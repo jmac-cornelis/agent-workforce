@@ -486,6 +486,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
         log.info('=' * 60)
         log.info('PHASE 0: Parsing scope document → FeatureScope')
         log.info('=' * 60)
+        self._progress(f'Phase 0: Parsing scope document: {scope_doc}')
 
         scope_result = self._parse_scope_document(scope_doc)
         if scope_result is None:
@@ -868,6 +869,15 @@ class FeaturePlanningOrchestrator(BaseAgent):
             log.error(f'Unsupported document type for extraction: {ext}')
             return None
 
+    # ------------------------------------------------------------------
+    # User-facing progress output
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _progress(message: str) -> None:
+        '''Print a user-facing progress message to stdout and flush immediately.'''
+        print(message, flush=True)
+
     def _run_full_workflow(self, execute: bool = False) -> AgentResponse:
         '''Run the complete workflow.'''
         results = []
@@ -876,11 +886,15 @@ class FeaturePlanningOrchestrator(BaseAgent):
         log.info('=' * 60)
         log.info('PHASE 1: Research')
         log.info('=' * 60)
-        results.append(self._phase_research())
+        self._progress('Phase 1/4: Researching feature domain...')
+        result = self._phase_research()
+        self._progress(f'  ✓ {result.splitlines()[0]}')
+        results.append(result)
 
         # Check for blocking questions
         blocking = self._get_blocking_questions()
         if blocking:
+            self._progress('  ⚠ Blocking questions found — pausing workflow')
             results.append(self._format_blocking_questions(blocking))
             return AgentResponse.success_response(
                 content='\n\n'.join(results),
@@ -895,17 +909,24 @@ class FeaturePlanningOrchestrator(BaseAgent):
         log.info('=' * 60)
         log.info('PHASE 2: Hardware Analysis')
         log.info('=' * 60)
-        results.append(self._phase_hw_analysis())
+        self._progress('Phase 2/4: Analyzing hardware platform...')
+        result = self._phase_hw_analysis()
+        self._progress(f'  ✓ {result.splitlines()[0]}')
+        results.append(result)
 
         # Phase 3: Scoping
         log.info('=' * 60)
         log.info('PHASE 3: SW/FW Scoping')
         log.info('=' * 60)
-        results.append(self._phase_scoping())
+        self._progress('Phase 3/4: Scoping SW/FW work items...')
+        result = self._phase_scoping()
+        self._progress(f'  ✓ {result.splitlines()[0]}')
+        results.append(result)
 
         # Check for blocking questions from scoping
         blocking = self._get_blocking_questions()
         if blocking:
+            self._progress('  ⚠ Blocking questions found — pausing workflow')
             results.append(self._format_blocking_questions(blocking))
             return AgentResponse.success_response(
                 content='\n\n'.join(results),
@@ -920,7 +941,10 @@ class FeaturePlanningOrchestrator(BaseAgent):
         log.info('=' * 60)
         log.info('PHASE 4: Jira Plan Generation')
         log.info('=' * 60)
-        results.append(self._phase_plan_generation())
+        self._progress('Phase 4/4: Generating Jira plan (epics + stories)...')
+        result = self._phase_plan_generation()
+        self._progress(f'  ✓ {result.splitlines()[0]}')
+        results.append(result)
 
         # Phase 5: Present for review
         log.info('=' * 60)
@@ -933,10 +957,13 @@ class FeaturePlanningOrchestrator(BaseAgent):
             log.info('=' * 60)
             log.info('PHASE 6: Jira Execution')
             log.info('=' * 60)
+            self._progress('Phase 6: Creating Jira tickets...')
             exec_result = self._phase_execution()
             if exec_result.success:
+                self._progress('  ✓ Jira tickets created')
                 results.append(exec_result.content)
             else:
+                self._progress(f'  ✗ Execution failed: {exec_result.error}')
                 results.append(f'Execution failed: {exec_result.error}')
 
         return AgentResponse.success_response(
@@ -965,6 +992,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
 
         try:
             # Pass 1: Deterministic baseline (guaranteed non-empty)
+            self._progress('  → Pass 1: deterministic tool research...')
             log.info('Phase 1 — Pass 1: deterministic research')
             baseline_report = self.research_agent.research(
                 self.state.feature_request,
@@ -975,6 +1003,8 @@ class FeaturePlanningOrchestrator(BaseAgent):
             log.info(f'Phase 1 — Pass 1 complete: {baseline_count} findings')
 
             # Pass 2: LLM enrichment (may produce richer content)
+            self._progress(f'  → Pass 1 done ({baseline_count} findings). '
+                           f'Pass 2: LLM enrichment (this may take a few minutes)...')
             log.info('Phase 1 — Pass 2: LLM enrichment')
             llm_response = self.research_agent.run({
                 'feature_request': self.state.feature_request,
@@ -997,6 +1027,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
             log.info(f'Phase 1 — Pass 2 complete: {llm_count} LLM findings')
 
             # Merge: LLM wins where it has content, baseline fills gaps
+            self._progress(f'  → Pass 2 done ({llm_count} LLM findings). Merging...')
             merged = self._merge_research(baseline_dict, llm_report)
             self.state.research_report = merged
             self.state.mark_phase_complete('research')
@@ -1045,6 +1076,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
 
         try:
             # Pass 1: Deterministic baseline
+            self._progress('  → Pass 1: deterministic HW analysis...')
             log.info('Phase 2 — Pass 1: deterministic HW analysis')
             baseline_profile = self.hw_analyst.analyze(
                 self.state.feature_request,
@@ -1059,6 +1091,8 @@ class FeaturePlanningOrchestrator(BaseAgent):
             log.info(f'Phase 2 — Pass 1 complete: {baseline_count} items')
 
             # Pass 2: LLM enrichment
+            self._progress(f'  → Pass 1 done ({baseline_count} items). '
+                           f'Pass 2: LLM enrichment (this may take a few minutes)...')
             log.info('Phase 2 — Pass 2: LLM enrichment')
             llm_response = self.hw_analyst.run({
                 'feature_request': self.state.feature_request,
@@ -1080,6 +1114,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
             log.info(f'Phase 2 — Pass 2 complete: {llm_count} LLM items')
 
             # Merge
+            self._progress(f'  → Pass 2 done ({llm_count} LLM items). Merging...')
             merged = self._merge_hw_profile(baseline_dict, llm_profile)
             self.state.hw_profile = merged
             self.state.mark_phase_complete('hw_analysis')
@@ -1121,6 +1156,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
 
         try:
             # Pass 1: Deterministic baseline
+            self._progress('  → Pass 1: deterministic scoping...')
             log.info('Phase 3 — Pass 1: deterministic scoping')
             baseline_scope = self.scoping_agent.scope(
                 self.state.feature_request,
@@ -1132,6 +1168,8 @@ class FeaturePlanningOrchestrator(BaseAgent):
             log.info(f'Phase 3 — Pass 1 complete: {baseline_count} items')
 
             # Pass 2: LLM enrichment
+            self._progress(f'  → Pass 1 done ({baseline_count} items). '
+                           f'Pass 2: LLM enrichment (this may take a few minutes)...')
             log.info('Phase 3 — Pass 2: LLM enrichment')
             llm_response = self.scoping_agent.run({
                 'feature_request': self.state.feature_request,
@@ -1154,6 +1192,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
             log.info(f'Phase 3 — Pass 2 complete: {llm_count} LLM items')
 
             # Merge: LLM scope items preferred (richer), baseline fills gaps
+            self._progress(f'  → Pass 2 done ({llm_count} LLM items). Merging...')
             merged = self._merge_scope(baseline_dict, llm_scope)
             self.state.feature_scope = merged
             self.state.mark_phase_complete('scoping')

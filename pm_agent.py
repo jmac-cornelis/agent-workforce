@@ -1501,6 +1501,7 @@ def _workflow_feature_plan(args):
     try:
         from agents.feature_planning_orchestrator import FeaturePlanningOrchestrator
 
+        output('Starting workflow...')
         orchestrator = FeaturePlanningOrchestrator(output_dir=output_dir)
 
         response = orchestrator.run({
@@ -1546,7 +1547,7 @@ def _workflow_feature_plan(args):
                 json_path = os.path.join(output_dir, 'plan.json')
                 with open(json_path, 'w', encoding='utf-8') as f:
                     json.dump(jira_plan, f, indent=2)
-                output(f'\nPlan saved to: {json_path}')
+                output(f'Saving plan to: {json_path}')
                 all_created_files.append((json_path, 'Feature plan JSON'))
 
                 # Also save Markdown summary
@@ -1593,8 +1594,9 @@ def _workflow_feature_plan(args):
                 output('Answer the questions above and re-run to continue.')
                 return 1
 
+            output('')
             if not execute:
-                output('\nThis was a DRY RUN. To create tickets in Jira, re-run with --execute.')
+                output('This was a DRY RUN. To create tickets in Jira, re-run with --execute.')
 
             _print_workflow_summary('feature-plan', all_created_files)
             return 0
