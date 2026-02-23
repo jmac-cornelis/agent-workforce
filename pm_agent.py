@@ -1455,7 +1455,6 @@ def _workflow_feature_plan(args):
     else:
         feature_request = args.feature
     doc_paths = args.docs or []
-    output_file = args.output or 'feature_plan.json'
     execute = getattr(args, 'execute', False)
     scope_doc = getattr(args, 'scope_doc', None) or ''
 
@@ -1464,22 +1463,36 @@ def _workflow_feature_plan(args):
     #   default      → 'full' (run all phases)
     mode = 'scope-to-plan' if scope_doc else 'full'
 
-    # Build an output directory from the output_file path.
-    # e.g. "plans/STLSB-redfish-rde/plan.json" → output_dir = "plans/STLSB-redfish-rde"
-    # If output_file has no directory component, use "plans/<project_key>"
-    output_dir = os.path.dirname(output_file)
+    # Resolve the output directory.
+    #
+    # The standard subdir structure is:  plans/<PROJECT>-<slug>/
+    # --output-dir ROOT  → ROOT/plans/<PROJECT>-<slug>/
+    # --output FILE      → dirname(FILE)  (explicit path, no slug)
+    # (neither)          → plans/<PROJECT>-<slug>/  (relative to cwd)
+    explicit_output_dir = getattr(args, 'output_dir', None)
+    output_file = args.output or 'feature_plan.json'
+
+    # Build the <PROJECT>-<slug> component used by the standard layout.
+    # When using --feature-prompt, derive slug from the filename stem
+    # (the full file content would be too long for a directory name).
+    if feature_prompt_file:
+        slug = os.path.splitext(os.path.basename(feature_prompt_file))[0].lower()
+    else:
+        slug = feature_request[:40].lower()
+    slug = slug.replace(' ', '-').replace('/', '-')
+    slug = ''.join(c for c in slug if c.isalnum() or c == '-')
+    slug = slug.strip('-')
+    plans_subdir = os.path.join('plans', f'{project_key}-{slug}')
+
+    if explicit_output_dir:
+        # --output-dir ROOT → ROOT/plans/<PROJECT>-<slug>/
+        output_dir = os.path.join(explicit_output_dir, plans_subdir)
+    else:
+        output_dir = os.path.dirname(output_file)
+
     if not output_dir:
-        # Default: plans/<project_key>-<sanitized_feature_slug>
-        # When using --feature-prompt, derive slug from the filename stem
-        # (the full file content would be too long for a directory name).
-        if feature_prompt_file:
-            slug = os.path.splitext(os.path.basename(feature_prompt_file))[0].lower()
-        else:
-            slug = feature_request[:40].lower()
-        slug = slug.replace(' ', '-').replace('/', '-')
-        slug = ''.join(c for c in slug if c.isalnum() or c == '-')
-        slug = slug.strip('-')
-        output_dir = os.path.join('plans', f'{project_key}-{slug}')
+        # Default: plans/<PROJECT>-<slug>/ relative to cwd
+        output_dir = plans_subdir
 
     output(f'Feature Planning Workflow')
     output(f'  Project:  {project_key}')
@@ -1705,6 +1718,7 @@ Examples:
   %(prog)s --workflow feature-plan --project STL --feature "Add PQC device support"
   %(prog)s --workflow feature-plan --project STL --feature "Add PQC device" --docs spec.pdf --execute
   %(prog)s --workflow feature-plan --project STLSB --feature-prompt RedfishRDE.md
+  %(prog)s --workflow feature-plan --project STLSB --feature-prompt RedfishRDE.md --output-dir /tmp/out
   %(prog)s --workflow feature-plan --project STL --feature "Add PQC device" --scope-doc scope.json
   %(prog)s --workflow feature-plan --project STL --feature "Add PQC device" --scope-doc scope.md --execute
   %(prog)s --env .env_sandbox --workflow feature-plan --project STLSB --feature "Redfish RDE" --scope-doc RedfishRDE.md
@@ -1785,6 +1799,12 @@ Examples:
                        help='Spec documents / datasheets for --workflow feature-plan')
     parser.add_argument('--execute', action='store_true',
                        help='Actually create Jira tickets (default: dry-run). '
+                            'Used by --workflow feature-plan.')
+    parser.add_argument('--output-dir', default=None, metavar='DIR',
+                       dest='output_dir',
+                       help='Root directory for output. The standard '
+                            'plans/<PROJECT>-<slug>/ subdir is created '
+                            'inside it. Default root: current directory. '
                             'Used by --workflow feature-plan.')
     
     # ---- Options for --plan ----------------------------------------------------
@@ -1992,7 +2012,9 @@ Examples:
                 log.info(f'+  Execute: YES (will create Jira tickets)')
             else:
                 log.info(f'+  Execute: DRY RUN')
-            if args.output:
+            if args.output_dir:
+                log.info(f'+  Output dir: {args.output_dir}')
+            elif args.output:
                 log.info(f'+  Output: {args.output}')
         if args.workflow_filter:
             log.info(f'+  Filter: {args.workflow_filter}')
