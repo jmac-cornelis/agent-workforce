@@ -141,8 +141,9 @@ class ScopingAgent(BaseAgent):
             feature_request, research_report, hw_profile
         )
 
-        # Run the ReAct loop
-        response = self._run_with_tools(user_prompt)
+        # Run the ReAct loop.
+        # Pass through any timeout set by the orchestrator.
+        response = self._run_with_tools(user_prompt, timeout=self._timeout)
 
         # Parse the LLM output into a structured FeatureScope
         scope = self._parse_scope(response.content, feature_request)

@@ -23,6 +23,17 @@ from tools.jira_tools import (
     assign_ticket,
     get_project_workflows,
     get_project_issue_types,
+    # New tool wrappers
+    list_filters,
+    run_filter,
+    run_jql_query,
+    get_children_hierarchy,
+    get_project_versions_tool,
+    get_ticket_totals,
+    list_dashboards,
+    get_dashboard,
+    create_dashboard,
+    bulk_update_tickets,
     JiraTools,
 )
 from tools.drawio_tools import (
@@ -76,6 +87,17 @@ __all__ = [
     'assign_ticket',
     'get_project_workflows',
     'get_project_issue_types',
+    # New Jira tools
+    'list_filters',
+    'run_filter',
+    'run_jql_query',
+    'get_children_hierarchy',
+    'get_project_versions_tool',
+    'get_ticket_totals',
+    'list_dashboards',
+    'get_dashboard',
+    'create_dashboard',
+    'bulk_update_tickets',
     'JiraTools',
     # Draw.io
     'parse_org_chart',

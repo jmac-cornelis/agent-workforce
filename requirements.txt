@@ -20,6 +20,9 @@ Pillow>=10.0.0                 # Image processing
 # Data handling
 pyyaml>=6.0                    # YAML file support
 
+# MCP server
+mcp>=1.0.0                     # Model Context Protocol server SDK
+
 # Optional: For enhanced features
 # anthropic>=0.18.0            # Anthropic SDK (if using Claude directly)
 # google-generativeai>=0.3.0   # Google Gemini SDK

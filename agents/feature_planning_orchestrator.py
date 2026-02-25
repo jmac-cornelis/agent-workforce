@@ -91,6 +91,8 @@ class FeaturePlanningOrchestrator(BaseAgent):
         if self._research_agent is None:
             from agents.research_agent import ResearchAgent
             self._research_agent = ResearchAgent()
+        # Propagate timeout from orchestrator to sub-agent
+        self._research_agent._timeout = getattr(self, '_timeout', None)
         return self._research_agent
 
     @property
@@ -98,6 +100,8 @@ class FeaturePlanningOrchestrator(BaseAgent):
         if self._hw_analyst is None:
             from agents.hardware_analyst import HardwareAnalystAgent
             self._hw_analyst = HardwareAnalystAgent()
+        # Propagate timeout from orchestrator to sub-agent
+        self._hw_analyst._timeout = getattr(self, '_timeout', None)
         return self._hw_analyst
 
     @property
@@ -105,6 +109,8 @@ class FeaturePlanningOrchestrator(BaseAgent):
         if self._scoping_agent is None:
             from agents.scoping_agent import ScopingAgent
             self._scoping_agent = ScopingAgent()
+        # Propagate timeout from orchestrator to sub-agent
+        self._scoping_agent._timeout = getattr(self, '_timeout', None)
         return self._scoping_agent
 
     @property
@@ -112,6 +118,8 @@ class FeaturePlanningOrchestrator(BaseAgent):
         if self._plan_builder is None:
             from agents.feature_plan_builder import FeaturePlanBuilderAgent
             self._plan_builder = FeaturePlanBuilderAgent()
+        # Propagate timeout from orchestrator to sub-agent
+        self._plan_builder._timeout = getattr(self, '_timeout', None)
         return self._plan_builder
 
     @property
@@ -119,6 +127,8 @@ class FeaturePlanningOrchestrator(BaseAgent):
         if self._review_agent is None:
             from agents.review_agent import ReviewAgent
             self._review_agent = ReviewAgent()
+        # Propagate timeout from orchestrator to sub-agent
+        self._review_agent._timeout = getattr(self, '_timeout', None)
         return self._review_agent
 
     # ------------------------------------------------------------------
@@ -373,6 +383,9 @@ class FeaturePlanningOrchestrator(BaseAgent):
         mode = input_data.get('mode', 'full')
         execute = input_data.get('execute', False)
         scope_doc = input_data.get('scope_doc', '')
+
+        # Extract timeout from CLI and store for sub-agent propagation
+        self._timeout = input_data.get('timeout', None)
 
         # Allow callers to set the output directory at run-time
         output_dir = input_data.get('output_dir', '')
@@ -748,7 +761,11 @@ class FeaturePlanningOrchestrator(BaseAgent):
             llm = get_llm_client()
             from llm.base import Message
             messages = [Message.user(parse_prompt)]
-            response = llm.chat(messages=messages)
+            # Pass through timeout if set by the CLI
+            chat_kwargs = {}
+            if getattr(self, '_timeout', None) is not None:
+                chat_kwargs['timeout'] = self._timeout
+            response = llm.chat(messages=messages, **chat_kwargs)
 
             if not response or not response.content:
                 log.error('LLM returned empty response for scope parsing')

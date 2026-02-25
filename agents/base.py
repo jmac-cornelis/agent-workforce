@@ -111,6 +111,9 @@ class BaseAgent(ABC):
         self.llm = llm or get_llm_client()
         self.tools: Dict[str, ToolDefinition] = {}
         self.conversation: List[Message] = []
+        # Optional per-request timeout (seconds) for LLM calls.
+        # Set by callers (e.g. orchestrator) before invoking run().
+        self._timeout: Optional[int] = None
         
         # Register tools
         if tools:
@@ -226,7 +229,8 @@ class BaseAgent(ABC):
     def _run_with_tools(
         self,
         user_input: str,
-        max_iterations: Optional[int] = None
+        max_iterations: Optional[int] = None,
+        timeout: Optional[int] = None
     ) -> AgentResponse:
         '''
         Run the agent with tool use capability.
@@ -240,6 +244,7 @@ class BaseAgent(ABC):
         Input:
             user_input: The user's input/task.
             max_iterations: Override for max iterations.
+            timeout: Optional timeout in seconds for each LLM call.
         
         Output:
             AgentResponse with final result.
@@ -261,12 +266,15 @@ class BaseAgent(ABC):
                 # Call LLM with tools.  Heartbeat "Still waiting on LLM
                 # return..." messages are emitted by CornelisLLM.chat()
                 # itself, so no wrapper thread is needed here.
-                response = self.llm.chat(
-                    messages=messages,
-                    temperature=self.config.temperature,
-                    max_tokens=self.config.max_tokens,
-                    tools=self.get_tool_schemas() if self.tools else None,
-                )
+                chat_kwargs: Dict[str, Any] = {
+                    'messages': messages,
+                    'temperature': self.config.temperature,
+                    'max_tokens': self.config.max_tokens,
+                    'tools': self.get_tool_schemas() if self.tools else None,
+                }
+                if timeout is not None:
+                    chat_kwargs['timeout'] = timeout
+                response = self.llm.chat(**chat_kwargs)
                 
                 # Check if LLM wants to call tools
                 # Note: This depends on the LLM response format

@@ -81,6 +81,14 @@ For each work item, list dependencies as:
 - `BLOCKED_BY: [item title]` — Cannot start until the dependency is complete
 - `RELATED_TO: [item title]` — Related but not strictly blocking
 
+**CRITICAL: Dependencies MUST cross category boundaries.**  If a tool item depends
+on a firmware item (e.g. a measurement manifest tool depends on the firmware
+measurement engine), list that firmware item as a dependency.  The plan builder
+uses the dependency graph to cluster items into functional-thread Epics — items
+connected by dependencies (even across firmware/driver/tool) will be grouped into
+the same Epic.  If you fail to declare cross-category dependencies, the plan will
+incorrectly split related work into separate area-based Epics.
+
 ## Output Format
 
 Write your scoping analysis narrative in clear Markdown. After the narrative, you **MUST** include a fenced JSON block containing the structured scope. This JSON block is machine-parsed — it must be valid JSON.

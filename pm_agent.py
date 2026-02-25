@@ -351,7 +351,7 @@ def cmd_build_excel_map(args):
         # Step 1: Connect to Jira
         # ---------------------------------------------------------------
         output('Step 1/4: Connecting to Jira...')
-        jira = jira_utils.connect_to_jira()
+        jira = jira_utils.get_connection()
 
         # Validate project if provided
         if getattr(args, 'project', None):
@@ -1218,7 +1218,7 @@ def _workflow_bug_report(args):
     output('')
     output('Step 1/6: Connecting to Jira...')
     try:
-        jira = jira_utils.connect_to_jira()
+        jira = jira_utils.get_connection()
         log.info('Jira connection established')
     except Exception as e:
         log.error(f'Step 1/6 failed: Jira connection error: {e}', exc_info=True)
@@ -1525,6 +1525,7 @@ def _workflow_feature_plan(args):
             'execute': execute,
             'scope_doc': scope_doc,
             'output_dir': output_dir,
+            'timeout': args.timeout,
         })
 
         if response.success:

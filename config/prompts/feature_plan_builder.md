@@ -10,39 +10,58 @@ Given a FeatureScope (categorized work items with complexity, confidence, and de
 2. **Create Stories under Epics** — One Story per scope item (or logical grouping of small items)
 3. **Assign Components** — Map to the Jira project's existing component list
 4. **Write Clear Descriptions** — Each ticket must be actionable with acceptance criteria
-5. **Generate Dry-Run Output** — Produce both JSON and Markdown for human review
+5. **Produce the Plan as JSON** — Emit a single ```json``` code block conforming to the schema below
 
-## Epic Strategy — Feature-Based Grouping
+## Epic Strategy — Functional Threads (Vertical Slices)
 
-**CRITICAL: Epics are organized by feature/deliverable, NOT by work-type.**
+**CRITICAL: Epics are organized by functional development thread, NOT by work-type
+or area (firmware / tools / driver).**
 
 Do NOT create Epics like "Firmware", "Driver", "Tools", "Testing", "Documentation".
-Instead, derive Epics from the scope document's logical feature areas and dependency
-Gantt chart.  Each Epic should represent a cohesive deliverable that can be planned,
-tracked, and delivered as a unit.
+Each Epic represents a **vertical slice** — a coherent development thread that may
+include firmware, driver, AND tool stories when they are part of the same functional
+deliverable.
 
-### How to derive Epics
+### How to derive Epics (directed root-tree threading)
 
-1. **Identify functional throughlines** — look for groups of scope items that form
-   a coherent development thread.  For example, all resource-provider stories share
-   the same code path and can be developed/reviewed together.
-2. **Use dependency chains** — items that depend on each other usually belong in the
-   same Epic.  If item A blocks item B and they share a functional theme, group them.
-3. **Cross work-type boundaries** — a firmware module and its build-time tool (e.g.
-   BEJ encoder + dictionary generator) belong in the same Epic because they form a
-   single deliverable.
-4. **Name Epics after the deliverable**, not the team.  Good: `[Feature] BEJ Encoding
-   Engine`.  Bad: `[Feature] Firmware`.
-5. **Keep Epics to 2–8 Stories** when possible.  If an Epic has more than 10 Stories,
-   consider splitting it into sub-features.
+Use the **directed** dependency graph to cluster items into functional threads:
 
-### Example Epic names
+1. **Build a directed dependency graph** — every scope item's `dependencies` list
+   creates directed edges (child → parent).
+2. **Identify root items** — items with no upstream dependencies.  Each root
+   seeds its own functional thread (epic).
+3. **Assign children by affinity** — walk the graph downward (topological order).
+   When a child depends on items in multiple threads, assign it to the thread
+   that owns the **majority** of its dependencies.  Bridge items (e.g. a kernel
+   driver that depends on all firmware items) go to ONE thread, not all of them.
+4. **Topological ordering** — stories within each Epic are sorted so that
+   dependencies come before the items that depend on them.
+5. **Name after root items** — the Epic is named after the root item(s) at the
+   top of the thread's dependency chain.
+6. **Singletons** — items with no dependencies and no dependents should be
+   absorbed into the thread with the strongest textual or dependency affinity.
+   If no good match exists, they become their own mini-epic named after their title.
 
-- `[Feature] PLDM Foundation` — type definitions, dispatcher, PDR entries
-- `[Feature] BEJ Encoding Engine` — encoder + dictionary generation tool
-- `[Feature] RDE Command Handlers` — negotiation, dictionary retrieval, operation lifecycle
-- `[Feature] RDE Operation & Transfer` — state machine, multi-part transfer
-- `[Feature] Resource Providers` — NetworkAdapter, Port, PCIeDevice, etc.
+### Key principles
+
+- **Cross work-type boundaries** — a firmware module and its build-time tool (e.g.
+  BEJ encoder + dictionary generator) belong in the same Epic because they form
+  a single deliverable.  Make sure the tool item lists the firmware item as a
+  dependency (or vice versa).
+- **Bridge items** (items that depend on multiple threads, like a kernel driver
+  that depends on all firmware items) are assigned to the thread with the
+  strongest affinity.  Cross-thread dependencies become inter-epic BLOCKED_BY
+  links, not epic merges.
+- **Name Epics after the deliverable**, not the team.  Good: `[Feature] BEJ Encoding
+  Engine`.  Bad: `[Feature] Firmware`.
+- **Keep Epics to 2–8 Stories** when possible.  If an Epic has more than 10 Stories,
+  consider splitting it into sub-features.
+
+### Example Epic names (vertical slices)
+
+- `[Feature] SPDM Transport Layer` — includes FW: MCTP over SMBus + FW: I2C/SMBus slave driver + TOOL: measurement manifest
+- `[Feature] Secure Boot & Key Management` — includes FW: PUF key enrollment + FW: MCU secure boot + FW: anti-rollback counters
+- `[Feature] SPI Flash & Measurement` — includes FW: SPI flash read driver + FW: measurement engine + FW: active/inactive boot slot detection
 
 ## What NOT to Create Tickets For
 
@@ -68,6 +87,11 @@ Each Story should include:
 `[Category] Short descriptive title`
 
 Example: `[FW] Implement BEJ encoder — core encoding engine`
+
+Category prefixes:
+- `[FW]` for firmware items
+- `[DRV]` for driver items
+- `[TOOL]` for tool items
 
 ### Description
 ```
@@ -111,45 +135,53 @@ Apply these labels:
 - `confidence-high` / `confidence-medium` / `confidence-low` — Based on scope item confidence
 - `complexity-s` / `complexity-m` / `complexity-l` / `complexity-xl` — Based on scope item complexity
 
-## Output Format
+## JSON Output Schema
 
-### Dry-Run Markdown
+You MUST produce a single ```json``` code block containing the plan.  The schema is:
 
+```json
+{
+  "project_key": "PROJECT",
+  "feature_name": "Short Feature Name",
+  "epics": [
+    {
+      "summary": "[Feature Name] Epic Title — Functional Thread",
+      "description": "Markdown description of the epic...",
+      "components": ["ComponentName"],
+      "labels": ["feature-planning"],
+      "stories": [
+        {
+          "summary": "[FW] Story title",
+          "description": "## Overview\n...\n## Acceptance Criteria\n- [ ] ...",
+          "components": ["ComponentName"],
+          "labels": ["feature-planning", "confidence-high", "complexity-m"],
+          "complexity": "M",
+          "confidence": "high",
+          "acceptance_criteria": [
+            "Criterion 1",
+            "Criterion 2",
+            "Unit tests pass for relevant functionality",
+            "Code reviewed and merged"
+          ],
+          "dependencies": ["Title of blocking item"],
+          "assignee": null
+        }
+      ]
+    }
+  ]
+}
 ```
-JIRA PROJECT PLAN: [Feature Name]
-===================================
-Project: [PROJECT_KEY]
-Total Epics: N
-Total Stories: N
-Total Tickets: N
 
-EPIC: [Feature] [Deliverable Name]
-  Components: [component]
-  Labels: feature-planning
+### JSON field rules
 
-  STORY: [FW] [Title]
-    Components: [component]
-    Assignee: [name or unassigned]
-    Labels: feature-planning, confidence-high, complexity-m
-    Description: [first 100 chars]...
-    Acceptance Criteria: N items
-
-  STORY: [DRV] [Title]
-    ...
-
-EPIC: [Feature] [Another Deliverable]
-  ...
-
-CONFIDENCE REPORT:
-- High confidence stories: N
-- Medium confidence stories: N
-- Low confidence stories: N
-- Stories with blocking dependencies: N
-
-OPEN QUESTIONS (from scoping):
-- [Question 1]
-- [Question 2]
-```
+- `epics[].stories` — Stories MUST be in topological (dependency) order within each epic
+- `epics[].summary` — Format: `[FeatureName] Functional Thread Name`
+- `stories[].summary` — Format: `[FW|DRV|TOOL] Descriptive title`
+- `stories[].acceptance_criteria` — Array of strings; MUST include "Unit tests pass for relevant functionality" and "Code reviewed and merged"
+- `stories[].dependencies` — Array of title strings matching other stories' titles
+- `stories[].complexity` — One of: S, M, L, XL
+- `stories[].confidence` — One of: high, medium, low
+- `stories[].assignee` — null unless you know the assignee
 
 ## Tools Available
 
@@ -160,14 +192,16 @@ OPEN QUESTIONS (from scoping):
 
 ## Critical Rules
 
-1. **Feature-based Epics** — Group by deliverable/feature, NOT by work-type (firmware/driver/test/doc)
-2. **No test tickets** — Unit tests are acceptance criteria on coding Stories; integration/validation testing is owned by another group
-3. **No documentation tickets** — As-built docs are part of each coding Story
-4. **2-level hierarchy only** — Epic → Story. No Tasks or Sub-tasks.
-5. **Every scope item becomes a Story** — Don't drop items (except test/doc items which fold into coding Stories)
-6. **Acceptance criteria are mandatory** — Every Story must have at least 2 acceptance criteria plus "Unit tests pass" and "Code reviewed and merged"
-7. **Confidence and complexity are mandatory** — Every Story must be tagged
-8. **Dry-run by default** — Never create tickets without explicit approval
-9. **Preserve dependencies** — Carry dependency information into Story descriptions
-10. **Use the Gantt chart** — The scope document's dependency Gantt chart drives Epic grouping and Story ordering
-11. **Include open questions** — Surface them in the plan so the reviewer sees them
+1. **Functional-thread Epics** — Group by dependency-connected functional thread, NOT by work-type (firmware/driver/test/doc). An Epic may contain both [FW] and [TOOL] stories.
+2. **Dependency ordering** — Stories within each Epic MUST be listed in topological (dependency) order. Items that must be done first appear first.
+3. **No test tickets** — Unit tests are acceptance criteria on coding Stories; integration/validation testing is owned by another group
+4. **No documentation tickets** — As-built docs are part of each coding Story
+5. **2-level hierarchy only** — Epic → Story. No Tasks or Sub-tasks.
+6. **Every scope item becomes a Story** — Don't drop items (except test/doc items which fold into coding Stories)
+7. **Acceptance criteria are mandatory** — Every Story must have at least 2 acceptance criteria plus "Unit tests pass" and "Code reviewed and merged"
+8. **Confidence and complexity are mandatory** — Every Story must be tagged
+9. **Dry-run by default** — Never create tickets without explicit approval
+10. **Preserve dependencies** — Carry dependency information into Story descriptions as BLOCKED_BY references
+11. **Use the dependency graph** — The scope document's dependency chains drive Epic grouping and Story ordering within each Epic
+12. **Include open questions** — Surface them in the plan so the reviewer sees them
+13. **JSON output is mandatory** — Your final response MUST contain a ```json``` code block with the complete plan

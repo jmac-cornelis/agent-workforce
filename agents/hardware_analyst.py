@@ -176,8 +176,9 @@ class HardwareAnalystAgent(BaseAgent):
             feature_request, project_key, research_report
         )
 
-        # Run the ReAct loop
-        response = self._run_with_tools(user_prompt)
+        # Run the ReAct loop.
+        # Pass through any timeout set by the orchestrator.
+        response = self._run_with_tools(user_prompt, timeout=self._timeout)
 
         # Parse the LLM output into a structured HardwareProfile
         profile = self._parse_profile(response.content)

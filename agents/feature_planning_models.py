@@ -355,6 +355,8 @@ class PlannedStory:
         confidence:          How confident we are this is needed.
         acceptance_criteria: List of acceptance criteria.
         dependencies:        Keys or titles of stories this depends on.
+        order:               1-based position within the parent Epic
+                             (topologically sorted by dependencies).
     '''
     summary: str = ''
     description: str = ''
@@ -366,6 +368,9 @@ class PlannedStory:
     acceptance_criteria: List[str] = field(default_factory=list)
     dependencies: List[str] = field(default_factory=list)
 
+    # 1-based position within the parent Epic (dependency order)
+    order: int = 0
+
     # Populated after Jira creation
     key: Optional[str] = None
     # Set by the plan builder to reference the parent Epic
@@ -374,6 +379,7 @@ class PlannedStory:
     def to_dict(self) -> Dict[str, Any]:
         return {
             'key': self.key,
+            'order': self.order,
             'summary': self.summary,
             'description': self.description,
             'components': self.components,

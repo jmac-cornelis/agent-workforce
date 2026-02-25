@@ -6,6 +6,12 @@
 #              Converts a FeatureScope into a concrete Jira project plan with
 #              Epics and Stories, ready for human review and execution.
 #
+#              The plan is produced entirely by the LLM via a ReAct loop.
+#              The agent sends the scoped work items as a structured prompt
+#              and the LLM returns a JSON plan conforming to the JiraPlan
+#              schema.  There is no deterministic fallback — the LLM is the
+#              authoritative plan builder.
+#
 # Author: Cornelis Networks
 #
 ##########################################################################################
@@ -13,119 +19,24 @@
 import json
 import logging
 import os
-import re
 import sys
-from collections import defaultdict
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional
 
 from agents.base import BaseAgent, AgentConfig, AgentResponse
-from agents.feature_planning_models import (
-    FeatureScope,
-    JiraPlan,
-    PlannedEpic,
-    PlannedStory,
-    ScopeItem,
-)
 
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
-
-# ---------------------------------------------------------------------------
-# Default system instruction
-# ---------------------------------------------------------------------------
-
-PLAN_BUILDER_INSTRUCTION = '''You are a Feature Plan Builder Agent for Cornelis Networks.
-
-Convert scoped SW/FW work items into a Jira project plan with Epics and Stories.
-Group items by feature/deliverable (NOT by work-type), assign components, write
-clear descriptions with acceptance criteria, and produce a dry-run plan for
-human review.
-
-IMPORTANT:
-- Do NOT create tickets for unit tests, documentation, integration testing,
-  or validation testing.  Unit tests and as-built docs are acceptance criteria
-  on coding Stories.  Integration/validation testing is owned by another group.
-- Epics are feature-based (derived from the dependency Gantt chart), not
-  work-type-based.
-'''
-
-# ---------------------------------------------------------------------------
-# Category → Epic title prefix mapping (used only for fallback grouping
-# when dependency-based clustering cannot determine a better grouping)
-# ---------------------------------------------------------------------------
-
-CATEGORY_EPIC_MAP = {
-    'firmware': 'Firmware',
-    'driver': 'Driver',
-    'tool': 'Tools & Diagnostics',
-}
-
-# Categories that should NOT produce tickets — their items are folded into
-# coding Stories as acceptance criteria instead.
-EXCLUDED_CATEGORIES = {'test', 'integration', 'documentation'}
-
-# Category → Jira component keyword matching
-CATEGORY_COMPONENT_KEYWORDS = {
-    'firmware': ['firmware', 'fw', 'embedded'],
-    'driver': ['driver', 'kernel', 'hfi', 'module'],
-    'tool': ['tool', 'cli', 'util', 'diag'],
-}
-
-# Category → Story summary prefix
-CATEGORY_PREFIX = {
-    'firmware': '[FW]',
-    'driver': '[DRV]',
-    'tool': '[TOOL]',
-}
-
-# ---------------------------------------------------------------------------
-# Throughline clustering — keyword groups that identify functional themes.
-# Each tuple is (epic_label, set_of_keywords_that_match_titles).
-# Order matters: first match wins.
-# ---------------------------------------------------------------------------
-
-# Each entry is (epic_label, title_pattern, description_pattern).
-# title_pattern is matched against the item title ONLY.
-# description_pattern (optional) is matched against the description ONLY
-# when the title pattern does not match.  This avoids false positives from
-# cross-references in description text.
-THROUGHLINE_PATTERNS: List[Tuple[str, re.Pattern, Optional[re.Pattern]]] = [
-    # PLDM foundation — type definitions, dispatcher, PDR entries
-    # (must be checked before BEJ because "type definitions" could match BEJ)
-    ('PLDM Foundation',
-     re.compile(r'type\s+definition|dispatcher|PDR\b|GetPLDMTypes|PLDM\s+Type\s+6',
-                re.IGNORECASE),
-     None),
-    # RDE command handlers (negotiation, dictionary retrieval)
-    ('RDE Command Handlers',
-     re.compile(r'command\s+handler|negotiat|dictionary\s+retrieval',
-                re.IGNORECASE),
-     None),
-    # RDE operation lifecycle — operation handlers, state machine, multi-part
-    ('RDE Operation & Transfer',
-     re.compile(r'operation\s+lifecycle|operation\s+state|multi-?part\s+transfer',
-                re.IGNORECASE),
-     None),
-    # BEJ encoding — encoder + dictionary generation
-    ('BEJ Encoding Engine',
-     re.compile(r'BEJ\s+encod|dictionary\s+generation', re.IGNORECASE),
-     None),
-    # Resource providers — any story about a specific Redfish resource
-    ('Resource Providers',
-     re.compile(r'resource\s+provider', re.IGNORECASE),
-     None),
-]
-
-# Mandatory acceptance criteria appended to every Story
-MANDATORY_ACCEPTANCE_CRITERIA = [
-    'Unit tests pass for relevant functionality',
-    'Code reviewed and merged',
-]
 
 
 class FeaturePlanBuilderAgent(BaseAgent):
     '''
     Agent that converts a FeatureScope into a Jira project plan.
+
+    The entire plan — epic grouping, story ordering, descriptions,
+    acceptance criteria — is produced by the LLM via a ReAct loop.
+    The system prompt (loaded from config/prompts/feature_plan_builder.md)
+    instructs the LLM on the epic-threading strategy, story format,
+    and JSON output schema.
 
     Produces a JiraPlan with Epics and Stories, including component
     assignment, descriptions with acceptance criteria, and confidence tags.
@@ -137,7 +48,14 @@ class FeaturePlanBuilderAgent(BaseAgent):
 
         Registers Jira and file tools for component lookup and output.
         '''
-        instruction = self._load_prompt_file() or PLAN_BUILDER_INSTRUCTION
+        # Load the system prompt from the .md file.  This is the sole
+        # source of LLM instructions — there is no hardcoded fallback.
+        instruction = self._load_prompt_file()
+        if not instruction:
+            raise FileNotFoundError(
+                'config/prompts/feature_plan_builder.md is required but not found. '
+                'The Feature Plan Builder Agent has no hardcoded fallback prompt.'
+            )
 
         config = AgentConfig(
             name='feature_plan_builder',
@@ -204,6 +122,10 @@ class FeaturePlanBuilderAgent(BaseAgent):
         '''
         Run the Feature Plan Builder Agent.
 
+        The LLM is the authoritative plan builder.  The ReAct loop lets
+        the LLM call tools (e.g. get_components) to gather Jira metadata,
+        then produce a JSON plan conforming to the JiraPlan schema.
+
         Input:
             input_data: Dictionary containing:
                 - feature_request: str — The user's feature description
@@ -229,428 +151,159 @@ class FeaturePlanBuilderAgent(BaseAgent):
         if not feature_scope:
             return AgentResponse.error_response('No feature_scope provided')
 
-        # Build the user prompt
+        # Build the user prompt with all scope items and instructions
         user_prompt = self._build_plan_prompt(
             feature_request, project_key, feature_scope
         )
 
-        # Run the ReAct loop — this lets the LLM call tools (e.g.
-        # get_project_info, get_components) to gather Jira metadata.
-        # The loop may time out on large prompts; that's OK because the
-        # deterministic build_plan() below is the authoritative output.
-        react_response = self._run_with_tools(user_prompt)
+        # Run the ReAct loop — the LLM calls tools (get_components, etc.)
+        # and produces the plan as JSON in its final response.
+        react_response = self._run_with_tools(user_prompt, timeout=self._timeout)
 
         if not react_response.success:
-            log.warning(
-                f'ReAct loop did not succeed '
-                f'(error={react_response.error}); '
-                f'falling back to deterministic build_plan()'
+            return AgentResponse.error_response(
+                f'LLM plan generation failed: {react_response.error}'
             )
 
-        # Build the plan programmatically — this is the authoritative,
-        # deterministic path that does not depend on the ReAct loop.
-        plan = self.build_plan(
-            feature_name=feature_scope.get('feature_name', feature_request[:100]),
-            project_key=project_key,
-            feature_scope=feature_scope,
+        # Parse the LLM's JSON output into a JiraPlan dict
+        feature_name = feature_scope.get(
+            'feature_name', feature_request[:100]
+        )
+        plan_dict = self._parse_llm_plan(
+            react_response.content or '',
+            project_key,
+            feature_name,
+            feature_scope,
         )
 
-        # Return a success response with the structured plan regardless
-        # of whether the ReAct loop succeeded.  The ReAct content is
-        # included as supplementary context when available.
         return AgentResponse.success_response(
-            content=react_response.content or plan.summary_markdown or '',
+            content=plan_dict.get('summary_markdown', ''),
             tool_calls=react_response.tool_calls,
             iterations=react_response.iterations,
-            metadata={'jira_plan': plan.to_dict()},
+            metadata={'jira_plan': plan_dict},
         )
 
     # ------------------------------------------------------------------
-    # Programmatic plan building (deterministic)
+    # LLM output parsing
     # ------------------------------------------------------------------
 
-    def build_plan(
+    def _parse_llm_plan(
         self,
-        feature_name: str,
+        llm_output: str,
         project_key: str,
+        feature_name: str,
         feature_scope: Dict[str, Any],
-    ) -> JiraPlan:
+    ) -> Dict[str, Any]:
         '''
-        Build a Jira plan programmatically from a FeatureScope dict.
+        Parse the LLM's text output into a JiraPlan-compatible dict.
 
-        This is the deterministic path that does not require LLM calls.
+        The LLM is instructed to emit a JSON block (```json ... ```)
+        conforming to the JiraPlan schema.  This method extracts that
+        block, validates it, and fills in any missing computed fields
+        (total_epics, total_stories, total_tickets, summary_markdown,
+        confidence_report).
 
-        Epic grouping strategy (in priority order):
-          1. **Throughline clustering** — match each scope item's title +
-             description against THROUGHLINE_PATTERNS to assign it to a
-             functional theme (e.g. "Resource Providers", "BEJ Encoding
-             Engine").
-          2. **Dependency pull-in** — if item A depends on item B and B is
-             already in a cluster, A joins the same cluster (unless A has
-             its own explicit match).
-          3. **Fallback** — items that match no pattern and share no
-             dependencies with a cluster go into a per-category fallback
-             Epic (e.g. "Firmware — Uncategorized").
-
-        Input:
-            feature_name:   Short name for the feature.
-            project_key:    Target Jira project key.
-            feature_scope:  FeatureScope as a dict (from .to_dict()).
-
-        Output:
-            JiraPlan with Epics and Stories.
+        If the JSON block is missing or malformed, we attempt to build
+        a minimal plan from whatever structure we can find.
         '''
-        log.info(f'FeaturePlanBuilderAgent.build_plan(project={project_key})')
+        # Try to extract a JSON block from the LLM output
+        plan_data = self._extract_json_block(llm_output)
 
-        plan = JiraPlan(
-            project_key=project_key,
-            feature_name=feature_name,
-        )
+        if not plan_data:
+            log.warning('No JSON block found in LLM output; returning raw text')
+            return {
+                'project_key': project_key,
+                'feature_name': feature_name,
+                'epics': [],
+                'total_epics': 0,
+                'total_stories': 0,
+                'total_tickets': 0,
+                'summary_markdown': llm_output,
+                'confidence_report': {},
+            }
 
-        # Load Jira components for assignment
-        components = self._get_jira_components(project_key)
+        # Ensure top-level fields are present
+        plan_data.setdefault('project_key', project_key)
+        plan_data.setdefault('feature_name', feature_name)
+        epics = plan_data.get('epics', [])
 
-        # ------------------------------------------------------------------
-        # 1. Collect all ticketable scope items into a flat list, each
-        #    annotated with its source category.
-        # ------------------------------------------------------------------
-        all_items: List[Tuple[str, Dict[str, Any]]] = []  # (category, item)
-        for category in ('firmware', 'driver', 'tool'):
-            for item in feature_scope.get(f'{category}_items', []):
-                all_items.append((category, item))
+        # Compute totals from the epics list
+        total_epics = len(epics)
+        total_stories = sum(len(e.get('stories', [])) for e in epics)
+        total_tickets = total_epics + total_stories
+        plan_data['total_epics'] = total_epics
+        plan_data['total_stories'] = total_stories
+        plan_data['total_tickets'] = total_tickets
 
-        if not all_items:
-            log.warning('No ticketable scope items found')
-            plan.summary_markdown = self._build_markdown_summary(plan, feature_scope)
-            plan.confidence_report = self._build_confidence_report(plan)
-            return plan
-
-        # ------------------------------------------------------------------
-        # 2. Assign each item to a throughline cluster via pattern matching.
-        # ------------------------------------------------------------------
-        # cluster_name → list of (category, item)
-        clusters: Dict[str, List[Tuple[str, Dict[str, Any]]]] = defaultdict(list)
-        unclustered: List[Tuple[str, Dict[str, Any]]] = []
-
-        for category, item in all_items:
-            title = item.get('title', '')
-            matched = False
-            for cluster_label, title_pat, desc_pat in THROUGHLINE_PATTERNS:
-                if title_pat.search(title):
-                    clusters[cluster_label].append((category, item))
-                    matched = True
-                    break
-                # Fall back to description pattern only if title didn't match
-                if desc_pat is not None:
-                    desc = item.get('description', '')
-                    if desc_pat.search(desc):
-                        clusters[cluster_label].append((category, item))
-                        matched = True
-                        break
-            if not matched:
-                unclustered.append((category, item))
-
-        # ------------------------------------------------------------------
-        # 3. Dependency pull-in — for each unclustered item, check if any
-        #    of its dependencies match a title already in a cluster.
-        # ------------------------------------------------------------------
-        # Build a title→cluster lookup from already-clustered items
-        title_to_cluster: Dict[str, str] = {}
-        for cluster_label, members in clusters.items():
-            for _cat, itm in members:
-                title_to_cluster[itm.get('title', '').lower()] = cluster_label
-
-        still_unclustered: List[Tuple[str, Dict[str, Any]]] = []
-        for category, item in unclustered:
-            deps = item.get('dependencies', [])
-            pulled = False
-            for dep in deps:
-                dep_lower = dep.lower()
-                # Check if any clustered item title is a substring of the
-                # dependency string (dependencies are often short-form titles)
-                for clustered_title, cluster_label in title_to_cluster.items():
-                    if clustered_title in dep_lower or dep_lower in clustered_title:
-                        clusters[cluster_label].append((category, item))
-                        pulled = True
-                        break
-                if pulled:
-                    break
-            if not pulled:
-                still_unclustered.append((category, item))
-
-        # ------------------------------------------------------------------
-        # 4. Fallback — remaining items go into per-category Epics.
-        # ------------------------------------------------------------------
-        fallback_clusters: Dict[str, List[Tuple[str, Dict[str, Any]]]] = defaultdict(list)
-        for category, item in still_unclustered:
-            fallback_label = CATEGORY_EPIC_MAP.get(category, category.title())
-            fallback_clusters[fallback_label].append((category, item))
-
-        # ------------------------------------------------------------------
-        # 5. Create Epics from throughline clusters.
-        # ------------------------------------------------------------------
-        for cluster_label, members in clusters.items():
-            # Determine the dominant category for component assignment
-            cat_counts: Dict[str, int] = defaultdict(int)
-            for cat, _itm in members:
-                cat_counts[cat] += 1
-            dominant_cat = max(cat_counts, key=cat_counts.get)  # type: ignore[arg-type]
-            epic_component = self._match_component(dominant_cat, components)
-
-            # Build item dicts for the epic description helper
-            item_dicts = [itm for _cat, itm in members]
-
-            epic = PlannedEpic(
-                summary=f'[{feature_name[:50]}] {cluster_label}',
-                description=self._build_epic_description(
-                    feature_name, cluster_label, item_dicts
-                ),
-                components=[epic_component] if epic_component else [],
-                labels=['feature-planning'],
+        # Build summary_markdown if the LLM didn't include one
+        if 'summary_markdown' not in plan_data:
+            plan_data['summary_markdown'] = self._build_markdown_from_plan(
+                plan_data, feature_scope
             )
 
-            for cat, item in members:
-                prefix = CATEGORY_PREFIX.get(cat, '')
-                story = self._scope_item_to_story(
-                    item, prefix, epic.summary, components, cat
-                )
-                epic.stories.append(story)
-
-            plan.epics.append(epic)
-
-        # ------------------------------------------------------------------
-        # 6. Create fallback Epics for unclustered items.
-        # ------------------------------------------------------------------
-        for fallback_label, members in fallback_clusters.items():
-            dominant_cat = members[0][0]
-            epic_component = self._match_component(dominant_cat, components)
-            item_dicts = [itm for _cat, itm in members]
-
-            epic = PlannedEpic(
-                summary=f'[{feature_name[:50]}] {fallback_label}',
-                description=self._build_epic_description(
-                    feature_name, fallback_label, item_dicts
-                ),
-                components=[epic_component] if epic_component else [],
-                labels=['feature-planning'],
+        # Build confidence_report if the LLM didn't include one
+        if 'confidence_report' not in plan_data:
+            plan_data['confidence_report'] = self._compute_confidence_report(
+                plan_data
             )
 
-            for cat, item in members:
-                prefix = CATEGORY_PREFIX.get(cat, '')
-                story = self._scope_item_to_story(
-                    item, prefix, epic.summary, components, cat
-                )
-                epic.stories.append(story)
-
-            plan.epics.append(epic)
-
-        log.info(
-            f'Plan built: {plan.total_epics} epics, '
-            f'{plan.total_stories} stories '
-            f'({len(clusters)} throughline clusters, '
-            f'{len(fallback_clusters)} fallback epics)'
-        )
-
-        # Build the Markdown summary
-        plan.summary_markdown = self._build_markdown_summary(plan, feature_scope)
-
-        # Build confidence report
-        plan.confidence_report = self._build_confidence_report(plan)
-
-        return plan
+        return plan_data
 
     # ------------------------------------------------------------------
-    # Internal helpers — Jira component lookup
-    # ------------------------------------------------------------------
-
-    def _get_jira_components(self, project_key: str) -> List[Dict[str, Any]]:
-        '''Fetch Jira components for the project (cached).'''
-        if self._jira_components is not None:
-            return self._jira_components
-
-        try:
-            from tools.jira_tools import get_components
-            result = get_components(project_key=project_key)
-            data = result.data if hasattr(result, 'data') else result
-            if isinstance(data, dict):
-                self._jira_components = data.get('components', [])
-                return self._jira_components
-        except Exception as e:
-            log.warning(f'Failed to fetch Jira components: {e}')
-
-        self._jira_components = []
-        return self._jira_components
-
-    def _match_component(
-        self,
-        category: str,
-        components: List[Dict[str, Any]],
-    ) -> Optional[str]:
-        '''Match a scope category to a Jira component name.'''
-        keywords = CATEGORY_COMPONENT_KEYWORDS.get(category, [])
-        if not keywords:
-            return None
-
-        for comp in components:
-            comp_name = comp.get('name', '')
-            comp_lower = comp_name.lower()
-            if any(kw in comp_lower for kw in keywords):
-                return comp_name
-
-        return None
-
-    # ------------------------------------------------------------------
-    # Internal helpers — Story creation
-    # ------------------------------------------------------------------
-
-    def _scope_item_to_story(
-        self,
-        item: Dict[str, Any],
-        prefix: str,
-        parent_epic_summary: str,
-        components: List[Dict[str, Any]],
-        category: str,
-    ) -> PlannedStory:
-        '''Convert a scope item dict into a PlannedStory.'''
-        title = item.get('title', 'Untitled')
-        description = item.get('description', '')
-        rationale = item.get('rationale', '')
-        confidence = item.get('confidence', 'medium')
-        complexity = item.get('complexity', 'M')
-        dependencies = item.get('dependencies', [])
-        acceptance_criteria = list(item.get('acceptance_criteria', []))
-
-        # Append mandatory acceptance criteria (unit tests + code review)
-        for mandatory_ac in MANDATORY_ACCEPTANCE_CRITERIA:
-            if mandatory_ac not in acceptance_criteria:
-                acceptance_criteria.append(mandatory_ac)
-
-        # Build the full Story description in Markdown
-        desc_lines = ['## Overview', '']
-        if description:
-            desc_lines.append(description)
-        if rationale:
-            desc_lines.extend(['', '## Rationale', '', rationale])
-
-        if dependencies:
-            desc_lines.extend(['', '## Dependencies'])
-            for dep in dependencies:
-                desc_lines.append(f'- BLOCKED_BY: {dep}')
-
-        if acceptance_criteria:
-            desc_lines.extend(['', '## Acceptance Criteria'])
-            for ac in acceptance_criteria:
-                desc_lines.append(f'- [ ] {ac}')
-
-        desc_lines.extend([
-            '',
-            f'## Confidence: {confidence.upper()}',
-            f'## Complexity: {complexity.upper()}',
-        ])
-
-        full_description = '\n'.join(desc_lines)
-
-        # Match component
-        component = self._match_component(category, components)
-
-        # Build labels
-        labels = [
-            'feature-planning',
-            f'confidence-{confidence.lower()}',
-            f'complexity-{complexity.lower()}',
-        ]
-
-        return PlannedStory(
-            summary=f'{prefix} {title}'.strip(),
-            description=full_description,
-            components=[component] if component else [],
-            labels=labels,
-            complexity=complexity,
-            confidence=confidence,
-            acceptance_criteria=acceptance_criteria,
-            dependencies=dependencies,
-            parent_epic_summary=parent_epic_summary,
-        )
-
-    # ------------------------------------------------------------------
-    # Internal helpers — description builders
+    # Markdown summary builder (from parsed plan dict)
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _build_epic_description(
-        feature_name: str,
-        epic_title: str,
-        items: List[Dict[str, Any]],
-    ) -> str:
-        '''Build the Epic description.'''
-        lines = [
-            f'## {epic_title} for {feature_name}',
-            '',
-            f'This Epic tracks all {epic_title.lower()} work for the '
-            f'"{feature_name}" feature.',
-            '',
-            f'### Stories ({len(items)}):',
-        ]
-        for item in items:
-            complexity = item.get('complexity', '?')
-            confidence = item.get('confidence', '?')
-            lines.append(
-                f"- [{complexity}] {item.get('title', '?')} "
-                f"(Confidence: {confidence})"
-            )
-
-        return '\n'.join(lines)
-
-    # ------------------------------------------------------------------
-    # Internal helpers — Markdown summary
-    # ------------------------------------------------------------------
-
-    def _build_markdown_summary(
-        self,
-        plan: JiraPlan,
+    def _build_markdown_from_plan(
+        plan: Dict[str, Any],
         feature_scope: Dict[str, Any],
     ) -> str:
-        '''Build a human-readable Markdown summary of the plan.'''
+        '''Build a human-readable Markdown summary from a plan dict.'''
         lines = [
-            f'# JIRA PROJECT PLAN: {plan.feature_name}',
+            f'# JIRA PROJECT PLAN: {plan.get("feature_name", "?")}',
             '',
-            f'**Project**: {plan.project_key}',
-            f'**Total Epics**: {plan.total_epics}',
-            f'**Total Stories**: {plan.total_stories}',
-            f'**Total Tickets**: {plan.total_tickets}',
+            f'**Project**: {plan.get("project_key", "?")}',
+            f'**Total Epics**: {plan.get("total_epics", 0)}',
+            f'**Total Stories**: {plan.get("total_stories", 0)}',
+            f'**Total Tickets**: {plan.get("total_tickets", 0)}',
             '',
             '---',
             '',
         ]
 
-        for epic in plan.epics:
-            components_str = ', '.join(epic.components) if epic.components else 'unassigned'
+        for epic in plan.get('epics', []):
+            components_str = ', '.join(
+                epic.get('components', [])
+            ) or 'unassigned'
             lines.extend([
-                f'## EPIC: {epic.summary}',
+                f'## EPIC: {epic.get("summary", "?")}',
                 f'  Components: {components_str}',
-                f'  Labels: {", ".join(epic.labels)}',
-                f'  Stories: {len(epic.stories)}',
+                f'  Labels: {", ".join(epic.get("labels", []))}',
+                f'  Stories (in dependency order): {len(epic.get("stories", []))}',
                 '',
             ])
 
-            for story in epic.stories:
-                s_components = ', '.join(story.components) if story.components else 'unassigned'
-                assignee = story.assignee or 'unassigned'
+            for story_idx, story in enumerate(epic.get('stories', []), 1):
+                s_components = ', '.join(
+                    story.get('components', [])
+                ) or 'unassigned'
+                assignee = story.get('assignee') or 'unassigned'
                 lines.extend([
-                    f'  ### STORY: {story.summary}',
+                    f'  ### {story_idx}. STORY: {story.get("summary", "?")}',
                     f'    Components: {s_components}',
                     f'    Assignee: {assignee}',
-                    f'    Labels: {", ".join(story.labels)}',
-                    f'    Confidence: {story.confidence.upper()}',
-                    f'    Complexity: {story.complexity.upper()}',
-                    f'    Acceptance Criteria: {len(story.acceptance_criteria)} items',
+                    f'    Labels: {", ".join(story.get("labels", []))}',
+                    f'    Confidence: {story.get("confidence", "?").upper()}',
+                    f'    Complexity: {story.get("complexity", "?").upper()}',
+                    f'    Acceptance Criteria: {len(story.get("acceptance_criteria", []))} items',
                 ])
-                if story.dependencies:
-                    lines.append(f'    Dependencies: {", ".join(story.dependencies)}')
+                deps = story.get('dependencies', [])
+                if deps:
+                    lines.append(f'    Dependencies: {", ".join(deps)}')
                 lines.append('')
 
         # Confidence report
-        report = plan.confidence_report
+        report = plan.get('confidence_report', {})
         lines.extend([
             '---',
             '',
@@ -693,34 +346,56 @@ class FeaturePlanBuilderAgent(BaseAgent):
         return '\n'.join(lines)
 
     # ------------------------------------------------------------------
-    # Internal helpers — confidence report
+    # Confidence report builder (from parsed plan dict)
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _build_confidence_report(plan: JiraPlan) -> Dict[str, Any]:
-        '''Build aggregate confidence metrics for the plan.'''
+    def _compute_confidence_report(plan: Dict[str, Any]) -> Dict[str, Any]:
+        '''Build aggregate confidence metrics from a plan dict.'''
         by_confidence: Dict[str, int] = {}
         by_complexity: Dict[str, int] = {}
         total_stories = 0
         stories_with_deps = 0
 
-        for epic in plan.epics:
-            for story in epic.stories:
+        for epic in plan.get('epics', []):
+            for story in epic.get('stories', []):
                 total_stories += 1
-                conf = story.confidence.lower()
+                conf = story.get('confidence', 'medium').lower()
                 by_confidence[conf] = by_confidence.get(conf, 0) + 1
-                comp = story.complexity.upper()
+                comp = story.get('complexity', 'M').upper()
                 by_complexity[comp] = by_complexity.get(comp, 0) + 1
-                if story.dependencies:
+                if story.get('dependencies'):
                     stories_with_deps += 1
 
         return {
-            'total_epics': plan.total_epics,
+            'total_epics': plan.get('total_epics', 0),
             'total_stories': total_stories,
             'by_confidence': by_confidence,
             'by_complexity': by_complexity,
             'stories_with_dependencies': stories_with_deps,
         }
+
+    # ------------------------------------------------------------------
+    # Internal helpers — Jira component lookup
+    # ------------------------------------------------------------------
+
+    def _get_jira_components(self, project_key: str) -> List[Dict[str, Any]]:
+        '''Fetch Jira components for the project (cached).'''
+        if self._jira_components is not None:
+            return self._jira_components
+
+        try:
+            from tools.jira_tools import get_components
+            result = get_components(project_key=project_key)
+            data = result.data if hasattr(result, 'data') else result
+            if isinstance(data, dict):
+                self._jira_components = data.get('components', [])
+                return self._jira_components
+        except Exception as e:
+            log.warning(f'Failed to fetch Jira components: {e}')
+
+        self._jira_components = []
+        return self._jira_components
 
     # ------------------------------------------------------------------
     # Internal helpers — prompt building
@@ -732,34 +407,57 @@ class FeaturePlanBuilderAgent(BaseAgent):
         project_key: str,
         feature_scope: Dict[str, Any],
     ) -> str:
-        '''Build the user prompt for the LLM-driven plan building.'''
+        '''
+        Build the user prompt for the LLM-driven plan building.
+
+        Presents all ticketable scope items (firmware, driver, tool)
+        with their dependencies, complexity, and confidence.  Test,
+        integration, and documentation items are noted as excluded.
+        '''
         lines = [
             f'## Feature Request\n\n{feature_request}\n',
             f'## Target Jira Project\n\nProject key: `{project_key}`\n',
             '## Scoped Work Items\n',
         ]
 
+        # Category display labels for the prompt
+        category_labels = {
+            'firmware': 'Firmware',
+            'driver': 'Driver',
+            'tool': 'Tools & Diagnostics',
+        }
+
+        # Categories that should NOT produce tickets
+        excluded_categories = {'test', 'integration', 'documentation'}
+
         # Summarize scope items by category — only include categories that
-        # produce tickets (firmware, driver, tool).  Test, integration, and
-        # documentation items are excluded per policy.
+        # produce tickets (firmware, driver, tool).
         for category in ('firmware', 'driver', 'tool'):
             items = feature_scope.get(f'{category}_items', [])
             if items:
-                label = CATEGORY_EPIC_MAP.get(category, category.title())
+                label = category_labels.get(category, category.title())
                 lines.append(f'### {label} ({len(items)} items):')
                 for item in items:
                     complexity = item.get('complexity', '?')
                     confidence = item.get('confidence', '?')
                     title = item.get('title', '?')
+                    description = item.get('description', '')
+                    deps = item.get('dependencies', [])
+                    ac = item.get('acceptance_criteria', [])
+                    dep_str = f' → depends on: {", ".join(deps)}' if deps else ''
                     lines.append(
-                        f'- [{complexity}] {title} (Confidence: {confidence})'
+                        f'- [{complexity}] {title} (Confidence: {confidence}){dep_str}'
                     )
+                    if description:
+                        lines.append(f'  Description: {description}')
+                    if ac:
+                        lines.append(f'  Acceptance criteria: {"; ".join(ac)}')
                 lines.append('')
 
         # Note excluded items so the LLM knows they exist but should not
         # become tickets
         excluded_count = 0
-        for cat in EXCLUDED_CATEGORIES:
+        for cat in excluded_categories:
             excluded_count += len(feature_scope.get(f'{cat}_items', []))
         if excluded_count:
             lines.append(
@@ -780,21 +478,35 @@ class FeaturePlanBuilderAgent(BaseAgent):
                     lines.append(f'- {q}')
             lines.append('')
 
+        # Assumptions
+        assumptions = feature_scope.get('assumptions', [])
+        if assumptions:
+            lines.append('### Assumptions:')
+            for a in assumptions:
+                lines.append(f'- {a}')
+            lines.append('')
+
         lines.append(
             '## Instructions\n\n'
             'Please build a Jira project plan from these scoped items:\n\n'
             '1. **Look up components** — Use `get_components` to find the '
             f'project\'s component list for `{project_key}`.\n'
-            '2. **Create feature-based Epics** — Group by deliverable/feature '
-            '(derived from the dependency Gantt chart), NOT by work-type.\n'
-            '3. **Create Stories** — One per scope item, with full descriptions '
+            '2. **Create functional-thread Epics** — Group items into Epics '
+            'based on their dependency connections using the directed '
+            'root-tree threading algorithm described in your system prompt.  '
+            'Items connected by dependencies (even across firmware/driver/tool) '
+            'belong in the same Epic.  Do NOT group by work-type.\n'
+            '3. **Order Stories by dependencies** — Within each Epic, list '
+            'Stories in topological order (items that must be done first '
+            'appear first).\n'
+            '4. **Create Stories** — One per scope item, with full descriptions '
             'and acceptance criteria.  Every Story must include "Unit tests pass" '
             'and "Code reviewed and merged" as acceptance criteria.\n'
-            '4. **Do NOT create test or documentation tickets** — Those are '
+            '5. **Do NOT create test or documentation tickets** — Those are '
             'acceptance criteria on coding Stories, not separate tickets.\n'
-            '5. **Assign components** — Match scope categories to Jira components.\n'
-            '6. **Generate the plan** — Produce the dry-run output in the format '
-            'specified in your system instructions.\n\n'
+            '6. **Assign components** — Match scope categories to Jira components.\n'
+            '7. **Produce the JSON plan** — Emit a single ```json``` code block '
+            'conforming to the JSON output schema in your system prompt.\n\n'
             'This is a DRY RUN — do NOT create any tickets. Just produce the plan.'
         )
 

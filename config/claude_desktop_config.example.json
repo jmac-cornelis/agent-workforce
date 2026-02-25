@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "cornelis-jira": {
+      "command": "python3",
+      "args": ["/path/to/jira/mcp_server.py"],
+      "env": {
+        "JIRA_URL": "https://cornelisnetworks.atlassian.net",
+        "JIRA_EMAIL": "your.email@cornelisnetworks.com",
+        "JIRA_API_TOKEN": "your_api_token_here"
+      }
+    }
+  }
+}

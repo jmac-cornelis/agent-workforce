@@ -29,12 +29,26 @@ try:
     import jira_utils
     from jira_utils import (
         connect_to_jira,
+        get_connection,
+        reset_connection,
         validate_project,
         get_project_workflows as _get_project_workflows,
         get_project_issue_types as _get_project_issue_types,
         get_project_versions,
         get_project_components as _get_project_components,
+        _get_related_data,
         JIRA_URL,
+        # --- New imports for expanded tool coverage ---
+        list_filters as _ju_list_filters,
+        run_filter as _ju_run_filter,
+        run_jql_query as _ju_run_jql_query,
+        get_children_hierarchy as _ju_get_children_hierarchy,
+        get_project_versions as _ju_get_project_versions,
+        get_ticket_totals as _ju_get_ticket_totals,
+        list_dashboards as _ju_list_dashboards,
+        get_dashboard as _ju_get_dashboard,
+        create_dashboard as _ju_create_dashboard,
+        bulk_update_tickets as _ju_bulk_update_tickets,
     )
     JIRA_UTILS_AVAILABLE = True
 except ImportError as e:
@@ -42,29 +56,22 @@ except ImportError as e:
     log.warning(f'jira_utils.py not available: {e}')
     JIRA_URL = os.getenv('JIRA_URL', 'https://cornelisnetworks.atlassian.net')
 
-# Jira connection cache
-_jira_connection = None
-
-
 def get_jira():
     '''
     Get or create Jira connection using jira_utils.
-    
+
+    Delegates to jira_utils.get_connection() for unified connection management.
+
     Output:
         JIRA object with active connection.
-    
+
     Raises:
         RuntimeError: If jira_utils is not available or connection fails.
     '''
-    global _jira_connection
-    
     if not JIRA_UTILS_AVAILABLE:
         raise RuntimeError('jira_utils.py is required but not available')
-    
-    if _jira_connection is None:
-        _jira_connection = connect_to_jira()
-    
-    return _jira_connection
+
+    return jira_utils.get_connection()
 
 
 # ****************************************************************************************
@@ -715,62 +722,657 @@ def get_related_tickets(
     limit: int = 100
 ) -> ToolResult:
     '''
-    Get related tickets by traversing links.
-    
-    This wraps the jira_utils.py --get-related functionality.
-    
+    Get related tickets by traversing links and children.
+
+    Delegates to jira_utils._get_related_data() which handles cycle-safe
+    graph traversal across both issue links and parent/child relationships.
+
     Input:
         ticket_key: The root ticket key to start from.
         hierarchy_depth: Maximum depth to traverse (default: 3).
-        limit: Maximum number of tickets to return.
-    
+            Use -1 for unlimited depth, or a positive int for depth limit.
+        limit: Maximum number of tickets to return (including root).
+
     Output:
         ToolResult with list of related tickets.
     '''
     log.debug(f'get_related_tickets(ticket_key={ticket_key}, depth={hierarchy_depth})')
-    
+
     try:
         if not JIRA_UTILS_AVAILABLE:
             return ToolResult.failure('jira_utils.py is required for get_related_tickets')
-        
+
         jira = get_jira()
-        
-        # Use jira_utils get_related_issues function if available
-        # For now, implement basic link traversal
-        visited = set()
+
+        # Delegate to jira_utils._get_related_data() for cycle-safe traversal.
+        # hierarchy_depth maps to the hierarchy parameter:
+        #   None  → direct links + direct children only
+        #   -1    → unlimited recursive depth
+        #   n > 0 → depth-limited recursive traversal
+        ordered = _get_related_data(
+            jira,
+            ticket_key,
+            hierarchy=hierarchy_depth,
+            limit=limit,
+        )
+
+        # Convert raw issue dicts returned by _get_related_data() into the
+        # flat dict format expected by ToolResult consumers.
         tickets = []
-        
-        def traverse(key: str, depth: int):
-            if depth > hierarchy_depth or key in visited or len(tickets) >= limit:
-                return
-            
-            visited.add(key)
-            
-            try:
-                issue = jira.issue(key, expand='changelog')
-                tickets.append(_issue_to_dict(issue))
-                
-                # Get linked issues
-                if hasattr(issue.fields, 'issuelinks'):
-                    for link in issue.fields.issuelinks:
-                        linked_key = None
-                        if hasattr(link, 'outwardIssue'):
-                            linked_key = link.outwardIssue.key
-                        elif hasattr(link, 'inwardIssue'):
-                            linked_key = link.inwardIssue.key
-                        
-                        if linked_key and linked_key not in visited:
-                            traverse(linked_key, depth + 1)
-            except Exception as e:
-                log.warning(f'Failed to get issue {key}: {e}')
-        
-        traverse(ticket_key, 0)
-        
+        for item in ordered:
+            raw = item.get('issue', {})
+            fields = raw.get('fields', {})
+            issue_type = fields.get('issuetype', {}) or {}
+            status = fields.get('status', {}) or {}
+            priority = fields.get('priority', {}) or {}
+            assignee = fields.get('assignee', {}) or {}
+            reporter = fields.get('reporter', {}) or {}
+            fix_versions = fields.get('fixVersions', []) or []
+            components = fields.get('components', []) or []
+            labels = fields.get('labels', []) or []
+
+            tickets.append({
+                'key': raw.get('key', ''),
+                'id': raw.get('id', ''),
+                'summary': fields.get('summary', ''),
+                'description': _extract_description(fields.get('description')),
+                'type': issue_type.get('name'),
+                'status': status.get('name'),
+                'priority': priority.get('name'),
+                'assignee': assignee.get('displayName') if assignee else None,
+                'assignee_id': assignee.get('accountId') if assignee else None,
+                'reporter': reporter.get('displayName') if reporter else None,
+                'created': fields.get('created'),
+                'updated': fields.get('updated'),
+                'fix_versions': [v.get('name', '') for v in fix_versions],
+                'components': [c.get('name', '') for c in components],
+                'labels': labels,
+                'url': f'{JIRA_URL}/browse/{raw.get("key", "")}',
+                # Extra traversal metadata from _get_related_data()
+                'depth': item.get('depth', 0),
+                'via': item.get('via'),
+                'relation': item.get('relation'),
+                'from_key': item.get('from_key'),
+            })
+
         return ToolResult.success(tickets, count=len(tickets), root_ticket=ticket_key)
-        
+
     except Exception as e:
         log.error(f'Failed to get related tickets: {e}')
         return ToolResult.failure(f'Failed to get related tickets for {ticket_key}: {e}')
+
+
+# ****************************************************************************************
+# New Tool Wrappers (expanded coverage of jira_utils.py)
+# ****************************************************************************************
+
+@tool(
+    name='list_filters',
+    description='List Jira filters, optionally filtered by owner or favourites only'
+)
+def list_filters(owner: Optional[str] = None, favourite_only: bool = False) -> ToolResult:
+    '''
+    List accessible Jira saved filters.
+
+    Delegates to jira_utils.list_filters() which queries the Jira REST API
+    for saved filters visible to the authenticated user.
+
+    Input:
+        owner: Optional owner display name or email to filter by ("me" for current user).
+        favourite_only: If True, return only the user's favourite/starred filters.
+
+    Output:
+        ToolResult with list of filter dicts containing id, name, jql, owner, etc.
+    '''
+    log.debug(f'list_filters(owner={owner}, favourite_only={favourite_only})')
+
+    try:
+        jira = get_jira()
+
+        # Delegate to jira_utils.list_filters — returns a list of raw filter dicts
+        filters = _ju_list_filters(jira, owner=owner, favourite_only=favourite_only)
+
+        # Normalise each filter into a clean dict for tool consumers
+        result = []
+        for f in (filters or []):
+            result.append({
+                'id': str(f.get('id', '')),
+                'name': f.get('name', ''),
+                'jql': f.get('jql', ''),
+                'owner': f.get('owner', {}).get('displayName', '') if f.get('owner') else '',
+                'favourite': f.get('favourite', False),
+                'description': f.get('description', '') or '',
+                'viewUrl': f.get('viewUrl', ''),
+            })
+
+        return ToolResult.success(result, count=len(result))
+
+    except Exception as e:
+        log.error(f'Failed to list filters: {e}')
+        return ToolResult.failure(f'Failed to list filters: {e}')
+
+
+@tool(
+    name='run_filter',
+    description='Run a Jira filter by ID and return matching tickets'
+)
+def run_filter(filter_id: str, limit: int = 50) -> ToolResult:
+    '''
+    Run a saved Jira filter and return matching tickets.
+
+    Delegates to jira_utils.run_filter() which fetches the filter's JQL
+    and executes it via run_jql_query().
+
+    Input:
+        filter_id: The saved filter ID (string or numeric).
+        limit: Maximum number of tickets to return (default 50).
+
+    Output:
+        ToolResult with list of matching ticket dicts.
+    '''
+    log.debug(f'run_filter(filter_id={filter_id}, limit={limit})')
+
+    try:
+        jira = get_jira()
+
+        # Delegate — returns list of raw issue dicts (REST API format).
+        # Do NOT pass dump_file/dump_format so data stays in memory.
+        issues = _ju_run_filter(jira, filter_id, limit=limit)
+
+        tickets = [_raw_issue_to_dict(iss) for iss in (issues or [])]
+
+        return ToolResult.success(tickets, count=len(tickets), filter_id=filter_id)
+
+    except Exception as e:
+        log.error(f'Failed to run filter {filter_id}: {e}')
+        return ToolResult.failure(f'Failed to run filter {filter_id}: {e}')
+
+
+@tool(
+    name='run_jql_query',
+    description='Run a JQL query and return matching tickets'
+)
+def run_jql_query(jql: str, limit: int = 50) -> ToolResult:
+    '''
+    Run an arbitrary JQL query and return matching tickets.
+
+    Delegates to jira_utils.run_jql_query() which handles pagination
+    against the Jira REST API.
+
+    Input:
+        jql: JQL query string.
+        limit: Maximum number of tickets to return (default 50).
+
+    Output:
+        ToolResult with list of matching ticket dicts.
+    '''
+    log.debug(f'run_jql_query(jql={jql}, limit={limit})')
+
+    try:
+        jira = get_jira()
+
+        # Delegate — returns list of raw issue dicts.
+        # Do NOT pass dump_file/dump_format so data stays in memory.
+        issues = _ju_run_jql_query(jira, jql, limit=limit)
+
+        tickets = [_raw_issue_to_dict(iss) for iss in (issues or [])]
+
+        return ToolResult.success(tickets, count=len(tickets), jql=jql)
+
+    except Exception as e:
+        log.error(f'Failed to run JQL query: {e}')
+        return ToolResult.failure(f'JQL query failed: {e}')
+
+
+@tool(
+    name='get_children_hierarchy',
+    description='Get child tickets in a hierarchy tree starting from a root ticket'
+)
+def get_children_hierarchy(root_key: str, limit: int = 100) -> ToolResult:
+    '''
+    Recursively retrieve the full child hierarchy for a given ticket.
+
+    Delegates to jira_utils.get_children_hierarchy() which performs
+    depth-first traversal of parent/child relationships.
+
+    Input:
+        root_key: The root ticket key to start from (e.g., 'PROJ-100').
+        limit: Maximum number of tickets to return including root (default 100).
+
+    Output:
+        ToolResult with list of ticket dicts including depth metadata.
+    '''
+    log.debug(f'get_children_hierarchy(root_key={root_key}, limit={limit})')
+
+    try:
+        jira = get_jira()
+
+        # Delegate — the function prints to stdout and returns None.
+        # We call the underlying _get_children_data helper directly for
+        # structured data, but it is a private function. Instead, we use
+        # the public API and also call the internal data helper if available.
+        from jira_utils import _get_children_data
+        ordered = _get_children_data(jira, root_key, limit=limit)
+
+        tickets = []
+        for item in ordered:
+            raw = item.get('issue', {})
+            fields = raw.get('fields', {})
+            issue_type = fields.get('issuetype', {}) or {}
+            status = fields.get('status', {}) or {}
+            priority = fields.get('priority', {}) or {}
+            assignee = fields.get('assignee', {}) or {}
+            fix_versions = fields.get('fixVersions', []) or []
+            components = fields.get('components', []) or []
+            labels = fields.get('labels', []) or []
+
+            tickets.append({
+                'key': raw.get('key', ''),
+                'id': raw.get('id', ''),
+                'summary': fields.get('summary', ''),
+                'type': issue_type.get('name'),
+                'status': status.get('name'),
+                'priority': priority.get('name'),
+                'assignee': assignee.get('displayName') if assignee else None,
+                'fix_versions': [v.get('name', '') for v in fix_versions],
+                'components': [c.get('name', '') for c in components],
+                'labels': labels,
+                'url': f'{JIRA_URL}/browse/{raw.get("key", "")}',
+                'depth': item.get('depth', 0),
+            })
+
+        return ToolResult.success(tickets, count=len(tickets), root_key=root_key)
+
+    except Exception as e:
+        log.error(f'Failed to get children hierarchy: {e}')
+        return ToolResult.failure(f'Failed to get children hierarchy for {root_key}: {e}')
+
+
+@tool(
+    name='get_project_versions',
+    description='Get all versions/releases defined for a Jira project'
+)
+def get_project_versions_tool(project_key: str) -> ToolResult:
+    '''
+    Get all versions (releases) defined for a Jira project.
+
+    Delegates to jira_utils.get_project_versions() which queries the
+    Jira REST API for project version metadata.
+
+    Input:
+        project_key: The project key (e.g., 'PROJ').
+
+    Output:
+        ToolResult with list of version dicts (id, name, released, releaseDate, etc.).
+    '''
+    log.debug(f'get_project_versions_tool(project_key={project_key})')
+
+    try:
+        jira = get_jira()
+
+        # get_project_versions prints to stdout and returns None.
+        # We fetch versions directly via the jira library for structured data.
+        versions = jira.project_versions(project_key)
+
+        result = []
+        for v in versions:
+            result.append({
+                'id': v.id,
+                'name': v.name,
+                'description': getattr(v, 'description', ''),
+                'released': getattr(v, 'released', False),
+                'releaseDate': getattr(v, 'releaseDate', None),
+                'startDate': getattr(v, 'startDate', None),
+                'archived': getattr(v, 'archived', False),
+            })
+
+        # Sort by release date then name (matching jira_utils pattern)
+        result.sort(key=lambda x: (
+            not x['released'],
+            x.get('releaseDate') or '9999-99-99',
+            x['name'],
+        ))
+
+        return ToolResult.success(result, count=len(result))
+
+    except Exception as e:
+        log.error(f'Failed to get project versions: {e}')
+        return ToolResult.failure(f'Failed to get versions for {project_key}: {e}')
+
+
+@tool(
+    name='get_ticket_totals',
+    description='Get ticket count totals for a project, grouped by status and issue type'
+)
+def get_ticket_totals(
+    project_key: str,
+    issue_types: Optional[str] = None,
+    statuses: Optional[str] = None
+) -> ToolResult:
+    '''
+    Get ticket count totals for a project.
+
+    Delegates to jira_utils.get_ticket_totals() which builds a JQL query
+    and uses the Jira approximate-count API for efficiency.
+
+    Input:
+        project_key: The project key (e.g., 'PROJ').
+        issue_types: Optional comma-separated issue type names to filter.
+        statuses: Optional comma-separated status names to filter.
+
+    Output:
+        ToolResult with ticket count information.
+    '''
+    log.debug(f'get_ticket_totals(project_key={project_key}, issue_types={issue_types}, statuses={statuses})')
+
+    try:
+        jira = get_jira()
+
+        # Parse comma-separated strings into lists for jira_utils
+        type_list = [t.strip() for t in issue_types.split(',')] if issue_types else None
+        status_list = [s.strip() for s in statuses.split(',')] if statuses else None
+
+        # get_ticket_totals prints to stdout and returns None.
+        # We replicate the count logic here for structured return data.
+        from jira_utils import normalize_issue_types, normalize_statuses, _build_status_jql
+        validate_project(jira, project_key)
+
+        normalized_types = normalize_issue_types(jira, project_key, type_list) if type_list else None
+        normalized_statuses = normalize_statuses(jira, status_list) if status_list else None
+
+        jql_parts = [f'project = "{project_key}"']
+        if normalized_types:
+            type_jql = ', '.join([f'"{t}"' for t in normalized_types])
+            jql_parts.append(f'issuetype IN ({type_jql})')
+        status_clause = _build_status_jql(normalized_statuses)
+        if status_clause:
+            jql_parts.append(status_clause)
+        jql = ' AND '.join(jql_parts).strip()
+
+        # Use the Jira approximate-count endpoint
+        from jira_utils import get_jira_credentials, JIRA_URL as _JIRA_URL
+        import requests
+        email, api_token = get_jira_credentials()
+        response = requests.post(
+            f'{_JIRA_URL}/rest/api/3/search/approximate-count',
+            auth=(email, api_token),
+            headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+            json={'jql': jql},
+        )
+        if response.status_code != 200:
+            raise Exception(f'Jira API error: {response.status_code} - {response.text}')
+
+        total_count = response.json().get('count', 0)
+
+        result = {
+            'project_key': project_key,
+            'total_count': total_count,
+            'jql': jql,
+            'issue_types': normalized_types,
+            'statuses': normalized_statuses,
+        }
+
+        return ToolResult.success(result)
+
+    except Exception as e:
+        log.error(f'Failed to get ticket totals: {e}')
+        return ToolResult.failure(f'Failed to get ticket totals for {project_key}: {e}')
+
+
+@tool(
+    name='list_dashboards',
+    description='List Jira dashboards, optionally filtered by owner'
+)
+def list_dashboards(owner: Optional[str] = None, shared: bool = False) -> ToolResult:
+    '''
+    List accessible Jira dashboards.
+
+    Delegates to jira_utils.list_dashboards() which queries the Jira
+    dashboard search REST API.
+
+    Input:
+        owner: Optional owner username/email to filter by ("me" for current user).
+        shared: If True, show only dashboards shared with current user.
+
+    Output:
+        ToolResult with list of dashboard dicts.
+    '''
+    log.debug(f'list_dashboards(owner={owner}, shared={shared})')
+
+    try:
+        jira = get_jira()
+
+        # list_dashboards prints to stdout and returns None.
+        # We replicate the API call for structured data.
+        from jira_utils import get_jira_credentials, JIRA_URL as _JIRA_URL
+        import requests
+        email, api_token = get_jira_credentials()
+
+        params = {'maxResults': 100}
+        if owner:
+            if owner.lower() == 'me':
+                params['accountId'] = 'me'
+            else:
+                params['owner'] = owner
+        if shared:
+            params['filter'] = 'sharedWithMe'
+
+        all_dashboards = []
+        start_at = 0
+
+        while True:
+            params['startAt'] = start_at
+            response = requests.get(
+                f'{_JIRA_URL}/rest/api/3/dashboard/search',
+                auth=(email, api_token),
+                headers={'Accept': 'application/json'},
+                params=params,
+            )
+            if response.status_code != 200:
+                raise Exception(f'Jira API error: {response.status_code} - {response.text}')
+
+            data = response.json()
+            dashboards = data.get('values', [])
+            all_dashboards.extend(dashboards)
+
+            total = data.get('total', 0)
+            if start_at + len(dashboards) >= total:
+                break
+            start_at += len(dashboards)
+
+        result = []
+        for d in all_dashboards:
+            owner_info = d.get('owner', {}) or {}
+            result.append({
+                'id': str(d.get('id', '')),
+                'name': d.get('name', ''),
+                'owner': owner_info.get('displayName', ''),
+                'isFavourite': d.get('isFavourite', False),
+                'view': d.get('view', ''),
+            })
+
+        return ToolResult.success(result, count=len(result))
+
+    except Exception as e:
+        log.error(f'Failed to list dashboards: {e}')
+        return ToolResult.failure(f'Failed to list dashboards: {e}')
+
+
+@tool(
+    name='get_dashboard',
+    description='Get details of a specific Jira dashboard by ID'
+)
+def get_dashboard(dashboard_id: str) -> ToolResult:
+    '''
+    Get details of a specific Jira dashboard.
+
+    Delegates to jira_utils.get_dashboard() which fetches dashboard
+    metadata from the Jira REST API.
+
+    Input:
+        dashboard_id: The dashboard ID (string or numeric).
+
+    Output:
+        ToolResult with dashboard detail dict.
+    '''
+    log.debug(f'get_dashboard(dashboard_id={dashboard_id})')
+
+    try:
+        jira = get_jira()
+
+        # get_dashboard prints to stdout and returns None.
+        # We call the REST API directly for structured data.
+        from jira_utils import get_jira_credentials, JIRA_URL as _JIRA_URL
+        import requests
+        email, api_token = get_jira_credentials()
+
+        response = requests.get(
+            f'{_JIRA_URL}/rest/api/3/dashboard/{dashboard_id}',
+            auth=(email, api_token),
+            headers={'Accept': 'application/json'},
+        )
+
+        if response.status_code == 404:
+            return ToolResult.failure(f'Dashboard {dashboard_id} not found')
+        if response.status_code != 200:
+            raise Exception(f'Jira API error: {response.status_code} - {response.text}')
+
+        d = response.json()
+        owner_info = d.get('owner', {}) or {}
+
+        result = {
+            'id': str(d.get('id', '')),
+            'name': d.get('name', ''),
+            'description': d.get('description', '') or '',
+            'owner': owner_info.get('displayName', ''),
+            'isFavourite': d.get('isFavourite', False),
+            'view': d.get('view', ''),
+            'sharePermissions': d.get('sharePermissions', []),
+        }
+
+        return ToolResult.success(result)
+
+    except Exception as e:
+        log.error(f'Failed to get dashboard {dashboard_id}: {e}')
+        return ToolResult.failure(f'Failed to get dashboard {dashboard_id}: {e}')
+
+
+@tool(
+    name='create_dashboard',
+    description='Create a new Jira dashboard'
+)
+def create_dashboard(name: str, description: str = '') -> ToolResult:
+    '''
+    Create a new Jira dashboard.
+
+    Delegates to jira_utils.create_dashboard() which POSTs to the
+    Jira REST API to create a dashboard.
+
+    Input:
+        name: Name for the new dashboard.
+        description: Optional description for the dashboard.
+
+    Output:
+        ToolResult with created dashboard details (id, name, view URL).
+    '''
+    log.debug(f'create_dashboard(name={name}, description={description})')
+
+    try:
+        jira = get_jira()
+
+        # create_dashboard prints to stdout and returns None.
+        # We call the REST API directly for structured return data.
+        from jira_utils import get_jira_credentials, JIRA_URL as _JIRA_URL
+        import requests
+        email, api_token = get_jira_credentials()
+
+        payload = {
+            'name': name,
+            'sharePermissions': [],
+        }
+        if description:
+            payload['description'] = description
+
+        response = requests.post(
+            f'{_JIRA_URL}/rest/api/3/dashboard',
+            auth=(email, api_token),
+            headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+            json=payload,
+        )
+
+        if response.status_code not in (200, 201):
+            raise Exception(f'Jira API error: {response.status_code} - {response.text}')
+
+        d = response.json()
+        result = {
+            'id': str(d.get('id', '')),
+            'name': d.get('name', ''),
+            'description': d.get('description', '') or '',
+            'view': d.get('view', ''),
+        }
+
+        log.info(f'Created dashboard: {result["id"]} - {result["name"]}')
+        return ToolResult.success(result)
+
+    except Exception as e:
+        log.error(f'Failed to create dashboard: {e}')
+        return ToolResult.failure(f'Failed to create dashboard "{name}": {e}')
+
+
+@tool(
+    name='bulk_update_tickets',
+    description='Bulk update tickets from a CSV file (set release, labels, etc.)'
+)
+def bulk_update_tickets(
+    input_file: str,
+    set_release: Optional[str] = None,
+    set_labels: Optional[str] = None
+) -> ToolResult:
+    '''
+    Bulk update tickets loaded from a CSV file.
+
+    Delegates to jira_utils.bulk_update_tickets() which reads ticket keys
+    from a CSV and applies the requested operations.
+
+    Input:
+        input_file: Path to the CSV file containing ticket keys.
+        set_release: Optional release/version name to set on all tickets.
+        set_labels: Optional comma-separated labels to set on tickets.
+
+    Output:
+        ToolResult confirming the bulk update operation.
+    '''
+    log.debug(f'bulk_update_tickets(input_file={input_file}, set_release={set_release}, set_labels={set_labels})')
+
+    try:
+        jira = get_jira()
+
+        # Validate input file exists
+        if not os.path.isfile(input_file):
+            return ToolResult.failure(f'Input file not found: {input_file}')
+
+        # Delegate to jira_utils.bulk_update_tickets.
+        # Note: dry_run=False to actually execute; the tool caller is
+        # responsible for confirming intent before invoking this tool.
+        _ju_bulk_update_tickets(
+            jira,
+            input_file,
+            set_release=set_release,
+            dry_run=False,
+        )
+
+        result = {
+            'input_file': input_file,
+            'set_release': set_release,
+            'set_labels': set_labels,
+            'status': 'completed',
+        }
+
+        return ToolResult.success(result)
+
+    except Exception as e:
+        log.error(f'Failed to bulk update tickets: {e}')
+        return ToolResult.failure(f'Bulk update failed: {e}')
 
 
 # ****************************************************************************************
@@ -809,6 +1411,44 @@ def _issue_to_dict(issue) -> Dict[str, Any]:
         'components': [c.name for c in components],
         'labels': labels,
         'url': f'{JIRA_URL}/browse/{issue.key}'
+    }
+
+
+def _raw_issue_to_dict(raw: dict) -> Dict[str, Any]:
+    '''
+    Convert a raw REST API issue dict (from run_jql_query / run_filter)
+    into the flat dict format used by ToolResult consumers.
+
+    Unlike _issue_to_dict() which works with jira-python Resource objects,
+    this helper operates on plain dicts returned by the REST API.
+    '''
+    fields = raw.get('fields', {}) or {}
+    issue_type = fields.get('issuetype', {}) or {}
+    status = fields.get('status', {}) or {}
+    priority = fields.get('priority', {}) or {}
+    assignee = fields.get('assignee', {}) or {}
+    reporter = fields.get('reporter', {}) or {}
+    fix_versions = fields.get('fixVersions', []) or []
+    components = fields.get('components', []) or []
+    labels = fields.get('labels', []) or []
+
+    return {
+        'key': raw.get('key', ''),
+        'id': raw.get('id', ''),
+        'summary': fields.get('summary', ''),
+        'description': _extract_description(fields.get('description')),
+        'type': issue_type.get('name'),
+        'status': status.get('name'),
+        'priority': priority.get('name'),
+        'assignee': assignee.get('displayName') if assignee else None,
+        'assignee_id': assignee.get('accountId') if assignee else None,
+        'reporter': reporter.get('displayName') if reporter else None,
+        'created': fields.get('created'),
+        'updated': fields.get('updated'),
+        'fix_versions': [v.get('name', '') for v in fix_versions],
+        'components': [c.get('name', '') for c in components],
+        'labels': labels,
+        'url': f'{JIRA_URL}/browse/{raw.get("key", "")}',
     }
 
 
@@ -931,3 +1571,55 @@ class JiraTools(BaseTool):
         hierarchy_depth: int = 3
     ) -> ToolResult:
         return get_related_tickets(ticket_key, hierarchy_depth)
+    
+    # --- New delegate methods for expanded tool coverage ---
+
+    @tool(description='List Jira filters, optionally filtered by owner or favourites')
+    def list_filters(self, owner: Optional[str] = None, favourite_only: bool = False) -> ToolResult:
+        return list_filters(owner, favourite_only)
+    
+    @tool(description='Run a Jira filter by ID and return matching tickets')
+    def run_filter(self, filter_id: str, limit: int = 50) -> ToolResult:
+        return run_filter(filter_id, limit)
+    
+    @tool(description='Run a JQL query and return matching tickets')
+    def run_jql_query(self, jql: str, limit: int = 50) -> ToolResult:
+        return run_jql_query(jql, limit)
+    
+    @tool(description='Get child tickets in a hierarchy tree from a root ticket')
+    def get_children_hierarchy(self, root_key: str, limit: int = 100) -> ToolResult:
+        return get_children_hierarchy(root_key, limit)
+    
+    @tool(description='Get all versions/releases defined for a Jira project')
+    def get_project_versions(self, project_key: str) -> ToolResult:
+        return get_project_versions_tool(project_key)
+    
+    @tool(description='Get ticket count totals for a project')
+    def get_ticket_totals(
+        self,
+        project_key: str,
+        issue_types: Optional[str] = None,
+        statuses: Optional[str] = None
+    ) -> ToolResult:
+        return get_ticket_totals(project_key, issue_types, statuses)
+    
+    @tool(description='List Jira dashboards, optionally filtered by owner')
+    def list_dashboards(self, owner: Optional[str] = None, shared: bool = False) -> ToolResult:
+        return list_dashboards(owner, shared)
+    
+    @tool(description='Get details of a specific Jira dashboard by ID')
+    def get_dashboard(self, dashboard_id: str) -> ToolResult:
+        return get_dashboard(dashboard_id)
+    
+    @tool(description='Create a new Jira dashboard')
+    def create_dashboard(self, name: str, description: str = '') -> ToolResult:
+        return create_dashboard(name, description)
+    
+    @tool(description='Bulk update tickets from a CSV file')
+    def bulk_update_tickets(
+        self,
+        input_file: str,
+        set_release: Optional[str] = None,
+        set_labels: Optional[str] = None
+    ) -> ToolResult:
+        return bulk_update_tickets(input_file, set_release, set_labels)

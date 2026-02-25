@@ -74,3 +74,31 @@ htmlcov/
 jql.txt
 *.csv
 !data/templates/*.json
+
+# Generated plan outputs (per-project run artifacts)
+plans/STLSB-*/
+plans/stlsb-*/
+plans/STLSB-redfish-rde-plan.json
+plans/STLSB-redfish-rde-plan.md
+plans/jira-agent-architecture-analysis.md
+plans/jira-agent-implementation-plan.md
+
+# Generated artifacts at repo root
+feature_plan.json
+feature_plan.md
+rde_project_plan.json
+rde_project_plan.md
+llm_output.md
+redfish_prompt.md
+RedfishRDE.md
+concat_output.xlsx
+my_map.xlsx
+*.xlsx
+!data/templates/*.xlsx
+
+# Credentials / env variants
+.env_prod
+
+# Shell scripts (user-local)
+go.sh
+jenkins_bug_report.sh

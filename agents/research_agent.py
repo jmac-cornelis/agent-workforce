@@ -165,8 +165,9 @@ class ResearchAgent(BaseAgent):
         # Build the user prompt that drives the LLM + tool loop
         user_prompt = self._build_research_prompt(feature_request, doc_paths)
 
-        # Run the ReAct loop (LLM calls tools, observes results, repeats)
-        response = self._run_with_tools(user_prompt)
+        # Run the ReAct loop (LLM calls tools, observes results, repeats).
+        # Pass through any timeout set by the orchestrator.
+        response = self._run_with_tools(user_prompt, timeout=self._timeout)
 
         # Parse the LLM's final output into a structured ResearchReport
         report = self._parse_report(response.content)
