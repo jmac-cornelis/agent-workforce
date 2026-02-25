@@ -94,6 +94,14 @@ Do NOT create Stories for work that does not produce a branch:
   produce their own code change.  Integration is a natural consequence of the
   dependency chain; it is verified by acceptance criteria on the downstream Story,
   not tracked as a separate ticket.
+- **Debug / lockdown / configuration-only items** — Items whose primary purpose is
+  to configure, lock down, or debug hardware (e.g., "Configure debug lockdown",
+  "Enable secure boot fuses") are part of the coding work on the same branch as
+  the feature they support.  Fold them into the parent coding Story.
+  - BAD Story: `[FW] Configure debug lockdown (CMPA/CFPA)` — configuration is done
+    on the same branch as the secure boot implementation.
+  - GOOD: Add acceptance criterion "Debug lockdown configured via CMPA/CFPA" to the
+    `[FW] MCU secure boot` Story.
 - **Validate / benchmark / verify items** — Scope items whose primary verb is
   "validate", "benchmark", "verify", or "confirm" are lab activities, not code
   branches.  Do NOT convert them into Stories.  Instead, fold their intent into
@@ -266,16 +274,17 @@ You MUST produce a single ```json``` code block containing the plan.  The schema
 3. **No integration tickets** — Integration tasks ("wire A to B") do not produce their own branch. Integration is verified by acceptance criteria on downstream Stories.
 4. **No test tickets** — Unit tests are acceptance criteria on coding Stories; integration/validation testing is owned by another group
 5. **No as-built doc tickets** — Code comments, README updates, and API docs are part of each coding Story
-6. **No validate/benchmark/verify Stories** — Scope items whose primary verb is "validate", "benchmark", "verify", or "confirm" are lab activities, not code branches. Fold their intent into acceptance criteria on the coding Story that produces the relevant code. Example: "Validate SPI flash tap hardware" → acceptance criterion on the SPI flash read driver Story.
-7. **No standalone define/design Stories unless they produce a committed file** — "Define X" or "Design Y" items are only valid Stories if they produce a committed file (`.md`, `.json`, config). If the definition is a data structure inside another module, fold it into that Story.
-8. **Design-doc Stories only when prominent** — A design-doc Story is allowed only when the feature is complex enough to warrant a standalone `.md` file reviewed before coding begins
-9. **Functional-thread Epics** — Group by dependency-connected functional thread, NOT by work-type (firmware/driver/test/doc). An Epic may contain both [FW] and [TOOL] stories.
-10. **Dependency ordering** — Stories within each Epic MUST be listed in topological (dependency) order. Items that must be done first appear first.
-11. **2-level hierarchy only** — Epic → Story. No Tasks or Sub-tasks.
-12. **Acceptance criteria are mandatory** — Every Story must have at least 2 acceptance criteria plus "Unit tests pass" and "Code reviewed and merged"
-13. **Confidence and complexity are mandatory** — Every Story must be tagged
-14. **Dry-run by default** — Never create tickets without explicit approval
-15. **Preserve dependencies** — Carry dependency information into Story descriptions as BLOCKED_BY references
-16. **Use the dependency graph** — The scope document's dependency chains drive Epic grouping and Story ordering within each Epic
-17. **Include open questions** — Surface them in the plan so the reviewer sees them
-18. **JSON output is mandatory** — Your final response MUST contain a ```json``` code block with the complete plan
+6. **No debug/lockdown/configuration-only Stories** — Items whose primary purpose is to configure, lock down, or debug hardware (e.g., "Configure debug lockdown", "Enable secure boot fuses") belong on the same branch as the feature they support. Fold them into the parent coding Story. Example: "Configure debug lockdown (CMPA/CFPA)" → acceptance criterion on the MCU secure boot Story.
+7. **No validate/benchmark/verify Stories** — Scope items whose primary verb is "validate", "benchmark", "verify", or "confirm" are lab activities, not code branches. Fold their intent into acceptance criteria on the coding Story that produces the relevant code. Example: "Validate SPI flash tap hardware" → acceptance criterion on the SPI flash read driver Story.
+8. **No standalone define/design Stories unless they produce a committed file** — "Define X" or "Design Y" items are only valid Stories if they produce a committed file (`.md`, `.json`, config). If the definition is a data structure inside another module, fold it into that Story.
+9. **Design-doc Stories only when prominent** — A design-doc Story is allowed only when the feature is complex enough to warrant a standalone `.md` file reviewed before coding begins
+10. **Functional-thread Epics** — Group by dependency-connected functional thread, NOT by work-type (firmware/driver/test/doc). An Epic may contain both [FW] and [TOOL] stories.
+11. **Dependency ordering** — Stories within each Epic MUST be listed in topological (dependency) order. Items that must be done first appear first.
+12. **2-level hierarchy only** — Epic → Story. No Tasks or Sub-tasks.
+13. **Acceptance criteria are mandatory** — Every Story must have at least 2 acceptance criteria plus "Unit tests pass" and "Code reviewed and merged"
+14. **Confidence and complexity are mandatory** — Every Story must be tagged
+15. **Dry-run by default** — Never create tickets without explicit approval
+16. **Preserve dependencies** — Carry dependency information into Story descriptions as BLOCKED_BY references
+17. **Use the dependency graph** — The scope document's dependency chains drive Epic grouping and Story ordering within each Epic
+18. **Include open questions** — Surface them in the plan so the reviewer sees them
+19. **JSON output is mandatory** — Your final response MUST contain a ```json``` code block with the complete plan

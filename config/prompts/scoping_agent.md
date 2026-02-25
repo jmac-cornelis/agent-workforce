@@ -181,7 +181,15 @@ Write your scoping analysis narrative in clear Markdown. After the narrative, yo
 6. **Design docs only when prominent** — A design-documentation scope item is allowed only when the feature is complex enough to warrant a standalone `.md` file in the repo that should be reviewed before coding begins.
 7. **No integration tasks** — Do NOT create "integrate A with B" scope items.  Integration is a natural consequence of the dependency chain and is verified by acceptance criteria on the downstream item.
 8. **No integration/validation test items** — Integration and validation testing is owned by a separate QA/validation group and is NOT scoped here.
-9. **No validate/benchmark/verify-only items** — Items whose primary purpose is to
+9. **No debug/lockdown/configuration-only items** — Items whose primary purpose is
+   to configure, lock down, or debug hardware or software (e.g., "Configure debug
+   lockdown", "Enable secure boot fuses") are NOT standalone scope items.  They are
+   part of the coding work on the same branch as the feature they support.  Fold
+   them into the parent coding item's description and acceptance criteria.
+   - BAD: "Configure debug lockdown (CMPA/CFPA)" as a standalone scope item.
+   - GOOD: Add acceptance criterion "Debug lockdown configured via CMPA/CFPA" to the
+     "MCU secure boot" scope item.
+10. **No validate/benchmark/verify-only items** — Items whose primary purpose is to
    validate, benchmark, or verify hardware or software are NOT scope items.  They do
    not produce committed source code.  Instead, fold the validation into the
    acceptance criteria of the coding item that produces the relevant code.
@@ -194,7 +202,7 @@ Write your scoping analysis narrative in clear Markdown. After the narrative, yo
    - BAD: "All 7 measurement indices populated & verified" — verification, not code.
    - GOOD: Add acceptance criterion "All 7 measurement indices populated and return
      correct hashes" to the "Measurement engine" scope item.
-10. **No "define" or "design" items unless they produce a committed file** — Items
+11. **No "define" or "design" items unless they produce a committed file** — Items
     like "Define measurement manifest" or "Design CA hierarchy" are only valid if
     they produce a committed `.md`, `.json`, or config file in the repo.  If the
     "definition" is just an input to another coding item, fold it into that item's
@@ -203,8 +211,8 @@ Write your scoping analysis narrative in clear Markdown. After the narrative, yo
       just a data structure inside the measurement engine code.
     - GOOD: "Define measurement manifest" as a standalone item ONLY if it produces a
       committed `measurement_manifest.json` or `measurement_manifest.md` file.
-11. **Be honest about unknowns** — LOW confidence is better than fabricated HIGH confidence
-12. **Ask, don't assume** — If a decision could go multiple ways, create a BLOCKING question
-13. **Consider error paths** — Not just the happy path; what happens when things go wrong?
-14. **Consider upgrade paths** — How does existing firmware/software get updated?
-15. **Consider backward compatibility** — Will this break existing functionality?
+12. **Be honest about unknowns** — LOW confidence is better than fabricated HIGH confidence
+13. **Ask, don't assume** — If a decision could go multiple ways, create a BLOCKING question
+14. **Consider error paths** — Not just the happy path; what happens when things go wrong?
+15. **Consider upgrade paths** — How does existing firmware/software get updated?
+16. **Consider backward compatibility** — Will this break existing functionality?
