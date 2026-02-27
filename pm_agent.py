@@ -1444,6 +1444,7 @@ def _workflow_feature_plan(args):
     project_key = args.project
     plan_file = getattr(args, 'plan_file', None)
     execute = getattr(args, 'execute', False)
+    initiative_key = getattr(args, 'initiative', None)
 
     # ------------------------------------------------------------------
     # Fast path: --plan-file loads a previously generated plan.json and
@@ -1452,9 +1453,11 @@ def _workflow_feature_plan(args):
     # ------------------------------------------------------------------
     if plan_file:
         output(f'Feature Planning Workflow — Execute from Plan File')
-        output(f'  Project:   {project_key}')
-        output(f'  Plan file: {plan_file}')
-        output(f'  Execute:   {"YES — will create Jira tickets" if execute else "DRY RUN"}')
+        output(f'  Project:      {project_key}')
+        output(f'  Plan file:    {plan_file}')
+        if initiative_key:
+            output(f'  Initiative:   {initiative_key}')
+        output(f'  Execute:      {"YES — will create Jira tickets" if execute else "DRY RUN"}')
         output('')
 
         try:
@@ -1467,6 +1470,7 @@ def _workflow_feature_plan(args):
                 'mode': 'execute-plan',
                 'plan_file': plan_file,
                 'execute': execute,
+                'initiative_key': initiative_key,
                 'timeout': getattr(args, 'timeout', None),
             })
 
@@ -1561,6 +1565,8 @@ def _workflow_feature_plan(args):
         output(f'  Docs:     {len(doc_paths)} file(s)')
         for dp in doc_paths:
             output(f'            - {dp}')
+    if initiative_key:
+        output(f'  Initiative: {initiative_key}')
     output(f'  Execute:  {"YES — will create Jira tickets" if execute else "DRY RUN"}')
     output('')
 
@@ -1576,6 +1582,7 @@ def _workflow_feature_plan(args):
             'doc_paths': doc_paths,
             'mode': mode,
             'execute': execute,
+            'initiative_key': initiative_key,
             'scope_doc': scope_doc,
             'output_dir': output_dir,
             'timeout': args.timeout,
@@ -1778,6 +1785,7 @@ Examples:
   %(prog)s --env .env_sandbox --workflow feature-plan --project STLSB --feature "Redfish RDE" --scope-doc RedfishRDE.md
   %(prog)s --workflow feature-plan --project STLSB --plan-file plans/STLSB-redfish/plan.json
   %(prog)s --workflow feature-plan --project STLSB --plan-file plans/STLSB-redfish/plan.json --execute
+  %(prog)s --workflow feature-plan --project STL --plan-file plan.json --initiative STL-74071 --execute
         '''
     )
     
@@ -1859,6 +1867,12 @@ Examples:
                             'Loads the plan and prints a summary (dry-run). '
                             'Combine with --execute to push tickets into Jira. '
                             'Skips all agentic phases. '
+                            'Used by --workflow feature-plan.')
+    parser.add_argument('--initiative', default=None, metavar='KEY',
+                       help='Existing Initiative ticket key (e.g. STL-74071). '
+                            'When provided with --execute, each created Epic '
+                            'is linked as a child of this Initiative. '
+                            'The ticket must exist and be of type Initiative. '
                             'Used by --workflow feature-plan.')
     parser.add_argument('--execute', action='store_true',
                        help='Actually create Jira tickets (default: dry-run). '
@@ -2079,6 +2093,9 @@ Examples:
                 log.info(f'+  Docs: {len(args.docs)} file(s)')
                 for dp in args.docs:
                     log.info(f'+    - {dp}')
+            initiative_arg = getattr(args, 'initiative', None)
+            if initiative_arg:
+                log.info(f'+  Initiative: {initiative_arg}')
             if args.execute:
                 log.info(f'+  Execute: YES (will create Jira tickets)')
             else:

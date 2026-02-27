@@ -579,13 +579,45 @@ python3 pm_agent.py --workflow bug-report --filter "My Filter" --prompt my_promp
 | 5 | Send JSON + prompt to LLM for analysis | `llm_output.md` + extracted files |
 | 6 | Convert any extracted CSV to styled Excel | `<name>.xlsx` |
 
+#### Feature Plan Workflow
+
+Generate a Jira project plan (Epics + Stories) from a feature description or scope document:
+
+```bash
+# Full agentic workflow (research → HW analysis → scoping → plan)
+pm_agent --workflow feature-plan --project STLSB --feature "Add PQC SPDM attestation"
+
+# From a rich feature prompt file
+pm_agent --workflow feature-plan --project STLSB --feature-prompt SPDM_1.2_Attestation.md
+
+# Skip to plan generation from a pre-existing scope document
+pm_agent --workflow feature-plan --project STLSB --feature "SPDM" --scope-doc scope.json
+
+# Execute from a previously generated plan.json (dry-run)
+pm_agent --workflow feature-plan --project STLSB --plan-file plans/STLSB-spdm/plan.json
+
+# Execute and create tickets in Jira
+pm_agent --workflow feature-plan --project STLSB --plan-file plans/STLSB-spdm/plan.json --execute
+
+# Execute and attach all Epics to an existing Initiative ticket
+pm_agent --workflow feature-plan --project STL --plan-file plan.json --initiative STL-74071 --execute
+```
+
 #### Workflow Flags
 
 | Flag | Description |
 |------|-------------|
-| `--workflow NAME` | Workflow to run (currently: `bug-report`) |
+| `--workflow NAME` | Workflow to run (`bug-report`, `feature-plan`) |
 | `--filter NAME` | Jira filter name to look up (required for `bug-report`) |
 | `--prompt FILE` | LLM prompt file (default: `config/prompts/cn5000_bugs_clean.md`) |
+| `--feature TEXT` | Feature description string (for `feature-plan`) |
+| `--feature-prompt FILE` | Rich feature prompt file — takes precedence over `--feature` |
+| `--scope-doc FILE` | Pre-existing scope document (JSON/MD/PDF/DOCX) — skips research/HW/scoping phases |
+| `--plan-file FILE` | Previously generated `plan.json` — skips all agentic phases |
+| `--initiative KEY` | Existing Initiative ticket key (e.g. `STL-74071`). Created Epics become children of this Initiative. Must be type Initiative. |
+| `--execute` | Actually create Jira tickets (default: dry-run) |
+| `--docs FILE [FILE ...]` | Spec documents / datasheets for research phase |
+| `--output-dir DIR` | Root directory for output (default: `plans/<PROJECT>-<slug>/`) |
 | `--timeout SECS` | LLM request timeout in seconds |
 | `--limit N` | Max tickets to retrieve |
 | `--output FILE` | Override output filename |

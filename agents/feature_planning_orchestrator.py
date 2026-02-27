@@ -385,9 +385,13 @@ class FeaturePlanningOrchestrator(BaseAgent):
         execute = input_data.get('execute', False)
         scope_doc = input_data.get('scope_doc', '')
         plan_file = input_data.get('plan_file', '')
+        initiative_key = input_data.get('initiative_key', '')
 
         # Extract timeout from CLI and store for sub-agent propagation
         self._timeout = input_data.get('timeout', None)
+
+        # Store initiative_key on the instance so _phase_execution() can use it
+        self._initiative_key = initiative_key or ''
 
         # Allow callers to set the output directory at run-time
         output_dir = input_data.get('output_dir', '')
@@ -548,14 +552,20 @@ class FeaturePlanningOrchestrator(BaseAgent):
         n_stories = plan_data.get('total_stories', 0)
         n_tickets = plan_data.get('total_tickets', n_epics + n_stories)
 
+        initiative_key = getattr(self, '_initiative_key', '')
+
         summary_lines = [
             f'Plan loaded from: {plan_file}',
-            f'  Project:  {plan_data["project_key"]}',
-            f'  Feature:  {feature_name}',
-            f'  Epics:    {n_epics}',
-            f'  Stories:  {n_stories}',
-            f'  Tickets:  {n_tickets}',
+            f'  Project:     {plan_data["project_key"]}',
+            f'  Feature:     {feature_name}',
         ]
+        if initiative_key:
+            summary_lines.append(f'  Initiative:  {initiative_key}')
+        summary_lines.extend([
+            f'  Epics:       {n_epics}',
+            f'  Stories:     {n_stories}',
+            f'  Tickets:     {n_tickets}',
+        ])
 
         # List each epic + story count
         for epic in plan_data.get('epics', []):
@@ -1400,6 +1410,34 @@ class FeaturePlanningOrchestrator(BaseAgent):
             self.state.errors.append(f'Plan generation exception: {e}')
             return f'PHASE 4: Jira Plan Generation — ERROR\n  {e}'
 
+    def _validate_initiative(self, initiative_key: str) -> Optional[str]:
+        '''
+        Validate that the initiative_key exists in Jira and is of type Initiative.
+
+        Input:
+            initiative_key: The Jira ticket key to validate (e.g. STL-74071).
+
+        Output:
+            None if valid, or an error message string if invalid.
+        '''
+        if not initiative_key:
+            return None  # no initiative requested — nothing to validate
+
+        try:
+            from tools.jira_tools import get_jira
+            jira = get_jira()
+            issue = jira.issue(initiative_key)
+            issue_type = issue.fields.issuetype.name
+            if issue_type.lower() != 'initiative':
+                return (
+                    f'Ticket {initiative_key} is of type "{issue_type}", '
+                    f'not "Initiative". Please provide an Initiative ticket key.'
+                )
+            log.info(f'Validated initiative: {initiative_key} ({issue.fields.summary})')
+            return None
+        except Exception as e:
+            return f'Failed to validate initiative {initiative_key}: {e}'
+
     def _phase_execution(self) -> AgentResponse:
         '''Phase 6: Create tickets in Jira.'''
         self.state.current_phase = 'execution'
@@ -1413,12 +1451,20 @@ class FeaturePlanningOrchestrator(BaseAgent):
         except ImportError:
             return AgentResponse.error_response('jira_tools not available')
 
+        # Validate the initiative ticket if one was requested
+        initiative_key = getattr(self, '_initiative_key', '')
+        if initiative_key:
+            validation_error = self._validate_initiative(initiative_key)
+            if validation_error:
+                return AgentResponse.error_response(validation_error)
+
         project_key = plan.get('project_key', '')
         created_tickets: List[Dict[str, Any]] = []
         errors: List[str] = []
 
         for epic_data in plan.get('epics', []):
-            # Create the Epic
+            # Create the Epic — if an initiative_key is provided, set it as the
+            # parent so the Epic appears as a child of the Initiative in Jira.
             try:
                 epic_result = create_ticket(
                     project_key=project_key,
@@ -1427,6 +1473,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
                     description=epic_data.get('description', ''),
                     components=epic_data.get('components'),
                     labels=epic_data.get('labels'),
+                    parent_key=initiative_key or None,
                 )
 
                 epic_key = None
@@ -1436,8 +1483,10 @@ class FeaturePlanningOrchestrator(BaseAgent):
                         'type': 'Epic',
                         'key': epic_key,
                         'summary': epic_data.get('summary', ''),
+                        'parent': initiative_key if initiative_key else None,
                     })
-                    log.info(f'Created Epic: {epic_key}')
+                    log.info(f'Created Epic: {epic_key}'
+                             f'{" under " + initiative_key if initiative_key else ""}')
                 else:
                     error = getattr(epic_result, 'error', str(epic_result))
                     errors.append(f"Epic '{epic_data.get('summary', '')}': {error}")
@@ -1486,8 +1535,10 @@ class FeaturePlanningOrchestrator(BaseAgent):
             'PHASE 6: Jira Execution — COMPLETE',
             f'  Created: {len(created_tickets)} tickets',
             f'  Errors: {len(errors)}',
-            '',
         ]
+        if initiative_key:
+            lines.append(f'  Initiative: {initiative_key} (Epics linked as children)')
+        lines.append('')
 
         if created_tickets:
             lines.append('Created Tickets:')
