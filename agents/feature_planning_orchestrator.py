@@ -1449,6 +1449,10 @@ class FeaturePlanningOrchestrator(BaseAgent):
         If self._initiative_key is set, validate it.  Otherwise create a new
         Initiative ticket using the plan's feature_name as summary.
 
+        If the Initiative issue type does not exist in the target project,
+        the method returns ('', None) — i.e. no error — and logs a warning.
+        Epics will be created without a parent Initiative in that case.
+
         Input:
             project_key:  Jira project key (e.g. STL).
             feature_name: Human-readable feature name for the Initiative summary.
@@ -1456,6 +1460,8 @@ class FeaturePlanningOrchestrator(BaseAgent):
         Output:
             (initiative_key, error_message) — on success error_message is None;
             on failure initiative_key is '' and error_message describes the problem.
+            When the Initiative type is unavailable, initiative_key is '' and
+            error_message is None (graceful degradation).
         '''
         initiative_key = getattr(self, '_initiative_key', '')
 
@@ -1491,11 +1497,62 @@ class FeaturePlanningOrchestrator(BaseAgent):
                 self._initiative_key = new_key
                 return (new_key, None)
             else:
-                error = getattr(result, 'error', str(result))
-                return ('', f'Failed to create Initiative: {error}')
+                error_msg = getattr(result, 'error', str(result))
+                if self._is_invalid_issue_type_error(error_msg):
+                    return self._warn_initiative_unavailable(project_key, error_msg)
+                return ('', f'Failed to create Initiative: {error_msg}')
 
         except Exception as e:
+            if self._is_invalid_issue_type_error(str(e)):
+                return self._warn_initiative_unavailable(project_key, str(e))
             return ('', f'Failed to create Initiative: {e}')
+
+    @staticmethod
+    def _is_invalid_issue_type_error(msg: str) -> bool:
+        '''
+        Detect Jira errors indicating the issue type does not exist.
+
+        Jira returns various phrasings depending on version/config:
+          - "The issue type selected is invalid."
+          - "valid issue type is required"
+          - "issue type ... not found"
+          - "is not valid for project"
+
+        Input:
+            msg: Error message string from Jira API or ToolResult.
+
+        Output:
+            True if the error indicates an invalid/missing issue type.
+        '''
+        _lower = (msg or '').lower()
+        # Match common Jira error patterns for invalid issue type
+        if 'issue type' in _lower or 'issuetype' in _lower:
+            for phrase in ('invalid', 'not found', 'not valid', 'is required',
+                           'does not exist', 'not available'):
+                if phrase in _lower:
+                    return True
+        return False
+
+    def _warn_initiative_unavailable(self, project_key: str, detail: str) -> tuple:
+        '''
+        Log a warning that Initiative type is unavailable and return a
+        graceful (no-error) tuple so execution continues without an Initiative.
+
+        Input:
+            project_key: The Jira project key.
+            detail:      The original error message for context.
+
+        Output:
+            ('', None) — empty initiative key, no error.
+        '''
+        warning = (
+            f'WARNING: Initiative issue type is not available in '
+            f'project {project_key}. Epics will be created without '
+            f'a parent Initiative. ({detail})'
+        )
+        log.warning(warning)
+        self._initiative_warning = warning
+        return ('', None)
 
     def _phase_execution(self) -> AgentResponse:
         '''Phase 6: Create tickets in Jira.'''
@@ -1602,14 +1659,21 @@ class FeaturePlanningOrchestrator(BaseAgent):
 
         # Format results
         was_auto = not getattr(self, '_initiative_was_supplied', False)
+        initiative_warning = getattr(self, '_initiative_warning', '')
         lines = [
             'PHASE 6: Jira Execution — COMPLETE',
             f'  Created: {len(created_tickets)} tickets',
             f'  Errors: {len(errors)}',
-            f'  Initiative: {initiative_key}'
-            f'{" (auto-created)" if was_auto else " (supplied)"}'
-            f' — Epics linked as children',
         ]
+        if initiative_key:
+            lines.append(
+                f'  Initiative: {initiative_key}'
+                f'{" (auto-created)" if was_auto else " (supplied)"}'
+                f' — Epics linked as children'
+            )
+        elif initiative_warning:
+            # Initiative type was unavailable — Epics created without parent
+            lines.append(f'  Initiative: SKIPPED — {initiative_warning}')
         lines.append('')
 
         if created_tickets:
