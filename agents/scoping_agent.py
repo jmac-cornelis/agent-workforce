@@ -29,15 +29,6 @@ from agents.feature_planning_models import (
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
 
-# ---------------------------------------------------------------------------
-# Default system instruction
-# ---------------------------------------------------------------------------
-
-SCOPING_INSTRUCTION = '''You are a Scoping Agent for Cornelis Networks — an expert
-embedded software/firmware engineer. Given research findings and a hardware profile,
-define and scope all SW/FW work needed. Assign confidence levels and complexity
-estimates. Identify dependencies and open questions. Never fabricate information.
-'''
 
 
 class ScopingAgent(BaseAgent):
@@ -55,7 +46,14 @@ class ScopingAgent(BaseAgent):
 
         Registers knowledge tools for reference lookups during scoping.
         '''
-        instruction = self._load_prompt_file() or SCOPING_INSTRUCTION
+        # Load the system prompt from config/prompts/scoping_agent.md.
+        # No hardcoded fallback — the external file is the sole source.
+        instruction = self._load_prompt_file()
+        if not instruction:
+            raise FileNotFoundError(
+                'config/prompts/scoping_agent.md is required but not found. '
+                'The Scoping Agent has no hardcoded fallback prompt.'
+            )
 
         config = AgentConfig(
             name='scoping_agent',

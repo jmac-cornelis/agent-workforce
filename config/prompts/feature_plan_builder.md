@@ -274,6 +274,8 @@ You MUST produce a single ```json``` code block containing the plan.  The schema
 2. **Combine small items** — Scope items that will naturally land in the same branch (same files, same module, too small for a separate PR) should be combined into a single Story. Use ~70% confidence engineering judgment.
 3. **No integration tickets** — Integration tasks ("wire A to B") do not produce their own branch. Integration is verified by acceptance criteria on downstream Stories.
 4. **No test tickets** — Unit tests are acceptance criteria on coding Stories; integration/validation testing is owned by another group
+4a. **No test tool or harness tickets** - Test tools and harnesses required by the development effort are assumed to be included in the development tasks themselves
+4b. **EXCEPTION to the tool rule** - If the tool IS the point of the project, for example `ethtool`, then we include the tool development. 
 5. **No as-built doc tickets** — Code comments, README updates, and API docs are part of each coding Story
 6. **No debug/lockdown/configuration-only Stories** — Items whose primary purpose is to configure, lock down, or debug hardware (e.g., "Configure debug lockdown", "Enable secure boot fuses") belong on the same branch as the feature they support. Fold them into the parent coding Story. Example: "Configure debug lockdown (CMPA/CFPA)" → acceptance criterion on the MCU secure boot Story.
 7. **No validate/benchmark/verify Stories** — Scope items whose primary verb is "validate", "benchmark", "verify", or "confirm" are lab activities, not code branches. Fold their intent into acceptance criteria on the coding Story that produces the relevant code. Example: "Validate SPI flash tap hardware" → acceptance criterion on the SPI flash read driver Story.

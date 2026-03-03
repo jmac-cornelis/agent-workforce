@@ -26,23 +26,6 @@ from agents.feature_planning_models import (
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
 
-# ---------------------------------------------------------------------------
-# Default system instruction (loaded from config/prompts/hardware_analyst.md
-# at runtime if available; this is the fallback).
-# ---------------------------------------------------------------------------
-
-HARDWARE_ANALYST_INSTRUCTION = '''You are a Hardware Analyst Agent for Cornelis Networks.
-
-Given research findings about a new feature, build a deep understanding of the
-target hardware product:
-1. Map the hardware architecture (components, buses, interfaces)
-2. Catalog existing firmware, drivers, and tools
-3. Identify integration points for the new feature
-4. Flag knowledge gaps and request missing documentation
-
-Think like an embedded systems engineer. Be specific about interfaces and
-protocols. Distinguish known facts from inferences.
-'''
 
 
 class HardwareAnalystAgent(BaseAgent):
@@ -59,7 +42,14 @@ class HardwareAnalystAgent(BaseAgent):
 
         Registers Jira, knowledge, MCP, and web search tools.
         '''
-        instruction = self._load_prompt_file() or HARDWARE_ANALYST_INSTRUCTION
+        # Load the system prompt from config/prompts/hardware_analyst.md.
+        # No hardcoded fallback — the external file is the sole source.
+        instruction = self._load_prompt_file()
+        if not instruction:
+            raise FileNotFoundError(
+                'config/prompts/hardware_analyst.md is required but not found. '
+                'The Hardware Analyst Agent has no hardcoded fallback prompt.'
+            )
 
         config = AgentConfig(
             name='hardware_analyst',

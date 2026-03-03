@@ -23,20 +23,6 @@ from agents.feature_planning_models import FeaturePlanningState
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
 
-# ---------------------------------------------------------------------------
-# Default system instruction
-# ---------------------------------------------------------------------------
-
-ORCHESTRATOR_INSTRUCTION = '''You are the Feature Planning Orchestrator for Cornelis Networks.
-
-You coordinate a multi-phase workflow that takes a high-level feature request
-and produces a complete Jira project plan with Epics and Stories.
-
-Phases: Research → Hardware Analysis → Scoping → Plan Building → Review → Execute.
-
-Always explain what you're doing. Never create Jira tickets without approval.
-Be transparent about confidence levels and unknowns.
-'''
 
 
 class FeaturePlanningOrchestrator(BaseAgent):
@@ -56,7 +42,15 @@ class FeaturePlanningOrchestrator(BaseAgent):
             output_dir: Optional directory for intermediate/debug files.
                         If empty, intermediate files are not saved.
         '''
-        instruction = self._load_prompt_file() or ORCHESTRATOR_INSTRUCTION
+        # Load the system prompt from config/prompts/feature_planning_orchestrator.md.
+        # No hardcoded fallback — the external file is the sole source.
+        instruction = self._load_prompt_file()
+        if not instruction:
+            raise FileNotFoundError(
+                'config/prompts/feature_planning_orchestrator.md is required but '
+                'not found. The Feature Planning Orchestrator has no hardcoded '
+                'fallback prompt.'
+            )
 
         config = AgentConfig(
             name='feature_planning_orchestrator',
@@ -148,6 +142,20 @@ class FeaturePlanningOrchestrator(BaseAgent):
             except Exception as e:
                 log.warning(f'Failed to load orchestrator prompt: {e}')
         return None
+
+    @staticmethod
+    def _load_scope_parser_prompt() -> str:
+        '''Load the scope document parser prompt from config/prompts/.'''
+        prompt_path = os.path.join('config', 'prompts', 'scope_document_parser.md')
+        if os.path.exists(prompt_path):
+            try:
+                with open(prompt_path, 'r', encoding='utf-8') as f:
+                    return f.read().strip()
+            except Exception as e:
+                log.warning(f'Failed to load scope document parser prompt: {e}')
+        raise FileNotFoundError(
+            'config/prompts/scope_document_parser.md is required but not found.'
+        )
 
     # ------------------------------------------------------------------
     # Intermediate / debug file helpers
@@ -861,41 +869,10 @@ class FeaturePlanningOrchestrator(BaseAgent):
 
         log.info(f'Parsing scope text via LLM ({len(text)} chars from {source})')
 
-        # Build the LLM prompt
-        parse_prompt = (
-            'You are given a technical scoping document for a Cornelis Networks '
-            'feature.  Parse it into a structured JSON object with this schema:\n\n'
-            '```json\n'
-            '{\n'
-            '  "feature_name": "short name",\n'
-            '  "summary": "executive summary",\n'
-            '  "firmware_items": [ { "title": "...", "description": "...", '
-            '"category": "firmware", "complexity": "S|M|L|XL", '
-            '"confidence": "high|medium|low", "dependencies": [], '
-            '"rationale": "...", "acceptance_criteria": ["..."] } ],\n'
-            '  "driver_items": [ ... ],\n'
-            '  "tool_items": [ ... ],\n'
-            '  "test_items": [ ... ],\n'
-            '  "integration_items": [ ... ],\n'
-            '  "documentation_items": [ ... ],\n'
-            '  "open_questions": [ { "question": "...", "context": "...", '
-            '"options": [], "blocking": false } ],\n'
-            '  "assumptions": [ "..." ]\n'
-            '}\n'
-            '```\n\n'
-            'Rules:\n'
-            '- Assign each work item to the most appropriate category.\n'
-            '- If the document mentions complexity/size, map it to S/M/L/XL.\n'
-            '- If the document mentions confidence, map it to high/medium/low.\n'
-            '- If not stated, default complexity to M and confidence to medium.\n'
-            '- Extract acceptance criteria from the text where possible.\n'
-            '- Identify dependencies between items by title.\n'
-            '- List any open questions or unknowns.\n'
-            '- List any assumptions made.\n\n'
-            'Return ONLY the JSON object, no other text.\n\n'
-            '--- SCOPE DOCUMENT ---\n\n'
-            f'{text}\n'
-        )
+        # Load the scope document parser prompt from external file
+        parse_prompt = self._load_scope_parser_prompt()
+        # Append the actual document text to the prompt template
+        parse_prompt = parse_prompt + f'\n\n--- SCOPE DOCUMENT ---\n\n{text}\n'
 
         try:
             from llm.config import get_llm_client

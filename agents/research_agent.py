@@ -27,22 +27,6 @@ from agents.feature_planning_models import (
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
 
-# ---------------------------------------------------------------------------
-# Default system instruction (loaded from config/prompts/research_agent.md
-# at runtime if available; this is the fallback).
-# ---------------------------------------------------------------------------
-
-RESEARCH_INSTRUCTION = '''You are a Research Agent for Cornelis Networks.
-
-Given a feature request, you must:
-1. Research the technology domain using web search and internal knowledge
-2. Find existing implementations and reference designs
-3. Gather internal Cornelis knowledge
-4. Identify gaps and open questions
-
-Tag every finding with a confidence level (HIGH, MEDIUM, LOW) and source.
-Never fabricate information. If you don't know, say so.
-'''
 
 
 class ResearchAgent(BaseAgent):
@@ -59,8 +43,14 @@ class ResearchAgent(BaseAgent):
 
         Registers web search, MCP, and knowledge tools.
         '''
-        # Load the full prompt from disk if available; fall back to inline
-        instruction = self._load_prompt_file() or RESEARCH_INSTRUCTION
+        # Load the system prompt from config/prompts/research_agent.md.
+        # No hardcoded fallback — the external file is the sole source.
+        instruction = self._load_prompt_file()
+        if not instruction:
+            raise FileNotFoundError(
+                'config/prompts/research_agent.md is required but not found. '
+                'The Research Agent has no hardcoded fallback prompt.'
+            )
 
         config = AgentConfig(
             name='research_agent',
