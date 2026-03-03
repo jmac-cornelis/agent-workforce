@@ -2067,20 +2067,26 @@ Examples:
             if not args.workflow_filter:
                 parser.error('--workflow bug-report requires --filter "FILTER_NAME"')
         elif args.workflow_name == 'feature-plan':
-            if not args.project:
-                parser.error('--workflow feature-plan requires --project PROJECT_KEY')
-            # --plan-file bypasses the agentic flow; no --feature needed
-            plan_file = getattr(args, 'plan_file', None)
-            if plan_file:
-                if not os.path.isfile(plan_file):
-                    parser.error(f'--plan-file not found: {plan_file}')
-            elif not args.feature and not args.feature_prompt:
-                # Require at least one of --feature or --feature-prompt
-                parser.error('--workflow feature-plan requires --feature "DESCRIPTION" '
-                             'or --feature-prompt FILE (or --plan-file FILE)')
-            # Validate that the prompt file exists when specified
-            if args.feature_prompt and not os.path.isfile(args.feature_prompt):
-                parser.error(f'--feature-prompt file not found: {args.feature_prompt}')
+            # --cleanup only needs the CSV file — skip all other validation
+            cleanup_csv = getattr(args, 'cleanup', None)
+            if cleanup_csv:
+                if not os.path.isfile(cleanup_csv):
+                    parser.error(f'--cleanup CSV not found: {cleanup_csv}')
+            else:
+                if not args.project:
+                    parser.error('--workflow feature-plan requires --project PROJECT_KEY')
+                # --plan-file bypasses the agentic flow; no --feature needed
+                plan_file = getattr(args, 'plan_file', None)
+                if plan_file:
+                    if not os.path.isfile(plan_file):
+                        parser.error(f'--plan-file not found: {plan_file}')
+                elif not args.feature and not args.feature_prompt:
+                    # Require at least one of --feature or --feature-prompt
+                    parser.error('--workflow feature-plan requires --feature "DESCRIPTION" '
+                                 'or --feature-prompt FILE (or --plan-file FILE)')
+                # Validate that the prompt file exists when specified
+                if args.feature_prompt and not os.path.isfile(args.feature_prompt):
+                    parser.error(f'--feature-prompt file not found: {args.feature_prompt}')
     
     # ---- Map ticket_keys for build-excel-map compatibility ---------------------
     # cmd_build_excel_map expects args.ticket_keys
