@@ -1767,6 +1767,32 @@ class FeaturePlanningOrchestrator(BaseAgent):
                     except Exception as e:
                         errors.append(f'Link {from_key}→{to_key}: {e}')
 
+        # ---- Link all Epics in this plan with "Relates" links ----
+        # Each consecutive pair of Epics is linked: E1→E2, E2→E3, etc.
+        # This makes the relationship between Epics in the same feature
+        # visible in Jira's "Linked work items" section.
+        epic_keys = [
+            t['key'] for t in created_tickets if t.get('type') == 'Epic'
+        ]
+        if len(epic_keys) > 1:
+            for i in range(len(epic_keys) - 1):
+                from_key = epic_keys[i]
+                to_key = epic_keys[i + 1]
+                try:
+                    link_result = link_tickets(
+                        from_key=from_key,
+                        to_key=to_key,
+                        link_type='Relates',
+                    )
+                    if hasattr(link_result, 'is_success') and link_result.is_success:
+                        created_links.append({'from': from_key, 'to': to_key})
+                        log.info(f'Linked Epics: {from_key} -Relates-> {to_key}')
+                    else:
+                        link_err = getattr(link_result, 'error', str(link_result))
+                        errors.append(f'Epic link {from_key}→{to_key}: {link_err}')
+                except Exception as e:
+                    errors.append(f'Epic link {from_key}→{to_key}: {e}')
+
         self.state.mark_phase_complete('execution')
 
         # ---- Write created_tickets.csv for leave-no-trace cleanup ----
@@ -1801,11 +1827,19 @@ class FeaturePlanningOrchestrator(BaseAgent):
         # Format results
         was_auto = not getattr(self, '_initiative_was_supplied', False)
         initiative_warning = getattr(self, '_initiative_warning', '')
+        # Count link types for the summary
+        story_links = [l for l in created_links
+                       if not any(t['key'] == l['from'] and t['type'] == 'Epic'
+                                  for t in created_tickets)
+                       or not any(t['key'] == l['to'] and t['type'] == 'Epic'
+                                  for t in created_tickets)]
+        epic_link_count = len(created_links) - len(story_links)
         lines = [
             'PHASE 6: Jira Execution — COMPLETE',
             f'  Created: {len(created_tickets)} tickets',
             f'  Skipped: {len(skipped_tickets)} (duplicates)',
-            f'  Links:   {len(created_links)} "Relates" links',
+            f'  Links:   {len(created_links)} "Relates" links'
+            f' ({epic_link_count} Epic↔Epic, {len(story_links)} Story↔Story)',
             f'  Errors:  {len(errors)}',
         ]
         if initiative_key:
