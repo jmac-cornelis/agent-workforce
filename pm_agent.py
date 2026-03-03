@@ -1446,6 +1446,40 @@ def _workflow_feature_plan(args):
     execute = getattr(args, 'execute', False)
     initiative_key = getattr(args, 'initiative', None)
     force = getattr(args, 'force', False)
+    cleanup_csv = getattr(args, 'cleanup', None)
+
+    # ------------------------------------------------------------------
+    # Cleanup path: --cleanup CSV deletes all tickets listed in the CSV
+    # produced by a previous --execute run.  Dry-run by default; add
+    # --execute to actually delete.  The CSV is already in child-first
+    # order so parents are deleted last.
+    # ------------------------------------------------------------------
+    if cleanup_csv:
+        output('Feature Planning Workflow — Cleanup (Leave No Trace)')
+        output(f'  CSV file:  {cleanup_csv}')
+        output(f'  Execute:   {"YES — will DELETE tickets" if execute else "DRY RUN"}')
+        if force:
+            output(f'  Force:     YES — skip confirmation prompt')
+        output('')
+
+        if not os.path.isfile(cleanup_csv):
+            output(f'ERROR: Cleanup CSV not found: {cleanup_csv}')
+            return 1
+
+        try:
+            jira = jira_utils.get_connection()
+            jira_utils.bulk_delete_tickets(
+                jira,
+                input_file=cleanup_csv,
+                delete_subtasks=True,
+                dry_run=not execute,
+                force=force,
+            )
+            return 0
+        except Exception as e:
+            output(f'ERROR: Cleanup failed: {e}')
+            log.error(f'Cleanup error: {e}', exc_info=True)
+            return 1
 
     # ------------------------------------------------------------------
     # Fast path: --plan-file loads a previously generated plan.json and
@@ -1481,6 +1515,11 @@ def _workflow_feature_plan(args):
 
             if response.success:
                 output(response.content)
+
+                # Surface the created_tickets.csv path if it was produced
+                csv_path = response.metadata.get('created_csv_path', '')
+                if csv_path and os.path.isfile(csv_path):
+                    output(f'\nCreated tickets CSV: {csv_path}')
 
                 # If this was a dry-run, remind the user
                 if not execute:
@@ -1669,6 +1708,11 @@ def _workflow_feature_plan(args):
                     except Exception as xlsx_err:
                         log.warning(f'Excel conversion failed: {xlsx_err}')
                         output(f'  WARNING: Excel conversion failed: {xlsx_err}')
+
+            # Surface the created_tickets.csv path if execution produced one
+            created_csv = response.metadata.get('created_csv_path', '')
+            if created_csv and os.path.isfile(created_csv):
+                all_created_files.append((created_csv, 'Created tickets (for --cleanup)'))
 
             # Report blocking status
             if response.metadata.get('blocked'):
@@ -1892,6 +1936,12 @@ Examples:
                             'Without --force, the agent pauses and asks before '
                             'creating a ticket whose summary already exists in '
                             'the project. Used by --workflow feature-plan.')
+    parser.add_argument('--cleanup', default=None, metavar='CSV',
+                       help='Delete all tickets listed in a created_tickets.csv '
+                            'file (produced by --execute). Dry-run by default; '
+                            'add --execute to actually delete. Children are '
+                            'deleted before parents. '
+                            'Used by --workflow feature-plan.')
     parser.add_argument('--output-dir', default=None, metavar='DIR',
                        dest='output_dir',
                        help='Root directory for output. The standard '

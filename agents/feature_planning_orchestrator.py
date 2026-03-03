@@ -1792,6 +1792,35 @@ class FeaturePlanningOrchestrator(BaseAgent):
 
         self.state.mark_phase_complete('execution')
 
+        # ---- Write created_tickets.csv for leave-no-trace cleanup ----
+        # The CSV uses the same format expected by jira_utils.bulk_delete_tickets
+        # (requires a 'key' column).  Tickets are listed in reverse creation order
+        # so that children (Stories) are deleted before parents (Epics/Initiative).
+        created_csv_path = ''
+        if created_tickets:
+            import csv as _csv
+            csv_name = 'created_tickets.csv'
+            csv_dir = getattr(self, '_output_dir', '') or '.'
+            os.makedirs(csv_dir, exist_ok=True)
+            created_csv_path = os.path.join(csv_dir, csv_name)
+            try:
+                with open(created_csv_path, 'w', newline='', encoding='utf-8') as cf:
+                    writer = _csv.DictWriter(
+                        cf, fieldnames=['key', 'issue_type', 'summary', 'parent'])
+                    writer.writeheader()
+                    # Reverse so children come first → safe deletion order
+                    for t in reversed(created_tickets):
+                        writer.writerow({
+                            'key': t.get('key', ''),
+                            'issue_type': t.get('type', ''),
+                            'summary': t.get('summary', ''),
+                            'parent': t.get('parent', '') or '',
+                        })
+                log.info(f'Wrote {len(created_tickets)} tickets to {created_csv_path}')
+            except Exception as csv_err:
+                log.warning(f'Failed to write created_tickets.csv: {csv_err}')
+                created_csv_path = ''
+
         # Format results
         was_auto = not getattr(self, '_initiative_was_supplied', False)
         initiative_warning = getattr(self, '_initiative_warning', '')
@@ -1831,6 +1860,11 @@ class FeaturePlanningOrchestrator(BaseAgent):
 
         content = '\n'.join(lines)
 
+        if created_csv_path:
+            lines.extend(['', f'Cleanup CSV: {created_csv_path}',
+                           '  To undo all created tickets:',
+                           f'  python pm_agent.py --cleanup {created_csv_path} --execute'])
+
         return AgentResponse.success_response(
             content=content,
             metadata={
@@ -1838,6 +1872,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
                 'created_tickets': created_tickets,
                 'skipped_tickets': skipped_tickets,
                 'created_links': created_links,
+                'created_csv_path': created_csv_path,
                 'execution_errors': errors,
             },
         )

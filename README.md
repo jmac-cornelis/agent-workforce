@@ -283,6 +283,17 @@ pm_agent --workflow feature-plan --project STLSB --plan-file plans/STLSB-spdm/pl
 # Execute without an Initiative (Epics created unattached)
 pm_agent --workflow feature-plan --project STLSB --plan-file plans/STLSB-spdm/plan.json --execute
 
+# ── Cleanup: delete all tickets created by a previous --execute ──────
+
+# Dry-run (preview what would be deleted)
+pm_agent --workflow feature-plan --cleanup plans/STLSB-spdm/created_tickets.csv
+
+# Execute the cleanup (deletes tickets in child-first order)
+pm_agent --workflow feature-plan --cleanup plans/STLSB-spdm/created_tickets.csv --execute
+
+# Skip the DELETE confirmation prompt
+pm_agent --workflow feature-plan --cleanup plans/STLSB-spdm/created_tickets.csv --execute --force
+
 # ── Sandbox testing ──────────────────────────────────────────────────
 
 pm_agent --env .env_sandbox --workflow feature-plan --project STLSB \
@@ -299,7 +310,8 @@ pm_agent --env .env_sandbox --workflow feature-plan --project STLSB \
 | `--plan-file FILE` | Previously generated `plan.json` — skips all agentic phases |
 | `--initiative KEY` | Optional existing Initiative ticket key (e.g. `STL-74071`). If supplied, validated and used as parent for all Epics. If omitted, a new Initiative is auto-created from the plan's feature name. |
 | `--execute` | Actually create Jira tickets (default: dry-run) |
-| `--force` | Skip duplicate-ticket confirmation prompts. Without `--force`, the agent pauses and asks before creating a ticket whose summary already exists in the project. |
+| `--force` | Skip duplicate-ticket confirmation prompts. Without `--force`, the agent pauses and asks before creating a ticket whose summary already exists in the project. Also skips the `DELETE` confirmation when used with `--cleanup`. |
+| `--cleanup CSV` | Delete all tickets listed in a `created_tickets.csv` (produced by `--execute`). Dry-run by default; add `--execute` to actually delete. Children are deleted before parents. |
 | `--docs FILE [FILE ...]` | Spec documents / datasheets for the research phase |
 | `--output-dir DIR` | Root directory for output (default: `plans/<PROJECT>-<slug>/`) |
 
@@ -315,6 +327,7 @@ All output lands in `plans/<PROJECT>-<slug>/`:
 | `research.json` | Research agent output |
 | `hw_profile.json` | Hardware analyst output |
 | `debug/*.md` | Raw LLM responses (for debugging) |
+| `created_tickets.csv` | Ticket keys created by `--execute` (feed to `--cleanup` to undo) |
 
 ---
 
