@@ -1445,6 +1445,7 @@ def _workflow_feature_plan(args):
     plan_file = getattr(args, 'plan_file', None)
     execute = getattr(args, 'execute', False)
     initiative_key = getattr(args, 'initiative', None)
+    force = getattr(args, 'force', False)
 
     # ------------------------------------------------------------------
     # Fast path: --plan-file loads a previously generated plan.json and
@@ -1459,6 +1460,7 @@ def _workflow_feature_plan(args):
             output(f'  Initiative:   {initiative_key} (supplied)')
         else:
             output(f'  Initiative:   (will be auto-created on --execute)')
+        output(f'  Force:        {"YES — skip duplicate prompts" if force else "no (interactive)"}')
         output(f'  Execute:      {"YES — will create Jira tickets" if execute else "DRY RUN"}')
         output('')
 
@@ -1473,6 +1475,7 @@ def _workflow_feature_plan(args):
                 'plan_file': plan_file,
                 'execute': execute,
                 'initiative_key': initiative_key,
+                'force': force,
                 'timeout': getattr(args, 'timeout', None),
             })
 
@@ -1571,6 +1574,7 @@ def _workflow_feature_plan(args):
         output(f'  Initiative: {initiative_key} (supplied)')
     else:
         output(f'  Initiative: (will be auto-created on --execute)')
+    output(f'  Force:    {"YES — skip duplicate prompts" if force else "no (interactive)"}')
     output(f'  Execute:  {"YES — will create Jira tickets" if execute else "DRY RUN"}')
     output('')
 
@@ -1587,6 +1591,7 @@ def _workflow_feature_plan(args):
             'mode': mode,
             'execute': execute,
             'initiative_key': initiative_key,
+            'force': force,
             'scope_doc': scope_doc,
             'output_dir': output_dir,
             'timeout': args.timeout,
@@ -1882,6 +1887,11 @@ Examples:
     parser.add_argument('--execute', action='store_true',
                        help='Actually create Jira tickets (default: dry-run). '
                             'Used by --workflow feature-plan.')
+    parser.add_argument('--force', action='store_true',
+                       help='Skip duplicate-ticket confirmation prompts. '
+                            'Without --force, the agent pauses and asks before '
+                            'creating a ticket whose summary already exists in '
+                            'the project. Used by --workflow feature-plan.')
     parser.add_argument('--output-dir', default=None, metavar='DIR',
                        dest='output_dir',
                        help='Root directory for output. The standard '

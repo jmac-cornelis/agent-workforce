@@ -299,6 +299,7 @@ pm_agent --env .env_sandbox --workflow feature-plan --project STLSB \
 | `--plan-file FILE` | Previously generated `plan.json` — skips all agentic phases |
 | `--initiative KEY` | Optional existing Initiative ticket key (e.g. `STL-74071`). If supplied, validated and used as parent for all Epics. If omitted, a new Initiative is auto-created from the plan's feature name. |
 | `--execute` | Actually create Jira tickets (default: dry-run) |
+| `--force` | Skip duplicate-ticket confirmation prompts. Without `--force`, the agent pauses and asks before creating a ticket whose summary already exists in the project. |
 | `--docs FILE [FILE ...]` | Spec documents / datasheets for the research phase |
 | `--output-dir DIR` | Root directory for output (default: `plans/<PROJECT>-<slug>/`) |
 

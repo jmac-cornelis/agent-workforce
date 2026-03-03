@@ -395,6 +395,9 @@ class FeaturePlanningOrchestrator(BaseAgent):
         self._initiative_key = initiative_key or ''
         self._initiative_was_supplied = bool(initiative_key)
 
+        # --force skips interactive duplicate-ticket confirmation prompts.
+        self._force = input_data.get('force', False)
+
         # Allow callers to set the output directory at run-time
         output_dir = input_data.get('output_dir', '')
         if output_dir:
@@ -1554,6 +1557,92 @@ class FeaturePlanningOrchestrator(BaseAgent):
         self._initiative_warning = warning
         return ('', None)
 
+    def _check_duplicate(self, project_key: str, summary: str,
+                         issue_type: str) -> list:
+        '''
+        Search Jira for existing tickets with a matching summary.
+
+        Uses a JQL text-match query (``summary ~ "..."``).  Returns a list of
+        dicts ``[{key, summary, status}, ...]`` for any matches found, or an
+        empty list when no duplicates exist.
+
+        Input:
+            project_key: Jira project key (e.g. ``STL``).
+            summary:     The ticket summary to check.
+            issue_type:  Issue type name (``Epic``, ``Story``, ``Initiative``).
+
+        Output:
+            List of matching ticket dicts, or ``[]`` if none found.
+        '''
+        try:
+            from tools.jira_tools import search_tickets
+
+            # Escape double-quotes in the summary for JQL safety
+            safe_summary = summary.replace('"', '\\"')
+            jql = (
+                f'project = {project_key} '
+                f'AND issuetype = "{issue_type}" '
+                f'AND summary ~ "{safe_summary}"'
+            )
+            result = search_tickets(jql=jql, limit=5)
+            if hasattr(result, 'is_success') and result.is_success:
+                return result.data or []
+            return []
+        except Exception as e:
+            log.warning(f'Duplicate check failed (proceeding): {e}')
+            return []
+
+    def _prompt_duplicate(self, issue_type: str, summary: str,
+                          duplicates: list) -> bool:
+        '''
+        Warn about potential duplicates and prompt the user interactively.
+
+        When ``self._force`` is True the prompt is skipped and creation
+        proceeds automatically.
+
+        Input:
+            issue_type:  The type being created (``Epic``, ``Story``, etc.).
+            summary:     The summary of the ticket about to be created.
+            duplicates:  List of matching ticket dicts from ``_check_duplicate``.
+
+        Output:
+            ``True`` if the ticket should be created, ``False`` to skip it.
+        '''
+        # Build a human-readable warning
+        dup_lines = []
+        for d in duplicates[:5]:
+            key = d.get('key', '?')
+            status = d.get('status', '?')
+            dup_summary = d.get('summary', '')
+            dup_lines.append(f'    {key} [{status}]: {dup_summary}')
+        dup_block = '\n'.join(dup_lines)
+
+        warning = (
+            f'\n⚠️  Potential duplicate(s) found for {issue_type}:\n'
+            f'  Summary: "{summary}"\n'
+            f'  Existing tickets:\n{dup_block}\n'
+        )
+
+        if self._force:
+            # --force: log the warning but proceed without prompting
+            log.warning(f'Duplicate detected (--force, creating anyway): {summary}')
+            print(warning)
+            print('  --force active → creating anyway.\n')
+            return True
+
+        # Interactive prompt — stop and ask the user
+        print(warning)
+        while True:
+            answer = input('  Create this ticket anyway? [y/N/a(ll)]: ').strip().lower()
+            if answer in ('y', 'yes'):
+                return True
+            if answer in ('a', 'all'):
+                # Switch to force mode for the rest of this execution run
+                self._force = True
+                return True
+            if answer in ('n', 'no', ''):
+                return False
+
     def _phase_execution(self) -> AgentResponse:
         '''Phase 6: Create tickets in Jira.'''
         self.state.current_phase = 'execution'
@@ -1578,6 +1667,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
 
         created_tickets: List[Dict[str, Any]] = []
         created_links: List[Dict[str, str]] = []
+        skipped_tickets: List[Dict[str, str]] = []
         errors: List[str] = []
 
         # Record the Initiative in created_tickets if we just created it
@@ -1591,12 +1681,22 @@ class FeaturePlanningOrchestrator(BaseAgent):
             })
 
         for epic_data in plan.get('epics', []):
+            epic_summary = epic_data.get('summary', '')
+
+            # --- Duplicate check for Epic ---
+            epic_dups = self._check_duplicate(project_key, epic_summary, 'Epic')
+            if epic_dups:
+                if not self._prompt_duplicate('Epic', epic_summary, epic_dups):
+                    skipped_tickets.append({'type': 'Epic', 'summary': epic_summary})
+                    log.info(f'Skipped duplicate Epic: "{epic_summary}"')
+                    continue
+
             # Create the Epic — if an initiative_key is provided, set it as the
             # parent so the Epic appears as a child of the Initiative in Jira.
             try:
                 epic_result = create_ticket(
                     project_key=project_key,
-                    summary=epic_data.get('summary', ''),
+                    summary=epic_summary,
                     issue_type='Epic',
                     description=epic_data.get('description', ''),
                     components=epic_data.get('components'),
@@ -1610,28 +1710,38 @@ class FeaturePlanningOrchestrator(BaseAgent):
                     created_tickets.append({
                         'type': 'Epic',
                         'key': epic_key,
-                        'summary': epic_data.get('summary', ''),
+                        'summary': epic_summary,
                         'parent': initiative_key if initiative_key else None,
                     })
                     log.info(f'Created Epic: {epic_key}'
                              f'{" under " + initiative_key if initiative_key else ""}')
                 else:
                     error = getattr(epic_result, 'error', str(epic_result))
-                    errors.append(f"Epic '{epic_data.get('summary', '')}': {error}")
+                    errors.append(f"Epic '{epic_summary}': {error}")
                     continue
 
             except Exception as e:
-                errors.append(f"Epic '{epic_data.get('summary', '')}': {e}")
+                errors.append(f"Epic '{epic_summary}': {e}")
                 continue
 
             # Create Stories under this Epic, collecting keys for linking
             epic_story_keys: List[str] = []
 
             for story_data in epic_data.get('stories', []):
+                story_summary = story_data.get('summary', '')
+
+                # --- Duplicate check for Story ---
+                story_dups = self._check_duplicate(project_key, story_summary, 'Story')
+                if story_dups:
+                    if not self._prompt_duplicate('Story', story_summary, story_dups):
+                        skipped_tickets.append({'type': 'Story', 'summary': story_summary})
+                        log.info(f'Skipped duplicate Story: "{story_summary}"')
+                        continue
+
                 try:
                     story_result = create_ticket(
                         project_key=project_key,
-                        summary=story_data.get('summary', ''),
+                        summary=story_summary,
                         issue_type='Story',
                         description=story_data.get('description', ''),
                         components=story_data.get('components'),
@@ -1646,18 +1756,18 @@ class FeaturePlanningOrchestrator(BaseAgent):
                         created_tickets.append({
                             'type': 'Story',
                             'key': story_key,
-                            'summary': story_data.get('summary', ''),
+                            'summary': story_summary,
                             'parent': epic_key,
                         })
                         log.info(f'Created Story: {story_key} under {epic_key}')
                     else:
                         error = getattr(story_result, 'error', str(story_result))
                         errors.append(
-                            f"Story '{story_data.get('summary', '')}': {error}"
+                            f"Story '{story_summary}': {error}"
                         )
 
                 except Exception as e:
-                    errors.append(f"Story '{story_data.get('summary', '')}': {e}")
+                    errors.append(f"Story '{story_summary}': {e}")
 
             # Link all Stories within this Epic with "Relates" links.
             # Each consecutive pair is linked: S1→S2, S2→S3, etc.
@@ -1688,8 +1798,9 @@ class FeaturePlanningOrchestrator(BaseAgent):
         lines = [
             'PHASE 6: Jira Execution — COMPLETE',
             f'  Created: {len(created_tickets)} tickets',
+            f'  Skipped: {len(skipped_tickets)} (duplicates)',
             f'  Links:   {len(created_links)} "Relates" links',
-            f'  Errors: {len(errors)}',
+            f'  Errors:  {len(errors)}',
         ]
         if initiative_key:
             lines.append(
@@ -1708,6 +1819,11 @@ class FeaturePlanningOrchestrator(BaseAgent):
                 parent = f" (under {t['parent']})" if t.get('parent') else ''
                 lines.append(f"  [{t['type']}] {t['key']}: {t['summary']}{parent}")
 
+        if skipped_tickets:
+            lines.extend(['', 'Skipped (duplicates):'])
+            for s in skipped_tickets:
+                lines.append(f"  ⊘ [{s['type']}] {s['summary']}")
+
         if errors:
             lines.extend(['', 'Errors:'])
             for e in errors:
@@ -1720,6 +1836,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
             metadata={
                 'state': self.state.to_dict(),
                 'created_tickets': created_tickets,
+                'skipped_tickets': skipped_tickets,
                 'created_links': created_links,
                 'execution_errors': errors,
             },
