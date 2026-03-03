@@ -1563,7 +1563,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
             return AgentResponse.error_response('No Jira plan to execute')
 
         try:
-            from tools.jira_tools import create_ticket
+            from tools.jira_tools import create_ticket, link_tickets
         except ImportError:
             return AgentResponse.error_response('jira_tools not available')
 
@@ -1577,6 +1577,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
             return AgentResponse.error_response(init_error)
 
         created_tickets: List[Dict[str, Any]] = []
+        created_links: List[Dict[str, str]] = []
         errors: List[str] = []
 
         # Record the Initiative in created_tickets if we just created it
@@ -1623,7 +1624,9 @@ class FeaturePlanningOrchestrator(BaseAgent):
                 errors.append(f"Epic '{epic_data.get('summary', '')}': {e}")
                 continue
 
-            # Create Stories under this Epic
+            # Create Stories under this Epic, collecting keys for linking
+            epic_story_keys: List[str] = []
+
             for story_data in epic_data.get('stories', []):
                 try:
                     story_result = create_ticket(
@@ -1639,6 +1642,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
 
                     if hasattr(story_result, 'is_success') and story_result.is_success:
                         story_key = story_result.data.get('key')
+                        epic_story_keys.append(story_key)
                         created_tickets.append({
                             'type': 'Story',
                             'key': story_key,
@@ -1655,6 +1659,27 @@ class FeaturePlanningOrchestrator(BaseAgent):
                 except Exception as e:
                     errors.append(f"Story '{story_data.get('summary', '')}': {e}")
 
+            # Link all Stories within this Epic with "Relates" links.
+            # Each consecutive pair is linked: S1→S2, S2→S3, etc.
+            if len(epic_story_keys) > 1:
+                for i in range(len(epic_story_keys) - 1):
+                    from_key = epic_story_keys[i]
+                    to_key = epic_story_keys[i + 1]
+                    try:
+                        link_result = link_tickets(
+                            from_key=from_key,
+                            to_key=to_key,
+                            link_type='Relates',
+                        )
+                        if hasattr(link_result, 'is_success') and link_result.is_success:
+                            created_links.append({'from': from_key, 'to': to_key})
+                            log.info(f'Linked: {from_key} -Relates-> {to_key}')
+                        else:
+                            link_err = getattr(link_result, 'error', str(link_result))
+                            errors.append(f'Link {from_key}→{to_key}: {link_err}')
+                    except Exception as e:
+                        errors.append(f'Link {from_key}→{to_key}: {e}')
+
         self.state.mark_phase_complete('execution')
 
         # Format results
@@ -1663,6 +1688,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
         lines = [
             'PHASE 6: Jira Execution — COMPLETE',
             f'  Created: {len(created_tickets)} tickets',
+            f'  Links:   {len(created_links)} "Relates" links',
             f'  Errors: {len(errors)}',
         ]
         if initiative_key:
@@ -1694,6 +1720,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
             metadata={
                 'state': self.state.to_dict(),
                 'created_tickets': created_tickets,
+                'created_links': created_links,
                 'execution_errors': errors,
             },
         )
