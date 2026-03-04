@@ -3566,6 +3566,26 @@ def create_ticket(
         output('=' * 80)
         output('')
     except Exception as e:
+        # If the error is specifically about customfield_28434 (Product Family)
+        # not being on the screen, retry without it — the field is best-effort.
+        err_text = str(e)
+        if 'customfield_28434' in err_text and 'customfield_28434' in fields:
+            log.warning(
+                f'Product Family field (customfield_28434) rejected by Jira — '
+                f'retrying without it: {err_text}'
+            )
+            output('  ⚠️  Product Family field not available on this screen — retrying without it')
+            del fields['customfield_28434']
+            try:
+                issue = jira.create_issue(fields=fields)
+                output(f'Created: {issue.key}')
+                output(f'URL:     {JIRA_URL}/browse/{issue.key}')
+                output('=' * 80)
+                output('')
+                return
+            except Exception as e2:
+                log.error(f'Failed to create ticket (retry): {e2}')
+                raise
         log.error(f'Failed to create ticket: {e}')
         raise
 

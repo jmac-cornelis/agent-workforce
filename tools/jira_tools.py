@@ -453,7 +453,21 @@ def create_ticket(
             fields.update(custom_fields)
         
         log.info(f'Creating ticket: {summary}')
-        issue = jira.create_issue(fields=fields)
+        try:
+            issue = jira.create_issue(fields=fields)
+        except Exception as field_err:
+            # If the error is specifically about customfield_28434 (Product
+            # Family) not being on the screen, retry without it — best-effort.
+            err_text = str(field_err)
+            if 'customfield_28434' in err_text and 'customfield_28434' in fields:
+                log.warning(
+                    f'Product Family field (customfield_28434) rejected — '
+                    f'retrying without it: {err_text}'
+                )
+                del fields['customfield_28434']
+                issue = jira.create_issue(fields=fields)
+            else:
+                raise
         
         result = {
             'key': issue.key,
