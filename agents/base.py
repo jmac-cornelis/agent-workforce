@@ -9,8 +9,10 @@
 #
 ##########################################################################################
 
+import json
 import logging
 import os
+import re
 import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
@@ -109,6 +111,9 @@ class BaseAgent(ABC):
         self.llm = llm or get_llm_client()
         self.tools: Dict[str, ToolDefinition] = {}
         self.conversation: List[Message] = []
+        # Optional per-request timeout (seconds) for LLM calls.
+        # Set by callers (e.g. orchestrator) before invoking run().
+        self._timeout: Optional[int] = None
         
         # Register tools
         if tools:
@@ -224,7 +229,8 @@ class BaseAgent(ABC):
     def _run_with_tools(
         self,
         user_input: str,
-        max_iterations: Optional[int] = None
+        max_iterations: Optional[int] = None,
+        timeout: Optional[int] = None
     ) -> AgentResponse:
         '''
         Run the agent with tool use capability.
@@ -238,6 +244,7 @@ class BaseAgent(ABC):
         Input:
             user_input: The user's input/task.
             max_iterations: Override for max iterations.
+            timeout: Optional timeout in seconds for each LLM call.
         
         Output:
             AgentResponse with final result.
@@ -249,16 +256,25 @@ class BaseAgent(ABC):
         messages = self._build_messages(user_input)
         
         for iteration in range(max_iter):
-            log.debug(f'Agent {self.config.name} iteration {iteration + 1}/{max_iter}')
+            log.info(
+                f'Agent {self.config.name} — LLM call '
+                f'(iteration {iteration + 1}/{max_iter}, '
+                f'{len(messages)} messages)'
+            )
             
             try:
-                # Call LLM with tools
-                response = self.llm.chat(
-                    messages=messages,
-                    temperature=self.config.temperature,
-                    max_tokens=self.config.max_tokens,
-                    tools=self.get_tool_schemas() if self.tools else None
-                )
+                # Call LLM with tools.  Heartbeat "Still waiting on LLM
+                # return..." messages are emitted by CornelisLLM.chat()
+                # itself, so no wrapper thread is needed here.
+                chat_kwargs: Dict[str, Any] = {
+                    'messages': messages,
+                    'temperature': self.config.temperature,
+                    'max_tokens': self.config.max_tokens,
+                    'tools': self.get_tool_schemas() if self.tools else None,
+                }
+                if timeout is not None:
+                    chat_kwargs['timeout'] = timeout
+                response = self.llm.chat(**chat_kwargs)
                 
                 # Check if LLM wants to call tools
                 # Note: This depends on the LLM response format
@@ -333,6 +349,49 @@ class BaseAgent(ABC):
             iterations=max_iter
         )
     
+    # ------------------------------------------------------------------
+    # JSON extraction helper — shared by all agent parsers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _extract_json_block(text: str) -> Optional[Dict]:
+        '''
+        Extract the first ```json ... ``` fenced block from LLM output.
+
+        Returns the parsed dict/list, or None if no valid JSON block is found.
+        This is the primary parsing strategy for the hybrid two-pass approach:
+        prompts instruct the LLM to emit a ```json block, and this helper
+        reliably extracts it.  If the LLM omits the block or produces
+        malformed JSON, callers fall back to the legacy Markdown regex parser.
+        '''
+        if not text:
+            return None
+
+        # Match ```json ... ``` (case-insensitive language tag)
+        match = re.search(r'```(?:json|JSON)\s*\n(.*?)\n```', text, re.DOTALL)
+        if match:
+            try:
+                return json.loads(match.group(1))
+            except json.JSONDecodeError as exc:
+                log.warning(f'Found ```json block but JSON parse failed: {exc}')
+
+        # Fallback: try to find a bare top-level JSON object in the text
+        # (some LLMs omit the fences but still produce valid JSON)
+        for start_char, end_char in [('{', '}'), ('[', ']')]:
+            start_idx = text.find(start_char)
+            if start_idx == -1:
+                continue
+            # Walk backwards from the end to find the matching close
+            end_idx = text.rfind(end_char)
+            if end_idx > start_idx:
+                candidate = text[start_idx:end_idx + 1]
+                try:
+                    return json.loads(candidate)
+                except json.JSONDecodeError:
+                    pass  # not valid JSON — skip
+
+        return None
+
     def load_prompt(self, prompt_name: str) -> str:
         '''
         Load a prompt from the config/prompts directory.

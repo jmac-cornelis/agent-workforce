@@ -23,6 +23,17 @@ from tools.jira_tools import (
     assign_ticket,
     get_project_workflows,
     get_project_issue_types,
+    # New tool wrappers
+    list_filters,
+    run_filter,
+    run_jql_query,
+    get_children_hierarchy,
+    get_project_versions_tool,
+    get_ticket_totals,
+    list_dashboards,
+    get_dashboard,
+    create_dashboard,
+    bulk_update_tickets,
     JiraTools,
 )
 from tools.drawio_tools import (
@@ -52,6 +63,11 @@ from tools.excel_tools import (
     diff_excel,
     ExcelTools,
 )
+from tools.plan_export_tools import (
+    plan_to_csv,
+    plan_json_to_dict_rows,
+    PlanExportTools,
+)
 
 __all__ = [
     # Base
@@ -71,6 +87,17 @@ __all__ = [
     'assign_ticket',
     'get_project_workflows',
     'get_project_issue_types',
+    # New Jira tools
+    'list_filters',
+    'run_filter',
+    'run_jql_query',
+    'get_children_hierarchy',
+    'get_project_versions_tool',
+    'get_ticket_totals',
+    'list_dashboards',
+    'get_dashboard',
+    'create_dashboard',
+    'bulk_update_tickets',
     'JiraTools',
     # Draw.io
     'parse_org_chart',
@@ -95,4 +122,8 @@ __all__ = [
     'csv_to_excel',
     'diff_excel',
     'ExcelTools',
+    # Plan Export
+    'plan_to_csv',
+    'plan_json_to_dict_rows',
+    'PlanExportTools',
 ]

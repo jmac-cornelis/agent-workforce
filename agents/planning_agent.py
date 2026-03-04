@@ -21,32 +21,6 @@ from tools.file_tools import FileTools
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
 
-# Default instruction for the Planning agent
-PLANNING_INSTRUCTION = '''You are a Release Planning Agent specialized in creating Jira release structures.
-
-Your role is to:
-1. Take roadmap information and current Jira state as input
-2. Design a release structure with appropriate ticket hierarchy
-3. Map features to Epics, Stories, and Tasks
-4. Assign components and owners based on org chart
-5. Set appropriate release versions
-
-When creating a release plan, follow these principles:
-- Epics represent major features or initiatives
-- Stories represent user-facing functionality
-- Tasks represent implementation work
-- Use components to categorize by area (e.g., Firmware, Driver, Tools)
-- Assign owners based on the org chart responsibilities
-
-Output your plan in a structured format with:
-- Release versions to create
-- Epic tickets with summaries and descriptions
-- Story tickets under each Epic
-- Task tickets for implementation details
-- Component and owner assignments
-
-Be specific and actionable - the plan should be ready for human review and execution.
-'''
 
 
 @dataclass
@@ -132,16 +106,41 @@ class PlanningAgent(BaseAgent):
         '''
         Initialize the Planning agent.
         '''
+        # Load the system prompt from config/prompts/planning_agent.md.
+        # No hardcoded fallback — the external file is the sole source.
+        instruction = self._load_prompt_file()
+        if not instruction:
+            raise FileNotFoundError(
+                'config/prompts/planning_agent.md is required but not found. '
+                'The Planning Agent has no hardcoded fallback prompt.'
+            )
+
         config = AgentConfig(
             name='planning_agent',
             description='Creates release structures from roadmap data',
-            instruction=PLANNING_INSTRUCTION
+            instruction=instruction
         )
         
         # Initialize with file tools for reading templates
         file_tools = FileTools()
         
         super().__init__(config=config, tools=[file_tools], **kwargs)
+
+    # ------------------------------------------------------------------
+    # Prompt loading
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _load_prompt_file() -> Optional[str]:
+        '''Load the planning agent prompt from config/prompts/.'''
+        prompt_path = os.path.join('config', 'prompts', 'planning_agent.md')
+        if os.path.exists(prompt_path):
+            try:
+                with open(prompt_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            except Exception as e:
+                log.warning(f'Failed to load planning agent prompt: {e}')
+        return None
         
         # Load ticket templates if available
         self.templates = self._load_templates()

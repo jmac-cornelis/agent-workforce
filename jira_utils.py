@@ -72,6 +72,41 @@ log.debug(f'JIRA_URL: {JIRA_URL}')
 _quiet_mode = False
 _show_jql = False
 
+# Public API surface — used by `from jira_utils import *` and tooling introspection.
+__all__ = [
+    # Connection
+    'connect_to_jira', 'get_connection', 'reset_connection',
+    'get_jira_credentials',
+    # Projects
+    'list_projects', 'validate_project', 'get_project_workflows',
+    'get_project_issue_types', 'get_project_fields',
+    'get_project_versions', 'get_project_components',
+    # Tickets
+    'get_tickets', 'get_ticket_totals', 'create_ticket',
+    'bulk_update_tickets', 'bulk_delete_tickets',
+    'dump_tickets_to_file', 'load_tickets_from_csv',
+    # Filters & JQL
+    'list_filters', 'get_filter', 'run_filter', 'run_jql_query',
+    # Releases
+    'get_releases', 'get_release_tickets', 'get_releases_tickets',
+    'get_no_release_tickets',
+    # Hierarchy & Relations
+    'get_children_hierarchy', 'get_related_issues',
+    # Dashboards
+    'list_dashboards', 'get_dashboard', 'create_dashboard',
+    'update_dashboard', 'delete_dashboard', 'copy_dashboard',
+    # Gadgets
+    'list_gadgets', 'add_gadget', 'remove_gadget', 'update_gadget',
+    # Normalization helpers
+    'normalize_issue_types', 'normalize_statuses', 'normalize_release',
+    'parse_date_filter', 'match_pattern_with_exclusions',
+    # Display helpers
+    'output', 'show_jql', 'display_jql',
+    # Exceptions
+    'Error', 'JiraConnectionError', 'JiraCredentialsError',
+    'JiraProjectError', 'JiraDashboardError',
+]
+
 def output(message=''):
     '''
     Print user-facing output, respecting quiet mode.
@@ -433,6 +468,44 @@ def connect_to_jira():
         return jira
     except Exception as e:
         raise JiraConnectionError(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Cached connection management
+# ---------------------------------------------------------------------------
+
+_cached_connection = None
+
+
+def get_connection():
+    '''
+    Get or create a cached Jira connection.
+
+    Returns the same JIRA object on repeated calls, avoiding redundant
+    authentication.  Call reset_connection() to force a fresh connection
+    (e.g. after changing credentials or for testing).
+
+    Output:
+        JIRA object with active connection.
+
+    Raises:
+        JiraConnectionError: If connection fails.
+    '''
+    global _cached_connection
+    if _cached_connection is None:
+        _cached_connection = connect_to_jira()
+    return _cached_connection
+
+
+def reset_connection():
+    '''
+    Clear the cached Jira connection.
+
+    The next call to get_connection() will create a fresh connection.
+    Useful for testing or after credential changes.
+    '''
+    global _cached_connection
+    _cached_connection = None
 
 
 def list_projects(jira):
@@ -2827,126 +2900,15 @@ def get_tickets(jira, project_key, issue_types=None, statuses=None, date_filter=
         raise
 
 
-# Status-to-fill color mapping for Excel conditional formatting.
-# These are embedded as dynamic Excel rules so they update if the user edits
-# status values in the spreadsheet.
-STATUS_FILL_COLORS = {
-    'Open':        'CCE5FF',   # Light blue
-    'In Progress': 'CCFFCC',   # Light green
-    'Verify':      'E5CCFF',   # Light purple
-    'Ready':       'FFFFCC',   # Light yellow
-    'Closed':      'FFFFFF',   # White
-}
-
-# Priority-to-fill/font color mapping for Excel conditional formatting.
-# Each entry maps a priority value to (fill_hex, font_hex).
-PRIORITY_FILL_COLORS = {
-    'P0-Stopper':  ('FF0000', 'FFFFFF'),   # Red fill, white text
-    'P1-Critical': ('FFFF00', '000000'),   # Yellow fill, black text
-}
-
-
-def _apply_status_conditional_formatting(ws, fieldnames):
-    '''
-    Add Excel conditional formatting rules to the status column.
-
-    Each rule highlights the status cell with a fill color based on its value.
-    Rules are dynamic — they are evaluated by Excel/LibreOffice when the file
-    is opened, so they update if the user edits status values.
-
-    Input:
-        ws: openpyxl Worksheet object (already populated with data).
-        fieldnames: List of column header names (to locate the status column).
-
-    Side Effects:
-        Adds conditional formatting rules to the worksheet.
-    '''
-    from openpyxl.formatting.rule import CellIsRule
-    from openpyxl.styles import PatternFill
-    from openpyxl.utils import get_column_letter
-
-    # Find the status column index (1-based)
-    status_col_idx = None
-    for idx, name in enumerate(fieldnames, 1):
-        if name.lower() == 'status':
-            status_col_idx = idx
-            break
-
-    if status_col_idx is None:
-        log.debug('No "status" column found — skipping conditional formatting')
-        return
-
-    col_letter = get_column_letter(status_col_idx)
-    # Apply rules from row 2 (skip header) to the last data row
-    last_row = ws.max_row
-    if last_row < 2:
-        return
-
-    cell_range = f'{col_letter}2:{col_letter}{last_row}'
-    log.debug(f'Applying status conditional formatting to range {cell_range}')
-
-    for status_value, hex_color in STATUS_FILL_COLORS.items():
-        fill = PatternFill(start_color=hex_color, end_color=hex_color, fill_type='solid')
-        rule = CellIsRule(
-            operator='equal',
-            formula=[f'"{status_value}"'],
-            fill=fill,
-        )
-        ws.conditional_formatting.add(cell_range, rule)
-
-    log.debug(f'Added {len(STATUS_FILL_COLORS)} conditional formatting rules for status column')
-
-
-def _apply_priority_conditional_formatting(ws, fieldnames):
-    '''
-    Add Excel conditional formatting rules to the priority column.
-
-    Highlights priority cells based on their value:
-      - P0-Stopper:  red fill, white text
-      - P1-Critical: yellow fill, black text
-
-    Input:
-        ws: openpyxl Worksheet object (already populated with data).
-        fieldnames: List of column header names (to locate the priority column).
-
-    Side Effects:
-        Adds conditional formatting rules to the worksheet.
-    '''
-    from openpyxl.formatting.rule import CellIsRule
-    from openpyxl.styles import PatternFill, Font
-    from openpyxl.utils import get_column_letter
-
-    # Find the priority column index (1-based)
-    priority_col_idx = None
-    for idx, name in enumerate(fieldnames, 1):
-        if name.lower() == 'priority':
-            priority_col_idx = idx
-            break
-
-    if priority_col_idx is None:
-        log.debug('No "priority" column found — skipping priority conditional formatting')
-        return
-
-    col_letter = get_column_letter(priority_col_idx)
-    last_row = ws.max_row
-    if last_row < 2:
-        return
-
-    cell_range = f'{col_letter}2:{col_letter}{last_row}'
-    log.debug(f'Applying priority conditional formatting to range {cell_range}')
-
-    for priority_value, (fill_hex, font_hex) in PRIORITY_FILL_COLORS.items():
-        fill = PatternFill(start_color=fill_hex, end_color=fill_hex, fill_type='solid')
-        font = Font(color=font_hex)
-        rule = CellIsRule(
-            operator='equal',
-            formula=[f'"{priority_value}"'],
-            fill=fill,
-            font=font,
-        )
-        ws.conditional_formatting.add(cell_range, rule)
-
-    log.debug(f'Added {len(PRIORITY_FILL_COLORS)} conditional formatting rules for priority column')
+# Excel formatting — canonical implementation lives in excel_utils.py.
+# Imported here so _write_excel() and dump_tickets_to_file() can use them
+# without duplicating the logic.
+from excel_utils import (
+    STATUS_FILL_COLORS,
+    PRIORITY_FILL_COLORS,
+    _apply_status_conditional_formatting,
+    _apply_priority_conditional_formatting,
+)
 
 
 def _write_excel(rows, output_path, extra_fields=None, table_format='flat'):
@@ -3811,6 +3773,12 @@ def bulk_delete_tickets(jira, input_file, delete_subtasks=False, dry_run=True, m
 
     email, api_token = get_jira_credentials()
 
+    # Derive the server URL from the jira connection object so that
+    # --env overrides are honoured even if the module-level JIRA_URL
+    # was captured before the override took effect.
+    server_url = jira.server_url if hasattr(jira, 'server_url') else JIRA_URL
+    log.info(f'bulk_delete_tickets: using server {server_url}')
+
     success_count = 0
     error_count = 0
     errors = []
@@ -3840,7 +3808,7 @@ def bulk_delete_tickets(jira, input_file, delete_subtasks=False, dry_run=True, m
 
         for retry in range(max_retries):
             response = requests.delete(
-                f'{JIRA_URL}/rest/api/3/issue/{ticket_key}',
+                f'{server_url}/rest/api/3/issue/{ticket_key}',
                 auth=(email, api_token),
                 headers={'Accept': 'application/json'},
                 params=params,

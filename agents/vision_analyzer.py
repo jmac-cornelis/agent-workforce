@@ -21,34 +21,6 @@ from tools.file_tools import FileTools
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
 
-# Default instruction for the Vision Analyzer agent
-VISION_ANALYZER_INSTRUCTION = '''You are a Vision Analyzer Agent specialized in extracting roadmap information from visual documents.
-
-Your role is to:
-1. Analyze roadmap slides, images, and documents
-2. Extract release names, versions, and timelines
-3. Identify features, milestones, and dependencies
-4. Structure the extracted information for release planning
-
-When analyzing visual content, look for:
-- Version numbers (e.g., 12.0, 12.1, 13.0)
-- Quarter/date references (Q1 2024, March 2024)
-- Feature names and descriptions
-- Milestone markers
-- Dependency arrows or relationships
-- Team or component assignments
-
-Output your analysis in a structured format with:
-- Releases: List of identified releases with versions and dates
-- Features: List of features/items with descriptions
-- Timeline: Chronological milestones
-- Dependencies: Any identified dependencies between items
-- Confidence: Your confidence level in the extraction
-
-Be thorough but also note any ambiguities or items that need clarification.
-'''
-
-
 class VisionAnalyzerAgent(BaseAgent):
     '''
     Agent for analyzing roadmap slides and images.
@@ -61,10 +33,19 @@ class VisionAnalyzerAgent(BaseAgent):
         '''
         Initialize the Vision Analyzer agent.
         '''
+        # Load the system prompt from config/prompts/vision_analyzer.md.
+        # No hardcoded fallback — the external file is the sole source.
+        instruction = self._load_prompt_file()
+        if not instruction:
+            raise FileNotFoundError(
+                'config/prompts/vision_analyzer.md is required but not found. '
+                'The Vision Analyzer Agent has no hardcoded fallback prompt.'
+            )
+
         config = AgentConfig(
             name='vision_analyzer',
             description='Analyzes roadmap slides and images to extract release information',
-            instruction=VISION_ANALYZER_INSTRUCTION
+            instruction=instruction
         )
         
         # Initialize with vision and file tools
@@ -72,7 +53,38 @@ class VisionAnalyzerAgent(BaseAgent):
         file_tools = FileTools()
         
         super().__init__(config=config, tools=[vision_tools, file_tools], **kwargs)
-    
+
+    # ------------------------------------------------------------------
+    # Prompt loading
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _load_prompt_file() -> Optional[str]:
+        '''Load the vision analyzer prompt from config/prompts/.'''
+        prompt_path = os.path.join('config', 'prompts', 'vision_analyzer.md')
+        if os.path.exists(prompt_path):
+            try:
+                with open(prompt_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            except Exception as e:
+                log.warning(f'Failed to load vision analyzer prompt: {e}')
+        return None
+
+    @staticmethod
+    def _load_vision_roadmap_prompt() -> str:
+        '''Load the roadmap image analysis prompt from config/prompts/.'''
+        prompt_path = os.path.join('config', 'prompts', 'vision_roadmap_analysis.md')
+        if os.path.exists(prompt_path):
+            try:
+                with open(prompt_path, 'r', encoding='utf-8') as f:
+                    return f.read().strip()
+            except Exception as e:
+                log.warning(f'Failed to load vision roadmap analysis prompt: {e}')
+        # Should not happen — the external file is the sole source
+        raise FileNotFoundError(
+            'config/prompts/vision_roadmap_analysis.md is required but not found.'
+        )
+
     def run(self, input_data: Any) -> AgentResponse:
         '''
         Run the vision analysis.
@@ -166,16 +178,11 @@ Use the appropriate tool to extract information from this {file_type} file, then
         }
         
         if file_type == 'image':
-            # Use vision analysis
+            # Use vision analysis — load the prompt from an external file
+            vision_prompt = self._load_vision_roadmap_prompt()
             analysis = analyze_image(
                 file_path,
-                prompt='''Analyze this roadmap image and extract:
-1. All version numbers or release names
-2. Dates, quarters, or timeline information
-3. Feature names and descriptions
-4. Any dependencies or relationships
-
-Format your response as structured data.'''
+                prompt=vision_prompt
             )
             
             if analysis.is_success:

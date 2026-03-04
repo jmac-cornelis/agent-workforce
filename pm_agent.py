@@ -21,11 +21,12 @@ import logging
 import re
 import sys
 import os
-import threading
-import time as _time
 from datetime import date
 
 from dotenv import load_dotenv
+
+import jira_utils
+import excel_utils
 
 # Load environment variables
 load_dotenv()
@@ -316,8 +317,6 @@ def cmd_build_excel_map(args):
         output('ERROR: openpyxl is required for build-excel-map. Install with: pip install openpyxl')
         return 1
 
-    import jira_utils
-
     hierarchy_depth = args.hierarchy
     limit = getattr(args, 'limit', None)
     # Default output filename: first ticket key, or combined if multiple
@@ -353,7 +352,7 @@ def cmd_build_excel_map(args):
         # Step 1: Connect to Jira
         # ---------------------------------------------------------------
         output('Step 1/4: Connecting to Jira...')
-        jira = jira_utils.connect_to_jira()
+        jira = jira_utils.get_connection()
 
         # Validate project if provided
         if getattr(args, 'project', None):
@@ -931,40 +930,14 @@ def _invoke_llm(prompt_text, attachments=None, timeout=None, model=None):
         output(f'Using model: {client.model}')
         messages = [Message.user(prompt_text)]
 
-    # ---- call LLM with waiting-status heartbeat -----------------------------
-    # Run the actual API call in a background thread so we can print
-    # periodic "Still waiting..." messages every 10 seconds.
-    llm_result = {}  # shared dict: {'response': ..., 'error': ...}
-
-    def _llm_worker():
-        try:
-            if image_data_uris:
-                llm_result['response'] = client.chat_with_vision(messages, image_data_uris)
-            else:
-                llm_result['response'] = client.chat(messages)
-        except Exception as exc:
-            llm_result['error'] = exc
-
-    worker = threading.Thread(target=_llm_worker, daemon=True)
-    start_time = _time.monotonic()
-    worker.start()
-
-    # Heartbeat loop — print status every 10 seconds while waiting
-    heartbeat_interval = 10
-    while worker.is_alive():
-        worker.join(timeout=heartbeat_interval)
-        if worker.is_alive():
-            elapsed = int(_time.monotonic() - start_time)
-            log.info(f'Still waiting on LLM return... {elapsed} seconds total')
-
-    elapsed_total = _time.monotonic() - start_time
-
-    # Re-raise any exception from the worker thread
-    if 'error' in llm_result:
-        raise llm_result['error']
-
-    response = llm_result['response']
-    log.info(f'LLM returned in {elapsed_total:.1f}s')
+    # ---- call LLM -----------------------------------------------------------
+    # Heartbeat "Still waiting on LLM return..." messages are now emitted
+    # inside CornelisLLM.chat() / chat_with_vision() themselves, so no
+    # wrapper thread is needed here.
+    if image_data_uris:
+        response = client.chat_with_vision(messages, image_data_uris)
+    else:
+        response = client.chat(messages)
 
     # ---- display response ---------------------------------------------------
     output('')
@@ -1152,6 +1125,7 @@ def cmd_workflow(args):
     # Registry of available workflows
     WORKFLOWS = {
         'bug-report': _workflow_bug_report,
+        'feature-plan': _workflow_feature_plan,
     }
 
     handler = WORKFLOWS.get(args.workflow_name)
@@ -1161,6 +1135,44 @@ def cmd_workflow(args):
         return 1
 
     return handler(args)
+
+
+# ---------------------------------------------------------------------------
+# Shared workflow summary helper
+# ---------------------------------------------------------------------------
+
+def _print_workflow_summary(workflow_name: str, created_files: list):
+    '''Print a standardised "WORKFLOW COMPLETE" banner with a file table.
+
+    Input:
+        workflow_name:  Short name shown in the banner (e.g. "bug-report").
+        created_files:  List of (filepath, description) tuples.
+    '''
+    banner = '=' * 80
+    output('')
+    output(banner)
+    output(f'WORKFLOW COMPLETE: {workflow_name}')
+    output(banner)
+
+    if created_files:
+        max_name = max(len(f[0]) for f in created_files)
+        max_name = max(max_name, 4)  # minimum column width
+        row_fmt = f'{{:<4}}{{:<{max_name + 3}}}{{:<}}'
+
+        file_table_lines = [
+            '',
+            banner,
+            'Workflow Output Files',
+            banner,
+            row_fmt.format('#', 'File', 'Description'),
+        ]
+        for idx, (fpath, fdesc) in enumerate(created_files, 1):
+            file_table_lines.append(row_fmt.format(str(idx), fpath, fdesc))
+        file_table_lines.append(banner)
+
+        output('\n'.join(file_table_lines))
+
+    output('')
 
 
 def _workflow_bug_report(args):
@@ -1192,9 +1204,6 @@ def _workflow_bug_report(args):
     log.debug(f'Entering _workflow_bug_report(filter={args.workflow_filter}, '
               f'prompt={args.workflow_prompt}, limit={args.limit}, timeout={args.timeout})')
 
-    import jira_utils
-    import excel_utils
-
     filter_name = args.workflow_filter
     prompt_path = args.workflow_prompt or 'config/prompts/cn5000_bugs_clean.md'
     all_created_files = []  # (filepath, description) tuples for final summary
@@ -1207,7 +1216,7 @@ def _workflow_bug_report(args):
     output('')
     output('Step 1/6: Connecting to Jira...')
     try:
-        jira = jira_utils.connect_to_jira()
+        jira = jira_utils.get_connection()
         log.info('Jira connection established')
     except Exception as e:
         log.error(f'Step 1/6 failed: Jira connection error: {e}', exc_info=True)
@@ -1406,34 +1415,327 @@ def _workflow_bug_report(args):
                 log.error(f'Excel conversion failed for {csv_path}: {e}', exc_info=True)
                 output(f'  WARNING: Failed to convert {csv_path} to Excel: {e}')
 
-    # ---- Final summary — ==== banner style ----------------------------------
-    banner = '=' * 80
-    output('')
-    output(banner)
-    output('WORKFLOW COMPLETE: bug-report')
-    output(banner)
-
-    if all_created_files:
-        max_name = max(len(f[0]) for f in all_created_files)
-        max_name = max(max_name, 4)
-        row_fmt = f'{{:<4}}{{:<{max_name + 3}}}{{:<}}'
-
-        file_table_lines = [
-            '',
-            banner,
-            'Workflow Output Files',
-            banner,
-            row_fmt.format('#', 'File', 'Description'),
-        ]
-        for idx, (fpath, fdesc) in enumerate(all_created_files, 1):
-            file_table_lines.append(row_fmt.format(str(idx), fpath, fdesc))
-        file_table_lines.append(banner)
-
-        file_table = '\n'.join(file_table_lines)
-        output(file_table)
-
-    output('')
+    _print_workflow_summary('bug-report', all_created_files)
     return 0
+
+
+def _workflow_feature_plan(args):
+    '''
+    Feature planning workflow: research → HW analysis → scoping → Jira plan.
+
+    Takes a high-level feature request and produces a Jira project plan with
+    Epics and Stories.  Dry-run by default; use --execute to create tickets.
+
+    Input:
+        args: Parsed argparse namespace with:
+            - project: Jira project key
+            - feature: Feature description string
+            - docs: Optional list of document paths
+            - output: Optional output file path
+            - execute: Whether to create tickets in Jira
+
+    Output:
+        int: Exit code (0 = success, 1 = error).
+    '''
+    log.debug('Entering _workflow_feature_plan()')
+
+    project_key = args.project
+    plan_file = getattr(args, 'plan_file', None)
+    execute = getattr(args, 'execute', False)
+    initiative_key = getattr(args, 'initiative', None)
+    force = getattr(args, 'force', False)
+    cleanup_csv = getattr(args, 'cleanup', None)
+
+    # ------------------------------------------------------------------
+    # Cleanup path: --cleanup CSV deletes all tickets listed in the CSV
+    # produced by a previous --execute run.  Dry-run by default; add
+    # --execute to actually delete.  The CSV is already in child-first
+    # order so parents are deleted last.
+    # ------------------------------------------------------------------
+    if cleanup_csv:
+        output('Feature Planning Workflow — Cleanup (Leave No Trace)')
+        output(f'  CSV file:  {cleanup_csv}')
+        output(f'  Execute:   {"YES — will DELETE tickets" if execute else "DRY RUN"}')
+        if force:
+            output(f'  Force:     YES — skip confirmation prompt')
+        output('')
+
+        if not os.path.isfile(cleanup_csv):
+            output(f'ERROR: Cleanup CSV not found: {cleanup_csv}')
+            return 1
+
+        try:
+            jira = jira_utils.get_connection()
+            jira_utils.bulk_delete_tickets(
+                jira,
+                input_file=cleanup_csv,
+                delete_subtasks=True,
+                dry_run=not execute,
+                force=force,
+            )
+            return 0
+        except Exception as e:
+            output(f'ERROR: Cleanup failed: {e}')
+            log.error(f'Cleanup error: {e}', exc_info=True)
+            return 1
+
+    # ------------------------------------------------------------------
+    # Fast path: --plan-file loads a previously generated plan.json and
+    # optionally pushes it into Jira (--execute).  No LLM / agentic
+    # phases are invoked.
+    # ------------------------------------------------------------------
+    if plan_file:
+        output(f'Feature Planning Workflow — Execute from Plan File')
+        output(f'  Project:      {project_key}')
+        output(f'  Plan file:    {plan_file}')
+        if initiative_key:
+            output(f'  Initiative:   {initiative_key} (supplied)')
+        else:
+            output(f'  Initiative:   (will be auto-created on --execute)')
+        output(f'  Force:        {"YES — skip duplicate prompts" if force else "no (interactive)"}')
+        output(f'  Execute:      {"YES — will create Jira tickets" if execute else "DRY RUN"}')
+        output('')
+
+        try:
+            from agents.feature_planning_orchestrator import FeaturePlanningOrchestrator
+
+            orchestrator = FeaturePlanningOrchestrator()
+            response = orchestrator.run({
+                'project_key': project_key,
+                'feature_request': '',          # not needed for execute-plan
+                'mode': 'execute-plan',
+                'plan_file': plan_file,
+                'execute': execute,
+                'initiative_key': initiative_key,
+                'force': force,
+                'timeout': getattr(args, 'timeout', None),
+            })
+
+            if response.success:
+                output(response.content)
+
+                # Surface the created_tickets.csv path if it was produced
+                csv_path = response.metadata.get('created_csv_path', '')
+                if csv_path and os.path.isfile(csv_path):
+                    output(f'\nCreated tickets CSV: {csv_path}')
+
+                # If this was a dry-run, remind the user
+                if not execute:
+                    output('')
+                    output('This was a DRY RUN. To create tickets in Jira, '
+                           're-run with --execute.')
+                return 0
+            else:
+                output(f'ERROR: {response.error}')
+                return 1
+
+        except ImportError as e:
+            output(f'ERROR: Missing dependency: {e}')
+            log.error(f'Import error: {e}', exc_info=True)
+            return 1
+        except Exception as e:
+            output(f'ERROR: Plan execution failed: {e}')
+            log.error(f'Plan execution error: {e}', exc_info=True)
+            return 1
+
+    # ------------------------------------------------------------------
+    # Standard path: agentic workflow (research → HW → scoping → plan)
+    # ------------------------------------------------------------------
+
+    # --feature-prompt FILE takes precedence over --feature "string"
+    feature_prompt_file = getattr(args, 'feature_prompt', None)
+    if feature_prompt_file:
+        log.info(f'Reading feature prompt from file: {feature_prompt_file}')
+        with open(feature_prompt_file, 'r', encoding='utf-8') as fp:
+            feature_request = fp.read().strip()
+        if not feature_request:
+            output(f'ERROR: Feature prompt file is empty: {feature_prompt_file}')
+            return 1
+        log.info(f'Feature prompt loaded: {len(feature_request)} chars from {feature_prompt_file}')
+    else:
+        feature_request = args.feature
+    doc_paths = args.docs or []
+    scope_doc = getattr(args, 'scope_doc', None) or ''
+
+    # Determine the workflow mode:
+    #   --scope-doc  → 'scope-to-plan' (skip research/HW/scoping, jump to plan)
+    #   default      → 'full' (run all phases)
+    mode = 'scope-to-plan' if scope_doc else 'full'
+
+    # Resolve the output directory.
+    #
+    # The standard subdir structure is:  plans/<PROJECT>-<slug>/
+    # --output-dir ROOT  → ROOT/plans/<PROJECT>-<slug>/
+    # --output FILE      → dirname(FILE)  (explicit path, no slug)
+    # (neither)          → plans/<PROJECT>-<slug>/  (relative to cwd)
+    explicit_output_dir = getattr(args, 'output_dir', None)
+    output_file = args.output or 'feature_plan.json'
+
+    # Build the <PROJECT>-<slug> component used by the standard layout.
+    # When using --feature-prompt, derive slug from the filename stem
+    # (the full file content would be too long for a directory name).
+    if feature_prompt_file:
+        slug = os.path.splitext(os.path.basename(feature_prompt_file))[0].lower()
+    else:
+        slug = feature_request[:40].lower()
+    slug = slug.replace(' ', '-').replace('/', '-')
+    slug = ''.join(c for c in slug if c.isalnum() or c == '-')
+    slug = slug.strip('-')
+    plans_subdir = os.path.join('plans', f'{project_key}-{slug}')
+
+    if explicit_output_dir:
+        # --output-dir ROOT → ROOT/plans/<PROJECT>-<slug>/
+        output_dir = os.path.join(explicit_output_dir, plans_subdir)
+    else:
+        output_dir = os.path.dirname(output_file)
+
+    if not output_dir:
+        # Default: plans/<PROJECT>-<slug>/ relative to cwd
+        output_dir = plans_subdir
+
+    output(f'Feature Planning Workflow')
+    output(f'  Project:  {project_key}')
+    if feature_prompt_file:
+        output(f'  Prompt:   {feature_prompt_file} ({len(feature_request)} chars)')
+    else:
+        output(f'  Feature:  {feature_request}')
+    output(f'  Mode:     {mode}')
+    output(f'  Output:   {output_dir}/')
+    if scope_doc:
+        output(f'  Scope:    {scope_doc}')
+    if doc_paths:
+        output(f'  Docs:     {len(doc_paths)} file(s)')
+        for dp in doc_paths:
+            output(f'            - {dp}')
+    if initiative_key:
+        output(f'  Initiative: {initiative_key} (supplied)')
+    else:
+        output(f'  Initiative: (will be auto-created on --execute)')
+    output(f'  Force:    {"YES — skip duplicate prompts" if force else "no (interactive)"}')
+    output(f'  Execute:  {"YES — will create Jira tickets" if execute else "DRY RUN"}')
+    output('')
+
+    try:
+        from agents.feature_planning_orchestrator import FeaturePlanningOrchestrator
+
+        output('Starting workflow...')
+        orchestrator = FeaturePlanningOrchestrator(output_dir=output_dir)
+
+        response = orchestrator.run({
+            'feature_request': feature_request,
+            'project_key': project_key,
+            'doc_paths': doc_paths,
+            'mode': mode,
+            'execute': execute,
+            'initiative_key': initiative_key,
+            'force': force,
+            'scope_doc': scope_doc,
+            'output_dir': output_dir,
+            'timeout': args.timeout,
+        })
+
+        if response.success:
+            output(response.content)
+
+            # Save the plan to JSON inside the output directory
+            jira_plan = response.metadata.get('state', {}).get('jira_plan')
+            # Track all output files for the summary table
+            all_created_files: list = []
+
+            # Include intermediate files created by the orchestrator
+            # (research.json, hw_profile.json, scope.json, debug/*.md)
+            intermediate_files = getattr(orchestrator, '_created_files', [])
+            for ifile in intermediate_files:
+                if os.path.exists(ifile):
+                    basename = os.path.basename(ifile)
+                    if 'debug' in ifile:
+                        all_created_files.append((ifile, f'Debug: {basename}'))
+                    else:
+                        desc_map = {
+                            'research.json': 'Research findings',
+                            'hw_profile.json': 'Hardware profile',
+                            'scope.json': 'Feature scope',
+                        }
+                        all_created_files.append(
+                            (ifile, desc_map.get(basename, f'Intermediate: {basename}'))
+                        )
+
+            if jira_plan:
+                import json
+                # Place plan files in the output directory
+                os.makedirs(output_dir, exist_ok=True)
+                json_path = os.path.join(output_dir, 'plan.json')
+                with open(json_path, 'w', encoding='utf-8') as f:
+                    json.dump(jira_plan, f, indent=2)
+                output(f'Saving plan to: {json_path}')
+                all_created_files.append((json_path, 'Feature plan JSON'))
+
+                # Also save Markdown summary
+                md_path = os.path.join(output_dir, 'plan.md')
+                markdown = jira_plan.get('summary_markdown', '')
+                if markdown:
+                    with open(md_path, 'w', encoding='utf-8') as f:
+                        f.write(markdown)
+                    output(f'Markdown saved to: {md_path}')
+                    all_created_files.append((md_path, 'Markdown summary'))
+
+                # Export plan to CSV (indented format)
+                csv_path = ''
+                try:
+                    from tools.plan_export_tools import plan_to_csv as _plan_to_csv
+                    csv_basename = os.path.join(output_dir, 'plan')
+                    csv_result = _plan_to_csv(json_path, output_path=csv_basename)
+                    if hasattr(csv_result, 'data') and csv_result.data:
+                        csv_path = csv_result.data.get('output_path', '')
+                        if csv_path:
+                            output(f'CSV saved to: {csv_path}')
+                            all_created_files.append((csv_path, 'Jira CSV (indented)'))
+                    elif hasattr(csv_result, 'error') and csv_result.error:
+                        log.warning(f'CSV export warning: {csv_result.error}')
+                except Exception as csv_err:
+                    log.warning(f'CSV export failed (plan JSON still saved): {csv_err}')
+
+                # Convert CSV to Excel workbook via excel_utils
+                if csv_path:
+                    try:
+                        xlsx_path = excel_utils.convert_from_csv(csv_path)
+                        log.info(f'Converted {csv_path} -> {xlsx_path}')
+                        output(f'Excel saved to: {xlsx_path}')
+                        all_created_files.append((xlsx_path, 'Excel workbook'))
+                    except Exception as xlsx_err:
+                        log.warning(f'Excel conversion failed: {xlsx_err}')
+                        output(f'  WARNING: Excel conversion failed: {xlsx_err}')
+
+            # Surface the created_tickets.csv path if execution produced one
+            created_csv = response.metadata.get('created_csv_path', '')
+            if created_csv and os.path.isfile(created_csv):
+                all_created_files.append((created_csv, 'Created tickets (for --cleanup)'))
+
+            # Report blocking status
+            if response.metadata.get('blocked'):
+                questions = response.metadata.get('blocking_questions', [])
+                output(f'\n⚠️  Workflow blocked by {len(questions)} question(s).')
+                output('Answer the questions above and re-run to continue.')
+                return 1
+
+            output('')
+            if not execute:
+                output('This was a DRY RUN. To create tickets in Jira, re-run with --execute.')
+
+            _print_workflow_summary('feature-plan', all_created_files)
+            return 0
+        else:
+            output(f'ERROR: {response.error}')
+            return 1
+
+    except ImportError as e:
+        output(f'ERROR: Missing dependency for feature planning: {e}')
+        log.error(f'Import error: {e}', exc_info=True)
+        return 1
+    except Exception as e:
+        output(f'ERROR: Feature planning failed: {e}')
+        log.error(f'Feature planning error: {e}', exc_info=True)
+        return 1
 
 
 def cmd_resume(args):
@@ -1524,12 +1826,25 @@ Examples:
   %(prog)s --invoke-llm prompt.md --attachments screenshot.png report.csv
   %(prog)s --sessions --list-sessions
   %(prog)s --resume abc123
+  %(prog)s --workflow feature-plan --project STL --feature "Add PQC device support"
+  %(prog)s --workflow feature-plan --project STL --feature "Add PQC device" --docs spec.pdf --execute
+  %(prog)s --workflow feature-plan --project STLSB --feature-prompt RedfishRDE.md
+  %(prog)s --workflow feature-plan --project STLSB --feature-prompt RedfishRDE.md --output-dir /tmp/out
+  %(prog)s --workflow feature-plan --project STL --feature "Add PQC device" --scope-doc scope.json
+  %(prog)s --workflow feature-plan --project STL --feature "Add PQC device" --scope-doc scope.md --execute
+  %(prog)s --env .env_sandbox --workflow feature-plan --project STLSB --feature "Redfish RDE" --scope-doc RedfishRDE.md
+  %(prog)s --workflow feature-plan --project STLSB --plan-file plans/STLSB-redfish/plan.json
+  %(prog)s --workflow feature-plan --project STLSB --plan-file plans/STLSB-redfish/plan.json --execute
+  %(prog)s --workflow feature-plan --project STL --plan-file plan.json --initiative STL-74071 --execute
         '''
     )
     
     # Global options
     parser.add_argument('-q', '--quiet', action='store_true',
                        help='Suppress output to stdout')
+    parser.add_argument('--env', default=None, metavar='FILE',
+                       help='Path to a .env file to load (overrides the default .env). '
+                            'Example: --env .env_sandbox')
     parser.add_argument('--persistence-format', choices=['json', 'sqlite', 'both'],
                        default='json', help='Session persistence format')
     
@@ -1577,6 +1892,59 @@ Examples:
                             'gets a COUNTIF-based pivot table. Names are '
                             'case-insensitive. '
                             'Example: --d-columns Phase Customer Product Module Priority')
+    
+    # ---- Options for --workflow feature-plan -----------------------------------
+    parser.add_argument('--feature', default=None, metavar='TEXT',
+                       help='Feature description for --workflow feature-plan '
+                            '(e.g. "Add PQC device support to CN5000 board")')
+    parser.add_argument('--feature-prompt', default=None, metavar='FILE',
+                       dest='feature_prompt',
+                       help='Markdown file with a rich feature prompt. '
+                            'When provided, its content is used as the feature '
+                            'request and takes precedence over --feature. '
+                            'Used by --workflow feature-plan.')
+    parser.add_argument('--scope-doc', default=None, metavar='FILE',
+                       dest='scope_doc',
+                       help='Pre-existing scope document (JSON, Markdown, PDF, DOCX). '
+                            'Skips research/HW-analysis/scoping phases and jumps '
+                            'straight to Jira plan generation. '
+                            'Used by --workflow feature-plan.')
+    parser.add_argument('--docs', nargs='*', default=None, metavar='FILE',
+                       help='Spec documents / datasheets for --workflow feature-plan')
+    parser.add_argument('--plan-file', default=None, metavar='FILE',
+                       dest='plan_file',
+                       help='Path to a previously generated plan.json. '
+                            'Loads the plan and prints a summary (dry-run). '
+                            'Combine with --execute to push tickets into Jira. '
+                            'Skips all agentic phases. '
+                            'Used by --workflow feature-plan.')
+    parser.add_argument('--initiative', default=None, metavar='KEY',
+                       help='Optional existing Initiative ticket key (e.g. STL-74071). '
+                            'If supplied, the ticket is validated as type Initiative '
+                            'and all created Epics become its children. '
+                            'If omitted, a new Initiative is auto-created from the '
+                            'plan feature name. '
+                            'Used by --workflow feature-plan.')
+    parser.add_argument('--execute', action='store_true',
+                       help='Actually create Jira tickets (default: dry-run). '
+                            'Used by --workflow feature-plan.')
+    parser.add_argument('--force', action='store_true',
+                       help='Skip duplicate-ticket confirmation prompts. '
+                            'Without --force, the agent pauses and asks before '
+                            'creating a ticket whose summary already exists in '
+                            'the project. Used by --workflow feature-plan.')
+    parser.add_argument('--cleanup', default=None, metavar='CSV',
+                       help='Delete all tickets listed in a created_tickets.csv '
+                            'file (produced by --execute). Dry-run by default; '
+                            'add --execute to actually delete. Children are '
+                            'deleted before parents. '
+                            'Used by --workflow feature-plan.')
+    parser.add_argument('--output-dir', default=None, metavar='DIR',
+                       dest='output_dir',
+                       help='Root directory for output. The standard '
+                            'plans/<PROJECT>-<slug>/ subdir is created '
+                            'inside it. Default root: current directory. '
+                            'Used by --workflow feature-plan.')
     
     # ---- Options for --plan ----------------------------------------------------
     parser.add_argument('--project', '-p', default=None,
@@ -1634,6 +2002,24 @@ Examples:
     if args.quiet:
         _quiet_mode = True
     
+    # ---- Load custom env file (--env) early, before anything reads env vars ----
+    # The default .env was already loaded at import time (line 31) with
+    # override=False.  When --env is provided we reload from that file with
+    # override=True so its values take precedence.
+    if args.env:
+        if not os.path.exists(args.env):
+            parser.error(f'--env file not found: {args.env}')
+        load_dotenv(dotenv_path=args.env, override=True)
+        log.info(f'Loaded env file: {args.env}')
+
+        # jira_utils.JIRA_URL was captured at import time from the default
+        # .env.  Now that --env has overridden os.environ, refresh the
+        # module-level URL and drop any cached connection so the next call
+        # to get_connection() uses the correct server.
+        jira_utils.JIRA_URL = os.getenv('JIRA_URL', jira_utils.DEFAULT_JIRA_URL)
+        jira_utils.reset_connection()
+        log.info(f'Refreshed jira_utils.JIRA_URL -> {jira_utils.JIRA_URL}')
+    
     # ---- Verbose mode: add a stdout handler so debug messages appear on console
     if args.verbose:
         sh = logging.StreamHandler(sys.stdout)
@@ -1685,6 +2071,27 @@ Examples:
         if args.workflow_name == 'bug-report':
             if not args.workflow_filter:
                 parser.error('--workflow bug-report requires --filter "FILTER_NAME"')
+        elif args.workflow_name == 'feature-plan':
+            # --cleanup only needs the CSV file — skip all other validation
+            cleanup_csv = getattr(args, 'cleanup', None)
+            if cleanup_csv:
+                if not os.path.isfile(cleanup_csv):
+                    parser.error(f'--cleanup CSV not found: {cleanup_csv}')
+            else:
+                if not args.project:
+                    parser.error('--workflow feature-plan requires --project PROJECT_KEY')
+                # --plan-file bypasses the agentic flow; no --feature needed
+                plan_file = getattr(args, 'plan_file', None)
+                if plan_file:
+                    if not os.path.isfile(plan_file):
+                        parser.error(f'--plan-file not found: {plan_file}')
+                elif not args.feature and not args.feature_prompt:
+                    # Require at least one of --feature or --feature-prompt
+                    parser.error('--workflow feature-plan requires --feature "DESCRIPTION" '
+                                 'or --feature-prompt FILE (or --plan-file FILE)')
+                # Validate that the prompt file exists when specified
+                if args.feature_prompt and not os.path.isfile(args.feature_prompt):
+                    parser.error(f'--feature-prompt file not found: {args.feature_prompt}')
     
     # ---- Map ticket_keys for build-excel-map compatibility ---------------------
     # cmd_build_excel_map expects args.ticket_keys
@@ -1748,6 +2155,31 @@ Examples:
         log.info(f'+  Session: {args.resume}')
     elif command == 'workflow':
         log.info(f'+  Workflow: {args.workflow_name}')
+        if args.workflow_name == 'feature-plan':
+            log.info(f'+  Project: {args.project}')
+            plan_file_arg = getattr(args, 'plan_file', None)
+            if plan_file_arg:
+                log.info(f'+  Plan file: {plan_file_arg}')
+            if args.feature_prompt:
+                log.info(f'+  Feature prompt: {args.feature_prompt}')
+            if args.feature:
+                feature_display = args.feature if len(args.feature) <= 60 else args.feature[:57] + '...'
+                log.info(f'+  Feature: {feature_display}')
+            if args.docs:
+                log.info(f'+  Docs: {len(args.docs)} file(s)')
+                for dp in args.docs:
+                    log.info(f'+    - {dp}')
+            initiative_arg = getattr(args, 'initiative', None)
+            if initiative_arg:
+                log.info(f'+  Initiative: {initiative_arg}')
+            if args.execute:
+                log.info(f'+  Execute: YES (will create Jira tickets)')
+            else:
+                log.info(f'+  Execute: DRY RUN')
+            if args.output_dir:
+                log.info(f'+  Output dir: {args.output_dir}')
+            elif args.output:
+                log.info(f'+  Output: {args.output}')
         if args.workflow_filter:
             log.info(f'+  Filter: {args.workflow_filter}')
         if args.workflow_prompt:

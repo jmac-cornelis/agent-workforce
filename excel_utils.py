@@ -52,6 +52,30 @@ log.debug('Global data and configuration for this script...')
 _quiet_mode = False
 _no_formatting = False
 
+# Public API surface — used by `from excel_utils import *` and tooling introspection.
+__all__ = [
+    # Color maps
+    'STATUS_FILL_COLORS', 'PRIORITY_FILL_COLORS',
+    # Formatting
+    '_apply_status_conditional_formatting',
+    '_apply_priority_conditional_formatting',
+    '_apply_header_style', '_auto_fit_columns',
+    # Concatenation
+    'concat_merge_sheet', 'concat_add_sheet',
+    # Conversion
+    'convert_to_csv', 'convert_from_csv',
+    # Diff
+    'diff_files',
+    # Dashboard
+    '_create_dashboard_sheet',
+    # Validation
+    '_validate_and_repair_csv',
+    # Exceptions
+    'Error', 'ExcelFileError',
+    # Display
+    'output',
+]
+
 
 def output(message=''):
     '''

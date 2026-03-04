@@ -37,14 +37,15 @@ agents = [
 
 [project.scripts]
 # Console entry points — these become commands on your PATH
-pm-agent = "pm_agent:main"
 jira-utils = "jira_utils:main"
+jira-mcp-server = "mcp_server:run"
 drawio-utils = "drawio_utilities:main"
+pm-agent = "pm_agent:main"
 excel-utils = "excel_utils:main"
 
 [tool.setuptools]
 # Include top-level .py modules (not packages)
-py-modules = ["jira_utils", "drawio_utilities", "excel_utils", "pm_agent"]
+py-modules = ["jira_utils", "drawio_utilities", "excel_utils", "pm_agent", "mcp_server"]
 
 [tool.setuptools.package-data]
 # Include template files so --create-ticket can reference them

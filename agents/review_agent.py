@@ -100,32 +100,6 @@ class ReviewSession:
         }
 
 
-# Default instruction for the Review agent
-REVIEW_INSTRUCTION = '''You are a Review Agent that facilitates human approval of release plans.
-
-Your role is to:
-1. Present planned changes clearly for human review
-2. Explain what each change will do
-3. Handle modifications requested by the user
-4. Execute approved changes in Jira
-5. Report results of executed changes
-
-When presenting items for review:
-- Show the item type (release, ticket, link)
-- Show the action (create, update)
-- Show all relevant details
-- Highlight any potential issues or concerns
-
-When executing changes:
-- Only execute approved items
-- Execute in the correct order (releases before tickets, epics before stories)
-- Report success or failure for each item
-- Stop and report if critical errors occur
-
-Always be clear about what will happen and get explicit approval before making changes.
-'''
-
-
 class ReviewAgent(BaseAgent):
     '''
     Agent for human-in-the-loop review and approval.
@@ -147,10 +121,19 @@ class ReviewAgent(BaseAgent):
                               If not provided, uses interactive console prompts.
             **kwargs: Additional arguments passed to BaseAgent.
         '''
+        # Load the system prompt from config/prompts/review_agent.md.
+        # No hardcoded fallback — the external file is the sole source.
+        instruction = self._load_prompt_file()
+        if not instruction:
+            raise FileNotFoundError(
+                'config/prompts/review_agent.md is required but not found. '
+                'The Review Agent has no hardcoded fallback prompt.'
+            )
+
         config = AgentConfig(
             name='review_agent',
             description='Facilitates human review and approval of release plans',
-            instruction=REVIEW_INSTRUCTION
+            instruction=instruction
         )
         
         # Initialize with Jira tools for execution
@@ -160,6 +143,22 @@ class ReviewAgent(BaseAgent):
         
         self.approval_callback = approval_callback
         self.current_session: Optional[ReviewSession] = None
+
+    # ------------------------------------------------------------------
+    # Prompt loading
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _load_prompt_file() -> Optional[str]:
+        '''Load the review agent prompt from config/prompts/.'''
+        prompt_path = os.path.join('config', 'prompts', 'review_agent.md')
+        if os.path.exists(prompt_path):
+            try:
+                with open(prompt_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            except Exception as e:
+                log.warning(f'Failed to load review agent prompt: {e}')
+        return None
     
     def run(self, input_data: Any) -> AgentResponse:
         '''

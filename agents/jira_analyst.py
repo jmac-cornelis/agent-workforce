@@ -20,34 +20,6 @@ from tools.jira_tools import JiraTools
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
 
-# Default instruction for the Jira Analyst agent
-JIRA_ANALYST_INSTRUCTION = '''You are a Jira Analyst Agent specialized in analyzing Jira project state.
-
-Your role is to:
-1. Examine the current state of a Jira project
-2. Identify existing releases and their tickets
-3. Understand the component structure
-4. Map team assignments and ownership
-5. Analyze workflow states and transitions
-
-When analyzing a project, you should:
-- List all current and upcoming releases
-- Identify the ticket hierarchy (Epics -> Stories -> Tasks)
-- Note which components exist and who leads them
-- Understand the workflow states available
-- Identify any patterns in ticket organization
-
-Always provide structured, actionable insights that can be used for release planning.
-
-Output your analysis in a clear, structured format with sections for:
-- Release Overview
-- Component Structure
-- Team Assignments
-- Workflow States
-- Recommendations
-'''
-
-
 class JiraAnalystAgent(BaseAgent):
     '''
     Agent for analyzing Jira project state.
@@ -71,10 +43,19 @@ class JiraAnalystAgent(BaseAgent):
             project_key: Default Jira project key to analyze.
             **kwargs: Additional arguments passed to BaseAgent.
         '''
+        # Load the system prompt from config/prompts/jira_analyst.md.
+        # No hardcoded fallback — the external file is the sole source.
+        instruction = self._load_prompt_file()
+        if not instruction:
+            raise FileNotFoundError(
+                'config/prompts/jira_analyst.md is required but not found. '
+                'The Jira Analyst Agent has no hardcoded fallback prompt.'
+            )
+
         config = AgentConfig(
             name='jira_analyst',
             description='Analyzes Jira project state for release planning',
-            instruction=JIRA_ANALYST_INSTRUCTION
+            instruction=instruction
         )
         
         # Initialize with Jira tools
@@ -83,6 +64,22 @@ class JiraAnalystAgent(BaseAgent):
         super().__init__(config=config, tools=[jira_tools], **kwargs)
         
         self.project_key = project_key
+
+    # ------------------------------------------------------------------
+    # Prompt loading
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _load_prompt_file() -> Optional[str]:
+        '''Load the jira analyst prompt from config/prompts/.'''
+        prompt_path = os.path.join('config', 'prompts', 'jira_analyst.md')
+        if os.path.exists(prompt_path):
+            try:
+                with open(prompt_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            except Exception as e:
+                log.warning(f'Failed to load jira analyst prompt: {e}')
+        return None
     
     def run(self, input_data: Any) -> AgentResponse:
         '''

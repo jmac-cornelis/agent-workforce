@@ -24,45 +24,6 @@ from agents.review_agent import ReviewAgent
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
 
-# Default instruction for the Orchestrator
-ORCHESTRATOR_INSTRUCTION = '''You are the Release Planning Orchestrator for Cornelis Networks.
-
-Your role is to coordinate the end-to-end release planning workflow:
-
-1. **Input Analysis**: Gather and analyze all input sources
-   - Roadmap slides/images (via Vision Analyzer)
-   - Current Jira state (via Jira Analyst)
-   - Organization chart (via Draw.io tools)
-
-2. **Planning**: Create a release structure
-   - Map roadmap items to Jira tickets
-   - Assign components and owners
-   - Set release versions
-
-3. **Review**: Present plan for human approval
-   - Show all planned changes
-   - Allow modifications
-   - Get explicit approval
-
-4. **Execution**: Create approved items in Jira
-   - Create releases
-   - Create tickets
-   - Link tickets appropriately
-
-Always:
-- Explain what you're doing at each step
-- Wait for human approval before making changes
-- Report results clearly
-- Handle errors gracefully
-
-You have access to specialized sub-agents:
-- Vision Analyzer: For analyzing roadmap images/slides
-- Jira Analyst: For analyzing current Jira state
-- Planning Agent: For creating release plans
-- Review Agent: For human approval workflow
-'''
-
-
 @dataclass
 class WorkflowState:
     '''
@@ -115,10 +76,19 @@ class ReleasePlanningOrchestrator(BaseAgent):
         '''
         Initialize the orchestrator.
         '''
+        # Load the system prompt from config/prompts/orchestrator.md.
+        # No hardcoded fallback — the external file is the sole source.
+        instruction = self._load_prompt_file()
+        if not instruction:
+            raise FileNotFoundError(
+                'config/prompts/orchestrator.md is required but not found. '
+                'The Release Planning Orchestrator has no hardcoded fallback prompt.'
+            )
+
         config = AgentConfig(
             name='release_planning_orchestrator',
             description='Coordinates end-to-end release planning workflow',
-            instruction=ORCHESTRATOR_INSTRUCTION,
+            instruction=instruction,
             max_iterations=50  # Higher limit for complex workflows
         )
         
@@ -132,6 +102,22 @@ class ReleasePlanningOrchestrator(BaseAgent):
         
         # Workflow state
         self.state = WorkflowState()
+
+    # ------------------------------------------------------------------
+    # Prompt loading
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _load_prompt_file() -> Optional[str]:
+        '''Load the orchestrator prompt from config/prompts/.'''
+        prompt_path = os.path.join('config', 'prompts', 'orchestrator.md')
+        if os.path.exists(prompt_path):
+            try:
+                with open(prompt_path, 'r', encoding='utf-8') as f:
+                    return f.read()
+            except Exception as e:
+                log.warning(f'Failed to load orchestrator prompt: {e}')
+        return None
     
     def run(self, input_data: Any) -> AgentResponse:
         '''
