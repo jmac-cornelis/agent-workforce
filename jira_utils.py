@@ -1495,7 +1495,7 @@ def _get_children_data(jira, root_key, limit=None):
         max_retries = 5
 
         # Fields needed for display/dump; keep aligned with print_ticket_row/dump_tickets_to_file
-        fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'parent', 'customfield_17504', 'customfield_28434']
+        fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'parent', 'customfield_17504', 'customfield_28434', 'customfield_28382']
         if _include_comments:
             fields_to_fetch.append('comment')
 
@@ -1692,7 +1692,7 @@ def _get_related_data(jira, root_key, hierarchy=None, limit=None):
     '''
     log.debug(f'Entering _get_related_data(root_key={root_key}, hierarchy={hierarchy}, limit={limit})')
 
-    fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'issuelinks', 'customfield_17504', 'customfield_28434']
+    fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'issuelinks', 'customfield_17504', 'customfield_28434', 'customfield_28382']
     if _include_comments:
         fields_to_fetch.append('comment')
 
@@ -2181,7 +2181,7 @@ def get_release_tickets(jira, project_key, release_name, issue_types=None, statu
             else:
                 current_batch = batch_size
             
-            fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'customfield_17504', 'customfield_28434']
+            fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'customfield_17504', 'customfield_28434', 'customfield_28382']
             if _include_comments:
                 fields_to_fetch.append('comment')
             if dump_file:
@@ -2360,7 +2360,7 @@ def get_releases_tickets(jira, project_key, release_pattern, issue_types=None, s
             else:
                 current_batch = batch_size
             
-            fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'customfield_17504', 'customfield_28434']
+            fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'customfield_17504', 'customfield_28434', 'customfield_28382']
             if _include_comments:
                 fields_to_fetch.append('comment')
             if dump_file:
@@ -2519,7 +2519,7 @@ def get_no_release_tickets(jira, project_key, issue_types=None, statuses=None, d
             else:
                 current_batch = batch_size
             
-            fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'customfield_17504', 'customfield_28434']
+            fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'customfield_17504', 'customfield_28434', 'customfield_28382']
             if _include_comments:
                 fields_to_fetch.append('comment')
             if dump_file:
@@ -2799,7 +2799,7 @@ def get_tickets(jira, project_key, issue_types=None, statuses=None, date_filter=
                 current_batch = batch_size
             
             # Build request payload - include extra fields if dumping
-            fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'customfield_17504', 'customfield_28434']
+            fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'customfield_17504', 'customfield_28434', 'customfield_28382']
             if _include_comments:
                 fields_to_fetch.append('comment')
             if dump_file:
@@ -3139,8 +3139,9 @@ def dump_tickets_to_file(issues, dump_file, dump_format, extra_fields=None, tabl
         customer_raw = fields.get('customfield_17504') or []
         customer_str = ', '.join(customer_raw) if isinstance(customer_raw, list) else str(customer_raw) if customer_raw else ''
         
-        # Extract Product Family (customfield_28434 — array of {"value": "CN5000"} objects)
-        pf_raw = fields.get('customfield_28434') or []
+        # Extract Product Family — field ID varies by project:
+        #   customfield_28434 (STLSB sandbox) or customfield_28382 (STL production)
+        pf_raw = fields.get('customfield_28434') or fields.get('customfield_28382') or []
         pf_str = ', '.join(
             v.get('value', '') if isinstance(v, dict) else str(v)
             for v in pf_raw
@@ -3522,10 +3523,16 @@ def create_ticket(
     if parent_key:
         fields['parent'] = {'key': parent_key}
 
-    # Product Family — customfield_28434 (array of {"value": "CN5000"} objects)
+    # Product Family — the custom-field ID varies by Jira project:
+    #   STLSB (sandbox) → customfield_28434
+    #   STL  (production) → customfield_28382
+    # We set the primary ID here and fall back to alternates on error.
+    _PF_FIELD_IDS = ['customfield_28434', 'customfield_28382']
+    _pf_values = None
     if product_family:
         pf_list = product_family if isinstance(product_family, list) else [product_family]
-        fields['customfield_28434'] = [{'value': v} for v in pf_list]
+        _pf_values = [{'value': v} for v in pf_list]
+        fields[_PF_FIELD_IDS[0]] = _pf_values
 
     output('')
     output('=' * 80)
@@ -3566,16 +3573,41 @@ def create_ticket(
         output('=' * 80)
         output('')
     except Exception as e:
-        # If the error is specifically about customfield_28434 (Product Family)
-        # not being on the screen, retry without it — the field is best-effort.
+        # Handle Product Family field-ID mismatch across projects.
+        # Two scenarios:
+        #   1. The field we set is "not on the appropriate screen" → remove it.
+        #   2. A *different* PF field ID is listed as required → add it.
+        # We iterate through known IDs to find the right one.
         err_text = str(e)
-        if 'customfield_28434' in err_text and 'customfield_28434' in fields:
-            log.warning(
-                f'Product Family field (customfield_28434) rejected by Jira — '
-                f'retrying without it: {err_text}'
-            )
-            output('  ⚠️  Product Family field not available on this screen — retrying without it')
-            del fields['customfield_28434']
+        _pf_retry = False
+
+        if _pf_values:
+            _rejected_ids = [fid for fid in _PF_FIELD_IDS if fid in err_text and fid in fields]
+            _required_ids = [fid for fid in _PF_FIELD_IDS if fid in err_text and fid not in fields]
+
+            if _rejected_ids or _required_ids:
+                for fid in _rejected_ids:
+                    log.warning(f'Product Family field ({fid}) rejected — removing')
+                    output(f'  ⚠️  Product Family field ({fid}) not on this screen — removing')
+                    del fields[fid]
+                for fid in _required_ids:
+                    log.info(f'Product Family field ({fid}) required — adding')
+                    output(f'  ℹ️  Product Family field ({fid}) required — adding')
+                    fields[fid] = _pf_values
+                _pf_retry = True
+
+            # If we only removed a field but the error didn't mention the
+            # alternate, proactively try the next known ID.
+            if _rejected_ids and not _required_ids:
+                for fid in _PF_FIELD_IDS:
+                    if fid not in fields and fid not in _rejected_ids:
+                        log.info(f'Trying alternate Product Family field: {fid}')
+                        output(f'  ℹ️  Trying alternate Product Family field: {fid}')
+                        fields[fid] = _pf_values
+                        break
+
+        if _pf_retry:
+            log.info('Retrying create_issue with corrected Product Family field(s)')
             try:
                 issue = jira.create_issue(fields=fields)
                 output(f'Created: {issue.key}')
@@ -3584,7 +3616,7 @@ def create_ticket(
                 output('')
                 return
             except Exception as e2:
-                log.error(f'Failed to create ticket (retry): {e2}')
+                log.error(f'Failed to create ticket (PF retry): {e2}')
                 raise
         log.error(f'Failed to create ticket: {e}')
         raise
@@ -3948,7 +3980,7 @@ def run_jql_query(jira, jql_query, limit=None, dump_file=None, dump_format='csv'
                 current_batch = batch_size
             
             # Build request payload - include extra fields if dumping
-            fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'customfield_17504', 'customfield_28434']
+            fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'customfield_17504', 'customfield_28434', 'customfield_28382']
             if _include_comments:
                 fields_to_fetch.append('comment')
             if dump_file:

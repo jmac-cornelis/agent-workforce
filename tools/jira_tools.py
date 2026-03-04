@@ -444,10 +444,18 @@ def create_ticket(
                 # Epic link field - may vary by Jira configuration
                 fields['parent'] = {'key': parent_key}
         
-        # Product Family — customfield_28434 (array of {"value": ...} objects)
+        # Product Family — the custom-field ID varies by Jira project:
+        #   STLSB (sandbox) → customfield_28434
+        #   STL  (production) → customfield_28382
+        # We set the primary ID here and fall back to alternates on error.
+        _PF_FIELD_IDS = ['customfield_28434', 'customfield_28382']
+        _pf_values = None
         if product_family:
             pf_list = product_family if isinstance(product_family, list) else [product_family]
-            fields['customfield_28434'] = [{'value': v} for v in pf_list]
+            _pf_values = [{'value': v} for v in pf_list]
+            # Start with the first known ID; the retry loop below will try
+            # alternates if the server rejects it.
+            fields[_PF_FIELD_IDS[0]] = _pf_values
 
         if custom_fields:
             fields.update(custom_fields)
@@ -456,16 +464,47 @@ def create_ticket(
         try:
             issue = jira.create_issue(fields=fields)
         except Exception as field_err:
-            # If the error is specifically about customfield_28434 (Product
-            # Family) not being on the screen, retry without it — best-effort.
+            # Handle Product Family field-ID mismatch across projects.
+            # Two scenarios:
+            #   1. The field we set is "not on the appropriate screen" → remove it.
+            #   2. A *different* PF field ID is listed as required → add it.
+            # We iterate through known IDs to find the right one.
             err_text = str(field_err)
-            if 'customfield_28434' in err_text and 'customfield_28434' in fields:
-                log.warning(
-                    f'Product Family field (customfield_28434) rejected — '
-                    f'retrying without it: {err_text}'
-                )
-                del fields['customfield_28434']
-                issue = jira.create_issue(fields=fields)
+            _pf_retry = False
+
+            if _pf_values:
+                # Detect which PF field IDs appear in the error message
+                _rejected_ids = [fid for fid in _PF_FIELD_IDS if fid in err_text and fid in fields]
+                _required_ids = [fid for fid in _PF_FIELD_IDS if fid in err_text and fid not in fields]
+
+                if _rejected_ids or _required_ids:
+                    # Remove any rejected IDs
+                    for fid in _rejected_ids:
+                        log.warning(f'Product Family field ({fid}) rejected — removing')
+                        del fields[fid]
+                    # Add any required IDs that we haven't set yet
+                    for fid in _required_ids:
+                        log.info(f'Product Family field ({fid}) required — adding')
+                        fields[fid] = _pf_values
+                    _pf_retry = True
+
+                # Also handle the case where the error only mentions the
+                # field we set (rejected) but doesn't mention the alternate.
+                # In that case, try the next known ID.
+                if _rejected_ids and not _required_ids:
+                    for fid in _PF_FIELD_IDS:
+                        if fid not in fields and fid not in _rejected_ids:
+                            log.info(f'Trying alternate Product Family field: {fid}')
+                            fields[fid] = _pf_values
+                            break
+
+            if _pf_retry:
+                log.info('Retrying create_issue with corrected Product Family field(s)')
+                try:
+                    issue = jira.create_issue(fields=fields)
+                except Exception as retry_err:
+                    log.error(f'Failed to create ticket (PF retry): {retry_err}')
+                    raise
             else:
                 raise
         
