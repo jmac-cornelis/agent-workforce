@@ -84,9 +84,29 @@ def paginated_jql_search(
     fields: Optional[list[str]] = None,
     page_size: int = 100,
 ) -> list[Any]:
+    """Paginated JQL search with automatic fallback.
+
+    Tries ``enhanced_search_issues`` first (required for Jira Cloud after the
+    ``search`` API deprecation).  Falls back to the legacy ``search_issues``
+    for on-prem / older library versions.
+
+    Note: ``enhanced_search_issues`` uses ``nextPageToken`` for pagination
+    (not ``startAt``), so we handle both pagination styles.
+    """
+    import logging
+    log = logging.getLogger(__name__)
+
     all_issues: list[Any] = []
-    start_at = 0
     effective_page_size = max(1, page_size)
+
+    # Decide which search method to use — prefer enhanced_search_issues
+    # on Jira Cloud (jira-python >= 3.9).
+    _use_enhanced = hasattr(jira_connection, 'enhanced_search_issues')
+
+    # State for legacy (startAt) pagination
+    start_at = 0
+    # State for enhanced (nextPageToken) pagination
+    next_page_token: str | None = None
 
     while True:
         if max_results is not None:
@@ -97,14 +117,50 @@ def paginated_jql_search(
         else:
             current_page_size = effective_page_size
 
-        search_kwargs: dict[str, Any] = {
-            'startAt': start_at,
-            'maxResults': current_page_size,
-        }
-        if fields is not None:
-            search_kwargs['fields'] = list(fields)
+        # Try enhanced first, fall back to legacy on any error.
+        if _use_enhanced:
+            try:
+                # enhanced_search_issues uses nextPageToken, not startAt
+                enhanced_kwargs: dict[str, Any] = {
+                    'maxResults': current_page_size,
+                }
+                if next_page_token is not None:
+                    enhanced_kwargs['nextPageToken'] = next_page_token
+                if fields is not None:
+                    enhanced_kwargs['fields'] = list(fields)
 
-        issues_page = jira_connection.search_issues(jql, **search_kwargs)
+                issues_page = jira_connection.enhanced_search_issues(
+                    jql, **enhanced_kwargs
+                )
+
+                # Extract nextPageToken for subsequent pages.
+                # The ResultList may carry it as an attribute, or we can
+                # check the underlying JSON response.
+                next_page_token = getattr(issues_page, 'nextPageToken', None)
+
+            except Exception as exc:
+                log.debug(
+                    'enhanced_search_issues failed (%s), falling back to search_issues',
+                    exc,
+                )
+                _use_enhanced = False
+                # Fall through to legacy search below
+                legacy_kwargs: dict[str, Any] = {
+                    'startAt': start_at,
+                    'maxResults': current_page_size,
+                }
+                if fields is not None:
+                    legacy_kwargs['fields'] = list(fields)
+                issues_page = jira_connection.search_issues(jql, **legacy_kwargs)
+                next_page_token = None
+        else:
+            legacy_kwargs = {
+                'startAt': start_at,
+                'maxResults': current_page_size,
+            }
+            if fields is not None:
+                legacy_kwargs['fields'] = list(fields)
+            issues_page = jira_connection.search_issues(jql, **legacy_kwargs)
 
         page_items = list(issues_page or [])
         if not page_items:
@@ -112,10 +168,14 @@ def paginated_jql_search(
 
         all_issues.extend(page_items)
 
+        # For legacy pagination, advance startAt
+        start_at += len(page_items)
+
+        # Stop conditions: fewer items than requested, or no next token
         if len(page_items) < current_page_size:
             break
-
-        start_at += len(page_items)
+        if _use_enhanced and next_page_token is None:
+            break
 
     if max_results is not None and len(all_issues) > max_results:
         return all_issues[:max_results]
