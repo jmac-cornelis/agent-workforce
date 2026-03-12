@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from typing import Any, Iterable, Sequence
+from typing import Any, Optional
 
 
-def _quote_values(values: Iterable[str]) -> str:
+def _quote_values(values: list[str]) -> str:
     return ', '.join([f'"{value}"' for value in values])
 
 
-def _build_status_jql(statuses: Sequence[str] | dict[str, Sequence[str]] | None) -> str:
+def _build_status_jql(statuses: Optional[list[str] | dict[str, list[str]]]) -> str:
     if not statuses:
         return ''
 
@@ -28,7 +28,7 @@ def _build_status_jql(statuses: Sequence[str] | dict[str, Sequence[str]] | None)
     return ' AND '.join(clauses)
 
 
-def build_tickets_jql(project: str, issue_types: Sequence[str] | None = None, statuses: Sequence[str] | dict[str, Sequence[str]] | None = None, date_filter: str | None = None, jql_extra: str | None = None) -> str:
+def build_tickets_jql(project: str, issue_types: Optional[list[str]] = None, statuses: Optional[list[str] | dict[str, list[str]]] = None, date_filter: Optional[str] = None, jql_extra: Optional[str] = None) -> str:
     jql_parts = [f'project = "{project}"']
 
     if jql_extra:
@@ -48,7 +48,7 @@ def build_tickets_jql(project: str, issue_types: Sequence[str] | None = None, st
     return f'{jql} ORDER BY created DESC'
 
 
-def build_release_tickets_jql(project: str, release: str, issue_types: Sequence[str] | None = None, statuses: Sequence[str] | dict[str, Sequence[str]] | None = None) -> str:
+def build_release_tickets_jql(project: str, release: str, issue_types: Optional[list[str]] = None, statuses: Optional[list[str] | dict[str, list[str]]] = None) -> str:
     return build_tickets_jql(
         project,
         issue_types=issue_types,
@@ -57,7 +57,7 @@ def build_release_tickets_jql(project: str, release: str, issue_types: Sequence[
     )
 
 
-def build_releases_tickets_jql(project: str, releases: Sequence[str], issue_types: Sequence[str] | None = None, statuses: Sequence[str] | dict[str, Sequence[str]] | None = None, date_filter: str | None = None) -> str:
+def build_releases_tickets_jql(project: str, releases: list[str], issue_types: Optional[list[str]] = None, statuses: Optional[list[str] | dict[str, list[str]]] = None, date_filter: Optional[str] = None) -> str:
     jql = build_tickets_jql(
         project,
         issue_types=issue_types,
@@ -68,7 +68,7 @@ def build_releases_tickets_jql(project: str, releases: Sequence[str], issue_type
     return jql.replace('ORDER BY created DESC', 'ORDER BY fixVersion DESC, created DESC', 1)
 
 
-def build_no_release_jql(project: str, issue_types: Sequence[str] | None = None, statuses: Sequence[str] | dict[str, Sequence[str]] | None = None) -> str:
+def build_no_release_jql(project: str, issue_types: Optional[list[str]] = None, statuses: Optional[list[str] | dict[str, list[str]]] = None) -> str:
     return build_tickets_jql(
         project,
         issue_types=issue_types,
@@ -81,7 +81,7 @@ def paginated_jql_search(
     jira_connection: Any,
     jql: str,
     max_results: int | None = None,
-    fields: Sequence[str] | None = None,
+    fields: Optional[list[str]] = None,
     page_size: int = 100,
 ) -> list[Any]:
     all_issues: list[Any] = []

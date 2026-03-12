@@ -24,7 +24,7 @@ import os
 import time
 import json
 import csv
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 import re
 import requests
 
@@ -2735,7 +2735,9 @@ def get_release_tickets(jira, project_key, release_name, issue_types=None, statu
         
         if dump_file:
             dump_tickets_to_file(all_issues, dump_file, dump_format, include_comments=_include_comments)
-        
+
+        return all_issues
+
     except JiraProjectError:
         raise
     except ValueError as e:
@@ -2911,7 +2913,9 @@ def get_releases_tickets(jira, project_key, release_pattern, issue_types=None, s
         # Dump to file if requested
         if dump_file and all_issues:
             dump_tickets_to_file(all_issues, dump_file, dump_format, include_comments=_include_comments)
-        
+
+        return all_issues
+
     except JiraProjectError:
         raise
     except ValueError as e:
@@ -3073,7 +3077,9 @@ def get_no_release_tickets(jira, project_key, issue_types=None, statuses=None, d
         
         if dump_file:
             dump_tickets_to_file(all_issues, dump_file, dump_format, include_comments=_include_comments)
-        
+
+        return all_issues
+
     except JiraProjectError:
         raise
     except ValueError as e:
@@ -3181,7 +3187,15 @@ def get_ticket_totals(jira, project_key, issue_types=None, statuses=None, date_f
         output(f'Total tickets: {total_count}')
         output('=' * 60)
         output('')
-        
+
+        return {
+            'project': project_key,
+            'count': total_count,
+            'jql': jql,
+            'issue_types': normalized_types,
+            'statuses': normalized_statuses,
+        }
+
     except JiraProjectError:
         raise
     except ValueError as e:
@@ -3359,7 +3373,9 @@ def get_tickets(jira, project_key, issue_types=None, statuses=None, date_filter=
         # Dump to file if requested
         if dump_file:
             dump_tickets_to_file(all_issues, dump_file, dump_format, include_comments=_include_comments)
-        
+
+        return all_issues
+
     except JiraProjectError:
         raise
     except ValueError as e:

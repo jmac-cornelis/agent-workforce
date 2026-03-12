@@ -162,10 +162,10 @@ def mock_jira(issue_factory):
     ]
 
     statuses = [
-        SimpleNamespace(name="Open"),
-        SimpleNamespace(name="In Progress"),
-        SimpleNamespace(name="Closed"),
-        SimpleNamespace(name="Verify"),
+        SimpleNamespace(name="Open", id="1", statusCategory=SimpleNamespace(name="To Do")),
+        SimpleNamespace(name="In Progress", id="2", statusCategory=SimpleNamespace(name="In Progress")),
+        SimpleNamespace(name="Closed", id="3", statusCategory=SimpleNamespace(name="Done")),
+        SimpleNamespace(name="Verify", id="4", statusCategory=SimpleNamespace(name="In Progress")),
     ]
 
     user_candidates = [

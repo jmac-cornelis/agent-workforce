@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, Optional, Tuple, List
+from typing import Any, Optional
 
 from core.utils import extract_text_from_adf
 
 DEFAULT_JIRA_URL = 'https://cornelisnetworks.atlassian.net'
 
 
-def issue_to_dict(issue: Any) -> Dict[str, Any]:
+def issue_to_dict(issue: Any) -> dict[str, Any]:
     key, issue_id, fields, raw_issue = _extract_issue_parts(issue)
 
     issue_type = _name_value(fields.get('issuetype')) or 'N/A'
@@ -32,7 +32,7 @@ def issue_to_dict(issue: Any) -> Dict[str, Any]:
     summary = _string_or_empty(fields.get('summary'))
     project_key = _project_key(fields.get('project'))
 
-    result: Dict[str, Any] = {
+    result: dict[str, Any] = {
         'key': key,
         'id': issue_id,
         'summary': summary,
@@ -78,7 +78,7 @@ def issue_to_dict(issue: Any) -> Dict[str, Any]:
     return result
 
 
-def _extract_issue_parts(issue: Any) -> Tuple[str, str, Dict[str, Any], Dict[str, Any]]:
+def _extract_issue_parts(issue: Any) -> tuple[str, str, dict[str, Any], dict[str, Any]]:
     if isinstance(issue, dict):
         raw_issue = issue
         key = str(issue.get('key', '') or '')
@@ -120,14 +120,14 @@ def _extract_issue_parts(issue: Any) -> Tuple[str, str, Dict[str, Any], Dict[str
     return key, issue_id, {}, {}
 
 
-def _fields_object_to_dict(fields_obj: Any) -> Dict[str, Any]:
+def _fields_object_to_dict(fields_obj: Any) -> dict[str, Any]:
     if fields_obj is None:
         return {}
 
     if isinstance(fields_obj, dict):
         return fields_obj
 
-    fields: Dict[str, Any] = {}
+    fields: dict[str, Any] = {}
 
     standard_attrs = [
         'summary',
@@ -214,14 +214,14 @@ def _project_key(value: Any) -> str:
     return str(getattr(value, 'key', '') or '')
 
 
-def _list_name_values(values: Any) -> List[str]:
+def _list_name_values(values: Any) -> list[str]:
     if not values:
         return []
 
     if not isinstance(values, list):
         values = [values]
 
-    names: List[str] = []
+    names: list[str] = []
     for item in values:
         if isinstance(item, str):
             names.append(item)
@@ -258,7 +258,7 @@ def _date_only(value: Optional[str]) -> str:
     return str(value)[:10]
 
 
-def _build_issue_url(key: str, issue: Any, raw_issue: Dict[str, Any]) -> str:
+def _build_issue_url(key: str, issue: Any, raw_issue: dict[str, Any]) -> str:
     if not key:
         return ''
 

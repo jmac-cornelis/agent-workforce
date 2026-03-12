@@ -3,12 +3,12 @@ import inspect
 import logging
 import re
 from itertools import combinations
-from typing import Any, Dict, List, Tuple
+from typing import Any, Optional
 
 
 def output(message: str = '', quiet_mode: bool = False) -> None:
-    caller_globals: Dict[str, Any] = {}
-    caller_locals: Dict[str, Any] = {}
+    caller_globals: dict[str, Any] = {}
+    caller_locals: dict[str, Any] = {}
     caller_file = __file__
 
     frame = inspect.currentframe()
@@ -70,7 +70,7 @@ def output(message: str = '', quiet_mode: bool = False) -> None:
         print(message)
 
 
-def validate_and_repair_csv(input_file: str, output_file: str | None = None) -> Tuple[bool, Dict[str, int]]:
+def validate_and_repair_csv(input_file: str, output_file: Optional[str] = None) -> tuple[bool, dict[str, int]]:
     with open(input_file, 'r', encoding='utf-8', newline='') as f:
         raw_rows = list(csv.reader(f))
 
@@ -106,7 +106,7 @@ def validate_and_repair_csv(input_file: str, output_file: str | None = None) -> 
         'module': {'driver', 'bts', 'fw', 'opx', 'gpu'},
     }
 
-    def score_alignment(fields: List[str], header_list: List[str]) -> int:
+    def score_alignment(fields: list[str], header_list: list[str]) -> int:
         score = 0
         for i, hdr in enumerate(header_list):
             if i >= len(fields):
@@ -155,7 +155,7 @@ def validate_and_repair_csv(input_file: str, output_file: str | None = None) -> 
         if extra <= 4:
             merge_candidates = list(range(n - 1))
             for merge_points in combinations(merge_candidates, extra):
-                candidate: List[str] = []
+                candidate: list[str] = []
                 i = 0
                 while i < n:
                     if i in merge_points:
@@ -205,7 +205,7 @@ def extract_text_from_adf(adf_content: Any) -> str:
     if isinstance(adf_content, str):
         return adf_content
 
-    parts: List[str] = []
+    parts: list[str] = []
 
     def walk(node: Any) -> None:
         if isinstance(node, dict):
