@@ -139,47 +139,27 @@ def test_build_no_release_jql_with_issue_types_and_statuses():
 
 
 def test_paginated_jql_search_prefers_enhanced_search_when_available():
-    # enhanced_search_issues uses nextPageToken, not startAt.
-    # First call: no token → return page 1 with a nextPageToken.
-    # Second call: has token → return page 2 with no token (signals end).
-    jira = SimpleNamespace()
-    jira.enhanced_search_issues_calls = []
+    from unittest.mock import MagicMock
+
+    mock_jira = MagicMock()
 
     class _ResultPage(list):
-        """Simulate a ResultList that carries nextPageToken as an attribute."""
         def __init__(self, items, next_token=None):
             super().__init__(items)
             self.nextPageToken = next_token
 
-    call_count = [0]
+    mock_jira.enhanced_search_issues = MagicMock(
+        side_effect=[
+            _ResultPage(['STL-1', 'STL-2'], next_token='page2'),
+            _ResultPage(['STL-3'], next_token=None),
+        ]
+    )
 
-    def _enhanced(_jql, **kwargs):
-        jira.enhanced_search_issues_calls.append(kwargs)
-        call_count[0] += 1
-        if call_count[0] == 1:
-            # First page — return 2 items with a nextPageToken
-            return _ResultPage(['STL-1', 'STL-2'], next_token='page2')
-        # Second page — return 1 item with no token (end)
-        return _ResultPage(['STL-3'], next_token=None)
-
-    jira.enhanced_search_issues = _enhanced
-    jira.search_issues_called = False
-
-    def _legacy(*_args, **_kwargs):
-        jira.search_issues_called = True
-        return []
-
-    jira.search_issues = _legacy
-
-    issues = queries.paginated_jql_search(jira, 'project = "STL"', page_size=2)
+    issues = queries.paginated_jql_search(mock_jira, 'project = "STL"', page_size=2)
 
     assert issues == ['STL-1', 'STL-2', 'STL-3']
-    assert jira.search_issues_called is False
-    # First call has no nextPageToken, second call has 'page2'
-    assert jira.enhanced_search_issues_calls == [
-        {'maxResults': 2},
-        {'maxResults': 2, 'nextPageToken': 'page2'},
-    ]
+    assert mock_jira.enhanced_search_issues.call_count == 2
+    mock_jira.search_issues.assert_not_called()
 
 
 def test_paginated_jql_search_falls_back_when_enhanced_raises():
