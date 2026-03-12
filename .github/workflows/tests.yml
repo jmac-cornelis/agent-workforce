@@ -48,8 +48,21 @@ jobs:
       - name: Build report site
         if: always()
         run: |
-          mkdir -p report-site
+          mkdir -p report-site/coverage
 
+          # Copy test report
+          cp test-report.html report-site/test-report.html
+
+          # Copy coverage HTML report
+          if [ -d coverage-html ]; then
+            cp -r coverage-html/* report-site/coverage/
+            echo "Coverage HTML: $(find report-site/coverage -type f | wc -l) files"
+          else
+            echo "<html><body><h1>Coverage report not generated</h1></body></html>" > report-site/coverage/index.html
+            echo "WARNING: coverage-html not found"
+          fi
+
+          # Build dashboard index
           python - <<'PYEOF'
           import xml.etree.ElementTree as ET
           import os, datetime
@@ -170,39 +183,17 @@ jobs:
           print(f'Summary: {passed}/{tests} passed, {line_rate:.0f}% coverage')
           PYEOF
 
-          cp test-report.html report-site/test-report.html
-          if [ -d coverage-html ]; then
-            cp -r coverage-html report-site/coverage
-            echo "Coverage HTML copied: $(find report-site/coverage -type f | wc -l) files"
-          else
-            mkdir -p report-site/coverage
-            echo "<html><body><h1>Coverage report not available</h1></body></html>" > report-site/coverage/index.html
-            echo "WARNING: coverage-html directory not found"
-          fi
           echo "Report site contents:"
+          find report-site -type f | wc -l
           find report-site -type f | head -30
-
-      - name: Prepare gh-pages deploy
-        if: always()
-        run: |
-          # Clone existing gh-pages content so we don't clobber other branches' reports
-          git fetch origin gh-pages:gh-pages || true
-          mkdir -p deploy-root
-          git worktree add deploy-root gh-pages || true
-          # Copy new report into branch-specific directory
-          rm -rf deploy-root/${{ github.ref_name }}
-          cp -r report-site deploy-root/${{ github.ref_name }}
-          echo "Deployed files:"
-          find deploy-root/${{ github.ref_name }} -type f | head -30
 
       - name: Deploy report to gh-pages branch
         if: always()
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./deploy-root
-          force_orphan: false
-          keep_files: false
+          publish_dir: ./report-site
+          destination_dir: ${{ github.ref_name }}
 
       - name: Post report link to PR
         if: always() && github.event_name == 'pull_request'
