@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, Optional, Tuple, List
 
-from core.utils import extract_text_from_adf as _extract_text_from_adf
+from core.utils import extract_text_from_adf
 
 DEFAULT_JIRA_URL = 'https://cornelisnetworks.atlassian.net'
 
@@ -76,10 +76,6 @@ def issue_to_dict(issue: Any) -> Dict[str, Any]:
             result[field_name] = _serialize_for_output(value)
 
     return result
-
-
-def extract_text_from_adf(description: Any) -> str:
-    return _extract_text_from_adf(description)
 
 
 def _extract_issue_parts(issue: Any) -> Tuple[str, str, Dict[str, Any], Dict[str, Any]]:

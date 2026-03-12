@@ -26,6 +26,7 @@ import sys
 import os
 from collections import OrderedDict
 from datetime import date
+from typing import Any, cast
 
 from core.utils import output, validate_and_repair_csv
 
@@ -70,6 +71,7 @@ __all__ = [
     '_apply_header_style', '_auto_fit_columns',
     # Concatenation
     'concat_merge_sheet', 'concat_add_sheet',
+    'build_excel_map',
     # Conversion
     'convert_to_csv', 'convert_from_csv',
     # Plan JSON conversion (CSV/Excel → feature-plan JSON)
@@ -452,7 +454,7 @@ def concat_merge_sheet(input_files, output_file):
 
     # Phase 2: Build the output workbook
     out_wb = Workbook()
-    out_ws = out_wb.active
+    out_ws = cast(Any, out_wb.active)
     out_ws.title = 'Merged'
 
     # Write header row
@@ -541,8 +543,9 @@ def concat_add_sheet(input_files, output_file):
 
     out_wb = Workbook()
     # Remove the default empty sheet (we'll add named sheets)
-    default_ws = out_wb.active
-    out_wb.remove(default_ws)
+    default_ws = cast(Any, out_wb.active)
+    if default_ws is not None:
+        out_wb.remove(default_ws)
 
     used_names = set()
 
@@ -623,12 +626,232 @@ def concat_add_sheet(input_files, output_file):
     output('')
 
 
+def build_excel_map(ticket_keys, hierarchy_depth=1, limit=None, output_file=None,
+                    project_key=None, keep_intermediates=False, output_callback=None):
+    import importlib
+    import tempfile
+    import shutil
+
+    jira_api = cast(Any, importlib.import_module('jira_utils'))
+
+    if isinstance(ticket_keys, str):
+        keys = [ticket_keys.upper()]
+    else:
+        keys = [str(k).upper() for k in ticket_keys if str(k).strip()]
+
+    if not keys:
+        raise ValueError('At least one ticket key is required')
+
+    if output_file:
+        out_file = output_file
+    elif len(keys) == 1:
+        out_file = f'{keys[0]}.xlsx'
+    else:
+        out_file = f'{"_".join(keys)}.xlsx'
+
+    if not out_file.endswith('.xlsx'):
+        out_file = f'{out_file}.xlsx'
+
+    if output_callback is None:
+        def default_output_callback(_message=''):
+            return None
+        output_callback = default_output_callback
+
+    temp_dir = tempfile.mkdtemp(prefix='excel_map_')
+    temp_files = []
+
+    try:
+        output_callback('Step 1/4: Connecting to Jira...')
+        jira = jira_api.get_connection()
+
+        if project_key:
+            jira_api.validate_project(jira, project_key)
+
+        output_callback(f'Step 2/4: Getting first-level issues for {len(keys)} root ticket(s)...')
+
+        merged_data = []
+        seen_keys = set()
+
+        for root_key in keys:
+            output_callback(f'  Fetching related for {root_key}...')
+            related_data = jira_api._get_related_data(jira, root_key, hierarchy=1, limit=limit)
+
+            added = 0
+            for item in related_data:
+                issue_key = item['issue'].get('key', '')
+                if issue_key and issue_key not in seen_keys:
+                    seen_keys.add(issue_key)
+                    merged_data.append(item)
+                    added += 1
+
+            depth0_count = sum(1 for item in related_data if item['depth'] == 0)
+            depth1_count = sum(1 for item in related_data if item['depth'] == 1)
+            output_callback(f'    {len(related_data)} issues ({depth0_count} root + {depth1_count} depth=1), {added} new after dedup')
+
+        output_callback(f'  Merged total: {len(merged_data)} unique issues')
+
+        map_temp = os.path.join(temp_dir, '_map_temp.xlsx')
+        temp_files.append(map_temp)
+
+        map_extras = {
+            item['issue'].get('key', ''): {
+                'depth': item.get('depth'),
+                'via': item.get('via'),
+                'relation': item.get('relation'),
+                'from_key': item.get('from_key'),
+            }
+            for item in merged_data
+        }
+
+        jira_api.dump_tickets_to_file(
+            [item['issue'] for item in merged_data],
+            map_temp,
+            'excel',
+            map_extras,
+            table_format='indented',
+        )
+        output_callback(f'  Map sheet: {len(merged_data)} rows, indented format (depth 0-1)')
+
+        depth1_keys = [item['issue'].get('key', '') for item in merged_data if item['depth'] == 1]
+        output_callback(f'Step 3/4: Getting children for {len(depth1_keys)} depth=1 tickets...')
+
+        children_temps = []
+        for idx, ticket_key in enumerate(depth1_keys, 1):
+            try:
+                children_data = jira_api._get_children_data(jira, ticket_key, limit=None)
+                child_count = len(children_data) - 1
+
+                child_temp = os.path.join(temp_dir, f'temp_{ticket_key}.xlsx')
+                temp_files.append(child_temp)
+
+                child_extras = {
+                    item['issue'].get('key', ''): {
+                        'depth': item.get('depth'),
+                    }
+                    for item in children_data
+                }
+                jira_api.dump_tickets_to_file(
+                    [item['issue'] for item in children_data],
+                    child_temp,
+                    'excel',
+                    child_extras,
+                    table_format='indented',
+                )
+
+                children_temps.append((ticket_key, child_temp, len(children_data)))
+                output_callback(f'  [{idx}/{len(depth1_keys)}] {ticket_key}: {child_count} children')
+            except Exception as e:
+                log.warning(f'Failed to get children for {ticket_key}: {e}')
+                output_callback(f'  [{idx}/{len(depth1_keys)}] {ticket_key}: ERROR - {e}')
+
+        output_callback('Step 4/4: Assembling final workbook...')
+
+        final_wb = Workbook()
+        active_sheet = cast(Any, final_wb.active)
+        if active_sheet is not None:
+            final_wb.remove(active_sheet)
+
+        total_rows = 0
+        sheet_count = 0
+
+        def _copy_sheet(src_wb_path, dest_wb, sheet_name):
+            nonlocal total_rows, sheet_count
+
+            src_wb = load_workbook(src_wb_path)
+            src_ws = cast(Any, src_wb.active)
+
+            safe_name = sheet_name[:31]
+            dest_ws = cast(Any, dest_wb.create_sheet(title=safe_name))
+
+            row_count = 0
+            for row in src_ws.iter_rows():
+                row_count += 1
+                for cell in row:
+                    dest_cell = dest_ws.cell(row=cell.row, column=cell.column, value=cell.value)
+
+                    if cell.font:
+                        dest_cell.font = copy(cell.font)
+                    if cell.fill:
+                        dest_cell.fill = copy(cell.fill)
+                    if cell.alignment:
+                        dest_cell.alignment = copy(cell.alignment)
+                    if cell.border:
+                        dest_cell.border = copy(cell.border)
+                    if cell.number_format:
+                        dest_cell.number_format = cell.number_format
+                    if cell.hyperlink:
+                        dest_cell.hyperlink = cell.hyperlink
+
+            for col_letter, dim in src_ws.column_dimensions.items():
+                dest_ws.column_dimensions[col_letter].width = dim.width
+
+            for merged_range in src_ws.merged_cells.ranges:
+                dest_ws.merge_cells(str(merged_range))
+
+            for cf_rule in src_ws.conditional_formatting:
+                try:
+                    cell_range = str(cf_rule.sqref)
+                except AttributeError:
+                    cell_range = str(cf_rule)
+                for rule in cf_rule.rules:
+                    try:
+                        dest_ws.conditional_formatting.add(cell_range, rule)
+                    except Exception as cf_err:
+                        log.debug(f'Skipping conditional formatting rule: {cf_err}')
+
+            if src_ws.freeze_panes:
+                dest_ws.freeze_panes = src_ws.freeze_panes
+
+            src_wb.close()
+
+            data_rows = max(0, row_count - 1)
+            total_rows += data_rows
+            sheet_count += 1
+            return data_rows
+
+        map_rows = _copy_sheet(map_temp, final_wb, 'Tickets')
+        output_callback(f'  Sheet 1: Tickets ({map_rows} rows)')
+
+        for idx, (ticket_key, child_temp, _child_row_count) in enumerate(children_temps, 2):
+            child_rows = _copy_sheet(child_temp, final_wb, ticket_key)
+            output_callback(f'  Sheet {idx}: {ticket_key} ({child_rows} rows)')
+
+        final_wb.save(out_file)
+        final_wb.close()
+
+        output_callback('')
+        output_callback(f'Output: {out_file} ({sheet_count} sheets, {total_rows} total rows)')
+
+        result = {
+            'output_file': out_file,
+            'sheet_count': sheet_count,
+            'total_rows': total_rows,
+            'depth1_tickets': len(depth1_keys),
+            'related_count': len(merged_data),
+            'root_tickets': keys,
+            'hierarchy_depth': hierarchy_depth,
+        }
+
+        if keep_intermediates:
+            result['temp_dir'] = temp_dir
+            result['temp_files'] = [tf for tf in temp_files if os.path.exists(tf)]
+
+        return result
+
+    finally:
+        if not keep_intermediates:
+            try:
+                shutil.rmtree(temp_dir)
+                log.debug(f'Cleaned up {len(temp_files)} intermediate files in {temp_dir}')
+            except Exception as cleanup_err:
+                log.warning(f'Failed to clean up temp dir {temp_dir}: {cleanup_err}')
+
+
 # ****************************************************************************************
 # CSV validation and repair
 # ****************************************************************************************
 
-def _validate_and_repair_csv(input_file):
-    return validate_and_repair_csv(input_file)
+_validate_and_repair_csv = validate_and_repair_csv
 
 
 # ****************************************************************************************
@@ -878,7 +1101,7 @@ def _create_dashboard_sheet(wb, ws_data, headers, dashboard_columns=None):
 DEFAULT_JIRA_BASE_URL = 'https://cornelisnetworks.atlassian.net'
 
 
-def convert_from_csv(input_file, output_file=None, jira_base_url=DEFAULT_JIRA_BASE_URL,
+def convert_from_csv(input_file, output_file=None, jira_base_url: str | None = DEFAULT_JIRA_BASE_URL,
                      dashboard_columns=None):
     '''
     Convert a comma-delimited CSV file to an Excel (.xlsx) file.
@@ -978,7 +1201,7 @@ def convert_from_csv(input_file, output_file=None, jira_base_url=DEFAULT_JIRA_BA
     link_font = Font(color='0563C1', underline='single')
 
     wb = Workbook()
-    ws = wb.active
+    ws = cast(Any, wb.active)
     ws.title = os.path.splitext(os.path.basename(input_file))[0][:31]
 
     # Write header row
@@ -1087,25 +1310,20 @@ def convert_to_plan_json(input_file, output_file=None, project_key='',
 
     # Import the plan_export_tools conversion functions.
     # These live in tools/ but are pure-Python with no agent framework dependency.
-    try:
-        from tools.plan_export_tools import plan_file_to_json, write_plan_json
-    except ImportError:
-        # Fallback: if tools package is not on the path, try a direct import.
-        # This handles the case where excel_utils.py is run from the repo root.
-        import importlib.util
-        _spec = importlib.util.spec_from_file_location(
-            'plan_export_tools',
-            os.path.join(os.path.dirname(__file__), 'tools', 'plan_export_tools.py'),
+    import importlib.util
+    _spec = importlib.util.spec_from_file_location(
+        'plan_export_tools',
+        os.path.join(os.path.dirname(__file__), 'tools', 'plan_export_tools.py'),
+    )
+    if _spec is None or _spec.loader is None:
+        raise ImportError(
+            'Cannot import plan_export_tools. Ensure tools/plan_export_tools.py '
+            'is available on the Python path.'
         )
-        if _spec is None or _spec.loader is None:
-            raise ImportError(
-                'Cannot import plan_export_tools. Ensure tools/plan_export_tools.py '
-                'is available on the Python path.'
-            )
-        _mod = importlib.util.module_from_spec(_spec)
-        _spec.loader.exec_module(_mod)
-        plan_file_to_json = _mod.plan_file_to_json
-        write_plan_json = _mod.write_plan_json
+    _mod = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)
+    plan_file_to_json = _mod.plan_file_to_json
+    write_plan_json = _mod.write_plan_json
 
     # Convert the CSV/Excel file to a plan dict
     plan = plan_file_to_json(
@@ -1296,6 +1514,8 @@ def diff_files(input_files, output_file=None):
 
     # --- Summary sheet ---
     ws_summary = out_wb.active
+    if ws_summary is None:
+        raise ExcelFileError('Failed to create Summary sheet')
     ws_summary.title = 'Summary'
     summary_headers = ['Comparison', 'File A Rows', 'File B Rows', 'Added', 'Removed', 'Changed', 'Same']
     for col_idx, h in enumerate(summary_headers, 1):

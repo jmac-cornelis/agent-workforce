@@ -1,4 +1,6 @@
 import csv
+import sys
+from pathlib import Path
 from typing import Any, cast
 
 import openpyxl
@@ -121,3 +123,111 @@ def test_concat_add_sheet_creates_one_sheet_per_input(temp_excel_file, tmp_path)
     assert wb["beta"].cell(row=2, column=1).value == "STL-2"
 
     wb.close()
+
+
+def test_build_excel_map_consolidated_function(monkeypatch, temp_excel_file, tmp_path):
+    output_file = tmp_path / "map.xlsx"
+
+    root_a = {"key": "STL-100", "fields": {"summary": "Root A"}}
+    child_a1 = {"key": "STL-101", "fields": {"summary": "Child A1"}}
+    root_b = {"key": "STL-200", "fields": {"summary": "Root B"}}
+    child_b1 = {"key": "STL-201", "fields": {"summary": "Child B1"}}
+    grandchild = {"key": "STL-202", "fields": {"summary": "Grandchild B1"}}
+
+    related_by_root = {
+        "STL-100": [
+            {"issue": root_a, "depth": 0, "via": "", "relation": "root", "from_key": ""},
+            {"issue": child_a1, "depth": 1, "via": "parent", "relation": "child", "from_key": "STL-100"},
+        ],
+        "STL-200": [
+            {"issue": root_b, "depth": 0, "via": "", "relation": "root", "from_key": ""},
+            {"issue": child_b1, "depth": 1, "via": "parent", "relation": "child", "from_key": "STL-200"},
+        ],
+    }
+
+    children_by_key = {
+        "STL-101": [
+            {"issue": child_a1, "depth": 0},
+        ],
+        "STL-201": [
+            {"issue": child_b1, "depth": 0},
+            {"issue": grandchild, "depth": 1},
+        ],
+    }
+
+    class FakeJiraUtils:
+        def __init__(self):
+            self.calls = {
+                "related": [],
+                "children": [],
+                "dump": [],
+                "validate": [],
+            }
+
+        def get_connection(self):
+            return object()
+
+        def validate_project(self, jira, project_key):
+            self.calls["validate"].append((jira, project_key))
+
+        def _get_related_data(self, jira, root_key, hierarchy=None, limit=None):
+            self.calls["related"].append((root_key, hierarchy, limit))
+            return related_by_root[root_key]
+
+        def _get_children_data(self, jira, ticket_key, limit=None):
+            self.calls["children"].append((ticket_key, limit))
+            return children_by_key[ticket_key]
+
+        def dump_tickets_to_file(self, issues, dump_file, dump_format, extra_fields=None, table_format="flat"):
+            self.calls["dump"].append((dump_file, dump_format, table_format, len(issues)))
+            rows = [[issue["key"], issue.get("fields", {}).get("summary", "")] for issue in issues]
+            temp_excel_file(Path(dump_file).name, ["key", "summary"], rows)
+            source = tmp_path / Path(dump_file).name
+            if source != Path(dump_file):
+                Path(dump_file).write_bytes(source.read_bytes())
+
+    fake_jira_utils = FakeJiraUtils()
+
+    prior_jira_module = sys.modules.get("jira_utils")
+    monkeypatch.setitem(sys.modules, "jira_utils", cast(Any, fake_jira_utils))
+
+    messages = []
+    result = excel_utils.build_excel_map(
+        ticket_keys=["stl-100", "STL-200"],
+        hierarchy_depth=3,
+        limit=25,
+        output_file=str(output_file),
+        project_key="STL",
+        output_callback=messages.append,
+    )
+
+    assert output_file.exists()
+    assert result["output_file"] == str(output_file)
+    assert result["sheet_count"] == 3
+    assert result["depth1_tickets"] == 2
+    assert result["related_count"] == 4
+    assert result["root_tickets"] == ["STL-100", "STL-200"]
+    assert result["hierarchy_depth"] == 3
+
+    assert fake_jira_utils.calls["related"] == [
+        ("STL-100", 1, 25),
+        ("STL-200", 1, 25),
+    ]
+    assert fake_jira_utils.calls["children"] == [
+        ("STL-101", None),
+        ("STL-201", None),
+    ]
+    assert len(fake_jira_utils.calls["dump"]) == 3
+    assert fake_jira_utils.calls["validate"][0][1] == "STL"
+
+    wb = openpyxl.load_workbook(output_file)
+    assert wb.sheetnames[0] == "Tickets"
+    assert "STL-101" in wb.sheetnames
+    assert "STL-201" in wb.sheetnames
+    wb.close()
+
+    assert any(str(msg).startswith("Step 1/4") for msg in messages)
+    assert any(str(msg).startswith("Output: ") for msg in messages)
+
+    if prior_jira_module is not None:
+        monkeypatch.setitem(sys.modules, "jira_utils", prior_jira_module)

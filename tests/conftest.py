@@ -279,23 +279,29 @@ def reset_jira_utils_state():
         yield
         return
 
-    jira_utils.reset_connection()
-    jira_utils.reset_user_resolver()
-    jira_utils._quiet_mode = False
-    jira_utils._show_jql = False
-    jira_utils._last_jql = None
-    jira_utils._include_comments = None
-    jira_utils._no_formatting = False
+    jira_state = cast(Any, jira_utils)
+
+    if hasattr(jira_state, "reset_connection"):
+        jira_state.reset_connection()
+    if hasattr(jira_state, "reset_user_resolver"):
+        jira_state.reset_user_resolver()
+    jira_state._quiet_mode = False
+    jira_state._show_jql = False
+    jira_state._last_jql = None
+    jira_state._include_comments = None
+    jira_state._no_formatting = False
 
     yield
 
-    jira_utils.reset_connection()
-    jira_utils.reset_user_resolver()
-    jira_utils._quiet_mode = False
-    jira_utils._show_jql = False
-    jira_utils._last_jql = None
-    jira_utils._include_comments = None
-    jira_utils._no_formatting = False
+    if hasattr(jira_state, "reset_connection"):
+        jira_state.reset_connection()
+    if hasattr(jira_state, "reset_user_resolver"):
+        jira_state.reset_user_resolver()
+    jira_state._quiet_mode = False
+    jira_state._show_jql = False
+    jira_state._last_jql = None
+    jira_state._include_comments = None
+    jira_state._no_formatting = False
 
 
 @pytest.fixture
