@@ -1,389 +1,270 @@
-# Cornelis Agent Workforce
+# Cornelis Jira PM Tools
 
-AI-powered engineering agents, reusable tools, and standalone CLI utilities for project management, Jira, Confluence, Excel, and Draw.io at Cornelis Networks.
+AI-powered PM agents and CLI utilities for Jira at Cornelis Networks.
 
-## Table of Contents
+## What's In The Box
 
-- [Overview](#overview)
-  - [When to Use What](#when-to-use-what)
-- [Architecture](#architecture)
-- [Quick Start](#quick-start)
-- [Agents](#agents)
-  - [Implemented Agents](#implemented-agents)
-  - [Agent Communication](#agent-communication)
-  - [Agent Workforce Vision](#agent-workforce-vision)
-- [Agentic Workflows](#agentic-workflows)
-- [Standalone Utilities](#standalone-utilities)
-- [Tools (MCP / Agent API)](#tools-mcp--agent-api)
-- [Development](#development)
-- [License](#license)
-
----
-
-## Overview
-
-This repository contains three categories of tooling:
-
-| Category | What it does | LLM required? |
-|----------|-------------|----------------|
-| **Agents** | Specialized AI agents for Jira coordination, Teams communication, project planning, and documentation — each with its own API and Teams channel | Varies |
-| **Agentic Workflows** | Multi-phase AI pipelines for feature planning, bug reporting, hygiene analysis, and documentation generation via `pm_agent.py` | Yes |
-| **Standalone Utilities** | CLI tools for Jira queries, Excel formatting, Draw.io diagrams, Confluence, and bulk operations — no LLM needed | No |
-
-### When to Use What
-
-**Use Agents** when you want continuous, interactive access to AI capabilities from Microsoft Teams. Shannon is the primary user interface — engineers mention `@Shannon` in the appropriate Teams channel to invoke any registered agent. Agents run as always-on services and respond with Adaptive Cards.
-
-- Ask Drucker to scan your project's Jira hygiene: `@Shannon /hygiene-run project_key STL`
-- Check bug activity trends: `@Shannon /bug-activity project_key STL`
-- Get Shannon's own status: `@Shannon /stats`
-
-**Use Agentic Workflows** when you need to run a multi-step AI pipeline from the command line — typically one-off planning, analysis, or reporting tasks that produce structured output files.
-
-- Generate a Jira project plan from a scope document
-- Build a planning snapshot with milestone proposals and risk summaries
-- Produce an enriched bug report from a Jira filter
-- Generate documentation drafts for repo Markdown or Confluence
-
-See [docs/workflows.md](docs/workflows.md) for the full workflow reference.
-
-**Use Standalone Utilities** when you need direct, deterministic CLI access to Jira, Excel, Draw.io, or Confluence — no LLM, no agents, just the tool.
-
-- Query Jira projects, tickets, filters, dashboards
-- Bulk-update or bulk-delete Jira tickets
-- Convert, concatenate, or diff Excel workbooks
-- Generate Draw.io dependency diagrams from Jira exports
-
----
-
-## Architecture
-
-![System Overview](docs/diagrams/system-overview.png)
-
-> Source: [`docs/diagrams/system-overview.mmd`](docs/diagrams/system-overview.mmd) — regenerate with `mmdc -i docs/diagrams/system-overview.mmd -o docs/diagrams/system-overview.png -b transparent -w 1200`
-
----
+| Name | What It Does | LLM? | Run With |
+|---|---|---|---|
+| Ticket Monitor | Validates new tickets, auto-fills missing fields, learns from corrections | No | `python ticket_monitor_cli.py` |
+| Release Tracker | Snapshots releases, tracks velocity, predicts readiness | No | `python release_tracker_cli.py` |
+| Feature Planner | Multi-agent pipeline: scope doc → Initiative → Epics → Stories | Yes | `python pm_agent.py` |
+| Jira CLI | Project queries, ticket creation, bulk ops, dashboards | No | `jira-utils` |
+| Excel CLI | CSV/Excel conversion, merge, diff | No | `excel-utils` |
+| Draw.io CLI | Dependency diagrams from Jira exports | No | `drawio-utils` |
+| MCP Server | Exposes Jira tools to AI assistants (Claude Desktop) | No | `jira-mcp-server` |
 
 ## Quick Start
 
-The fastest way to get set up is with [OpenCode](https://github.com/opencode-ai/opencode). Clone the repo and paste this prompt into an OpenCode session:
+1. Clone & install (`pip install -e '.[agents]'` for full, `pip install -r requirements.txt` for minimal)
+2. Configure `.env` (requires JIRA_EMAIL, JIRA_API_TOKEN, JIRA_URL)
+3. Verify: `jira-utils --list`
 
-```
-I just cloned the agent-workforce repo and need to set it up. Please:
+## Configuration
 
-1. Create a Python virtual environment in .venv, activate it, and install
-   requirements.txt
-2. Copy .env.example to .env (preserving all comments and structure)
-3. Ask me for credentials to fill in. Group your questions into one message:
-   - Jira email address (required)
-   - Jira API token (required — generate at
-     https://id.atlassian.com/manage-profile/security/api-tokens)
-   - Jira URL (default: https://cornelisnetworks.atlassian.net — keep default
-     unless I say otherwise)
-   - Whether I want to use agentic workflows (if yes, ask which LLM provider:
-     Cornelis internal, OpenAI, or Anthropic, and the corresponding API key)
-4. Update only the corresponding values in .env — do not rewrite or reformat
-   the file
-5. Verify the installation:
-   - Run: python3 jira_utils.py --help (confirms install works)
-   - Run: python3 jira_utils.py --list (confirms Jira connectivity)
-   - Report whether both succeeded
-```
+### Environment Variables
 
-**Prerequisites:** Python 3.9+, access to Cornelis Networks Jira, and a Jira API token ([generate one here](https://id.atlassian.com/manage-profile/security/api-tokens)). An LLM API key is only required for agentic workflows.
+**Required** (all tools):
+| Variable | Purpose |
+|---|---|
+| JIRA_EMAIL | Your Jira login email |
+| JIRA_API_TOKEN | API token for authentication |
+| JIRA_URL | Jira instance URL |
 
-For manual installation, global CLI install via pipx, and full configuration reference, see **[docs/installation.md](docs/installation.md)**.
+**LLM** (Feature Planner only):
+| Variable | Purpose |
+|---|---|
+| CORNELIS_LLM_BASE_URL | Internal LLM API endpoint |
+| CORNELIS_LLM_API_KEY | Internal LLM key |
+| CORNELIS_LLM_MODEL | Default internal model |
+| DEFAULT_LLM_PROVIDER | Set to cornelis, openai, or anthropic |
+| OPENAI_API_KEY | External fallback key |
+| ANTHROPIC_API_KEY | External fallback key |
 
----
+**Optional**:
+| Variable | Purpose |
+|---|---|
+| BRAVE_SEARCH_API_KEY | Web search access |
+| TAVILY_API_KEY | Alternative web search access |
+| CORNELIS_MCP_URL | MCP server endpoint |
+| CORNELIS_MCP_API_KEY | MCP server authentication |
+
+### Config Files
+
+| File Path | What It Controls |
+|---|---|
+| config/ticket_monitor.yaml | Validation rules, learning thresholds, notification settings |
+| config/release_tracker.yaml | Tracked releases, velocity windows, cycle time config |
+| config/prompts/*.md | System prompts for LLM-based agents |
+| .env / .env_prod / .env_sandbox | Jira credentials per environment |
 
 ## Agents
 
-The repo implements specialized agents that automate engineering workflows. Each agent operates as an independent service with its own API, commands, and Teams channel. **Shannon is the primary user interface** — all agents are accessed through Shannon from Microsoft Teams.
+### Ticket Monitor
 
-### Implemented Agents
+Watches for newly created tickets and validates required fields based on issue type. Uses a local learning store to auto-fill missing fields when confident.
 
-| Agent | Directory | Description | Port |
-|-------|-----------|-------------|------|
-| **Shannon** | `shannon/` | Microsoft Teams communications service. Routes commands from Teams to backend agents, renders Adaptive Card responses, and posts proactive notifications. Zero-cost deployment via Outgoing Webhook + Power Automate Workflows. | 8200 |
-| **Drucker** | `agents/drucker_api.py` | Jira hygiene coordinator. Runs ticket hygiene scans, tracks bug activity, and produces remediation reports. Operates as a standalone FastAPI service called by Shannon. | 8201 |
-| **Gantt** | `agents/gantt_agent.py` | Project planning snapshots. Builds Jira-grounded milestone proposals, dependency views, and risk summaries from project backlogs. | — |
-| **Hypatia** | `agents/hypatia_agent.py` | Documentation agent. Produces source-grounded documentation candidates for repo Markdown and optional Confluence publication. | — |
+**Confidence-Based Actions:**
 
-### Agent Communication
+| Confidence | Action | Example |
+|---|---|---|
+| ≥90% | Auto-fill | Sets component to "JKR Host Driver" and posts comment |
+| ≥50% | Suggest | Posts comment asking creator to confirm "BTS/verbs" |
+| <50% | Flag | Posts comment warning about missing component |
 
-Engineers interact with agents by mentioning `@Shannon` in the appropriate Microsoft Teams channel:
+**Validation Rules:**
 
-- `#agent-shannon` — Shannon self-service commands (`/stats`, `/busy`, `/work-today`, etc.)
-- `#agent-drucker` — Drucker hygiene commands (`/hygiene-run`, `/hygiene-report`, `/bug-activity`, etc.)
+| Issue Type | Required | Warn |
+|---|---|---|
+| Bug | affectedVersion, components, priority, description | assignee, labels |
+| Story | components, fixVersions | assignee |
+| Epic | description, fixVersions | components |
 
-Agent routing is configured in [`config/shannon/agent_registry.yaml`](config/shannon/agent_registry.yaml). For setup details, see [docs/shannon-teams-setup.md](docs/shannon-teams-setup.md).
+**Usage:**
 
-### Agent Workforce Vision
+```bash
+# Validate and act on new tickets
+python ticket_monitor_cli.py --project STL
 
-This repo implements the first agents of a planned 17-agent workforce for Cornelis Networks engineering, organized across six zones:
+# Dry-run (report only)
+python ticket_monitor_cli.py --project STL --dry-run
 
-![Agent Workforce Zone Map](docs/diagrams/workforce/AGENT_ZONE_MAP.png)
+# Process historical tickets to build learning store
+python ticket_monitor_cli.py --project STL --learn-only
 
-> Source: [`docs/diagrams/workforce/AGENT_ZONE_MAP.drawio`](docs/diagrams/workforce/AGENT_ZONE_MAP.drawio) — regenerate with `drawio --export --format png --width 1200 --border 10 docs/diagrams/workforce/AGENT_ZONE_MAP.drawio`
+# Check monitor state and stats
+python ticket_monitor_cli.py --status
+```
 
-The full architectural vision, agent specifications, and implementation phasing are documented in [docs/workforce/](docs/workforce/).
+**CLI Flags:**
 
----
+| Flag | Description |
+|---|---|
+| `--project KEY` | Target Jira project |
+| `--dry-run` | Report only, no updates |
+| `--since DATE` | Process from specific ISO date |
+| `--learn-only` | Build database without actions |
+| `--reset-learning` | Clear database and restart |
+| `--status` | Show current stats |
 
-## Agentic Workflows
+**Cron:**
 
-Agentic workflows are multi-phase AI pipelines orchestrated by [`pm_agent.py`](pm_agent.py). They require an LLM and use specialized agents to research, analyze, scope, and plan.
+```bash
+*/5 * * * * cd /path/to/repo && .venv/bin/python ticket_monitor_cli.py --project STL >> logs/ticket_monitor.log 2>&1
+```
 
-| Workflow | Command | Description |
-|----------|---------|-------------|
-| **Gantt Snapshot** | `pm_agent --workflow gantt-snapshot` | Jira-grounded planning snapshots with milestone proposals and risk summaries |
-| **Feature Plan** | `pm_agent --workflow feature-plan` | Scope document → Initiative → Epics → Stories in Jira |
-| **Drucker Hygiene** | `pm_agent --workflow drucker-hygiene` | Ticket hygiene reports with remediation suggestions |
-| **Hypatia Docs** | `pm_agent --workflow hypatia-generate` | Source-grounded documentation drafts for repo Markdown or Confluence |
-| **Bug Report** | `pm_agent --workflow bug-report` | Enriched bug reports from Jira filters, exported to styled Excel |
-| **Release Planning** | `pm_agent --plan` | Full release planning from roadmap documents |
+**Learning:** 
+The agent tracks when humans correct its auto-filled fields. This feedback loop adjusts confidence scores for future predictions.
 
-All workflows are **dry-run by default** — no Jira tickets are created or modified until `--execute` is passed.
+### Release Tracker
 
-For the complete workflow reference with examples, flags, and output files, see **[docs/workflows.md](docs/workflows.md)**.
+Monitors releases throughout the day and generates daily summaries. Predicts release readiness based on cycle times and velocity.
 
----
+**What It Tracks:**
+1. Snapshot of tickets by status, priority, and component
+2. Delta showing new, moved, and closed tickets
+3. Velocity of opened versus closed items
+4. Readiness predictions based on current pace
+5. Stale tickets stuck beyond average cycle times
+
+**Usage:**
+
+```bash
+# Track all releases in config
+python release_tracker_cli.py --project STL
+
+# Track specific release
+python release_tracker_cli.py --project STL --release "12.1.1.x"
+
+# Include readiness predictions
+python release_tracker_cli.py --project STL --predict
+
+# Export to CSV
+python release_tracker_cli.py --project STL --format csv --output report.csv
+
+# Show tracking stats
+python release_tracker_cli.py --status
+```
+
+**CLI Flags:**
+
+| Flag | Description |
+|---|---|
+| `--project KEY` | Target Jira project |
+| `--release VER` | Specific version to track |
+| `--format FMT` | Output as table, json, csv, or excel |
+| `--output FILE` | File path for export |
+| `--predict` | Include readiness estimates |
+| `--status` | Show tracking stats |
+
+**Output Formats:** 
+table/json/csv/excel
+
+**Cron:**
+
+```bash
+0 9 * * * cd /path/to/repo && .venv/bin/python release_tracker_cli.py --project STL --predict >> logs/release_tracker.log 2>&1
+```
+
+### Feature Planner
+
+Transforms engineering scope documents into fully structured Jira project plans. Orchestrates multiple agents to handle research, scoping, and review before execution.
+
+**The Pipeline:** 
+scope doc → Research → HW Analysis → Scoping → Plan Building → Review → Execute
+
+**Three Commands:**
+```bash
+# Generate plan
+pm_agent --workflow feature-plan --project STL --scope-doc scope.json
+# Review
+cat plans/STL-feature/plan.md
+# Execute
+pm_agent --workflow feature-plan --project STL --plan-file plan.json --execute
+```
+
+**Sub-Agents:**
+
+| Name | Role |
+|---|---|
+| Research Agent | Gathers domain knowledge |
+| Hardware Analyst | Maps architecture and interfaces |
+| Scoping Agent | Breaks features into concrete items |
+| Plan Builder | Converts items to Epics and Stories |
+| Review Agent | Formats plans for human validation |
+
+**Key Flags:**
+
+| Flag | Description |
+|---|---|
+| `--scope-doc` | Input engineering document |
+| `--plan-file` | Pre-generated plan to execute |
+| `--initiative` | Existing Initiative to attach Epics to |
+| `--execute` | Create tickets in Jira |
+| `--cleanup` | Delete previously created tickets |
+| `--force` | Skip confirmation prompts |
+
+## MCP Server
+
+Exposes Jira tools directly to AI assistants. Run it via Claude Desktop or other MCP clients. 
+Configure `claude_desktop_config.json` like this:
+
+```json
+{
+  "mcpServers": {
+    "jira": {
+      "command": "python",
+      "args": ["/path/to/repo/mcp_server.py"]
+    }
+  }
+}
+```
 
 ## Standalone Utilities
 
-These CLI tools work **without any LLM** and can be installed globally via `pipx`.
+These CLI utilities run locally without any LLM. Install them globally via pipx.
 
-| Command | Source | Description |
-|---------|--------|-------------|
-| `jira-utils` | [`jira_utils.py`](jira_utils.py) | Full-featured Jira CLI (project queries, ticket creation, bulk ops, dashboards) |
-| `excel-utils` | [`excel_utils.py`](excel_utils.py) | Excel workbook concatenation, CSV conversion, and diff reporting |
-| `drawio-utils` | [`drawio_utilities.py`](drawio_utilities.py) | Draw.io diagram generator from Jira hierarchy CSV exports |
-| `confluence-utils` | [`confluence_utils.py`](confluence_utils.py) | Confluence CLI for managing pages, spaces, and content |
+| CLI | Console Script | One-Line Description |
+|---|---|---|
+| Jira CLI | `jira-utils` | Query projects, create tickets, and manage dashboards |
+| Excel CLI | `excel-utils` | Convert CSV to styled Excel, merge sheets, and run diffs |
+| Draw.io CLI | `drawio-utils` | Generate dependency diagrams from Jira hierarchy exports |
 
-Run any of them with `-h` for full help:
-
-```bash
-jira-utils -h
-excel-utils -h
-drawio-utils -h
-confluence-utils -h
-```
-
-For detailed usage examples, see the sections below.
-
-<details>
-<summary>Jira CLI examples</summary>
-
-#### Project & Metadata
-
-```bash
-python3 jira_utils.py --list
-python3 jira_utils.py --project PROJ --get-workflow
-python3 jira_utils.py --project PROJ --get-issue-types
-python3 jira_utils.py --project PROJ --get-fields
-python3 jira_utils.py --project PROJ --get-versions
-python3 jira_utils.py --project PROJ --get-components
-```
-
-#### Ticket Queries
-
-```bash
-python3 jira_utils.py --project PROJ --get-tickets
-python3 jira_utils.py --project PROJ --get-tickets --issue-types Bug Story --status Open --limit 50
-python3 jira_utils.py --project PROJ --releases "12.*"
-python3 jira_utils.py --project PROJ --release-tickets "12.3*" --issue-types Bug Story Task
-python3 jira_utils.py --project PROJ --no-release --issue-types Bug --status Open
-python3 jira_utils.py --jql "project = PROJ AND status = Open" --limit 20
-python3 jira_utils.py --get-children PROJ-100
-python3 jira_utils.py --get-related PROJ-100 --hierarchy
-```
-
-#### Date Filters
-
-| Value | Meaning |
-|-------|---------|
-| `today` | Created today |
-| `week` | Last 7 days |
-| `month` | Last 30 days |
-| `year` | Last 365 days |
-| `all` | No date filter |
-| `MM-DD-YYYY:MM-DD-YYYY` | Custom date range |
-
-#### Dump to File
-
-```bash
-python3 jira_utils.py --project PROJ --get-tickets --dump-file tickets
-python3 jira_utils.py --project PROJ --get-tickets --dump-file tickets --dump-format json
-```
-
-#### Filters
-
-```bash
-python3 jira_utils.py --list-filters
-python3 jira_utils.py --run-filter 12345 --limit 100
-```
-
-#### Bulk Update
-
-```bash
-python3 jira_utils.py --bulk-update --input-file orphans.csv --set-release "12.3.0"          # dry-run
-python3 jira_utils.py --bulk-update --input-file orphans.csv --set-release "12.3.0" --execute # execute
-```
-
-#### Bulk Delete
-
-```bash
-python3 jira_utils.py --bulk-delete --input-file to_delete.csv             # dry-run
-python3 jira_utils.py --bulk-delete --input-file to_delete.csv --execute   # execute
-```
-
-#### Dashboard Management
-
-```bash
-python3 jira_utils.py --dashboards
-python3 jira_utils.py --dashboard 12345
-python3 jira_utils.py --create-dashboard "My Dashboard"
-python3 jira_utils.py --copy-dashboard 12345 --name "Copy"
-```
-
-</details>
-
-<details>
-<summary>Excel CLI examples</summary>
-
-```bash
-# Concatenation
-python3 excel_utils.py --concat fileA.xlsx fileB.xlsx --method merge-sheet --output merged.xlsx
-python3 excel_utils.py --concat fileA.xlsx fileB.xlsx --method add-sheet --output combined.xlsx
-
-# Conversion
-python3 excel_utils.py --convert-to-csv data.xlsx
-python3 excel_utils.py --convert-from-csv data.csv
-python3 excel_utils.py --convert-from-csv data.csv --jira-url https://cornelisnetworks.atlassian.net
-
-# Diff
-python3 excel_utils.py --diff fileA.xlsx fileB.xlsx --output changes.xlsx
-
-# Plain output (no formatting)
-python3 excel_utils.py --convert-from-csv data.csv --no-formatting
-```
-
-</details>
-
-<details>
-<summary>Draw.io CLI examples</summary>
-
-```bash
-# Generate diagram from Jira hierarchy CSV
-python3 drawio_utilities.py --create-map tickets.csv
-
-# End-to-end: Jira → CSV → Draw.io
-python3 jira_utils.py --get-related PROJ-100 --hierarchy --dump-file tickets
-python3 drawio_utilities.py --create-map tickets.csv
-```
-
-</details>
-
-<details>
-<summary>Confluence CLI examples</summary>
-
-```bash
-confluence-utils -h   # Full usage
-```
-
-</details>
-
----
-
-## Tools (MCP / Agent API)
-
-The `tools/` directory and [`mcp_server.py`](mcp_server.py) expose agent-callable wrappers around the underlying standalone utilities. These tools provide safe, structured access to Jira, Excel, and other capabilities for AI agents and external consumers via MCP (Model Context Protocol).
-
-| Category | Tools |
-|----------|-------|
-| **Jira** | `get_project_info`, `search_tickets`, `create_ticket`, `update_ticket`, `bulk_update_tickets`, `get_releases`, `get_components`, `get_related_tickets`, `link_tickets`, `assign_ticket` |
-| **Excel** | `convert_from_csv`, `convert_to_csv`, `concat_merge_sheet`, `concat_add_sheet`, `diff_files` |
-| **Draw.io** | `parse_org_chart`, `get_responsibilities`, `create_ticket_diagram`, `create_diagram_from_tickets` |
-| **Vision** | `analyze_image`, `extract_roadmap_from_ppt`, `extract_roadmap_from_excel` |
-| **Confluence** | `confluence_tools` |
-
----
+See [docs/standalone-utilities.md](docs/standalone-utilities.md) for full CLI reference.
 
 ## Development
 
-### Project Structure
+- Tests: `pytest tests/ -v` (357 tests)
+- Coverage: `pytest tests/ --cov=core --cov=agents`
+- See [docs/architecture.md](docs/architecture.md) for module structure and dev patterns
+- See [docs/tools-reference.md](docs/tools-reference.md) for the full tools catalog
 
-```
-agent-workforce/
-├── pm_agent.py                  # Agentic workflow entry point
-├── jira_utils.py                # Standalone Jira CLI (→ jira-utils)
-├── excel_utils.py               # Standalone Excel CLI (→ excel-utils)
-├── drawio_utilities.py          # Standalone Draw.io CLI (→ drawio-utils)
-├── confluence_utils.py          # Standalone Confluence CLI (→ confluence-utils)
-├── mcp_server.py                # MCP server for exposing tools
-├── shannon/                     # Teams communication service
-│   ├── app.py                   # FastAPI server (port 8200)
-│   ├── service.py               # Agent bridge / command routing
-│   ├── poster.py                # Teams message posting (Workflows / Bot Framework)
-│   └── cards.py                 # Adaptive Card renderers
-├── agents/                      # Agent definitions
-│   ├── base.py                  # BaseAgent abstract class
-│   ├── drucker_api.py           # Drucker hygiene agent service (port 8201)
-│   ├── gantt_agent.py           # Gantt planning agent
-│   ├── hypatia_agent.py         # Documentation agent
-│   ├── feature_planning_orchestrator.py
-│   ├── research_agent.py
-│   ├── hardware_analyst.py
-│   ├── scoping_agent.py
-│   └── ...
-├── tools/                       # Agent-callable wrappers (MCP + direct)
-│   ├── jira_tools.py
-│   ├── excel_tools.py
-│   ├── drawio_tools.py
-│   ├── confluence_tools.py
-│   └── ...
+## Project Structure
+
+```text
+jira-utilities/
+├── pm_agent.py
+├── jira_utils.py
+├── excel_utils.py
+├── drawio_utilities.py
+├── ticket_monitor_cli.py
+├── release_tracker_cli.py
+├── mcp_server.py
+├── agents/
+├── tools/
+├── core/
+├── llm/
+├── notifications/
+├── state/
 ├── config/
-│   ├── shannon/                 # Shannon bot config + agent registry
-│   └── prompts/                 # Agent system prompts
+├── data/
+├── plans/
+├── tests/
 ├── docs/
-│   ├── workflows.md             # Full agentic workflow reference
-│   ├── shannon-teams-setup.md   # Teams integration setup guide
-│   ├── shannon-deployment-plan.md
-│   └── workforce/               # Agent workforce vision (17 agents)
-├── pyproject.toml               # Package metadata & console_scripts
-├── requirements.txt
-└── .env.example
+├── pyproject.toml
+└── requirements.txt
 ```
-
-### Adding New Tools
-
-```python
-from tools.base import tool, ToolResult
-
-@tool(description='My new tool')
-def my_tool(param: str) -> ToolResult:
-    return ToolResult.success({'result': 'data'})
-```
-
-### Adding New Agents
-
-1. Create agent class extending `BaseAgent`
-2. Define instruction prompt in `config/prompts/`
-3. Register tools and implement `run()` method
-
-### Testing
-
-```bash
-pytest tests/
-pytest tests/test_tools/test_jira_tools.py
-```
-
----
 
 ## License
 
-Proprietary — Cornelis Networks
-
-## Support
-
-For issues or questions, contact the Engineering Tools team.
+Proprietary, Cornelis Networks
