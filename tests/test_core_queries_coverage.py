@@ -139,27 +139,27 @@ def test_build_no_release_jql_with_issue_types_and_statuses():
 
 
 def test_paginated_jql_search_prefers_enhanced_search_when_available():
-    from unittest.mock import MagicMock
-
-    mock_jira = MagicMock()
+    from types import SimpleNamespace as NS
 
     class _ResultPage(list):
         def __init__(self, items, next_token=None):
             super().__init__(items)
             self.nextPageToken = next_token
 
-    mock_jira.enhanced_search_issues = MagicMock(
-        side_effect=[
-            _ResultPage(['STL-1', 'STL-2'], next_token='page2'),
-            _ResultPage(['STL-3'], next_token=None),
-        ]
-    )
+    calls = []
+
+    def _enhanced(jql, **kwargs):
+        calls.append(kwargs)
+        if len(calls) == 1:
+            return _ResultPage(['STL-1', 'STL-2'], next_token='page2')
+        return _ResultPage(['STL-3'], next_token=None)
+
+    mock_jira = NS(enhanced_search_issues=_enhanced, search_issues=None)
 
     issues = queries.paginated_jql_search(mock_jira, 'project = "STL"', page_size=2)
 
     assert issues == ['STL-1', 'STL-2', 'STL-3']
-    assert mock_jira.enhanced_search_issues.call_count == 2
-    mock_jira.search_issues.assert_not_called()
+    assert len(calls) == 2
 
 
 def test_paginated_jql_search_falls_back_when_enhanced_raises():
