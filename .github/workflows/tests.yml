@@ -203,7 +203,7 @@ jobs:
 
   deploy-report:
     needs: test
-    if: always()
+    if: always() && needs.test.result == 'success'
     runs-on: ubuntu-latest
     
     permissions:
