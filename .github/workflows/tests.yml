@@ -6,6 +6,10 @@ on:
   push:
     branches: [main, master, refactor-jira-utils]
 
+concurrency:
+  group: pages-deploy-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
   checks: write
