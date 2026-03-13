@@ -2,6 +2,7 @@ import csv
 import inspect
 import logging
 import re
+from functools import lru_cache
 from itertools import combinations
 from typing import Any, Optional
 
@@ -88,6 +89,8 @@ def validate_and_repair_csv(input_file: str, output_file: Optional[str] = None) 
     expected = len(header)
 
     jira_key_re = re.compile(r'^[A-Z]{2,10}-\d+$')
+    date_re = re.compile(r'^\d{4}-\d{2}-\d{2}(?:[ T].*)?$')
+    version_token_re = re.compile(r'^(?:\d+\.){2,4}(?:x|\d+)$', re.IGNORECASE)
     known_values = {
         'issue_type': {
             'bug', 'story', 'task', 'epic', 'sub-task', 'subtask',
@@ -98,31 +101,108 @@ def validate_and_repair_csv(input_file: str, output_file: Optional[str] = None) 
             'to do', 'done', 'resolved', 'reopened', 'in review',
         },
         'priority': {
-            'p0-stopper', 'p1-critical', 'p2-major', 'p3-minor',
-            'p4-trivial', 'blocker', 'critical', 'major', 'minor', 'trivial',
+            'p0-stopper', 'p1-critical', 'p2-high', 'p2-major',
+            'p3-medium', 'p3-minor', 'p4-low', 'p4-trivial',
+            'blocker', 'critical', 'high', 'major', 'medium', 'minor', 'low', 'trivial',
         },
         'project': {'stl', 'stlsb', 'cn', 'opx'},
         'product': {'nic', 'switch'},
         'module': {'driver', 'bts', 'fw', 'opx', 'gpu'},
     }
+    absorb_comma_headers = {
+        'summary', 'description', 'assignee', 'fix_version', 'affects_version',
+        'versions', 'todays_status', 'today_status', 'latest_comment',
+        'comments', 'dependency',
+    }
+    penalty_headers = {'key', 'project', 'issue_type', 'status', 'priority', 'updated'}
+
+    def normalize_header(header_name: str) -> str:
+        normalized = header_name.strip().lower()
+        normalized = normalized.replace(' ', '_').replace('-', '_').replace('/', '_')
+        if normalized in {'issuetype', 'issue_typ'} or normalized.startswith('issue_typ'):
+            return 'issue_type'
+        if normalized in {'fixversions', 'fix_version_s'} or normalized.startswith('fix_ver'):
+            return 'fix_version'
+        if normalized in {'versions', 'affectedversion', 'affectedversions'}:
+            return 'affects_version'
+        if normalized in {'todaysstatus', 'todays_status'}:
+            return 'todays_status'
+        if normalized in {'latestcomment', 'latest_comment'}:
+            return 'latest_comment'
+        return normalized
+
+    def looks_like_version_list(value: str) -> bool:
+        tokens = [token.strip() for token in value.split(',') if token.strip()]
+        return bool(tokens) and all(version_token_re.match(token) for token in tokens)
 
     def score_alignment(fields: list[str], header_list: list[str]) -> int:
         score = 0
-        for i, hdr in enumerate(header_list):
+        for i, header_name in enumerate(header_list):
             if i >= len(fields):
                 break
-            val = (fields[i] or '').strip()
-            hdr_low = hdr.strip().lower()
+            value = (fields[i] or '').strip()
+            header_key = normalize_header(header_name)
+            value_lower = value.lower()
 
-            if hdr_low == 'key' and jira_key_re.match(val):
-                score += 10
-            elif hdr_low in known_values and val.lower() in known_values[hdr_low]:
-                score += 5
-            elif hdr_low == 'updated' and re.match(r'^\d{4}-\d{2}-\d{2}', val):
-                score += 5
-            elif val and hdr_low in ('customer', 'summary', 'assignee', 'fix_version'):
-                score += 1
+            if header_key == 'key' and jira_key_re.match(value):
+                score += 12
+            elif header_key in known_values and value_lower in known_values[header_key]:
+                score += 7
+            elif header_key == 'updated' and date_re.match(value):
+                score += 7
+            elif header_key in {'fix_version', 'affects_version'} and looks_like_version_list(value):
+                score += 7
+            elif value and header_key in absorb_comma_headers:
+                score += 2
         return score
+
+    def score_segment(header_key: str, value: str, width: int) -> int:
+        value = value.strip()
+        value_lower = value.lower()
+        score = 0
+
+        if header_key in absorb_comma_headers:
+            score += 2 if value else 0
+            if width > 1:
+                score += min(width * 3, 12)
+        elif width > 1:
+            score -= 8 * (width - 1)
+
+        if header_key == 'key':
+            return score + (40 if jira_key_re.match(value) else -20)
+        if header_key == 'project':
+            if value_lower in known_values['project'] or re.match(r'^[A-Z][A-Z0-9]{1,9}$', value):
+                return score + 18
+            return score - 6
+        if header_key == 'issue_type':
+            return score + (18 if value_lower in known_values['issue_type'] else -10)
+        if header_key == 'status':
+            return score + (18 if value_lower in known_values['status'] else -10)
+        if header_key == 'priority':
+            return score + (18 if value_lower in known_values['priority'] else -10)
+        if header_key == 'updated':
+            return score + (18 if date_re.match(value) else -10)
+        if header_key in {'fix_version', 'affects_version'}:
+            if looks_like_version_list(value):
+                return score + 20
+            return score - 4
+        if header_key == 'assignee':
+            if re.match(r'^[^,]+,\s*[^,]+(?:\s+[^,]+)?$', value):
+                return score + 16
+            if value:
+                return score + 6
+            return score - 2
+        if header_key == 'dependency':
+            if all(jira_key_re.match(part.strip()) for part in value.split(',') if part.strip()):
+                return score + 12
+            return score + (4 if value else 0)
+        if header_key in {'customer', 'product', 'module', 'phase'}:
+            if value and width == 1:
+                return score + 8
+            return score - 2
+        if header_key in {'summary', 'description', 'todays_status', 'today_status', 'latest_comment', 'comments'}:
+            return score + (6 if value else 0)
+        return score + (2 if value else 0)
 
     stats = {
         'total_rows': len(raw_rows) - 1,
@@ -151,6 +231,8 @@ def validate_and_repair_csv(input_file: str, output_file: Optional[str] = None) 
         extra = n - expected
         best_score = -1
         best_fields = None
+        fallback_fields = fields[: expected - 1]
+        fallback_fields.append(','.join(fields[expected - 1 :]))
 
         if extra <= 4:
             merge_candidates = list(range(n - 1))
@@ -176,9 +258,54 @@ def validate_and_repair_csv(input_file: str, output_file: Optional[str] = None) 
                 if score > best_score:
                     best_score = score
                     best_fields = candidate
-        else:
-            best_fields = fields[: expected - 1]
-            best_fields.append(','.join(fields[expected - 1 :]))
+
+        normalized_header = [normalize_header(name) for name in header]
+
+        @lru_cache(maxsize=None)
+        def align_columns(header_idx: int, field_idx: int) -> tuple[int, tuple[int, ...]]:
+            if header_idx == expected and field_idx == n:
+                return 0, ()
+            if header_idx >= expected or field_idx >= n:
+                return -10**9, ()
+
+            remaining_headers = expected - header_idx
+            remaining_fields = n - field_idx
+            max_width = remaining_fields - (remaining_headers - 1)
+            if max_width < 1:
+                return -10**9, ()
+
+            best_local_score = -10**9
+            best_widths: tuple[int, ...] = ()
+            for width in range(1, max_width + 1):
+                value = ','.join(fields[field_idx: field_idx + width])
+                current_score = score_segment(normalized_header[header_idx], value, width)
+                remainder_score, remainder_widths = align_columns(header_idx + 1, field_idx + width)
+                total_score = current_score + remainder_score
+                if total_score > best_local_score:
+                    best_local_score = total_score
+                    best_widths = (width,) + remainder_widths
+
+            return best_local_score, best_widths
+
+        dp_score, dp_widths = align_columns(0, 0)
+        if dp_widths and len(dp_widths) == expected:
+            candidate = []
+            field_pos = 0
+            for width in dp_widths:
+                candidate.append(','.join(fields[field_pos: field_pos + width]))
+                field_pos += width
+
+            candidate_alignment_score = score_alignment(candidate, header)
+            if (
+                len(candidate) == expected
+                and dp_score > best_score
+                and (extra <= 4 or candidate_alignment_score >= 15)
+            ):
+                best_score = dp_score
+                best_fields = candidate
+
+        if best_fields is None:
+            best_fields = fallback_fields
 
         if best_fields and len(best_fields) == expected:
             raw_rows[row_idx] = best_fields

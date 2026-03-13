@@ -62,6 +62,40 @@ def test_validate_and_repair_csv_supports_output_file(tmp_path):
     assert rows[1] == ['STL-1', 'Hello, world', 'Open']
 
 
+def test_validate_and_repair_csv_repairs_multiple_unquoted_comma_fields(tmp_path):
+    csv_path = tmp_path / 'bug_report.csv'
+    csv_path.write_text(
+        'customer,product,module,todays_status,phase,key,project,issue_type,status,priority,summary,assignee,updated,fix_version\n'
+        'internal,NIC,Driver,Nodes rebooted, will monitor further,sw_debugging,STL-6946,STL,Bug,Open,P0-Stopper,12.1.1.0.16 - LustreError: unpack failed, follow-up needed,Reiser, Lindsay,2026-03-13,12.1.1.x,12.1.1.0.x\n',
+        encoding='utf-8',
+    )
+
+    repaired, stats = core_utils.validate_and_repair_csv(str(csv_path))
+
+    assert repaired is True
+    assert stats['repaired_rows'] == 1
+
+    with csv_path.open('r', encoding='utf-8', newline='') as handle:
+        rows = list(csv.reader(handle))
+
+    assert rows[1] == [
+        'internal',
+        'NIC',
+        'Driver',
+        'Nodes rebooted, will monitor further',
+        'sw_debugging',
+        'STL-6946',
+        'STL',
+        'Bug',
+        'Open',
+        'P0-Stopper',
+        '12.1.1.0.16 - LustreError: unpack failed, follow-up needed',
+        'Reiser, Lindsay',
+        '2026-03-13',
+        '12.1.1.x,12.1.1.0.x',
+    ]
+
+
 def test_extract_text_from_adf_handles_dict_string_none():
     adf = {
         'type': 'doc',

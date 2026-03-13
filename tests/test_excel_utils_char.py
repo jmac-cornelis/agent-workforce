@@ -81,6 +81,29 @@ def test_validate_and_repair_csv_repairs_unquoted_comma(tmp_path):
     assert len(rows[1]) == 3
 
 
+def test_convert_from_csv_repairs_bug_report_rows_with_multiple_split_fields(tmp_path):
+    csv_path = tmp_path / "bug_report.csv"
+    csv_path.write_text(
+        "customer,product,module,todays_status,phase,key,project,issue_type,status,priority,summary,assignee,updated,fix_version\n"
+        "internal,NIC,Driver,Nodes rebooted, will monitor further,sw_debugging,STL-6946,STL,Bug,Open,P0-Stopper,12.1.1.0.16 - LustreError: unpack failed, follow-up needed,Reiser, Lindsay,2026-03-13,12.1.1.x,12.1.1.0.x\n",
+        encoding="utf-8",
+    )
+
+    out_path = excel_utils.convert_from_csv(str(csv_path), str(tmp_path / "bug_report.xlsx"))
+
+    wb = openpyxl.load_workbook(out_path)
+    ws = wb[wb.sheetnames[0]]
+
+    assert ws.cell(row=2, column=4).value == "Nodes rebooted, will monitor further"
+    assert ws.cell(row=2, column=6).value == "STL-6946"
+    assert ws.cell(row=2, column=11).value == "12.1.1.0.16 - LustreError: unpack failed, follow-up needed"
+    assert ws.cell(row=2, column=12).value == "Reiser, Lindsay"
+    assert ws.cell(row=2, column=13).value == "2026-03-13"
+    assert ws.cell(row=2, column=14).value == "12.1.1.x,12.1.1.0.x"
+
+    wb.close()
+
+
 def test_concat_merge_sheet_merges_rows_and_union_columns(temp_excel_file, tmp_path):
     file_a = temp_excel_file(
         "a.xlsx",
