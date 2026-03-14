@@ -63,6 +63,17 @@ def test_markdown_to_storage_supports_common_blocks():
     assert 'print("hello")' in storage
 
 
+def test_storage_to_markdown_converts_code_macros():
+    markdown = confluence_utils.storage_to_markdown(
+        '<ac:structured-macro ac:name="code">'
+        '<ac:parameter ac:name="language">python</ac:parameter>'
+        '<ac:plain-text-body><![CDATA[print("hello")]]></ac:plain-text-body>'
+        '</ac:structured-macro>'
+    )
+
+    assert markdown == '```python\nprint("hello")\n```\n'
+
+
 def test_load_markdown_document_parses_front_matter_and_assets(tmp_path: Path):
     image_file = tmp_path / 'diagram.png'
     image_file.write_bytes(b'png')

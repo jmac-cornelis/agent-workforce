@@ -1188,13 +1188,20 @@ def storage_to_markdown(storage_text: str) -> str:
     '''
     markdown = storage_text
 
+    def _code_macro_to_markdown(match: re.Match[str]) -> str:
+        params = match.group(1)
+        code_body = match.group(2)
+        language_match = re.search(
+            r'<ac:parameter ac:name="language">(.*?)</ac:parameter>',
+            params,
+            re.DOTALL,
+        )
+        language = language_match.group(1) if language_match else ''
+        return f'```{language}\n{code_body}\n```'
+
     markdown = re.sub(
         r'<ac:structured-macro ac:name="code">(.*?)<ac:plain-text-body><!\[CDATA\[(.*?)\]\]></ac:plain-text-body></ac:structured-macro>',
-        lambda m: (
-            '```'
-            f'{re.search(r"<ac:parameter ac:name=\"language\">(.*?)</ac:parameter>", m.group(1), re.DOTALL).group(1) if re.search(r"<ac:parameter ac:name=\"language\">(.*?)</ac:parameter>", m.group(1), re.DOTALL) else ""}\n'
-            f'{m.group(2)}\n```'
-        ),
+        _code_macro_to_markdown,
         markdown,
         flags=re.DOTALL,
     )
