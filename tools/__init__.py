@@ -75,6 +75,24 @@ from tools.file_tools import (
     read_yaml,
     FileTools,
 )
+from tools.knowledge_tools import (
+    search_knowledge,
+    list_knowledge_files,
+    read_knowledge_file,
+    read_document,
+    KnowledgeTools,
+)
+from tools.web_search_tools import (
+    web_search,
+    web_search_multi,
+    WebSearchTools,
+)
+from tools.mcp_tools import (
+    mcp_discover_tools,
+    mcp_call_tool,
+    mcp_search,
+    MCPTools,
+)
 from tools.excel_tools import (
     build_excel_map,
     concat_excel,
@@ -154,6 +172,21 @@ __all__ = [
     'write_json',
     'read_yaml',
     'FileTools',
+    # Knowledge
+    'search_knowledge',
+    'list_knowledge_files',
+    'read_knowledge_file',
+    'read_document',
+    'KnowledgeTools',
+    # Web Search
+    'web_search',
+    'web_search_multi',
+    'WebSearchTools',
+    # MCP Client
+    'mcp_discover_tools',
+    'mcp_call_tool',
+    'mcp_search',
+    'MCPTools',
     # Excel
     'build_excel_map',
     'concat_excel',
