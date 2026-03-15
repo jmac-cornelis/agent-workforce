@@ -44,6 +44,25 @@ Those workflows are enabled by a common base layer:
 
 This means we are not building one-off agents. We are building specialist workers that can be orchestrated into repeatable pipelines.
 
+## Gantt Planning Agent
+
+### GanttProjectPlannerAgent
+
+The `GanttProjectPlannerAgent` is useful when the team needs a current planning snapshot grounded in Jira backlog reality instead of a static plan document.
+
+Practical applications:
+
+- Generate milestone proposals from fix versions and current backlog state
+- Produce dependency summaries that show blocked and unscheduled work
+- Create risk snapshots for planning reviews, staff meetings, and roadmap check-ins
+- Persist planning snapshots so teams can compare and revisit planning states over time
+
+Why it matters:
+
+- It turns Jira backlog data into a planning surface instead of just a ticket list.
+- It creates a durable artifact that can be reviewed by leads before any Jira write-back exists.
+- It is the strongest direct implementation in this repo of the `Gantt` role from the larger `agent_workforce` model.
+
 ## Release-Planning Agents
 
 ### ReleasePlanningOrchestrator

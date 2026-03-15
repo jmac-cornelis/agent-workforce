@@ -84,6 +84,9 @@ This is where `jira-utilities` is currently strongest.
 
 **Current mapping in `jira-utilities`**
 
+- `agents/gantt_agent.py`
+- `agents/gantt_components.py`
+- `agents/gantt_models.py`
 - `agents/feature_planning_orchestrator.py`
 - `agents/orchestrator.py`
 - `agents/planning_agent.py`
@@ -122,13 +125,19 @@ The release-planning flow is also a planning-oriented orchestration path:
 - plan generation
 - approval and execution
 
+The newer dedicated Gantt slice makes this mapping more concrete than it was before:
+
+- `BacklogInterpreter` normalizes Jira backlog state for planning
+- `DependencyMapper` produces first-class dependency views
+- `MilestonePlanner` produces milestone proposals from release and backlog data
+- `RiskProjector` converts stale work, blockers, and ownership gaps into planning-risk records
+- `PlanningSummarizer` produces durable planning snapshot summaries
+
 **Main gaps vs workforce Gantt**
 
 - no event-driven planning snapshots
-- no formal milestone proposal model
-- no dependency graph as a first-class output
 - no integration with execution-spine evidence like builds/tests/releases
-- no delivery-risk projection from cross-agent operational data
+- no delivery-risk projection from cross-agent operational data beyond Jira-derived backlog signals
 
 #### Brooks — Delivery Manager
 

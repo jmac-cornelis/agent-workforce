@@ -68,6 +68,22 @@ def test_import_gantt_agent_class():
     assert GanttProjectPlannerAgent is not None
 
 
+def test_import_gantt_components():
+    from agents.gantt_components import (
+        BacklogInterpreter,
+        DependencyMapper,
+        MilestonePlanner,
+        PlanningSummarizer,
+        RiskProjector,
+    )
+
+    assert BacklogInterpreter is not None
+    assert DependencyMapper is not None
+    assert MilestonePlanner is not None
+    assert PlanningSummarizer is not None
+    assert RiskProjector is not None
+
+
 def test_import_gantt_snapshot_store():
     from state.gantt_snapshot_store import GanttSnapshotStore
 
