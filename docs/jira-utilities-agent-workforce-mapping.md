@@ -18,7 +18,7 @@ The goal is to answer four practical questions:
 The strongest mapping is:
 
 - `Gantt` — strong partial implementation
-- `Drucker` — strong foundation, with some direct overlap already present
+- `Drucker` — strong partial implementation
 - `Hypatia` — strong tooling foundation, but not yet a dedicated documentation agent
 
 The lighter partial mappings are:
@@ -84,6 +84,9 @@ This is where `jira-utilities` is currently strongest.
 
 **Current mapping in `jira-utilities`**
 
+- `agents/gantt_agent.py`
+- `agents/gantt_components.py`
+- `agents/gantt_models.py`
 - `agents/feature_planning_orchestrator.py`
 - `agents/orchestrator.py`
 - `agents/planning_agent.py`
@@ -122,13 +125,19 @@ The release-planning flow is also a planning-oriented orchestration path:
 - plan generation
 - approval and execution
 
+The newer dedicated Gantt slice makes this mapping more concrete than it was before:
+
+- `BacklogInterpreter` normalizes Jira backlog state for planning
+- `DependencyMapper` produces first-class dependency views
+- `MilestonePlanner` produces milestone proposals from release and backlog data
+- `RiskProjector` converts stale work, blockers, and ownership gaps into planning-risk records
+- `PlanningSummarizer` produces durable planning snapshot summaries
+
 **Main gaps vs workforce Gantt**
 
 - no event-driven planning snapshots
-- no formal milestone proposal model
-- no dependency graph as a first-class output
 - no integration with execution-spine evidence like builds/tests/releases
-- no delivery-risk projection from cross-agent operational data
+- no delivery-risk projection from cross-agent operational data beyond Jira-derived backlog signals
 
 #### Brooks — Delivery Manager
 
@@ -181,15 +190,18 @@ This repo has important foundations here, but most implementations are still thi
 
 **Current mapping in `jira-utilities`**
 
+- `agents/drucker_agent.py`
+- `agents/drucker_models.py`
 - `agents/jira_analyst.py`
 - `tools/jira_tools.py`
 - `mcp_server.py`
 - `agents/review_agent.py`
 - workflow support in `pm_agent.py`
+- `state/drucker_report_store.py`
 
 **Maturity**
 
-Strong foundation, with partial direct implementation overlap.
+Strong partial implementation.
 
 **Why it maps well**
 
@@ -206,7 +218,15 @@ This repo already has much of the tool and control surface Drucker would need:
 
 The recent widening of the Jira tool surface is especially important because Drucker depends more on deterministic Jira actions than on free-form generation.
 
-`JiraAnalystAgent` is not yet Drucker, but it is clearly Drucker-adjacent:
+The newer dedicated Drucker slice makes the mapping much more concrete:
+
+- `DruckerCoordinatorAgent` produces deterministic Jira hygiene reports
+- project-level findings are persisted durably through `DruckerReportStore`
+- ticket-level remediation suggestions are converted into reviewable Jira actions
+- Jira write-back is gated through the shared `ReviewAgent` execution model
+- `pm_agent --workflow drucker-hygiene` makes the slice usable without custom code
+
+`JiraAnalystAgent` still matters here as a precursor and supporting capability:
 
 - it inspects the current Jira state
 - it frames the project operationally
@@ -215,13 +235,12 @@ The recent widening of the Jira tool surface is especially important because Dru
 **Main gaps vs workforce Drucker**
 
 - no continuous issue-evaluation service
-- no stale-state or metadata-gap engine
-- no routing coordinator
-- no policy-backed write-back engine
-- no durable issue-coordination record model
+- no assignment/routing policy engine beyond reviewable labels and comments
 - no event-driven Jira issue processing
+- no durable coordination history per issue beyond point-in-time reports
+- no escalation model tied to teams, components, or managers
 
-The practical conclusion is that `jira-utilities` is probably the best seed codebase for a future Drucker implementation.
+The practical conclusion is that `jira-utilities` is now a real seed implementation of Drucker, not just a precursor.
 
 #### Hypatia — Documentation Agent
 
@@ -238,10 +257,13 @@ The practical conclusion is that `jira-utilities` is probably the best seed code
 - `tools/web_search_tools.py`
 - `tools/mcp_tools.py`
 - `agents/research_agent.py`
+- `agents/hypatia_agent.py`
+- `agents/hypatia_models.py`
+- `state/hypatia_record_store.py`
 
 **Maturity**
 
-Strong tooling foundation, weak direct agent implementation.
+Strong partial implementation.
 
 **Why it maps well**
 
@@ -264,19 +286,28 @@ The repo also has supporting evidence tools:
 - research and knowledge lookup
 - file/document read paths
 - review-style approval patterns
+- durable documentation records
+- review-gated repo and Confluence publication staging
+
+The new Hypatia slice now adds:
+
+- a dedicated documentation agent class
+- documentation request, impact, patch, record, and publication models
+- a source-grounded internal documentation workflow
+- a review-gated publication path for repo docs and Confluence
+- stronger validation hooks plus optional evidence-backed publication inputs
 
 **Main gaps vs workforce Hypatia**
 
-- no dedicated documentation agent class
-- no documentation-impact model
-- no source/build/test/release-driven documentation workflow
-- no publication validation pipeline
 - no as-built documentation generation model
+- no always-on event-driven impact detection
+- no fully event-driven source/build/test/release-driven documentation workflow yet
+- no Sphinx/ReadTheDocs publication pipeline yet
 
 So the right reading is:
 
-- `jira-utilities` is not Hypatia
-- `jira-utilities` does contain a useful first-generation Hypatia tool substrate
+- `jira-utilities` is now a real first-generation Hypatia slice
+- it is still narrower than the full workforce Hypatia design
 
 #### Herodotus — Knowledge Capture
 
@@ -518,6 +549,7 @@ This is the inverse view: starting from the agents that already exist here and s
 | `PlanningAgent` | `Gantt` | Core plan synthesis behavior |
 | `FeaturePlanBuilderAgent` | `Gantt` -> `Drucker` handoff | Turns scoped work into Jira-ready structures |
 | `JiraAnalystAgent` | `Drucker` precursor | Strong current-state Jira understanding, but not yet hygiene/routing orchestration |
+| `HypatiaDocumentationAgent` | `Hypatia` | Source-grounded internal documentation generation with review-gated publication |
 | `ReviewAgent` | Shared cross-cutting capability | Reusable across `Drucker`, `Hedy`, `Hypatia`, `Brooks`, and `Gantt` |
 | `VisionAnalyzerAgent` | `Gantt` intake adapter | Helps turn roadmap artifacts into planning inputs |
 | `ResearchAgent` | Upstream support for `Gantt`, `Hypatia`, and `Nightingale` | Better understood as shared intelligence than a workforce one-to-one mapping |
@@ -530,7 +562,7 @@ If the organization wants to use `jira-utilities` as a seed implementation for `
 
 - use this repo as the starting codebase for `Gantt`
 - grow `Drucker` out of the existing Jira tool and analysis layer
-- use the Confluence and document tooling here as the starting substrate for `Hypatia`
+- use the Hypatia slice here as the starting documentation-service foundation
 - reuse `ReviewAgent` as a shared approval capability across the future platform
 
 That is more realistic than trying to force this repo to represent the entire workforce.
@@ -564,7 +596,8 @@ If the goal is to converge this repo toward the workforce model, the most sensib
 1. Formalize `Gantt` as the umbrella role for the existing planning agents.
 2. Grow `JiraAnalystAgent` plus `jira_tools` into a real `Drucker` slice:
    metadata gaps, stale-state detection, recommendation records, and safe write-backs.
-3. Add a dedicated documentation agent on top of the new Confluence layer as the first `Hypatia` slice.
+3. Deepen the new `Hypatia` slice:
+   doc-impact detection, stronger validation, and richer documentation classes.
 4. Standardize service interfaces around these agents:
    request model, response model, audit metadata, and approval hooks.
 5. Leave execution-spine agents for a separate phase, since they depend on systems this repo does not currently model.
@@ -577,7 +610,7 @@ Its center of gravity is:
 
 - `Gantt` first
 - `Drucker` second
-- `Hypatia` tooling third
+- `Hypatia` third
 
 Everything else is either an adjacency or a future integration point.
 

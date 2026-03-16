@@ -331,6 +331,75 @@ All output lands in `plans/<PROJECT>-<slug>/`:
 
 ---
 
+### Gantt Snapshot Workflow
+
+Build, persist, and review Jira-grounded planning snapshots for a project backlog.
+
+```bash
+# Create and persist a new planning snapshot
+pm_agent --workflow gantt-snapshot --project STL --planning-horizon 120
+
+# Add build/test/release evidence inputs to the snapshot
+pm_agent --workflow gantt-snapshot --project STL --evidence build.json test.yaml release.md
+
+# List stored snapshots, optionally scoped to one project
+pm_agent --workflow gantt-snapshot-list --project STL
+
+# Load a stored snapshot by ID and re-export it
+pm_agent --workflow gantt-snapshot-get --snapshot-id a1b2c3d4 --output stl_snapshot.json
+```
+
+Each `gantt-snapshot` run now stores a durable copy under `data/gantt_snapshots/<PROJECT>/<SNAPSHOT_ID>/`
+in addition to any ad hoc output path you provide with `--output`.
+
+---
+
+### Drucker Hygiene Workflow
+
+Build, persist, and review Jira hygiene reports with ticket-level remediation suggestions.
+
+```bash
+# Create and persist a Drucker hygiene report
+pm_agent --workflow drucker-hygiene --project STL
+
+# Tighten the stale threshold and export ad hoc files
+pm_agent --workflow drucker-hygiene --project STL --stale-days 21 --output stl_hygiene.json
+```
+
+Each `drucker-hygiene` run stores a durable copy under `data/drucker_reports/<PROJECT>/<REPORT_ID>/`
+and also writes a review-session JSON file alongside the exported report files so the
+proposed Jira actions can be reviewed before execution.
+
+---
+
+### Hypatia Documentation Workflow
+
+Build, persist, and review source-grounded internal documentation candidates for
+repo Markdown and optional Confluence targets.
+
+```bash
+# Generate a repo-owned documentation draft
+pm_agent --workflow hypatia-generate --doc-title "STL Build Notes" --docs README.md AGENTS.md
+
+# Target a specific repo doc path and documentation class
+pm_agent --workflow hypatia-generate --doc-title "Fabric Bring-Up Guide" \
+  --doc-type how_to --docs docs/source.md --target-file docs/fabric-bring-up.md
+
+# Add evidence files and stricter validation for release-note support
+pm_agent --workflow hypatia-generate --doc-title "Release Notes Support" \
+  --doc-type release_note_support --docs notes.md --evidence release.json --doc-validation strict
+
+# Stage a Confluence publication target alongside the repo draft
+pm_agent --workflow hypatia-generate --doc-title "STL Weekly Summary" \
+  --docs README.md --confluence-title "STL Weekly Summary" --confluence-space ENG
+```
+
+Each `hypatia-generate` run stores a durable copy under `data/hypatia_docs/<DOC_ID>/`
+and writes a review-session JSON plus per-target Markdown patch drafts alongside the
+exported record files so publication stays reviewable before execution.
+
+---
+
 ### Bug Report Workflow
 
 Generate a cleaned, enriched bug report from a Jira filter.
@@ -401,8 +470,15 @@ These flags apply to all agentic workflows:
 
 | Flag | Description |
 |------|-------------|
-| `--workflow NAME` | Workflow to run (`bug-report`, `feature-plan`) |
+| `--workflow NAME` | Workflow to run (`bug-report`, `drucker-hygiene`, `feature-plan`, `gantt-snapshot`, `gantt-snapshot-get`, `gantt-snapshot-list`, `hypatia-generate`) |
 | `--project KEY` | Jira project key |
+| `--stale-days DAYS` | Stale threshold for `drucker-hygiene` |
+| `--evidence FILE ...` | Evidence files for workflows that accept build/test/release/meeting context |
+| `--doc-title TEXT` | Document title for `hypatia-generate` |
+| `--doc-type TYPE` | Documentation class for `hypatia-generate` |
+| `--doc-validation PROFILE` | Validation profile for `hypatia-generate` (`default`, `strict`, `sphinx`) |
+| `--target-file FILE` | Repo Markdown target for `hypatia-generate` |
+| `--confluence-title TITLE`, `--confluence-page PAGE`, `--confluence-space SPACE` | Optional Confluence publication target for `hypatia-generate` |
 | `--model MODEL`, `-m` | LLM model name override (e.g. `developer-opus`, `gpt-4o`) |
 | `--timeout SECS` | LLM request timeout in seconds |
 | `--env FILE` | Load a specific `.env` file |

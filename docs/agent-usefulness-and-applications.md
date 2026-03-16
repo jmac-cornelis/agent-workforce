@@ -31,10 +31,11 @@ This is especially valuable for engineering planning work, where the real proble
 
 ## System-Level Value
 
-The repository currently supports two major agent workflows:
+The repository currently supports three major agent workflows:
 
 - A release-planning workflow centered on roadmap extraction, Jira analysis, plan creation, and approval
 - A feature-planning workflow centered on research, hardware understanding, scoping, plan generation, and review
+- A documentation workflow centered on source-grounded internal doc generation, validation, and review-gated publication
 
 Those workflows are enabled by a common base layer:
 
@@ -43,6 +44,65 @@ Those workflows are enabled by a common base layer:
 - The newer Jira and Confluence wrappers make those capabilities available both to direct code and to agents.
 
 This means we are not building one-off agents. We are building specialist workers that can be orchestrated into repeatable pipelines.
+
+## Gantt Planning Agent
+
+### GanttProjectPlannerAgent
+
+The `GanttProjectPlannerAgent` is useful when the team needs a current planning snapshot grounded in Jira backlog reality instead of a static plan document.
+
+Practical applications:
+
+- Generate milestone proposals from fix versions and current backlog state
+- Produce dependency summaries that show blocked and unscheduled work
+- Create risk snapshots for planning reviews, staff meetings, and roadmap check-ins
+- Persist planning snapshots so teams can compare and revisit planning states over time
+
+Why it matters:
+
+- It turns Jira backlog data into a planning surface instead of just a ticket list.
+- It creates a durable artifact that can be reviewed by leads before any Jira write-back exists.
+- It is the strongest direct implementation in this repo of the `Gantt` role from the larger `agent_workforce` model.
+
+## Jira Coordination Agent
+
+### DruckerCoordinatorAgent
+
+The `DruckerCoordinatorAgent` is useful when the team needs Jira hygiene and coordination work turned into a concrete, reviewable operating loop instead of a one-time dashboard check.
+
+Practical applications:
+
+- Generate project-level hygiene reports that highlight stale, blocked, unassigned, and under-specified work
+- Produce ticket-level remediation suggestions with evidence and recommended follow-up
+- Persist hygiene reports so operational reviews can be revisited and compared over time
+- Create review-gated Jira actions such as labels and comments before any write-back happens
+
+Why it matters:
+
+- It moves the repo from Jira analysis toward true Jira coordination.
+- It gives leads a concrete backlog-hygiene artifact instead of scattered Jira queries.
+- It uses the existing `ReviewAgent` boundary so operational cleanup can stay safe and auditable.
+
+## Documentation Agent
+
+### HypatiaDocumentationAgent
+
+The `HypatiaDocumentationAgent` is useful when the team needs internal documentation updates that are grounded in actual source files and reviewable before they touch either the repo or Confluence.
+
+Practical applications:
+
+- Generate internal engineering-reference or how-to drafts from Markdown source inputs
+- Pull in build/test/release/meeting evidence files alongside source docs when stronger grounding is available
+- Stage repo-owned documentation updates and optional Confluence publications in the same review session
+- Persist documentation records so teams can audit what was generated, why, and from which sources
+- Validate publication targets before writing, including safe Confluence dry-run previews where available
+
+Why it matters:
+
+- It turns the Confluence and file tooling in this repo into a real documentation workflow instead of a bag of utilities.
+- It keeps internal documentation tied to source references instead of free-form prose generation.
+- It reuses the shared `ReviewAgent` boundary so doc publication can stay explicit, reviewable, and auditable.
+- It now has stronger publish gating through structure checks, source-reference validation, optional Sphinx validation, and evidence-input support.
 
 ## Release-Planning Agents
 
@@ -95,6 +155,7 @@ Why it matters:
 - Planning without current-state analysis creates duplicates and misalignment.
 - This agent gives the rest of the pipeline a grounded view of the project.
 - The deterministic `analyze_project()` path is especially good for safe, repeatable baseline analysis.
+- It now works well as an upstream input to `DruckerCoordinatorAgent`, which turns baseline analysis into hygiene findings and proposed Jira actions.
 
 ### PlanningAgent
 

@@ -52,6 +52,26 @@ from tools.confluence_tools import (
     export_confluence_page,
     ConfluenceTools,
 )
+from tools.gantt_tools import (
+    create_gantt_snapshot,
+    get_gantt_snapshot,
+    list_gantt_snapshots,
+    review_gantt_dependency,
+    list_gantt_dependency_reviews,
+    GanttTools,
+)
+from tools.drucker_tools import (
+    create_drucker_hygiene_report,
+    get_drucker_report,
+    list_drucker_reports,
+    DruckerTools,
+)
+from tools.hypatia_tools import (
+    generate_hypatia_documentation,
+    get_hypatia_record,
+    list_hypatia_records,
+    HypatiaTools,
+)
 from tools.drawio_tools import (
     parse_org_chart,
     get_responsibilities,
@@ -152,6 +172,23 @@ __all__ = [
     'list_confluence_children',
     'export_confluence_page',
     'ConfluenceTools',
+    # Gantt
+    'create_gantt_snapshot',
+    'get_gantt_snapshot',
+    'list_gantt_snapshots',
+    'review_gantt_dependency',
+    'list_gantt_dependency_reviews',
+    'GanttTools',
+    # Drucker
+    'create_drucker_hygiene_report',
+    'get_drucker_report',
+    'list_drucker_reports',
+    'DruckerTools',
+    # Hypatia
+    'generate_hypatia_documentation',
+    'get_hypatia_record',
+    'list_hypatia_records',
+    'HypatiaTools',
     # Draw.io
     'parse_org_chart',
     'get_responsibilities',
