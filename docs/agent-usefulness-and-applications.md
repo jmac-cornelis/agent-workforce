@@ -92,6 +92,7 @@ The `HypatiaDocumentationAgent` is useful when the team needs internal documenta
 Practical applications:
 
 - Generate internal engineering-reference or how-to drafts from Markdown source inputs
+- Pull in build/test/release/meeting evidence files alongside source docs when stronger grounding is available
 - Stage repo-owned documentation updates and optional Confluence publications in the same review session
 - Persist documentation records so teams can audit what was generated, why, and from which sources
 - Validate publication targets before writing, including safe Confluence dry-run previews where available
@@ -101,6 +102,7 @@ Why it matters:
 - It turns the Confluence and file tooling in this repo into a real documentation workflow instead of a bag of utilities.
 - It keeps internal documentation tied to source references instead of free-form prose generation.
 - It reuses the shared `ReviewAgent` boundary so doc publication can stay explicit, reviewable, and auditable.
+- It now has stronger publish gating through structure checks, source-reference validation, optional Sphinx validation, and evidence-input support.
 
 ## Release-Planning Agents
 

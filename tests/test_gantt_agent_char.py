@@ -152,6 +152,68 @@ def test_gantt_agent_run_returns_snapshot_metadata(monkeypatch: pytest.MonkeyPat
     assert response.metadata['planning_snapshot']['project_key'] == 'STL'
 
 
+def test_gantt_agent_loads_evidence_bundle(monkeypatch: pytest.MonkeyPatch, tmp_path):
+    from agents.gantt_agent import GanttProjectPlannerAgent
+
+    evidence_path = tmp_path / 'build.json'
+    evidence_path.write_text(
+        '{"evidence_type": "build", "title": "Build 42", "summary": "stable"}',
+        encoding='utf-8',
+    )
+
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'gantt prompt'),
+    )
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_load_project_info',
+        lambda self, project_key: {'key': project_key},
+    )
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_load_releases',
+        lambda self, project_key: [],
+    )
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_load_backlog_issues',
+        lambda self, request: [],
+    )
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_build_dependency_graph',
+        lambda self, issues: PlanningSnapshot().dependency_graph,
+    )
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_build_milestones',
+        lambda self, issues, releases, dependency_graph: [],
+    )
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_build_risks',
+        lambda self, issues, milestones, dependency_graph: [],
+    )
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_build_backlog_overview',
+        lambda self, issues, milestones, dependency_graph, risks: {'total_issues': 0},
+    )
+
+    snapshot = GanttProjectPlannerAgent(project_key='STL').create_snapshot(
+        PlanningRequest(
+            project_key='STL',
+            evidence_paths=[str(evidence_path)],
+        )
+    )
+
+    assert snapshot.evidence_summary['record_count'] == 1
+    assert snapshot.evidence_summary['by_type']['build'] == 1
+    assert 'Missing evidence inputs for:' in snapshot.evidence_gaps[0]
+
+
 def test_gantt_agent_applies_dependency_review_store(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,

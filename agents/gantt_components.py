@@ -27,6 +27,7 @@ from agents.gantt_models import (
     PlanningRiskRecord,
     PlanningSnapshot,
 )
+from core.evidence import EvidenceBundle
 from core.tickets import issue_to_dict
 
 # Logging config - follows jira_utils.py pattern
@@ -747,11 +748,43 @@ class RiskProjector:
     Projects evidence gaps and planning risks from the current backlog view.
     '''
 
-    def build_evidence_gaps(self, issues: List[Dict[str, Any]]) -> List[str]:
-        gaps = [
-            'Build, test, release, and traceability evidence are not yet integrated into Gantt snapshots.',
-            'Meeting-derived decisions and action items are not yet connected to planning snapshots.',
+    def build_evidence_gaps(
+        self,
+        issues: List[Dict[str, Any]],
+        evidence_bundle: Optional[EvidenceBundle] = None,
+    ) -> List[str]:
+        gaps: List[str] = []
+
+        provided_types = set()
+        warning_count = 0
+        if evidence_bundle is not None:
+            provided_types = {
+                str(record.evidence_type or '').strip()
+                for record in evidence_bundle.records
+                if str(record.evidence_type or '').strip()
+            }
+            warning_count = len(evidence_bundle.warnings)
+
+        required_types = ['build', 'test', 'release', 'traceability', 'meeting']
+        missing_types = [
+            evidence_type for evidence_type in required_types
+            if evidence_type not in provided_types
         ]
+
+        if not provided_types:
+            gaps.extend([
+                'Build, test, release, and traceability evidence are not yet integrated into Gantt snapshots.',
+                'Meeting-derived decisions and action items are not yet connected to planning snapshots.',
+            ])
+        elif missing_types:
+            gaps.append(
+                'Missing evidence inputs for: ' + ', '.join(missing_types) + '.'
+            )
+
+        if warning_count:
+            gaps.append(
+                f'{warning_count} evidence file(s) could not be loaded cleanly.'
+            )
 
         unscheduled = sum(
             1
@@ -1059,6 +1092,22 @@ class PlanningSummarizer:
             ])
             for chain in notable_chains[:5]:
                 lines.append(f"- {' -> '.join(chain)}")
+
+        evidence_summary = snapshot.evidence_summary or {}
+        if evidence_summary.get('record_count'):
+            lines.extend([
+                '',
+                '## Evidence Inputs',
+                '',
+                f"- Records loaded: {evidence_summary.get('record_count', 0)}",
+                f"- Types: {', '.join(sorted((evidence_summary.get('by_type') or {}).keys())) or 'none'}",
+            ])
+            source_refs = evidence_summary.get('source_refs') or []
+            if source_refs:
+                lines.append(f"- Sources: {', '.join(source_refs[:5])}")
+            warnings = evidence_summary.get('warnings') or []
+            if warnings:
+                lines.append(f"- Loader warnings: {len(warnings)}")
 
         lines.extend([
             '',

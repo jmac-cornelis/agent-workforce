@@ -339,6 +339,9 @@ Build, persist, and review Jira-grounded planning snapshots for a project backlo
 # Create and persist a new planning snapshot
 pm_agent --workflow gantt-snapshot --project STL --planning-horizon 120
 
+# Add build/test/release evidence inputs to the snapshot
+pm_agent --workflow gantt-snapshot --project STL --evidence build.json test.yaml release.md
+
 # List stored snapshots, optionally scoped to one project
 pm_agent --workflow gantt-snapshot-list --project STL
 
@@ -381,6 +384,10 @@ pm_agent --workflow hypatia-generate --doc-title "STL Build Notes" --docs README
 # Target a specific repo doc path and documentation class
 pm_agent --workflow hypatia-generate --doc-title "Fabric Bring-Up Guide" \
   --doc-type how_to --docs docs/source.md --target-file docs/fabric-bring-up.md
+
+# Add evidence files and stricter validation for release-note support
+pm_agent --workflow hypatia-generate --doc-title "Release Notes Support" \
+  --doc-type release_note_support --docs notes.md --evidence release.json --doc-validation strict
 
 # Stage a Confluence publication target alongside the repo draft
 pm_agent --workflow hypatia-generate --doc-title "STL Weekly Summary" \
@@ -466,8 +473,10 @@ These flags apply to all agentic workflows:
 | `--workflow NAME` | Workflow to run (`bug-report`, `drucker-hygiene`, `feature-plan`, `gantt-snapshot`, `gantt-snapshot-get`, `gantt-snapshot-list`, `hypatia-generate`) |
 | `--project KEY` | Jira project key |
 | `--stale-days DAYS` | Stale threshold for `drucker-hygiene` |
+| `--evidence FILE ...` | Evidence files for workflows that accept build/test/release/meeting context |
 | `--doc-title TEXT` | Document title for `hypatia-generate` |
 | `--doc-type TYPE` | Documentation class for `hypatia-generate` |
+| `--doc-validation PROFILE` | Validation profile for `hypatia-generate` (`default`, `strict`, `sphinx`) |
 | `--target-file FILE` | Repo Markdown target for `hypatia-generate` |
 | `--confluence-title TITLE`, `--confluence-page PAGE`, `--confluence-space SPACE` | Optional Confluence publication target for `hypatia-generate` |
 | `--model MODEL`, `-m` | LLM model name override (e.g. `developer-opus`, `gpt-4o`) |

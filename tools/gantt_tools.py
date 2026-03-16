@@ -30,6 +30,7 @@ def create_gantt_snapshot(
     include_done: bool = False,
     backlog_jql: Optional[str] = None,
     policy_profile: str = 'default',
+    evidence_paths: Optional[list[str]] = None,
     persist: bool = True,
 ) -> ToolResult:
     '''
@@ -42,6 +43,7 @@ def create_gantt_snapshot(
         include_done: Whether to include done/closed issues.
         backlog_jql: Optional JQL override for backlog selection.
         policy_profile: Optional future-facing planning policy profile.
+        evidence_paths: Optional build/test/release/meeting evidence files.
         persist: Whether to save the snapshot in the durable snapshot store.
 
     Output:
@@ -51,7 +53,8 @@ def create_gantt_snapshot(
         f'create_gantt_snapshot(project_key={project_key}, '
         f'planning_horizon_days={planning_horizon_days}, limit={limit}, '
         f'include_done={include_done}, backlog_jql={backlog_jql}, '
-        f'policy_profile={policy_profile}, persist={persist})'
+        f'policy_profile={policy_profile}, evidence_paths={evidence_paths}, '
+        f'persist={persist})'
     )
 
     try:
@@ -67,6 +70,7 @@ def create_gantt_snapshot(
             include_done=include_done,
             backlog_jql=backlog_jql,
             policy_profile=policy_profile,
+            evidence_paths=list(evidence_paths or []),
         )
         snapshot = agent.create_snapshot(request)
 
@@ -268,6 +272,7 @@ class GanttTools(BaseTool):
         include_done: bool = False,
         backlog_jql: Optional[str] = None,
         policy_profile: str = 'default',
+        evidence_paths: Optional[list[str]] = None,
         persist: bool = True,
     ) -> ToolResult:
         return create_gantt_snapshot(
@@ -277,6 +282,7 @@ class GanttTools(BaseTool):
             include_done,
             backlog_jql,
             policy_profile,
+            evidence_paths,
             persist,
         )
 

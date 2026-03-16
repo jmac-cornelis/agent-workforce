@@ -196,6 +196,76 @@ def test_hypatia_publish_approved_executes_repo_and_confluence_targets(
     assert session.items[1].status.value == 'executed'
 
 
+def test_hypatia_strict_validation_requires_source_refs(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    from agents.hypatia_agent import HypatiaDocumentationAgent
+
+    monkeypatch.setattr(
+        HypatiaDocumentationAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'hypatia prompt'),
+    )
+
+    agent = HypatiaDocumentationAgent(project_key='STL')
+    record, _session = agent.plan_documentation(DocumentationRequest(
+        title='Ungrounded Draft',
+        doc_type='engineering_reference',
+        project_key='STL',
+        summary='This draft has no authoritative sources.',
+        target_file=str(tmp_path / 'ungrounded.md'),
+        validation_profile='strict',
+    ))
+
+    assert record.validation['valid'] is False
+    assert any('source references' in issue.casefold() for issue in record.validation['blocking_issues'])
+
+
+def test_hypatia_sphinx_validation_runs_when_requested(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    from agents.hypatia_agent import HypatiaDocumentationAgent
+    from agents import hypatia_agent as hypatia_agent_module
+
+    docs_source = tmp_path / 'docs' / 'source'
+    docs_source.mkdir(parents=True)
+    (docs_source / 'conf.py').write_text("project = 'Demo'\n", encoding='utf-8')
+    source_path = tmp_path / 'facts.md'
+    source_path.write_text('# Facts\n\n- One\n', encoding='utf-8')
+
+    run_calls = []
+
+    monkeypatch.setattr(
+        HypatiaDocumentationAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'hypatia prompt'),
+    )
+    monkeypatch.setattr(hypatia_agent_module.shutil, 'which', lambda name: '/usr/bin/sphinx-build')
+    monkeypatch.setattr(
+        hypatia_agent_module.subprocess,
+        'run',
+        lambda args, capture_output, text, check: (
+            run_calls.append(args) or SimpleNamespace(returncode=0, stdout='', stderr='')
+        ),
+    )
+
+    agent = HypatiaDocumentationAgent(project_key='STL')
+    record, _session = agent.plan_documentation(DocumentationRequest(
+        title='Sphinx Draft',
+        doc_type='engineering_reference',
+        project_key='STL',
+        source_paths=[str(source_path)],
+        target_file=str(docs_source / 'guide.md'),
+        validation_profile='sphinx',
+    ))
+
+    assert record.validation['valid'] is True
+    assert run_calls
+    assert record.patches[0].metadata['sphinx_validation']['validated'] is True
+
+
 def test_workflow_hypatia_generate_writes_record_and_publications(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,

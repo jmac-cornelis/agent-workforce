@@ -70,10 +70,16 @@ except ImportError:
 # ---------------------------------------------------------------------------
 import jira_utils
 import confluence_utils
+from agents.drucker_agent import DruckerCoordinatorAgent
+from agents.drucker_models import DruckerRequest
 from agents.gantt_agent import GanttProjectPlannerAgent
 from agents.gantt_models import PlanningRequest
+from agents.hypatia_agent import HypatiaDocumentationAgent
+from agents.hypatia_models import DocumentationRequest
+from state.drucker_report_store import DruckerReportStore
 from state.gantt_dependency_review_store import GanttDependencyReviewStore
 from state.gantt_snapshot_store import GanttSnapshotStore
+from state.hypatia_record_store import HypatiaRecordStore
 
 # CRITICAL: Suppress all stdout output from jira_utils.  The MCP protocol
 # uses stdout exclusively for JSON-RPC 2.0 messages; any stray print()
@@ -764,6 +770,7 @@ async def create_gantt_snapshot(
     include_done: bool = False,
     backlog_jql: Optional[str] = None,
     policy_profile: str = 'default',
+    evidence_paths: Optional[list[str]] = None,
     persist: bool = True,
 ) -> list[Any]:
     """Create a Gantt planning snapshot from Jira backlog state."""
@@ -776,6 +783,7 @@ async def create_gantt_snapshot(
             include_done=include_done,
             backlog_jql=backlog_jql,
             policy_profile=policy_profile,
+            evidence_paths=list(evidence_paths or []),
         )
         snapshot = agent.create_snapshot(request)
         result = {
@@ -865,6 +873,162 @@ async def list_gantt_dependency_reviews(
         return _json_result(rows)
     except Exception as e:
         log.error(f'list_gantt_dependency_reviews failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Drucker hygiene tools
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def create_drucker_hygiene_report(
+    project_key: str,
+    limit: int = 200,
+    include_done: bool = False,
+    stale_days: int = 30,
+    jql: Optional[str] = None,
+    label_prefix: str = 'drucker',
+    persist: bool = True,
+) -> list[Any]:
+    """Create a Drucker Jira hygiene report and review session."""
+    try:
+        agent = DruckerCoordinatorAgent(project_key=project_key)
+        request = DruckerRequest(
+            project_key=project_key,
+            limit=limit,
+            include_done=include_done,
+            stale_days=stale_days,
+            jql=jql,
+            label_prefix=label_prefix,
+        )
+        report = agent.analyze_project_hygiene(request)
+        review_session = agent.create_review_session(report)
+        result = {
+            'report': report.to_dict(),
+            'review_session': review_session.to_dict(),
+        }
+        if persist:
+            result['stored'] = DruckerReportStore().save_report(
+                report,
+                summary_markdown=report.summary_markdown,
+            )
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'create_drucker_hygiene_report failed: {e}')
+        return _error_result(str(e))
+
+
+@_tool_decorator()
+async def get_drucker_report(
+    report_id: str,
+    project_key: Optional[str] = None,
+) -> list[Any]:
+    """Get a persisted Drucker hygiene report by report ID."""
+    try:
+        record = DruckerReportStore().get_report(report_id, project_key=project_key)
+        if not record:
+            return _error_result(f'Drucker report {report_id} not found')
+        return _json_result(record)
+    except Exception as e:
+        log.error(f'get_drucker_report failed: {e}')
+        return _error_result(str(e))
+
+
+@_tool_decorator()
+async def list_drucker_reports(
+    project_key: Optional[str] = None,
+    limit: int = 20,
+) -> list[Any]:
+    """List persisted Drucker hygiene reports."""
+    try:
+        rows = DruckerReportStore().list_reports(project_key=project_key, limit=limit)
+        return _json_result(rows)
+    except Exception as e:
+        log.error(f'list_drucker_reports failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Hypatia documentation tools
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def generate_hypatia_documentation(
+    title: str,
+    doc_type: str = 'engineering_reference',
+    project_key: str = '',
+    summary: str = '',
+    source_paths: Optional[list[str]] = None,
+    source_refs: Optional[list[str]] = None,
+    evidence_paths: Optional[list[str]] = None,
+    target_file: Optional[str] = None,
+    confluence_title: Optional[str] = None,
+    confluence_page: Optional[str] = None,
+    confluence_space: Optional[str] = None,
+    confluence_parent_id: Optional[str] = None,
+    version_message: Optional[str] = None,
+    validation_profile: str = 'default',
+    persist: bool = True,
+) -> list[Any]:
+    """Generate a Hypatia documentation record and review session."""
+    try:
+        agent = HypatiaDocumentationAgent(project_key=project_key or None)
+        request = DocumentationRequest(
+            title=title,
+            doc_type=doc_type,
+            project_key=project_key,
+            summary=summary,
+            source_paths=list(source_paths or []),
+            source_refs=list(source_refs or []),
+            evidence_paths=list(evidence_paths or []),
+            target_file=target_file,
+            confluence_title=confluence_title,
+            confluence_page=confluence_page,
+            confluence_space=confluence_space,
+            confluence_parent_id=confluence_parent_id,
+            version_message=version_message,
+            validation_profile=validation_profile,
+        )
+        record, review_session = agent.plan_documentation(request)
+        result = {
+            'record': record.to_dict(),
+            'review_session': review_session.to_dict(),
+        }
+        if persist:
+            result['stored'] = HypatiaRecordStore().save_record(
+                record,
+                summary_markdown=record.summary_markdown,
+            )
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'generate_hypatia_documentation failed: {e}')
+        return _error_result(str(e))
+
+
+@_tool_decorator()
+async def get_hypatia_record(doc_id: str) -> list[Any]:
+    """Get a persisted Hypatia documentation record by document ID."""
+    try:
+        record = HypatiaRecordStore().get_record(doc_id)
+        if not record:
+            return _error_result(f'Hypatia record {doc_id} not found')
+        return _json_result(record)
+    except Exception as e:
+        log.error(f'get_hypatia_record failed: {e}')
+        return _error_result(str(e))
+
+
+@_tool_decorator()
+async def list_hypatia_records(
+    doc_type: Optional[str] = None,
+    limit: int = 20,
+) -> list[Any]:
+    """List persisted Hypatia documentation records."""
+    try:
+        rows = HypatiaRecordStore().list_records(doc_type=doc_type, limit=limit)
+        return _json_result(rows)
+    except Exception as e:
+        log.error(f'list_hypatia_records failed: {e}')
         return _error_result(str(e))
 
 

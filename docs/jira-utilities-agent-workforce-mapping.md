@@ -295,14 +295,14 @@ The new Hypatia slice now adds:
 - documentation request, impact, patch, record, and publication models
 - a source-grounded internal documentation workflow
 - a review-gated publication path for repo docs and Confluence
+- stronger validation hooks plus optional evidence-backed publication inputs
 
 **Main gaps vs workforce Hypatia**
 
-- no source/build/test/release-driven documentation workflow
 - no as-built documentation generation model
 - no always-on event-driven impact detection
-- no build/test/release/meeting evidence providers yet
-- no Sphinx/ReadTheDocs validation pipeline yet
+- no fully event-driven source/build/test/release-driven documentation workflow yet
+- no Sphinx/ReadTheDocs publication pipeline yet
 
 So the right reading is:
 

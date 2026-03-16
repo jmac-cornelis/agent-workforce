@@ -19,12 +19,14 @@ async def test_create_gantt_snapshot_tool(import_mcp_server, monkeypatch: pytest
             self.project_key = project_key
 
         def create_snapshot(self, request):
+            assert request.evidence_paths == ['build.json']
             snapshot = PlanningSnapshot(
                 project_key=request.project_key,
                 created_at='2026-03-15T12:00:00+00:00',
                 planning_horizon_days=request.planning_horizon_days,
                 backlog_overview={'total_issues': 3},
                 dependency_graph=DependencyGraph(),
+                evidence_summary={'record_count': 1, 'by_type': {'build': 1}},
                 summary_markdown='# Snapshot',
             )
             snapshot.snapshot_id = 'snap-401'
@@ -45,11 +47,13 @@ async def test_create_gantt_snapshot_tool(import_mcp_server, monkeypatch: pytest
     result = await import_mcp_server.create_gantt_snapshot(
         project_key='STL',
         planning_horizon_days=120,
+        evidence_paths=['build.json'],
         persist=True,
     )
     data = _payload(result)
 
     assert data['snapshot']['project_key'] == 'STL'
+    assert data['snapshot']['evidence_summary']['record_count'] == 1
     assert data['stored']['snapshot_id'] == 'snap-401'
 
 

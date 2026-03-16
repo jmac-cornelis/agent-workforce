@@ -16,6 +16,8 @@ from __future__ import annotations
 import logging
 import os
 import re
+import shutil
+import subprocess
 import sys
 import tempfile
 from collections import Counter
@@ -33,6 +35,7 @@ from agents.hypatia_models import (
     PublicationRecord,
 )
 from agents.review_agent import ReviewAgent, ReviewItem, ReviewSession
+from core.evidence import EvidenceBundle, load_evidence_bundle
 from tools.confluence_tools import (
     create_confluence_page,
     get_confluence_page,
@@ -42,6 +45,9 @@ from tools.file_tools import read_file
 
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
+
+
+VALIDATION_PROFILES = {'default', 'strict', 'sphinx'}
 
 
 class HypatiaDocumentationAgent(BaseAgent):
@@ -122,14 +128,31 @@ class HypatiaDocumentationAgent(BaseAgent):
         Produce a documentation record and review-gated publication session.
         '''
         impact = self.detect_documentation_impact(request)
+        evidence_bundle = load_evidence_bundle(request.evidence_paths)
         source_materials, existing_targets = self._load_authoritative_inputs(request)
-        content_markdown = self._generate_content(request, impact, source_materials, existing_targets)
-        patches = self._build_patches(request, impact, content_markdown)
-        validation, validation_warnings, confidence = self._validate_patches(request, patches)
+        source_refs = self._merge_source_refs(request, source_materials, evidence_bundle)
+        content_markdown = self._generate_content(
+            request,
+            impact,
+            source_materials,
+            existing_targets,
+            evidence_bundle,
+        )
+        patches = self._build_patches(request, impact, content_markdown, source_refs)
+        validation, validation_warnings, confidence = self._validate_patches(
+            request,
+            patches,
+            evidence_bundle,
+            source_refs,
+        )
         warnings = list(impact.warnings) + [
             warning for warning in validation_warnings
             if warning not in impact.warnings
         ]
+        warnings.extend(
+            warning for warning in evidence_bundle.warnings
+            if warning not in warnings
+        )
         if impact.blocking_issues:
             validation['blocking_issues'] = list(validation.get('blocking_issues') or []) + [
                 blocker for blocker in impact.blocking_issues
@@ -153,7 +176,8 @@ class HypatiaDocumentationAgent(BaseAgent):
             project_key=request.project_key,
             request=request.to_dict(),
             impact=impact.to_dict(),
-            source_refs=self._merge_source_refs(request, source_materials),
+            source_refs=source_refs,
+            evidence_summary=evidence_bundle.to_summary(),
             content_markdown=content_markdown,
             summary_markdown=summary_markdown,
             patches=patches,
@@ -163,6 +187,7 @@ class HypatiaDocumentationAgent(BaseAgent):
             metadata={
                 'source_materials': source_materials,
                 'existing_targets': existing_targets,
+                'evidence_bundle': evidence_bundle.to_dict(),
             },
         )
         review_session = self.create_review_session(record)
@@ -345,12 +370,18 @@ class HypatiaDocumentationAgent(BaseAgent):
                 source_refs=[
                     str(ref) for ref in (input_data.get('source_refs') or [])
                 ],
+                evidence_paths=[
+                    str(path) for path in (input_data.get('evidence_paths') or [])
+                ],
                 target_file=input_data.get('target_file'),
                 confluence_title=input_data.get('confluence_title'),
                 confluence_page=input_data.get('confluence_page'),
                 confluence_space=input_data.get('confluence_space'),
                 confluence_parent_id=input_data.get('confluence_parent_id'),
                 version_message=input_data.get('version_message'),
+                validation_profile=str(
+                    input_data.get('validation_profile') or 'default'
+                ).strip() or 'default',
             )
         elif isinstance(input_data, str):
             request = DocumentationRequest(
@@ -370,6 +401,12 @@ class HypatiaDocumentationAgent(BaseAgent):
 
         if not request.title:
             request.title = self._derive_title(request)
+
+        if request.validation_profile not in VALIDATION_PROFILES:
+            raise ValueError(
+                f'Unsupported validation_profile "{request.validation_profile}". '
+                f'Expected one of: {", ".join(sorted(VALIDATION_PROFILES))}'
+            )
 
         return request
 
@@ -464,6 +501,7 @@ class HypatiaDocumentationAgent(BaseAgent):
         impact: DocumentationImpactRecord,
         source_materials: List[Dict[str, Any]],
         existing_targets: Dict[str, Any],
+        evidence_bundle: EvidenceBundle,
     ) -> str:
         '''
         Generate a source-grounded Markdown documentation candidate.
@@ -512,6 +550,18 @@ class HypatiaDocumentationAgent(BaseAgent):
             for ref in request.source_refs:
                 lines.append(f'  - `{ref}`')
 
+        if evidence_bundle.records:
+            lines.extend([
+                '',
+                '## Evidence Inputs',
+            ])
+            for record in evidence_bundle.records:
+                lines.append(
+                    f'- `{record.evidence_type}`: {record.title} (`{record.source_ref}`)'
+                )
+                if record.summary:
+                    lines.append(f'  - {record.summary}')
+
         lines.extend([
             '',
             '## Key Facts',
@@ -528,6 +578,19 @@ class HypatiaDocumentationAgent(BaseAgent):
                     lines.append(material['excerpt'])
                 else:
                     lines.append('- No extractable facts found.')
+
+        if evidence_bundle.records:
+            lines.extend([
+                '',
+                '## Evidence Highlights',
+            ])
+            for record in evidence_bundle.records:
+                lines.append('')
+                lines.append(f'### Evidence: {record.title}')
+                if record.summary:
+                    lines.append(f'- Summary: {record.summary}')
+                for fact in record.facts[:6]:
+                    lines.append(f'- {fact}')
         else:
             lines.append('- No authoritative source facts were available.')
 
@@ -585,6 +648,11 @@ class HypatiaDocumentationAgent(BaseAgent):
         for ref in self._merge_source_refs(request, source_materials):
             lines.append(f'- `{ref}`')
 
+        evidence_refs = evidence_bundle.to_summary().get('source_refs') or []
+        for ref in evidence_refs:
+            if ref not in request.source_refs and ref not in request.source_paths:
+                lines.append(f'- `{ref}`')
+
         return '\n'.join(lines).rstrip() + '\n'
 
     def _build_patches(
@@ -592,12 +660,12 @@ class HypatiaDocumentationAgent(BaseAgent):
         request: DocumentationRequest,
         impact: DocumentationImpactRecord,
         content_markdown: str,
+        source_refs: List[str],
     ) -> List[DocumentationPatch]:
         '''
         Build candidate patches for each affected internal target.
         '''
         patches: List[DocumentationPatch] = []
-        source_refs = impact.source_refs
         title = request.title or self._derive_title(request)
 
         for target in impact.affected_targets:
@@ -703,6 +771,8 @@ class HypatiaDocumentationAgent(BaseAgent):
         self,
         request: DocumentationRequest,
         patches: List[DocumentationPatch],
+        evidence_bundle: EvidenceBundle,
+        source_refs: List[str],
     ) -> Tuple[Dict[str, Any], List[str], str]:
         '''
         Validate the generated documentation patches.
@@ -718,16 +788,53 @@ class HypatiaDocumentationAgent(BaseAgent):
             by_target[patch.target_type] += 1
             patch_warnings: List[str] = []
             patch_blockers: List[str] = []
+            section_names = self._extract_section_names(patch.content_markdown)
 
             if not patch.content_markdown.strip():
                 patch_blockers.append('Generated patch content is empty.')
 
+            if not patch.content_markdown.lstrip().startswith(f'# {patch.title}'):
+                patch_blockers.append('Patch is missing a top-level title heading.')
+
+            missing_sections = [
+                section for section in self._required_sections_for(request.doc_type)
+                if section not in section_names
+            ]
+            if missing_sections:
+                patch_blockers.append(
+                    'Patch is missing required sections: ' + ', '.join(missing_sections)
+                )
+
             if not patch.source_refs:
-                patch_warnings.append('Patch has no source references.')
+                patch_blockers.append('Patch has no source references.')
+
+            if request.validation_profile in {'strict', 'sphinx'} and not source_refs:
+                patch_blockers.append('Strict validation requires source references.')
+
+            if evidence_bundle.records and 'Evidence Highlights' not in section_names:
+                patch_warnings.append(
+                    'Evidence inputs were provided but no Evidence Highlights section was generated.'
+                )
+
+            broken_links = self._find_broken_links(
+                patch.content_markdown,
+                base_path=patch.target_ref if patch.target_type == 'repo_markdown' else None,
+            )
+            if broken_links:
+                patch_warnings.append(
+                    'Broken relative links detected: ' + ', '.join(broken_links[:5])
+                )
 
             if patch.target_type == 'repo_markdown':
                 if not patch.target_ref.endswith('.md'):
                     patch_warnings.append('Repo documentation target does not end in .md.')
+                sphinx_result = self._maybe_run_sphinx_validation(request, patch)
+                if sphinx_result.get('warning'):
+                    patch_warnings.append(str(sphinx_result['warning']))
+                if sphinx_result.get('error'):
+                    patch_blockers.append(str(sphinx_result['error']))
+                if sphinx_result:
+                    patch.metadata['sphinx_validation'] = sphinx_result
 
             if patch.target_type == 'confluence_page':
                 preview_error = str((patch.preview or {}).get('error') or '').strip()
@@ -816,6 +923,7 @@ class HypatiaDocumentationAgent(BaseAgent):
         self,
         request: DocumentationRequest,
         source_materials: List[Dict[str, Any]],
+        evidence_bundle: Optional[EvidenceBundle] = None,
     ) -> List[str]:
         refs: List[str] = []
         for ref in request.source_refs:
@@ -824,11 +932,115 @@ class HypatiaDocumentationAgent(BaseAgent):
         for path in request.source_paths:
             if path and path not in refs:
                 refs.append(path)
+        for path in request.evidence_paths:
+            if path and path not in refs:
+                refs.append(path)
         for material in source_materials:
             path = str(material.get('path') or '')
             if path and path not in refs:
                 refs.append(path)
+        if evidence_bundle is not None:
+            for ref in evidence_bundle.to_summary().get('source_refs') or []:
+                if ref and ref not in refs:
+                    refs.append(ref)
         return refs
+
+    @staticmethod
+    def _required_sections_for(doc_type: str) -> List[str]:
+        base_sections = [
+            'Purpose',
+            'Metadata',
+            'Authoritative Inputs',
+            'Key Facts',
+            'Source References',
+        ]
+        if doc_type in {'how_to', 'as_built'}:
+            return base_sections + ['Publication Targets']
+        return base_sections
+
+    @staticmethod
+    def _extract_section_names(content: str) -> List[str]:
+        return [
+            match.group(1).strip()
+            for match in re.finditer(r'^##\s+(.+?)\s*$', content, flags=re.MULTILINE)
+        ]
+
+    def _find_broken_links(
+        self,
+        content: str,
+        base_path: Optional[str] = None,
+    ) -> List[str]:
+        broken: List[str] = []
+        base_dir = Path(base_path).resolve().parent if base_path else Path.cwd()
+
+        for match in re.finditer(r'\[[^\]]+\]\(([^)]+)\)', content):
+            link_target = match.group(1).strip()
+            if not link_target or link_target.startswith(('#', 'http://', 'https://', 'mailto:')):
+                continue
+            candidate = Path(link_target)
+            if not candidate.is_absolute():
+                candidate = base_dir / candidate
+            if not candidate.exists():
+                broken.append(link_target)
+
+        return broken
+
+    def _maybe_run_sphinx_validation(
+        self,
+        request: DocumentationRequest,
+        patch: DocumentationPatch,
+    ) -> Dict[str, Any]:
+        should_validate = (
+            request.validation_profile == 'sphinx'
+            or patch.target_ref.startswith('docs/source/')
+        )
+        if not should_validate:
+            return {}
+
+        sphinx_build = shutil.which('sphinx-build')
+        if not sphinx_build:
+            return {'warning': 'Sphinx validation requested but sphinx-build is unavailable.'}
+
+        source_dir = self._find_sphinx_source_dir(patch.target_ref)
+        if source_dir is None:
+            return {'warning': 'Sphinx validation requested but no conf.py was found.'}
+
+        with tempfile.TemporaryDirectory(prefix='hypatia-sphinx-') as temp_dir:
+            try:
+                completed = subprocess.run(
+                    [sphinx_build, '-b', 'dummy', str(source_dir), temp_dir],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+            except Exception as e:
+                return {'error': f'Sphinx validation failed to start: {e}'}
+
+        if completed.returncode != 0:
+            stderr = (completed.stderr or completed.stdout or '').strip()
+            return {
+                'error': 'Sphinx validation failed.'
+                + (f' {stderr[:240]}' if stderr else ''),
+            }
+
+        return {
+            'validated': True,
+            'builder': 'dummy',
+            'source_dir': str(source_dir),
+        }
+
+    @staticmethod
+    def _find_sphinx_source_dir(target_ref: str) -> Optional[Path]:
+        target_path = Path(target_ref)
+        candidate_dirs = [target_path.parent, *target_path.parents]
+        for directory in candidate_dirs:
+            if (directory / 'conf.py').exists():
+                return directory
+
+        default_source = Path('docs/source')
+        if (default_source / 'conf.py').exists():
+            return default_source
+        return None
 
     def _extract_fact_lines(
         self,

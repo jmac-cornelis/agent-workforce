@@ -34,6 +34,7 @@ from agents.gantt_models import (
     PlanningRiskRecord,
     PlanningSnapshot,
 )
+from core.evidence import EvidenceBundle, load_evidence_bundle
 from state.gantt_dependency_review_store import GanttDependencyReviewStore
 from tools.jira_tools import JiraTools, get_jira, get_project_info, get_releases
 
@@ -117,6 +118,9 @@ class GanttProjectPlannerAgent(BaseAgent):
                 include_done=bool(input_data.get('include_done', False)),
                 backlog_jql=input_data.get('backlog_jql'),
                 policy_profile=input_data.get('policy_profile', 'default'),
+                evidence_paths=[
+                    str(path) for path in (input_data.get('evidence_paths') or [])
+                ],
             )
         else:
             return AgentResponse.error_response(
@@ -146,9 +150,10 @@ class GanttProjectPlannerAgent(BaseAgent):
         project_info = self._load_project_info(request.project_key)
         releases = self._load_releases(request.project_key)
         issues = self._load_backlog_issues(request)
+        evidence_bundle = load_evidence_bundle(request.evidence_paths)
         dependency_graph = self._build_dependency_graph(issues)
         milestones = self._build_milestones(issues, releases, dependency_graph)
-        evidence_gaps = self._build_evidence_gaps(issues)
+        evidence_gaps = self._build_evidence_gaps(issues, evidence_bundle)
         risks = self._build_risks(issues, milestones, dependency_graph)
         backlog_overview = self._build_backlog_overview(
             issues,
@@ -166,6 +171,7 @@ class GanttProjectPlannerAgent(BaseAgent):
             dependency_graph=dependency_graph,
             risks=risks,
             issues=issues,
+            evidence_summary=evidence_bundle.to_summary(),
             evidence_gaps=evidence_gaps,
         )
         snapshot.summary_markdown = self._format_snapshot(snapshot)
@@ -269,8 +275,12 @@ class GanttProjectPlannerAgent(BaseAgent):
     def _milestone_sort_key(milestone: MilestoneProposal) -> tuple[int, str, str]:
         return MilestonePlanner.milestone_sort_key(milestone)
 
-    def _build_evidence_gaps(self, issues: List[Dict[str, Any]]) -> List[str]:
-        return self.risk_projector.build_evidence_gaps(issues)
+    def _build_evidence_gaps(
+        self,
+        issues: List[Dict[str, Any]],
+        evidence_bundle: Optional[EvidenceBundle] = None,
+    ) -> List[str]:
+        return self.risk_projector.build_evidence_gaps(issues, evidence_bundle)
 
     def _build_risks(
         self,

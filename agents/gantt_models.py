@@ -35,6 +35,7 @@ class PlanningRequest:
     include_done: bool = False
     backlog_jql: Optional[str] = None
     policy_profile: str = 'default'
+    evidence_paths: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -44,6 +45,7 @@ class PlanningRequest:
             'include_done': self.include_done,
             'backlog_jql': self.backlog_jql,
             'policy_profile': self.policy_profile,
+            'evidence_paths': self.evidence_paths,
         }
 
 
@@ -209,6 +211,7 @@ class PlanningSnapshot:
     dependency_graph: DependencyGraph = field(default_factory=DependencyGraph)
     risks: List[PlanningRiskRecord] = field(default_factory=list)
     issues: List[Dict[str, Any]] = field(default_factory=list)
+    evidence_summary: Dict[str, Any] = field(default_factory=dict)
     evidence_gaps: List[str] = field(default_factory=list)
     summary_markdown: str = ''
 
@@ -224,6 +227,7 @@ class PlanningSnapshot:
             'dependency_graph': self.dependency_graph.to_dict(),
             'risks': [risk.to_dict() for risk in self.risks],
             'issues': self.issues,
+            'evidence_summary': self.evidence_summary,
             'evidence_gaps': self.evidence_gaps,
             'summary_markdown': self.summary_markdown,
         }

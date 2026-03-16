@@ -1460,6 +1460,7 @@ def _workflow_gantt_snapshot(args):
         'planning_horizon_days': args.planning_horizon,
         'limit': args.limit or 200,
         'include_done': args.include_done,
+        'evidence_paths': list(getattr(args, 'evidence', None) or []),
     })
 
     if not result.success:
@@ -1733,12 +1734,14 @@ def _workflow_hypatia_generate(args):
         'project_key': args.project or '',
         'summary': args.doc_summary or '',
         'source_paths': list(args.docs or []),
+        'evidence_paths': list(getattr(args, 'evidence', None) or []),
         'target_file': args.target_file,
         'confluence_title': args.confluence_title,
         'confluence_page': args.confluence_page,
         'confluence_space': args.confluence_space,
         'confluence_parent_id': args.confluence_parent_id,
         'version_message': args.version_message,
+        'validation_profile': getattr(args, 'validation_profile', 'default'),
     }
 
     record, review_session = agent.plan_documentation(
@@ -2027,12 +2030,14 @@ Examples:
   %(prog)s --vision roadmap.png roadmap2.xlsx
   %(prog)s --workflow gantt-snapshot --project STL
   %(prog)s --workflow gantt-snapshot --project STL --planning-horizon 120 --output stl_snapshot.json
+  %(prog)s --workflow gantt-snapshot --project STL --evidence build.json test.yaml
   %(prog)s --workflow gantt-snapshot-list --project STL
   %(prog)s --workflow gantt-snapshot-get --snapshot-id a1b2c3d4
   %(prog)s --workflow drucker-hygiene --project STL
   %(prog)s --workflow drucker-hygiene --project STL --stale-days 21 --output stl_hygiene.json
   %(prog)s --workflow hypatia-generate --doc-title "STL Build Notes" --docs README.md AGENTS.md
   %(prog)s --workflow hypatia-generate --doc-title "Fabric Bring-Up Guide" --doc-type how_to --docs docs/source.md --target-file docs/fabric-bring-up.md
+  %(prog)s --workflow hypatia-generate --doc-title "Release Notes Support" --docs notes.md --evidence release.json --doc-validation strict
   %(prog)s --workflow hypatia-generate --doc-title "STL Weekly Summary" --docs README.md --confluence-title "STL Weekly Summary" --confluence-space ENG
   %(prog)s --build-excel-map STL-74071
   %(prog)s --build-excel-map STL-74071 STL-76297 --hierarchy 2 --output my_map.xlsx
@@ -2181,6 +2186,10 @@ Examples:
                        dest='stale_days',
                        help='Stale-ticket threshold in days for --workflow drucker-hygiene '
                             '(default: 30).')
+    parser.add_argument('--evidence', nargs='*', default=None, metavar='FILE',
+                       help='Evidence files (JSON, YAML, Markdown, text) for workflows '
+                            'that can consume build/test/release/meeting context such as '
+                            '--workflow gantt-snapshot and --workflow hypatia-generate.')
     parser.add_argument('--doc-title', default=None, metavar='TEXT',
                        dest='doc_title',
                        help='Document title for --workflow hypatia-generate.')
@@ -2216,6 +2225,12 @@ Examples:
     parser.add_argument('--version-message', default=None, metavar='TEXT',
                        dest='version_message',
                        help='Optional Confluence version message for --workflow hypatia-generate.')
+    parser.add_argument('--doc-validation',
+                       choices=['default', 'strict', 'sphinx'],
+                       default='default',
+                       dest='validation_profile',
+                       help='Validation profile for --workflow hypatia-generate '
+                            '(default, strict, or sphinx).')
     
     # ---- Options for --plan ----------------------------------------------------
     parser.add_argument('--project', '-p', default=None,
@@ -2340,6 +2355,11 @@ Examples:
             parser.error('--analyze requires --project')
     
     if command == 'workflow':
+        if args.evidence:
+            for evidence_path in args.evidence:
+                if not os.path.isfile(evidence_path):
+                    parser.error(f'--evidence file not found: {evidence_path}')
+
         if args.workflow_name == 'bug-report':
             if not args.workflow_filter:
                 parser.error('--workflow bug-report requires --filter "FILTER_NAME"')
@@ -2484,6 +2504,10 @@ Examples:
             log.info(f'+  Project: {args.project}')
             log.info(f'+  Planning horizon: {args.planning_horizon} days')
             log.info(f'+  Include done: {"yes" if args.include_done else "no"}')
+            if args.evidence:
+                log.info(f'+  Evidence files: {len(args.evidence)}')
+                for evidence_path in args.evidence:
+                    log.info(f'+    - {evidence_path}')
             if args.output:
                 log.info(f'+  Output: {args.output}')
         elif args.workflow_name == 'gantt-snapshot-get':
@@ -2504,12 +2528,17 @@ Examples:
         elif args.workflow_name == 'hypatia-generate':
             log.info(f'+  Document title: {args.doc_title or args.confluence_title or "auto"}')
             log.info(f'+  Document class: {args.doc_type}')
+            log.info(f'+  Validation: {args.validation_profile}')
             if args.project:
                 log.info(f'+  Project: {args.project}')
             if args.docs:
                 log.info(f'+  Docs: {len(args.docs)} file(s)')
                 for dp in args.docs:
                     log.info(f'+    - {dp}')
+            if args.evidence:
+                log.info(f'+  Evidence files: {len(args.evidence)}')
+                for evidence_path in args.evidence:
+                    log.info(f'+    - {evidence_path}')
             if args.target_file:
                 log.info(f'+  Target file: {args.target_file}')
             if args.confluence_page:

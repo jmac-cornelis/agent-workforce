@@ -20,12 +20,14 @@ def test_create_gantt_snapshot_tool_persists_snapshot(
             self.project_key = project_key
 
         def create_snapshot(self, request):
+            assert request.evidence_paths == ['build.json']
             snapshot = PlanningSnapshot(
                 project_key=request.project_key,
                 created_at='2026-03-15T12:00:00+00:00',
                 planning_horizon_days=request.planning_horizon_days,
                 backlog_overview={'total_issues': 2},
                 dependency_graph=DependencyGraph(),
+                evidence_summary={'record_count': 1, 'by_type': {'build': 1}},
                 summary_markdown='# Gantt Snapshot\n\nSummary',
             )
             snapshot.snapshot_id = 'snap-201'
@@ -34,10 +36,16 @@ def test_create_gantt_snapshot_tool_persists_snapshot(
     monkeypatch.setattr(gantt_agent_module, 'GanttProjectPlannerAgent', _FakeGanttAgent)
     monkeypatch.setenv('GANTT_SNAPSHOT_DIR', str(tmp_path / 'store'))
 
-    result = create_gantt_snapshot('STL', planning_horizon_days=120, persist=True)
+    result = create_gantt_snapshot(
+        'STL',
+        planning_horizon_days=120,
+        evidence_paths=['build.json'],
+        persist=True,
+    )
 
     assert result.is_success
     assert result.data['snapshot']['project_key'] == 'STL'
+    assert result.data['snapshot']['evidence_summary']['record_count'] == 1
     assert result.data['stored']['snapshot_id'] == 'snap-201'
     assert (tmp_path / 'store' / 'STL' / 'snap-201' / 'snapshot.json').exists()
     assert result.metadata['persisted'] is True

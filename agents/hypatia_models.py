@@ -44,12 +44,14 @@ class DocumentationRequest:
     summary: str = ''
     source_paths: List[str] = field(default_factory=list)
     source_refs: List[str] = field(default_factory=list)
+    evidence_paths: List[str] = field(default_factory=list)
     target_file: Optional[str] = None
     confluence_title: Optional[str] = None
     confluence_page: Optional[str] = None
     confluence_space: Optional[str] = None
     confluence_parent_id: Optional[str] = None
     version_message: Optional[str] = None
+    validation_profile: str = 'default'
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -59,12 +61,14 @@ class DocumentationRequest:
             'summary': self.summary,
             'source_paths': self.source_paths,
             'source_refs': self.source_refs,
+            'evidence_paths': self.evidence_paths,
             'target_file': self.target_file,
             'confluence_title': self.confluence_title,
             'confluence_page': self.confluence_page,
             'confluence_space': self.confluence_space,
             'confluence_parent_id': self.confluence_parent_id,
             'version_message': self.version_message,
+            'validation_profile': self.validation_profile,
         }
 
 
@@ -180,6 +184,7 @@ class DocumentationRecord:
     request: Dict[str, Any] = field(default_factory=dict)
     impact: Dict[str, Any] = field(default_factory=dict)
     source_refs: List[str] = field(default_factory=list)
+    evidence_summary: Dict[str, Any] = field(default_factory=dict)
     content_markdown: str = ''
     summary_markdown: str = ''
     patches: List[DocumentationPatch] = field(default_factory=list)
@@ -199,6 +204,7 @@ class DocumentationRecord:
             'request': self.request,
             'impact': self.impact,
             'source_refs': self.source_refs,
+            'evidence_summary': self.evidence_summary,
             'content_markdown': self.content_markdown,
             'summary_markdown': self.summary_markdown,
             'patches': [patch.to_dict() for patch in self.patches],
