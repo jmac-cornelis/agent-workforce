@@ -27,3 +27,30 @@ events:
 api:
   prefix: /v1/bot
   port: 8200
+
+# Microsoft Teams channel registry
+# Populate team_id and channel_id from Azure portal or via CLI discovery
+teams:
+  default_team_id: ''
+  default_team_name: 'Cornelis Agent Workforce'
+
+channels:
+  drucker:
+    channel_id: ''
+    display_name: '#agent-drucker'
+    enabled: true
+
+  gantt:
+    channel_id: ''
+    display_name: '#agent-gantt'
+    enabled: true
+
+  hypatia:
+    channel_id: ''
+    display_name: '#agent-hypatia'
+    enabled: true
+
+  shannon:
+    channel_id: ''
+    display_name: '#agent-shannon'
+    enabled: true
