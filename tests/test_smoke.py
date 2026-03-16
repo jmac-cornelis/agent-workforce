@@ -74,6 +74,18 @@ def test_import_gantt_agent_class():
     assert GanttProjectPlannerAgent is not None
 
 
+def test_import_drucker_agent_class():
+    from agents.drucker_agent import DruckerCoordinatorAgent
+
+    assert DruckerCoordinatorAgent is not None
+
+
+def test_import_hypatia_agent_class():
+    from agents.hypatia_agent import HypatiaDocumentationAgent
+
+    assert HypatiaDocumentationAgent is not None
+
+
 def test_import_gantt_components():
     from agents.gantt_components import (
         BacklogInterpreter,
@@ -94,6 +106,18 @@ def test_import_gantt_snapshot_store():
     from state.gantt_snapshot_store import GanttSnapshotStore
 
     assert GanttSnapshotStore is not None
+
+
+def test_import_drucker_report_store():
+    from state.drucker_report_store import DruckerReportStore
+
+    assert DruckerReportStore is not None
+
+
+def test_import_hypatia_record_store():
+    from state.hypatia_record_store import HypatiaRecordStore
+
+    assert HypatiaRecordStore is not None
 
 
 def test_import_gantt_dependency_review_store():

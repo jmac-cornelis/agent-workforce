@@ -12,11 +12,14 @@
 import logging
 import os
 import sys
+import tempfile
 from typing import Any, Callable, Dict, List, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 
 from agents.base import BaseAgent, AgentConfig, AgentResponse
+from tools.confluence_tools import ConfluenceTools
+from tools.file_tools import FileTools
 from tools.jira_tools import JiraTools
 
 # Logging config - follows jira_utils.py pattern
@@ -138,8 +141,10 @@ class ReviewAgent(BaseAgent):
         
         # Initialize with Jira tools for execution
         jira_tools = JiraTools()
+        file_tools = FileTools()
+        confluence_tools = ConfluenceTools()
         
-        super().__init__(config=config, tools=[jira_tools], **kwargs)
+        super().__init__(config=config, tools=[jira_tools, file_tools, confluence_tools], **kwargs)
         
         self.approval_callback = approval_callback
         self.current_session: Optional[ReviewSession] = None
@@ -393,8 +398,10 @@ Then execute the approved items.'''
                 return (0, item.id)
             elif item.data.get('issue_type') == 'Epic':
                 return (1, item.id)
-            else:
+            elif item.item_type == 'ticket':
                 return (2, item.id)
+            else:
+                return (3, item.id)
         
         to_execute.sort(key=sort_key)
         
@@ -428,7 +435,15 @@ Then execute the approved items.'''
         created_tickets: Dict
     ) -> Dict[str, Any]:
         '''Execute a single item.'''
-        from tools.jira_tools import create_release, create_ticket
+        from tools.jira_tools import (
+            add_ticket_comment,
+            create_release,
+            create_ticket,
+            transition_ticket,
+            update_ticket,
+        )
+        from tools.confluence_tools import create_confluence_page, update_confluence_page
+        from tools.file_tools import write_file
         
         data = item.get_effective_data()
         
@@ -462,6 +477,115 @@ Then execute the approved items.'''
                     return {'success': True, 'data': result.data, 'item_id': item.id}
                 else:
                     return {'success': False, 'error': result.error, 'item_id': item.id}
+
+            elif item.item_type == 'ticket' and item.action == 'update':
+                result = update_ticket(
+                    ticket_key=data['ticket_key'],
+                    summary=data.get('summary'),
+                    description=data.get('description'),
+                    assignee=data.get('assignee'),
+                    status=data.get('status'),
+                    fix_versions=data.get('fix_versions'),
+                    components=data.get('components'),
+                    labels=data.get('labels'),
+                    custom_fields=data.get('custom_fields'),
+                )
+
+                if result.is_success:
+                    return {'success': True, 'data': result.data, 'item_id': item.id}
+                else:
+                    return {'success': False, 'error': result.error, 'item_id': item.id}
+
+            elif item.item_type == 'ticket' and item.action == 'comment':
+                result = add_ticket_comment(
+                    ticket_key=data['ticket_key'],
+                    body=data.get('body', ''),
+                )
+
+                if result.is_success:
+                    return {'success': True, 'data': result.data, 'item_id': item.id}
+                else:
+                    return {'success': False, 'error': result.error, 'item_id': item.id}
+
+            elif item.item_type == 'ticket' and item.action == 'transition':
+                result = transition_ticket(
+                    ticket_key=data['ticket_key'],
+                    to_status=data['to_status'],
+                    comment=data.get('comment'),
+                    fields=data.get('fields'),
+                )
+
+                if result.is_success:
+                    return {'success': True, 'data': result.data, 'item_id': item.id}
+                else:
+                    return {'success': False, 'error': result.error, 'item_id': item.id}
+
+            elif item.item_type == 'document' and item.action == 'write':
+                result = write_file(
+                    file_path=data['file_path'],
+                    content=data.get('content', ''),
+                    overwrite=True,
+                )
+
+                if result.is_success:
+                    return {'success': True, 'data': result.data, 'item_id': item.id}
+                else:
+                    return {'success': False, 'error': result.error, 'item_id': item.id}
+
+            elif item.item_type == 'confluence_page' and item.action in ('create', 'update'):
+                input_file = data.get('input_file')
+                temp_path = None
+                if not input_file:
+                    markdown_content = data.get('content', '')
+                    if not markdown_content:
+                        return {
+                            'success': False,
+                            'error': 'Confluence publication item is missing input_file and content',
+                            'item_id': item.id,
+                        }
+
+                    with tempfile.NamedTemporaryFile(
+                        mode='w',
+                        encoding='utf-8',
+                        suffix='.md',
+                        delete=False,
+                    ) as handle:
+                        handle.write(markdown_content)
+                        temp_path = handle.name
+                    input_file = temp_path
+
+                try:
+                    if item.action == 'create':
+                        result = create_confluence_page(
+                            title=data['title'],
+                            input_file=input_file,
+                            space=data.get('space'),
+                            parent_id=data.get('parent_id'),
+                            version_message=data.get('version_message'),
+                            dry_run=bool(data.get('dry_run', False)),
+                        )
+                    else:
+                        result = update_confluence_page(
+                            page_id_or_title=(
+                                data.get('page_id_or_title')
+                                or data.get('title')
+                            ),
+                            input_file=input_file,
+                            space=data.get('space'),
+                            version_message=data.get('version_message'),
+                            dry_run=bool(data.get('dry_run', False)),
+                        )
+
+                    if result.is_success:
+                        return {'success': True, 'data': result.data, 'item_id': item.id}
+                    else:
+                        return {'success': False, 'error': result.error, 'item_id': item.id}
+                finally:
+                    if temp_path:
+                        try:
+                            os.unlink(temp_path)
+                        except OSError:
+                            pass
             
             else:
                 return {
@@ -519,6 +643,8 @@ Then execute the approved items.'''
         # Group by type
         releases = [i for i in session.items if i.item_type == 'release']
         tickets = [i for i in session.items if i.item_type == 'ticket']
+        documents = [i for i in session.items if i.item_type == 'document']
+        confluence_pages = [i for i in session.items if i.item_type == 'confluence_page']
         
         if releases:
             lines.append('\nRELEASES TO CREATE:')
@@ -529,15 +655,65 @@ Then execute the approved items.'''
                     lines.append(f"       Date: {item.data['release_date']}")
         
         if tickets:
-            lines.append('\nTICKETS TO CREATE:')
+            has_non_create_ticket_actions = any(
+                item.action != 'create' for item in tickets
+            )
+            lines.append(
+                '\nTICKET ACTIONS:' if has_non_create_ticket_actions else '\nTICKETS TO CREATE:'
+            )
             lines.append('-' * 40)
             for item in tickets:
-                issue_type = item.data.get('issue_type', 'Story')
-                lines.append(f"  [{item.id}] [{issue_type}] {item.data.get('summary', '')[:50]}")
-                if item.data.get('components'):
-                    lines.append(f"       Components: {', '.join(item.data['components'])}")
-                if item.data.get('assignee'):
-                    lines.append(f"       Assignee: {item.data['assignee']}")
+                if item.action == 'create':
+                    issue_type = item.data.get('issue_type', 'Story')
+                    lines.append(
+                        f"  [{item.id}] [{issue_type}] {item.data.get('summary', '')[:50]}"
+                    )
+                    if item.data.get('components'):
+                        lines.append(f"       Components: {', '.join(item.data['components'])}")
+                    if item.data.get('assignee'):
+                        lines.append(f"       Assignee: {item.data['assignee']}")
+                    continue
+
+                ticket_key = item.data.get('ticket_key', '')
+                ticket_summary = (
+                    item.data.get('ticket_summary')
+                    or item.data.get('summary', '')
+                )
+                lines.append(
+                    f"  [{item.id}] [{item.action.upper()}] {ticket_key} {ticket_summary[:50]}".rstrip()
+                )
+                if item.data.get('title'):
+                    lines.append(f"       Title: {item.data['title']}")
+                if item.action == 'update' and item.data.get('labels'):
+                    lines.append(f"       Labels: {', '.join(item.data['labels'])}")
+                if item.action == 'comment' and item.data.get('body'):
+                    lines.append(
+                        f"       Comment: {str(item.data['body'])[:80]}"
+                    )
+
+        if documents:
+            lines.append('\nDOCUMENT CHANGES:')
+            lines.append('-' * 40)
+            for item in documents:
+                lines.append(
+                    f"  [{item.id}] [WRITE] {item.data.get('file_path', '')}"
+                )
+                if item.data.get('title'):
+                    lines.append(f"       Title: {item.data['title']}")
+
+        if confluence_pages:
+            lines.append('\nCONFLUENCE PUBLICATIONS:')
+            lines.append('-' * 40)
+            for item in confluence_pages:
+                target = (
+                    item.data.get('page_id_or_title')
+                    or item.data.get('title', '')
+                )
+                lines.append(
+                    f"  [{item.id}] [{item.action.upper()}] {target}".rstrip()
+                )
+                if item.data.get('space'):
+                    lines.append(f"       Space: {item.data['space']}")
         
         lines.append('')
         lines.append('=' * 60)
@@ -562,7 +738,12 @@ Then execute the approved items.'''
             item_id = result.get('item_id', 'Unknown')
             if result.get('success'):
                 data = result.get('data', {})
-                key = data.get('key') or data.get('name', 'Created')
+                key = (
+                    data.get('key')
+                    or data.get('ticket_key')
+                    or data.get('name')
+                    or 'Created'
+                )
                 lines.append(f'  ✓ [{item_id}] {key}')
             else:
                 error = result.get('error', 'Unknown error')

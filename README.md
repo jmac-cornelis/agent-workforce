@@ -351,6 +351,48 @@ in addition to any ad hoc output path you provide with `--output`.
 
 ---
 
+### Drucker Hygiene Workflow
+
+Build, persist, and review Jira hygiene reports with ticket-level remediation suggestions.
+
+```bash
+# Create and persist a Drucker hygiene report
+pm_agent --workflow drucker-hygiene --project STL
+
+# Tighten the stale threshold and export ad hoc files
+pm_agent --workflow drucker-hygiene --project STL --stale-days 21 --output stl_hygiene.json
+```
+
+Each `drucker-hygiene` run stores a durable copy under `data/drucker_reports/<PROJECT>/<REPORT_ID>/`
+and also writes a review-session JSON file alongside the exported report files so the
+proposed Jira actions can be reviewed before execution.
+
+---
+
+### Hypatia Documentation Workflow
+
+Build, persist, and review source-grounded internal documentation candidates for
+repo Markdown and optional Confluence targets.
+
+```bash
+# Generate a repo-owned documentation draft
+pm_agent --workflow hypatia-generate --doc-title "STL Build Notes" --docs README.md AGENTS.md
+
+# Target a specific repo doc path and documentation class
+pm_agent --workflow hypatia-generate --doc-title "Fabric Bring-Up Guide" \
+  --doc-type how_to --docs docs/source.md --target-file docs/fabric-bring-up.md
+
+# Stage a Confluence publication target alongside the repo draft
+pm_agent --workflow hypatia-generate --doc-title "STL Weekly Summary" \
+  --docs README.md --confluence-title "STL Weekly Summary" --confluence-space ENG
+```
+
+Each `hypatia-generate` run stores a durable copy under `data/hypatia_docs/<DOC_ID>/`
+and writes a review-session JSON plus per-target Markdown patch drafts alongside the
+exported record files so publication stays reviewable before execution.
+
+---
+
 ### Bug Report Workflow
 
 Generate a cleaned, enriched bug report from a Jira filter.
@@ -421,8 +463,13 @@ These flags apply to all agentic workflows:
 
 | Flag | Description |
 |------|-------------|
-| `--workflow NAME` | Workflow to run (`bug-report`, `feature-plan`, `gantt-snapshot`, `gantt-snapshot-get`, `gantt-snapshot-list`) |
+| `--workflow NAME` | Workflow to run (`bug-report`, `drucker-hygiene`, `feature-plan`, `gantt-snapshot`, `gantt-snapshot-get`, `gantt-snapshot-list`, `hypatia-generate`) |
 | `--project KEY` | Jira project key |
+| `--stale-days DAYS` | Stale threshold for `drucker-hygiene` |
+| `--doc-title TEXT` | Document title for `hypatia-generate` |
+| `--doc-type TYPE` | Documentation class for `hypatia-generate` |
+| `--target-file FILE` | Repo Markdown target for `hypatia-generate` |
+| `--confluence-title TITLE`, `--confluence-page PAGE`, `--confluence-space SPACE` | Optional Confluence publication target for `hypatia-generate` |
 | `--model MODEL`, `-m` | LLM model name override (e.g. `developer-opus`, `gpt-4o`) |
 | `--timeout SECS` | LLM request timeout in seconds |
 | `--env FILE` | Load a specific `.env` file |

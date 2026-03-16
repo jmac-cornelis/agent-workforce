@@ -1,0 +1,299 @@
+import json
+from datetime import datetime, timezone
+from types import SimpleNamespace
+
+import pytest
+
+from agents.base import AgentResponse
+from agents.drucker_models import DruckerAction, DruckerFinding, DruckerHygieneReport, DruckerRequest
+from tools.base import ToolResult
+
+
+class _FixedDateTime(datetime):
+    @classmethod
+    def now(cls, tz=None):
+        return cls(2026, 3, 15, tzinfo=tz or timezone.utc)
+
+
+def test_drucker_agent_builds_hygiene_report_and_actions(monkeypatch: pytest.MonkeyPatch):
+    from agents import drucker_agent as drucker_agent_module
+    from agents.drucker_agent import DruckerCoordinatorAgent
+
+    monkeypatch.setattr(
+        DruckerCoordinatorAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'drucker prompt'),
+    )
+    monkeypatch.setattr(drucker_agent_module, 'datetime', _FixedDateTime)
+    monkeypatch.setattr(
+        drucker_agent_module,
+        'get_project_info',
+        lambda project_key: ToolResult.success({
+            'key': project_key,
+            'name': 'Storage Team',
+        }),
+    )
+    monkeypatch.setattr(
+        drucker_agent_module,
+        'search_tickets',
+        lambda jql, limit=100, fields=None: ToolResult.success([
+            {
+                'key': 'STL-101',
+                'summary': 'Old blocked story',
+                'status': 'Blocked',
+                'priority': 'High',
+                'assignee': 'Unassigned',
+                'assignee_display': '',
+                'updated': '2026-01-15T10:00:00.000+0000',
+                'updated_date': '2026-01-15',
+                'fix_versions': [],
+                'components': [],
+                'labels': [],
+                'issue_type': 'Story',
+            },
+            {
+                'key': 'STL-102',
+                'summary': 'Healthy story',
+                'status': 'In Progress',
+                'priority': 'Medium',
+                'assignee': 'Jane Dev',
+                'assignee_display': 'Jane Dev',
+                'updated': '2026-03-10T10:00:00.000+0000',
+                'updated_date': '2026-03-10',
+                'fix_versions': ['12.1.0'],
+                'components': ['Fabric'],
+                'labels': ['in-flight'],
+                'issue_type': 'Story',
+            },
+        ]),
+    )
+
+    agent = DruckerCoordinatorAgent(project_key='STL')
+    report = agent.analyze_project_hygiene(
+        DruckerRequest(project_key='STL', stale_days=21, limit=50)
+    )
+
+    categories = {finding.category for finding in report.findings}
+    action_types = [action.action_type for action in report.proposed_actions]
+
+    assert report.project_key == 'STL'
+    assert report.summary['total_tickets'] == 2
+    assert report.summary['tickets_with_findings'] == 1
+    assert 'stale_ticket' in categories
+    assert 'blocked_stale_ticket' in categories
+    assert 'unassigned_ticket' in categories
+    assert 'missing_fix_version' in categories
+    assert 'missing_component' in categories
+    assert 'missing_labels' in categories
+    assert action_types == ['update', 'comment']
+    assert report.proposed_actions[0].update_fields['labels'] == [
+        'drucker-blocked',
+        'drucker-needs-component',
+        'drucker-needs-owner',
+        'drucker-needs-release-target',
+        'drucker-needs-triage',
+        'drucker-stale',
+    ]
+    assert '## Ticket Remediation Suggestions' in report.summary_markdown
+    assert 'STL-101' in report.summary_markdown
+
+
+def test_drucker_report_store_save_load_and_list(tmp_path):
+    from state.drucker_report_store import DruckerReportStore
+
+    store = DruckerReportStore(storage_dir=str(tmp_path / 'drucker'))
+
+    first_summary = store.save_report({
+        'report_id': 'rep-001',
+        'project_key': 'STL',
+        'created_at': '2026-03-15T12:00:00+00:00',
+        'summary': {
+            'total_tickets': 5,
+            'finding_count': 3,
+            'action_count': 2,
+            'tickets_with_findings': 2,
+            'by_severity': {'high': 2},
+        },
+        'findings': [],
+        'proposed_actions': [],
+        'summary_markdown': '# Report 1',
+    }, summary_markdown='# Report 1')
+    store.save_report({
+        'report_id': 'rep-002',
+        'project_key': 'STL',
+        'created_at': '2026-03-16T12:00:00+00:00',
+        'summary': {
+            'total_tickets': 8,
+            'finding_count': 5,
+            'action_count': 4,
+            'tickets_with_findings': 4,
+            'by_severity': {'high': 1},
+        },
+        'findings': [],
+        'proposed_actions': [],
+        'summary_markdown': '# Report 2',
+    }, summary_markdown='# Report 2')
+
+    record = store.get_report('rep-001', project_key='STL')
+    listed = store.list_reports(project_key='STL')
+
+    assert record is not None
+    assert record['report']['project_key'] == 'STL'
+    assert record['summary_markdown'] == '# Report 1'
+    assert first_summary['storage_dir'].endswith('STL/rep-001')
+    assert [row['report_id'] for row in listed] == ['rep-002', 'rep-001']
+
+
+def test_drucker_agent_creates_review_session_and_executes_approved_actions(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.review_agent import ReviewAgent
+    from tools import jira_tools as jira_tools_module
+
+    monkeypatch.setattr(
+        DruckerCoordinatorAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'drucker prompt'),
+    )
+    monkeypatch.setattr(
+        ReviewAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'review prompt'),
+    )
+
+    update_calls = []
+    comment_calls = []
+
+    monkeypatch.setattr(
+        jira_tools_module,
+        'update_ticket',
+        lambda **kwargs: (
+            update_calls.append(kwargs)
+            or ToolResult.success({'key': kwargs['ticket_key'], 'labels': kwargs.get('labels', [])})
+        ),
+    )
+    monkeypatch.setattr(
+        jira_tools_module,
+        'add_ticket_comment',
+        lambda **kwargs: (
+            comment_calls.append(kwargs)
+            or ToolResult.success({'ticket_key': kwargs['ticket_key'], 'comment': {'body': kwargs['body']}})
+        ),
+    )
+
+    report = DruckerHygieneReport(
+        project_key='STL',
+        summary={'finding_count': 2, 'action_count': 2},
+        findings=[
+            DruckerFinding(
+                finding_id='F001',
+                ticket_key='STL-201',
+                category='stale_ticket',
+                severity='high',
+                title='Active ticket is stale',
+                description='STL-201 has not moved recently.',
+                recommendation='Confirm status and owner.',
+            )
+        ],
+        proposed_actions=[
+            DruckerAction(
+                action_id='D001',
+                ticket_key='STL-201',
+                action_type='update',
+                title='Apply Drucker hygiene labels',
+                update_fields={'labels': ['drucker-stale']},
+                finding_ids=['F001'],
+            ),
+            DruckerAction(
+                action_id='D002',
+                ticket_key='STL-201',
+                action_type='comment',
+                title='Post Drucker hygiene summary',
+                comment='Drucker hygiene review\n\nSummary',
+                finding_ids=['F001'],
+            ),
+        ],
+        tickets=[{'key': 'STL-201', 'summary': 'Needs attention'}],
+    )
+
+    agent = DruckerCoordinatorAgent(project_key='STL')
+    session = agent.create_review_session(report)
+
+    assert [item.action for item in session.items] == ['update', 'comment']
+
+    agent.review_agent.approve_all(session)
+    results = agent.execute_approved_actions(session)
+
+    assert [result['item_id'] for result in results] == ['D001', 'D002']
+    assert update_calls[0]['ticket_key'] == 'STL-201'
+    assert update_calls[0]['labels'] == ['drucker-stale']
+    assert comment_calls[0]['ticket_key'] == 'STL-201'
+    assert session.items[0].status.value == 'executed'
+    assert session.items[1].status.value == 'executed'
+
+
+def test_workflow_drucker_hygiene_writes_report_files(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    import pm_agent
+    from agents import drucker_agent as drucker_agent_module
+
+    class _FakeDruckerAgent:
+        def __init__(self, project_key=None, **kwargs):
+            self.project_key = project_key
+
+        def run(self, input_data):
+            return AgentResponse.success_response(
+                content='# Drucker Hygiene Report\n\nSummary',
+                metadata={
+                    'hygiene_report': {
+                        'report_id': 'rep-101',
+                        'project_key': input_data['project_key'],
+                        'created_at': '2026-03-15T12:00:00+00:00',
+                        'summary': {
+                            'total_tickets': 4,
+                            'finding_count': 3,
+                            'action_count': 2,
+                            'tickets_with_findings': 2,
+                            'by_severity': {'high': 1},
+                        },
+                        'findings': [],
+                        'proposed_actions': [],
+                    },
+                    'review_session': {
+                        'session_id': 'rep-101',
+                        'items': [{'id': 'D001', 'action': 'update'}],
+                    },
+                },
+            )
+
+    monkeypatch.setattr(drucker_agent_module, 'DruckerCoordinatorAgent', _FakeDruckerAgent)
+    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
+    monkeypatch.setenv('DRUCKER_REPORT_DIR', str(tmp_path / 'store'))
+
+    output_path = tmp_path / 'drucker_report.json'
+    args = SimpleNamespace(
+        project='STL',
+        limit=25,
+        include_done=False,
+        stale_days=21,
+        output=str(output_path),
+    )
+
+    exit_code = pm_agent._workflow_drucker_hygiene(args)
+
+    assert exit_code == 0
+    assert output_path.exists()
+    assert (tmp_path / 'drucker_report.md').exists()
+    assert (tmp_path / 'drucker_report_review.json').exists()
+    assert (tmp_path / 'store' / 'STL' / 'rep-101' / 'report.json').exists()
+
+    exported = json.loads(output_path.read_text(encoding='utf-8'))
+    review_payload = json.loads(
+        (tmp_path / 'drucker_report_review.json').read_text(encoding='utf-8')
+    )
+
+    assert exported['project_key'] == 'STL'
+    assert review_payload['session_id'] == 'rep-101'

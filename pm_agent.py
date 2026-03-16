@@ -807,10 +807,12 @@ def cmd_workflow(args):
     # Registry of available workflows
     WORKFLOWS = {
         'bug-report': _workflow_bug_report,
+        'drucker-hygiene': _workflow_drucker_hygiene,
         'feature-plan': _workflow_feature_plan,
         'gantt-snapshot': _workflow_gantt_snapshot,
         'gantt-snapshot-get': _workflow_gantt_snapshot_get,
         'gantt-snapshot-list': _workflow_gantt_snapshot_list,
+        'hypatia-generate': _workflow_hypatia_generate,
     }
 
     handler = WORKFLOWS.get(args.workflow_name)
@@ -1619,6 +1621,192 @@ def _workflow_gantt_snapshot_list(args):
     return 0
 
 
+def _workflow_drucker_hygiene(args):
+    '''
+    Drucker workflow: Jira project hygiene analysis -> durable report + review session.
+    '''
+    log.debug(
+        f'Entering _workflow_drucker_hygiene(project={args.project}, '
+        f'limit={args.limit}, include_done={args.include_done}, stale_days={args.stale_days})'
+    )
+
+    from agents.drucker_agent import DruckerCoordinatorAgent
+    from state.drucker_report_store import DruckerReportStore
+
+    output('')
+    output('=' * 60)
+    output('WORKFLOW: drucker-hygiene')
+    output('=' * 60)
+    output('')
+    output(f'Project: {args.project}')
+    output(f'Include done issues: {"yes" if args.include_done else "no"}')
+    output(f'Stale threshold: {args.stale_days} days')
+    output('')
+    output('Step 1/4: Building Jira hygiene report...')
+
+    agent = DruckerCoordinatorAgent(project_key=args.project)
+    result = agent.run({
+        'project_key': args.project,
+        'limit': args.limit or 200,
+        'include_done': args.include_done,
+        'stale_days': args.stale_days,
+    })
+
+    if not result.success:
+        output(f'ERROR: {result.error}')
+        return 1
+
+    report = result.metadata.get('hygiene_report')
+    review_session = result.metadata.get('review_session')
+
+    if not report:
+        output('ERROR: Drucker hygiene report missing from agent response')
+        return 1
+
+    output('Step 2/4: Persisting hygiene report...')
+
+    store = DruckerReportStore()
+    stored_summary = store.save_report(report, summary_markdown=result.content or '')
+
+    output(f'  Stored report ID: {stored_summary["report_id"]}')
+    output(f'  Stored in: {stored_summary["storage_dir"]}')
+
+    output('Step 3/4: Writing report files...')
+
+    output_base = args.output or f'{args.project.lower()}_drucker_hygiene.json'
+    json_path, md_path, review_path = _write_drucker_report_files(
+        report,
+        result.content or '',
+        review_session or {},
+        output_base,
+    )
+
+    output(f'  Saved: {json_path}')
+    output(f'  Saved: {md_path}')
+    output(f'  Saved: {review_path}')
+
+    output('Step 4/4: Reporting summary...')
+    output(f'  Findings: {report.get("summary", {}).get("finding_count", 0)}')
+    output(f'  Proposed actions: {report.get("summary", {}).get("action_count", 0)}')
+    output(f'  Tickets with findings: {report.get("summary", {}).get("tickets_with_findings", 0)}')
+
+    _print_workflow_summary('drucker-hygiene', [
+        (stored_summary['json_path'], 'stored hygiene report JSON'),
+        (stored_summary['markdown_path'], 'stored hygiene report Markdown'),
+        (json_path, 'exported hygiene report JSON'),
+        (md_path, 'exported hygiene report Markdown'),
+        (review_path, 'review session JSON'),
+    ])
+    return 0
+
+
+def _workflow_hypatia_generate(args):
+    '''
+    Hypatia workflow: build a source-grounded documentation record and stage
+    review-gated publication targets for repo Markdown and Confluence.
+    '''
+    log.debug(
+        f'Entering _workflow_hypatia_generate(project={args.project}, '
+        f'doc_title={args.doc_title}, doc_type={args.doc_type}, execute={args.execute})'
+    )
+
+    from agents.hypatia_agent import HypatiaDocumentationAgent
+    from state.hypatia_record_store import HypatiaRecordStore
+
+    output('')
+    output('=' * 60)
+    output('WORKFLOW: hypatia-generate')
+    output('=' * 60)
+    output('')
+    output(f'Document title: {args.doc_title or args.confluence_title or "auto"}')
+    output(f'Document class: {args.doc_type}')
+    output(f'Project: {args.project or "n/a"}')
+    output(f'Source files: {len(args.docs or [])}')
+    output(f'Publish approved changes now: {"yes" if args.execute else "no"}')
+    output('')
+    output('Step 1/4: Generating documentation plan...')
+
+    agent = HypatiaDocumentationAgent(project_key=args.project)
+    request = {
+        'title': args.doc_title or '',
+        'doc_type': args.doc_type,
+        'project_key': args.project or '',
+        'summary': args.doc_summary or '',
+        'source_paths': list(args.docs or []),
+        'target_file': args.target_file,
+        'confluence_title': args.confluence_title,
+        'confluence_page': args.confluence_page,
+        'confluence_space': args.confluence_space,
+        'confluence_parent_id': args.confluence_parent_id,
+        'version_message': args.version_message,
+    }
+
+    record, review_session = agent.plan_documentation(
+        agent._normalize_request(request)
+    )
+
+    output('Step 2/4: Persisting documentation record...')
+
+    store = HypatiaRecordStore()
+    stored_summary = store.save_record(record, summary_markdown=record.summary_markdown)
+
+    output(f'  Stored document ID: {stored_summary["doc_id"]}')
+    output(f'  Stored in: {stored_summary["storage_dir"]}')
+
+    output('Step 3/4: Writing documentation artifacts...')
+
+    output_base = args.output or f'{record.doc_id}_hypatia_record.json'
+    json_path, md_path, review_path, patch_paths = _write_hypatia_record_files(
+        record.to_dict(),
+        review_session.to_dict(),
+        output_base,
+    )
+
+    output(f'  Saved: {json_path}')
+    output(f'  Saved: {md_path}')
+    output(f'  Saved: {review_path}')
+    if patch_paths:
+        output(f'  Saved patch drafts: {len(patch_paths)}')
+
+    created_files = [
+        (stored_summary['json_path'], 'stored documentation record JSON'),
+        (stored_summary['markdown_path'], 'stored documentation summary Markdown'),
+        (json_path, 'exported documentation record JSON'),
+        (md_path, 'exported documentation summary Markdown'),
+        (review_path, 'review session JSON'),
+    ]
+    created_files.extend(
+        (path, 'documentation patch draft Markdown')
+        for path in patch_paths
+    )
+
+    output('Step 4/4: Review and publication summary...')
+    output(f'  Patches: {len(record.patches)}')
+    output(f'  Validation status: {"valid" if record.validation.get("valid") else "blocked"}')
+    output(f'  Warnings: {len(record.warnings)}')
+
+    if args.execute:
+        if not record.validation.get('valid'):
+            output('ERROR: Hypatia record has blocking validation issues; refusing to publish.')
+            return 1
+
+        agent.review_agent.approve_all(review_session)
+        publications = agent.publish_approved(review_session)
+        store.record_publications(record.doc_id, publications)
+
+        publications_path = _write_hypatia_publication_file(
+            publications,
+            output_base,
+        )
+        created_files.append((publications_path, 'publication results JSON'))
+
+        output(f'  Published targets: {sum(1 for item in publications if item.status == "published")}')
+        output(f'  Publication log: {publications_path}')
+
+    _print_workflow_summary('hypatia-generate', created_files)
+    return 0
+
+
 def _write_gantt_snapshot_files(
     snapshot: dict[str, Any],
     summary_markdown: str,
@@ -1647,6 +1835,113 @@ def _write_gantt_snapshot_files(
         f.write(summary_markdown or '')
 
     return json_path, md_path
+
+
+def _write_drucker_report_files(
+    report: dict[str, Any],
+    summary_markdown: str,
+    review_session: dict[str, Any],
+    output_base: str,
+):
+    '''
+    Write Drucker report JSON + Markdown + review-session JSON files.
+    '''
+    output_root, output_ext = os.path.splitext(output_base)
+    if output_ext.lower() == '.md':
+        output_root = output_root or str(
+            report.get('project_key') or 'drucker_report'
+        ).lower()
+    elif output_ext.lower() != '.json':
+        output_root = output_base
+
+    json_path = output_root + '.json'
+    md_path = output_root + '.md'
+    review_path = output_root + '_review.json'
+
+    os.makedirs(os.path.dirname(json_path) or '.', exist_ok=True)
+
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(report, f, indent=2, default=str)
+
+    with open(md_path, 'w', encoding='utf-8') as f:
+        f.write(summary_markdown or '')
+
+    with open(review_path, 'w', encoding='utf-8') as f:
+        json.dump(review_session or {}, f, indent=2, default=str)
+
+    return json_path, md_path, review_path
+
+
+def _write_hypatia_record_files(
+    record: dict[str, Any],
+    review_session: dict[str, Any],
+    output_base: str,
+):
+    '''
+    Write Hypatia record JSON + Markdown + review-session JSON + patch drafts.
+    '''
+    output_root, output_ext = os.path.splitext(output_base)
+    if output_ext.lower() == '.md':
+        output_root = output_root or str(
+            record.get('doc_id') or 'hypatia_record'
+        ).lower()
+    elif output_ext.lower() != '.json':
+        output_root = output_base
+
+    json_path = output_root + '.json'
+    md_path = output_root + '.md'
+    review_path = output_root + '_review.json'
+    patch_dir = output_root + '_patches'
+
+    os.makedirs(os.path.dirname(json_path) or '.', exist_ok=True)
+    os.makedirs(patch_dir, exist_ok=True)
+
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(record, f, indent=2, default=str)
+
+    with open(md_path, 'w', encoding='utf-8') as f:
+        f.write(str(record.get('summary_markdown') or ''))
+
+    with open(review_path, 'w', encoding='utf-8') as f:
+        json.dump(review_session or {}, f, indent=2, default=str)
+
+    patch_paths: list[str] = []
+    for index, patch in enumerate(record.get('patches') or [], start=1):
+        title = str(patch.get('title') or patch.get('target_ref') or f'patch-{index}')
+        slug = re.sub(r'[^a-z0-9]+', '-', title.casefold()).strip('-') or f'patch-{index}'
+        draft_path = os.path.join(
+            patch_dir,
+            f'{index:02d}_{str(patch.get("patch_id") or index)}_{slug}.md',
+        )
+        with open(draft_path, 'w', encoding='utf-8') as f:
+            f.write(str(patch.get('content_markdown') or ''))
+        patch_paths.append(draft_path)
+
+    return json_path, md_path, review_path, patch_paths
+
+
+def _write_hypatia_publication_file(
+    publications: list[Any],
+    output_base: str,
+) -> str:
+    '''
+    Write Hypatia publication results JSON and return its path.
+    '''
+    output_root, output_ext = os.path.splitext(output_base)
+    if output_ext.lower() not in ('.json', '.md'):
+        output_root = output_base
+
+    publications_path = output_root + '_publications.json'
+    payload = [
+        publication.to_dict() if hasattr(publication, 'to_dict') else publication
+        for publication in publications
+    ]
+
+    os.makedirs(os.path.dirname(publications_path) or '.', exist_ok=True)
+    with open(publications_path, 'w', encoding='utf-8') as f:
+        json.dump(payload, f, indent=2, default=str)
+
+    return publications_path
 
 
 def cmd_resume(args):
@@ -1734,6 +2029,11 @@ Examples:
   %(prog)s --workflow gantt-snapshot --project STL --planning-horizon 120 --output stl_snapshot.json
   %(prog)s --workflow gantt-snapshot-list --project STL
   %(prog)s --workflow gantt-snapshot-get --snapshot-id a1b2c3d4
+  %(prog)s --workflow drucker-hygiene --project STL
+  %(prog)s --workflow drucker-hygiene --project STL --stale-days 21 --output stl_hygiene.json
+  %(prog)s --workflow hypatia-generate --doc-title "STL Build Notes" --docs README.md AGENTS.md
+  %(prog)s --workflow hypatia-generate --doc-title "Fabric Bring-Up Guide" --doc-type how_to --docs docs/source.md --target-file docs/fabric-bring-up.md
+  %(prog)s --workflow hypatia-generate --doc-title "STL Weekly Summary" --docs README.md --confluence-title "STL Weekly Summary" --confluence-space ENG
   %(prog)s --build-excel-map STL-74071
   %(prog)s --build-excel-map STL-74071 STL-76297 --hierarchy 2 --output my_map.xlsx
   %(prog)s --invoke-llm prompt.md
@@ -1877,6 +2177,45 @@ Examples:
     parser.add_argument('--snapshot-id', default=None, metavar='ID',
                        dest='snapshot_id',
                        help='Stored snapshot ID for --workflow gantt-snapshot-get.')
+    parser.add_argument('--stale-days', type=int, default=30, metavar='DAYS',
+                       dest='stale_days',
+                       help='Stale-ticket threshold in days for --workflow drucker-hygiene '
+                            '(default: 30).')
+    parser.add_argument('--doc-title', default=None, metavar='TEXT',
+                       dest='doc_title',
+                       help='Document title for --workflow hypatia-generate.')
+    parser.add_argument('--doc-type',
+                       choices=['as_built', 'engineering_reference', 'how_to', 'release_note_support', 'user_guide'],
+                       default='engineering_reference',
+                       dest='doc_type',
+                       help='Documentation class for --workflow hypatia-generate '
+                            '(default: engineering_reference).')
+    parser.add_argument('--doc-summary', default=None, metavar='TEXT',
+                       dest='doc_summary',
+                       help='Optional purpose/scope summary for --workflow hypatia-generate.')
+    parser.add_argument('--target-file', default=None, metavar='FILE',
+                       dest='target_file',
+                       help='Repo-owned Markdown target for --workflow hypatia-generate. '
+                            'Defaults to docs/<slug>.md if omitted.')
+    parser.add_argument('--confluence-title', default=None, metavar='TITLE',
+                       dest='confluence_title',
+                       help='Confluence page title for --workflow hypatia-generate. '
+                            'With --confluence-space and without --confluence-page, '
+                            'this creates a page target.')
+    parser.add_argument('--confluence-page', default=None, metavar='PAGE',
+                       dest='confluence_page',
+                       help='Confluence page ID or exact title to update for '
+                            '--workflow hypatia-generate.')
+    parser.add_argument('--confluence-space', default=None, metavar='SPACE',
+                       dest='confluence_space',
+                       help='Confluence space key or ID for --workflow hypatia-generate.')
+    parser.add_argument('--confluence-parent-id', default=None, metavar='PAGE_ID',
+                       dest='confluence_parent_id',
+                       help='Parent page ID when creating a Confluence target for '
+                            '--workflow hypatia-generate.')
+    parser.add_argument('--version-message', default=None, metavar='TEXT',
+                       dest='version_message',
+                       help='Optional Confluence version message for --workflow hypatia-generate.')
     
     # ---- Options for --plan ----------------------------------------------------
     parser.add_argument('--project', '-p', default=None,
@@ -1908,7 +2247,7 @@ Examples:
                        help='Max tickets per step (used by --build-excel-map) or '
                             'max snapshots to show (used by --workflow gantt-snapshot-list).')
     parser.add_argument('--output', '-o', default=None,
-                       help='Output filename (used by --build-excel-map and Gantt snapshot workflows)')
+                       help='Output filename (used by --build-excel-map and selected workflows such as gantt-snapshot, drucker-hygiene, and hypatia-generate)')
     parser.add_argument('--keep-intermediates', action='store_true',
                        help='Keep temp files instead of cleaning up (used by --build-excel-map)')
     
@@ -2033,6 +2372,26 @@ Examples:
                 parser.error('--workflow gantt-snapshot-get requires --snapshot-id ID')
         elif args.workflow_name == 'gantt-snapshot-list':
             pass
+        elif args.workflow_name == 'drucker-hygiene':
+            if not args.project:
+                parser.error('--workflow drucker-hygiene requires --project PROJECT_KEY')
+        elif args.workflow_name == 'hypatia-generate':
+            if args.docs:
+                for source_path in args.docs:
+                    if not os.path.isfile(source_path):
+                        parser.error(f'--docs source file not found: {source_path}')
+
+            if not args.doc_title and not args.confluence_title and not args.target_file:
+                parser.error(
+                    '--workflow hypatia-generate requires --doc-title TEXT '
+                    '(or a title-bearing target such as --confluence-title or --target-file)'
+                )
+
+            if args.confluence_title and not args.confluence_page and not args.confluence_space:
+                parser.error(
+                    '--workflow hypatia-generate requires --confluence-space '
+                    'when creating a Confluence page with --confluence-title'
+                )
     
     # ---- Map ticket_keys for build-excel-map compatibility ---------------------
     # cmd_build_excel_map expects args.ticket_keys
@@ -2136,6 +2495,32 @@ Examples:
         elif args.workflow_name == 'gantt-snapshot-list':
             if args.project:
                 log.info(f'+  Project: {args.project}')
+        elif args.workflow_name == 'drucker-hygiene':
+            log.info(f'+  Project: {args.project}')
+            log.info(f'+  Stale days: {args.stale_days}')
+            log.info(f'+  Include done: {"yes" if args.include_done else "no"}')
+            if args.output:
+                log.info(f'+  Output: {args.output}')
+        elif args.workflow_name == 'hypatia-generate':
+            log.info(f'+  Document title: {args.doc_title or args.confluence_title or "auto"}')
+            log.info(f'+  Document class: {args.doc_type}')
+            if args.project:
+                log.info(f'+  Project: {args.project}')
+            if args.docs:
+                log.info(f'+  Docs: {len(args.docs)} file(s)')
+                for dp in args.docs:
+                    log.info(f'+    - {dp}')
+            if args.target_file:
+                log.info(f'+  Target file: {args.target_file}')
+            if args.confluence_page:
+                log.info(f'+  Confluence page: {args.confluence_page}')
+            if args.confluence_title:
+                log.info(f'+  Confluence title: {args.confluence_title}')
+            if args.confluence_space:
+                log.info(f'+  Confluence space: {args.confluence_space}')
+            log.info(f'+  Execute: {"YES" if args.execute else "DRY RUN"}')
+            if args.output:
+                log.info(f'+  Output: {args.output}')
         if args.workflow_filter:
             log.info(f'+  Filter: {args.workflow_filter}')
         if args.workflow_prompt:
