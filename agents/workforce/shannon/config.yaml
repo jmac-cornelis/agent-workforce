@@ -1,0 +1,29 @@
+agent_id: shannon
+agent_name: Shannon Communications
+zone: service_infrastructure
+phase: 0
+
+description: >
+  Single Teams bot serving all agent channels. Routes commands, manages
+  approvals, posts notifications, and logs all human-agent interactions.
+
+llm:
+  temperature: 0.1
+  max_tokens: 2048
+  max_iterations: 10
+
+events:
+  emits:
+    - approval.completed
+    - approval.timeout
+    - approval.escalated
+    - message.routed
+    - message.failed
+    - input.received
+  consumes:
+    - approval.requested
+    - input.requested
+
+api:
+  prefix: /v1/bot
+  port: 8200

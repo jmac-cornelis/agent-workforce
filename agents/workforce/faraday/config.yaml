@@ -1,0 +1,35 @@
+##########################################################################################
+# Faraday Test Executor Agent Configuration
+# Author: Cornelis Networks
+##########################################################################################
+
+agent_id: faraday
+display_name: Faraday
+zone: execution_spine
+phase: 2
+description: >
+  Test Executor Agent. Runs ATF/Fuze Test cycles, captures logs, artifacts,
+  and results, classifies failures, and produces structured
+  TestExecutionRecords tied to the originating build ID.
+
+model: null
+temperature: 0.2
+max_iterations: 15
+timeout_seconds: 7200
+
+events:
+  consumes:
+    - test.input_generated
+    - reservation.granted
+  produces:
+    - test.execution_accepted
+    - test.execution_started
+    - test.execution_completed
+    - test.execution_failed
+    - test.execution_cancelled
+
+dependencies:
+  - curie
+  - tesla
+  - artifact_store
+  - event_bus

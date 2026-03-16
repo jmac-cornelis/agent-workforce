@@ -1,0 +1,29 @@
+# Babbage Version Manager Agent Configuration
+# Cornelis Networks
+
+agent_id: babbage
+agent_name: Babbage Version Manager
+zone: intelligence
+phase: 3
+
+description: >
+  Maps internal Fuze build IDs to external customer-facing release versions
+  with conflict detection and lineage tracking.
+
+llm:
+  temperature: 0.3
+  max_tokens: 4096
+  max_iterations: 10
+
+events:
+  emits:
+    - version.mapped
+    - version.mapping_proposed
+    - version.mapping_confirmed
+    - version.mapping_conflict_detected
+  consumes:
+    - build.completed
+
+api:
+  prefix: /v1/version-mappings
+  port: 8210
