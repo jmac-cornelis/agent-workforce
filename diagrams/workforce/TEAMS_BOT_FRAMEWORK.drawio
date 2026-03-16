@@ -1,0 +1,521 @@
+<mxfile host="app.diagrams.net" modified="2026-03-15T12:00:00.000Z" agent="Codex" version="24.7.17" type="device">
+  <diagram id="tab-arch-overview" name="Architecture Overview">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title and Subtitle -->
+        <mxCell id="t1" value="Teams Bot Framework — Architecture Overview" style="text;html=1;fontSize=18;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="20" y="10" width="500" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="Component diagram showing the Teams Bot Service, agent integrations, and supporting infrastructure" style="text;html=1;fontSize=11;fontColor=#666666;align=left;" vertex="1" parent="1">
+          <mxGeometry x="20" y="38" width="700" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Microsoft Teams (External - Blue) -->
+        <mxCell id="teams-cloud" value="Microsoft Teams" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="30" y="200" width="160" height="100" as="geometry"/>
+        </mxCell>
+
+        <!-- Azure AD (External - Blue) -->
+        <mxCell id="azure-ad" value="Azure AD" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="360" width="120" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- Bot Service Container (Green) -->
+        <mxCell id="bot-container" value="Teams Bot Service" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;fontStyle=1;verticalAlign=top;dashed=0;container=1;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="280" y="100" width="380" height="340" as="geometry"/>
+        </mxCell>
+
+        <!-- Bot Service internal components -->
+        <mxCell id="webhook" value="Webhook&#xa;Receiver" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="bot-container">
+          <mxGeometry x="20" y="40" width="100" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="cmd-router" value="Command&#xa;Router" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="bot-container">
+          <mxGeometry x="140" y="40" width="100" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="card-renderer" value="Card&#xa;Renderer" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="bot-container">
+          <mxGeometry x="260" y="40" width="100" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="thread-mgr" value="Thread&#xa;Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="bot-container">
+          <mxGeometry x="20" y="120" width="100" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="msg-poster" value="Message&#xa;Poster" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="bot-container">
+          <mxGeometry x="140" y="120" width="100" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Agent Registry (Green) -->
+        <mxCell id="agent-registry" value="Agent Registry&#xa;(Config Store)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;fontStyle=1;" vertex="1" parent="bot-container">
+          <mxGeometry x="100" y="210" width="160" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Internal arrows within bot container -->
+        <mxCell id="int1" style="endArrow=block;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="bot-container" source="webhook" target="cmd-router">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="int2" style="endArrow=block;html=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="bot-container" source="cmd-router" target="card-renderer">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="int3" style="endArrow=block;html=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="bot-container" source="cmd-router" target="msg-poster">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="int4" style="endArrow=block;html=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="bot-container" source="msg-poster" target="thread-mgr">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="int5" value="lookup" style="endArrow=block;html=1;dashed=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;fontSize=9;" edge="1" parent="bot-container" source="cmd-router" target="agent-registry">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- PostgreSQL (Orange) -->
+        <mxCell id="postgres" value="PostgreSQL&#xa;(Conversation State, Audit Log)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;size=10;" vertex="1" parent="1">
+          <mxGeometry x="300" y="520" width="180" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- Redis (Orange) -->
+        <mxCell id="redis" value="Redis&#xa;(Rate Limiting, Session Cache)" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=11;fontStyle=1;size=10;" vertex="1" parent="1">
+          <mxGeometry x="520" y="520" width="180" height="70" as="geometry"/>
+        </mxCell>
+
+        <!-- Agent API Groups (Purple) -->
+        <mxCell id="agent-group" value="Agent APIs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontStyle=1;verticalAlign=top;dashed=1;container=1;collapsible=0;" vertex="1" parent="1">
+          <mxGeometry x="760" y="100" width="200" height="340" as="geometry"/>
+        </mxCell>
+        <mxCell id="exec-agents" value="Execution Spine&#xa;Josephine, Hedy,&#xa;Ada, Curie, Faraday,&#xa;Tesla, Linus" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="agent-group">
+          <mxGeometry x="20" y="35" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="intel-agents" value="Intelligence&#xa;Nightingale, Drucker,&#xa;Linnaeus, Babbage,&#xa;Herodotus, Hypatia" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="agent-group">
+          <mxGeometry x="20" y="130" width="160" height="80" as="geometry"/>
+        </mxCell>
+        <mxCell id="plan-agents" value="Planning&#xa;Gantt, Brooks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="agent-group">
+          <mxGeometry x="20" y="225" width="160" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows: Teams → Bot Service -->
+        <mxCell id="arr1" value="messages / card actions" style="html=1;endArrow=block;fontSize=10;exitX=1;exitY=0.5;entryX=0;entryY=0.2;" edge="1" parent="1" source="teams-cloud" target="bot-container">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows: Bot Service → Teams -->
+        <mxCell id="arr2" value="cards / notifications" style="html=1;endArrow=block;fontSize=10;exitX=0;exitY=0.6;entryX=1;entryY=0.7;" edge="1" parent="1" source="bot-container" target="teams-cloud">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows: Azure AD → Bot Service -->
+        <mxCell id="arr3" value="auth tokens" style="html=1;endArrow=block;dashed=1;fontSize=9;exitX=1;exitY=0.5;entryX=0;entryY=1;" edge="1" parent="1" source="azure-ad" target="bot-container">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows: Bot Service → Agent APIs -->
+        <mxCell id="arr4" value="API calls" style="html=1;endArrow=block;fontSize=10;exitX=1;exitY=0.3;" edge="1" parent="1" source="bot-container" target="exec-agents">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arr5" style="html=1;endArrow=block;fontSize=10;exitX=1;exitY=0.5;" edge="1" parent="1" source="bot-container" target="intel-agents">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="arr6" style="html=1;endArrow=block;fontSize=10;exitX=1;exitY=0.7;" edge="1" parent="1" source="bot-container" target="plan-agents">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Arrows: Agent APIs → Bot Service (responses / proactive) -->
+        <mxCell id="arr7" value="responses / proactive msgs" style="html=1;endArrow=block;dashed=1;fontSize=9;" edge="1" parent="1" source="intel-agents" target="bot-container">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint as="offset"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Arrows: Bot Service → PostgreSQL -->
+        <mxCell id="arr8" value="state / audit" style="html=1;endArrow=block;fontSize=9;exitX=0.3;exitY=1;" edge="1" parent="1" source="bot-container" target="postgres">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="390" y="440" as="sourcePoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Arrows: Bot Service → Redis -->
+        <mxCell id="arr9" value="cache / rate limit" style="html=1;endArrow=block;fontSize=9;exitX=0.7;exitY=1;" edge="1" parent="1" source="bot-container" target="redis">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="560" y="440" as="sourcePoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="leg1" value="Blue = External Systems" style="text;html=1;fontSize=9;fontColor=#6c8ebf;align=left;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="520" width="150" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg2" value="Green = Bot Framework" style="text;html=1;fontSize=9;fontColor=#82b366;align=left;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="540" width="150" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg3" value="Purple = Agent APIs" style="text;html=1;fontSize=9;fontColor=#9673a6;align=left;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="560" width="150" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg4" value="Orange = Infrastructure" style="text;html=1;fontSize=9;fontColor=#d79b00;align=left;" vertex="1" parent="1">
+          <mxGeometry x="1050" y="580" width="150" height="18" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="tab-cmd-flow" name="Standard Command Flow">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title and Subtitle -->
+        <mxCell id="t1" value="Teams Bot Framework — Standard Command Flow" style="text;html=1;fontSize=18;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="20" y="10" width="500" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="User posts /stats in #agent-josephine; Bot routes to agent API and returns an Adaptive Card" style="text;html=1;fontSize=11;fontColor=#666666;align=left;" vertex="1" parent="1">
+          <mxGeometry x="20" y="38" width="700" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Lifelines -->
+        <mxCell id="u1" value="User" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="60" y="80" width="80" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="u2" value="Microsoft&#xa;Teams" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="220" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="u3" value="Bot Webhook&#xa;Receiver" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="400" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="u4" value="Command&#xa;Router" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="580" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="u5" value="Agent API&#xa;(Josephine)" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="780" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="u6" value="PostgreSQL" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="980" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+
+        <!-- Messages -->
+        <!-- 1. User posts "/stats" in #agent-josephine -->
+        <mxCell id="m1" value="1. Post &quot;/stats&quot; in #agent-josephine" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="100" y="160" as="sourcePoint"/>
+            <mxPoint x="270" y="160" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 2. Teams → Bot Webhook: message received -->
+        <mxCell id="m2" value="2. Message received (webhook POST)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="270" y="200" as="sourcePoint"/>
+            <mxPoint x="450" y="200" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 3. Bot → Command Router: parse command -->
+        <mxCell id="m3" value="3. Parse command" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="450" y="240" as="sourcePoint"/>
+            <mxPoint x="630" y="240" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 4. Command Router: lookup channel → agent (registry) -->
+        <mxCell id="m4" value="4. Lookup channel → agent (registry)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="630" y="280" as="sourcePoint"/>
+            <mxPoint x="630" y="310" as="targetPoint"/>
+            <Array as="points">
+              <mxPoint x="670" y="280"/>
+              <mxPoint x="670" y="310"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 5. Command Router → Agent API: GET /v1/status/stats -->
+        <mxCell id="m5" value="5. GET /v1/status/stats" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="630" y="340" as="sourcePoint"/>
+            <mxPoint x="830" y="340" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 6. Agent API → Command Router: stats response (JSON) -->
+        <mxCell id="m6" value="6. Stats response (JSON)" style="html=1;verticalAlign=bottom;endArrow=block;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="830" y="380" as="sourcePoint"/>
+            <mxPoint x="630" y="380" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 7. Command Router → Card Renderer: format Adaptive Card -->
+        <mxCell id="m7" value="7. Format Adaptive Card" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="630" y="420" as="sourcePoint"/>
+            <mxPoint x="630" y="450" as="targetPoint"/>
+            <Array as="points">
+              <mxPoint x="670" y="420"/>
+              <mxPoint x="670" y="450"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 8. Bot → Teams: post stats card to channel -->
+        <mxCell id="m8" value="8. Post stats Adaptive Card" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="450" y="490" as="sourcePoint"/>
+            <mxPoint x="270" y="490" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 9. Bot → PostgreSQL: log interaction (audit) -->
+        <mxCell id="m9" value="9. Log interaction (audit)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="450" y="530" as="sourcePoint"/>
+            <mxPoint x="1030" y="530" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Note -->
+        <mxCell id="n1" value="Card Renderer formats JSON&#xa;into Teams Adaptive Card schema" style="text;html=1;fontSize=10;fontColor=#999999;align=left;" vertex="1" parent="1">
+          <mxGeometry x="1100" y="160" width="200" height="30" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="tab-approval-flow" name="Approval Workflow">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title and Subtitle -->
+        <mxCell id="t1" value="Teams Bot Framework — Approval Workflow" style="text;html=1;fontSize=18;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="20" y="10" width="500" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="Hedy requests release approval via Bot; approver responds via Adaptive Card; Bot relays decision" style="text;html=1;fontSize=11;fontColor=#666666;align=left;" vertex="1" parent="1">
+          <mxGeometry x="20" y="38" width="700" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Lifelines -->
+        <mxCell id="a1" value="Agent API&#xa;(Hedy)" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="60" y="80" width="100" height="600" as="geometry"/>
+        </mxCell>
+        <mxCell id="a2" value="Bot API" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="280" y="80" width="100" height="600" as="geometry"/>
+        </mxCell>
+        <mxCell id="a3" value="Microsoft&#xa;Teams" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="500" y="80" width="100" height="600" as="geometry"/>
+        </mxCell>
+        <mxCell id="a4" value="Release&#xa;Approver" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="720" y="80" width="100" height="600" as="geometry"/>
+        </mxCell>
+        <mxCell id="a5" value="PostgreSQL" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="940" y="80" width="100" height="600" as="geometry"/>
+        </mxCell>
+
+        <!-- Messages -->
+        <!-- 1. Hedy → Bot API: POST /v1/bot/request-approval -->
+        <mxCell id="m1" value="1. POST /v1/bot/request-approval&#xa;   (release promotion)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="110" y="160" as="sourcePoint"/>
+            <mxPoint x="330" y="160" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 2. Bot → PostgreSQL: create approval record -->
+        <mxCell id="m2" value="2. Create approval record (status=pending)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="200" as="sourcePoint"/>
+            <mxPoint x="990" y="200" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 3. Bot → Teams: post Approval Adaptive Card -->
+        <mxCell id="m3" value="3. Post Approval Adaptive Card&#xa;   [Approve] [Reject]" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="250" as="sourcePoint"/>
+            <mxPoint x="550" y="250" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 4. Release Approver clicks "Approve" -->
+        <mxCell id="m4" value="4. Click &quot;Approve&quot;" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="770" y="310" as="sourcePoint"/>
+            <mxPoint x="550" y="310" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 5. Teams → Bot Webhook: card action received -->
+        <mxCell id="m5" value="5. Card action received (approve)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="550" y="350" as="sourcePoint"/>
+            <mxPoint x="330" y="350" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 6. Bot → PostgreSQL: update approval -->
+        <mxCell id="m6" value="6. Update approval (status=approved, user_id)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="390" as="sourcePoint"/>
+            <mxPoint x="990" y="390" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 7. Bot → Hedy API: POST /v1/approvals/{id}/respond -->
+        <mxCell id="m7" value="7. POST /v1/approvals/{id}/respond (approved)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="430" as="sourcePoint"/>
+            <mxPoint x="110" y="430" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 8. Hedy processes approval -->
+        <mxCell id="m8" value="8. Process approval (promote release)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="110" y="470" as="sourcePoint"/>
+            <mxPoint x="110" y="500" as="targetPoint"/>
+            <Array as="points">
+              <mxPoint x="145" y="470"/>
+              <mxPoint x="145" y="500"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 9. Bot → Teams: post confirmation message (threaded) -->
+        <mxCell id="m9" value="9. Post confirmation (threaded reply)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="540" as="sourcePoint"/>
+            <mxPoint x="550" y="540" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Alt: timeout -->
+        <mxCell id="alt-box" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#b85450;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="250" y="580" width="530" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="alt-label" value="alt [timeout 4h]" style="text;html=1;fontSize=10;fontStyle=1;fontColor=#b85450;align=left;" vertex="1" parent="1">
+          <mxGeometry x="255" y="582" width="100" height="18" as="geometry"/>
+        </mxCell>
+        <mxCell id="m10" value="10. Re-post with @mention escalation" style="html=1;verticalAlign=bottom;endArrow=block;strokeColor=#b85450;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="610" as="sourcePoint"/>
+            <mxPoint x="550" y="610" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+
+  <diagram id="tab-input-flow" name="Input Request Flow">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title and Subtitle -->
+        <mxCell id="t1" value="Teams Bot Framework — Input Request Flow" style="text;html=1;fontSize=18;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="20" y="10" width="500" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="Nightingale requests missing reproduction steps from an engineer via a Teams form card" style="text;html=1;fontSize=11;fontColor=#666666;align=left;" vertex="1" parent="1">
+          <mxGeometry x="20" y="38" width="700" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Lifelines -->
+        <mxCell id="a1" value="Agent API&#xa;(Nightingale)" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="80" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="a2" value="Bot API" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="320" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="a3" value="Microsoft&#xa;Teams" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="560" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="a4" value="Engineer" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="780" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="a5" value="PostgreSQL" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+
+        <!-- Messages -->
+        <!-- 1. Nightingale → Bot API: POST /v1/bot/request-input -->
+        <mxCell id="m1" value="1. POST /v1/bot/request-input&#xa;   (missing reproduction steps)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="130" y="170" as="sourcePoint"/>
+            <mxPoint x="370" y="170" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 2. Bot → PostgreSQL: create input request record -->
+        <mxCell id="m2" value="2. Create input request record" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="370" y="220" as="sourcePoint"/>
+            <mxPoint x="1050" y="220" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 3. Bot → Teams: post Input Request Adaptive Card -->
+        <mxCell id="m3" value="3. Post Input Request Adaptive Card&#xa;   (form fields for repro steps)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="370" y="270" as="sourcePoint"/>
+            <mxPoint x="610" y="270" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 4. Engineer fills form and submits -->
+        <mxCell id="m4" value="4. Fill form and submit" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="830" y="340" as="sourcePoint"/>
+            <mxPoint x="610" y="340" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 5. Teams → Bot Webhook: form submission received -->
+        <mxCell id="m5" value="5. Form submission received" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="610" y="390" as="sourcePoint"/>
+            <mxPoint x="370" y="390" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 6. Bot → PostgreSQL: store response -->
+        <mxCell id="m6" value="6. Store response" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="370" y="430" as="sourcePoint"/>
+            <mxPoint x="1050" y="430" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 7. Bot → Nightingale API: POST /v1/input/{id}/respond -->
+        <mxCell id="m7" value="7. POST /v1/input/{id}/respond (form data)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="370" y="470" as="sourcePoint"/>
+            <mxPoint x="130" y="470" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 8. Nightingale processes input -->
+        <mxCell id="m8" value="8. Process input (update investigation)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="130" y="510" as="sourcePoint"/>
+            <mxPoint x="130" y="540" as="targetPoint"/>
+            <Array as="points">
+              <mxPoint x="165" y="510"/>
+              <mxPoint x="165" y="540"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 9. Bot → Teams: post acknowledgment (threaded) -->
+        <mxCell id="m9" value="9. Post acknowledgment (threaded reply)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="370" y="580" as="sourcePoint"/>
+            <mxPoint x="610" y="580" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- Note -->
+        <mxCell id="n1" value="Adaptive Card includes form fields:&#xa;• Environment details&#xa;• Steps to reproduce&#xa;• Expected vs actual behavior" style="text;html=1;fontSize=10;fontColor=#999999;align=left;" vertex="1" parent="1">
+          <mxGeometry x="1120" y="260" width="220" height="60" as="geometry"/>
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

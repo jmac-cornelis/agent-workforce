@@ -1,0 +1,269 @@
+<mxfile host="app.diagrams.net" modified="2026-03-14T22:00:00.000Z" agent="Codex" version="24.7.17" type="device">
+  <diagram id="page-mapping" name="1 — Version Mapping">
+    <mxGraphModel dx="1200" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="t1_title" value="Babbage — Version Mapping" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="400" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_sub" value="How FuzeIDs get mapped to external release versions — build events, hints, and mapping creation" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="50" width="600" height="20" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="t1_boundary" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=20;dashed=1;dashPattern=8 4;" vertex="1" parent="1">
+          <mxGeometry x="320" y="80" width="440" height="440" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_blabel" value="Babbage" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=13;fontStyle=1;fontColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="330" y="85" width="120" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Actors: left side -->
+        <mxCell id="t1_a_josephine" value="Josephine&lt;br&gt;Build Spine" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="100" y="140" width="30" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_a_fuze" value="Fuze&lt;br&gt;Config" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="100" y="310" width="30" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_a_eng" value="Engineer" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="100" y="460" width="30" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Use cases -->
+        <mxCell id="t1_uc1" value="Receive Build Event&lt;br&gt;from Josephine" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="380" y="120" width="180" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_uc2" value="Create Version&lt;br&gt;Mapping" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="380" y="230" width="180" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_uc3" value="Extract Release-Version&lt;br&gt;Hint from Fuze" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="380" y="340" width="180" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_uc4" value="Submit Manual&lt;br&gt;Mapping Request" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="380" y="440" width="180" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Actor-to-UC edges -->
+        <mxCell id="t1_e1" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="t1_a_josephine" target="t1_uc1" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_e2" style="endArrow=none;html=1;strokeColor=#6c8ebf;" edge="1" source="t1_a_fuze" target="t1_uc3" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_e3" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="t1_a_eng" target="t1_uc4" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Include/triggers -->
+        <mxCell id="t1_i1" value="&amp;laquo;triggers&amp;raquo;" style="endArrow=open;endSize=10;dashed=1;html=1;strokeColor=#999999;fontSize=10;fontColor=#999999;" edge="1" source="t1_uc1" target="t1_uc2" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_i2" value="&amp;laquo;include&amp;raquo;" style="endArrow=open;endSize=10;dashed=1;html=1;strokeColor=#999999;fontSize=10;fontColor=#999999;" edge="1" source="t1_uc2" target="t1_uc3" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="page-conflict" name="2 — Conflict &amp; Validation">
+    <mxGraphModel dx="1200" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="t2_title" value="Babbage — Conflict &amp; Validation" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="450" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_sub" value="Detecting conflicts, resolving ambiguity, and human confirmation of version mappings" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="50" width="600" height="20" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="t2_boundary" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=20;dashed=1;dashPattern=8 4;" vertex="1" parent="1">
+          <mxGeometry x="320" y="80" width="440" height="440" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_blabel" value="Babbage" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=13;fontStyle=1;fontColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="330" y="85" width="120" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Actors -->
+        <mxCell id="t2_a_eng" value="Engineer" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="100" y="250" width="30" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_a_eventbus" value="Event Bus" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="880" y="250" width="30" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Use cases -->
+        <mxCell id="t2_uc1" value="Detect Mapping&lt;br&gt;Conflicts" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="380" y="110" width="180" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_uc2" value="Resolve Ambiguous&lt;br&gt;Hints" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="380" y="220" width="180" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_uc3" value="Confirm Mapping&lt;br&gt;(Human Approval)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="380" y="330" width="180" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_uc4" value="Emit mapping_conflict&lt;br&gt;_detected Event" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="380" y="440" width="180" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Actor-to-UC edges -->
+        <mxCell id="t2_e1" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="t2_a_eng" target="t2_uc2" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_e2" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="t2_a_eng" target="t2_uc3" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_e3" style="endArrow=none;html=1;strokeColor=#6c8ebf;" edge="1" source="t2_uc4" target="t2_a_eventbus" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Include/triggers -->
+        <mxCell id="t2_i1" value="&amp;laquo;triggers&amp;raquo;" style="endArrow=open;endSize=10;dashed=1;html=1;strokeColor=#999999;fontSize=10;fontColor=#999999;" edge="1" source="t2_uc1" target="t2_uc4" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_i2" value="&amp;laquo;include&amp;raquo;" style="endArrow=open;endSize=10;dashed=1;html=1;strokeColor=#999999;fontSize=10;fontColor=#999999;" edge="1" source="t2_uc1" target="t2_uc2" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="page-lineage" name="3 — Lineage &amp; Compatibility">
+    <mxGraphModel dx="1200" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="t3_title" value="Babbage — Lineage &amp; Compatibility" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="450" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3_sub" value="Recording version lineage, tracking supersession chains, and cross-version compatibility" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="50" width="600" height="20" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="t3_boundary" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=20;dashed=1;dashPattern=8 4;" vertex="1" parent="1">
+          <mxGeometry x="320" y="80" width="440" height="440" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3_blabel" value="Babbage" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=13;fontStyle=1;fontColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="330" y="85" width="120" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Actors -->
+        <mxCell id="t3_a_eng" value="Engineer" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="100" y="200" width="30" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3_a_linnaeus" value="Linnaeus&lt;br&gt;Traceability" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="880" y="200" width="30" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3_a_hedy" value="Hedy&lt;br&gt;Release Eval" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="880" y="380" width="30" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Use cases -->
+        <mxCell id="t3_uc1" value="Record Version&lt;br&gt;Lineage" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="380" y="120" width="180" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3_uc2" value="Track Explicit&lt;br&gt;Supersession" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="380" y="240" width="180" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3_uc3" value="Record Cross-Version&lt;br&gt;Compatibility" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="380" y="360" width="180" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Actor-to-UC edges -->
+        <mxCell id="t3_e1" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="t3_a_eng" target="t3_uc2" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3_e2" style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" source="t3_uc1" target="t3_a_linnaeus" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3_e3" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="t3_uc3" target="t3_a_hedy" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Include -->
+        <mxCell id="t3_i1" value="&amp;laquo;include&amp;raquo;" style="endArrow=open;endSize=10;dashed=1;html=1;strokeColor=#999999;fontSize=10;fontColor=#999999;" edge="1" source="t3_uc2" target="t3_uc1" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="page-lookup" name="4 — Lookup &amp; Output">
+    <mxGraphModel dx="1200" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <mxCell id="t4_title" value="Babbage — Lookup &amp; Output" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="400" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_sub" value="Querying mappings by build or version, emitting events, and serving downstream agents" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="50" width="600" height="20" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="t4_boundary" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=20;dashed=1;dashPattern=8 4;" vertex="1" parent="1">
+          <mxGeometry x="280" y="80" width="380" height="440" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_blabel" value="Babbage" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=13;fontStyle=1;fontColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="290" y="85" width="120" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Actors: left side -->
+        <mxCell id="t4_a_eng" value="Engineer" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="80" y="200" width="30" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Actors: right side -->
+        <mxCell id="t4_a_linnaeus" value="Linnaeus&lt;br&gt;Traceability" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="830" y="120" width="30" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_a_hedy" value="Hedy&lt;br&gt;Release Eval" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="830" y="260" width="30" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_a_eventbus" value="Event Bus" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="830" y="400" width="30" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Use cases -->
+        <mxCell id="t4_uc1" value="Forward Lookup&lt;br&gt;(Build → Version)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="350" y="110" width="180" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_uc2" value="Reverse Lookup&lt;br&gt;(Version → Build)" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="350" y="220" width="180" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_uc3" value="Emit version.mapped&lt;br&gt;Events" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="350" y="330" width="180" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_uc4" value="Provide Mappings to&lt;br&gt;Linnaeus &amp; Hedy" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="350" y="440" width="180" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Actor-to-UC edges -->
+        <mxCell id="t4_e1" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="t4_a_eng" target="t4_uc1" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_e2" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="t4_a_eng" target="t4_uc2" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_e3" style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" source="t4_uc4" target="t4_a_linnaeus" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_e4" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="t4_uc4" target="t4_a_hedy" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_e5" style="endArrow=none;html=1;strokeColor=#6c8ebf;" edge="1" source="t4_uc3" target="t4_a_eventbus" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Triggers -->
+        <mxCell id="t4_i1" value="&amp;laquo;triggers&amp;raquo;" style="endArrow=open;endSize=10;dashed=1;html=1;strokeColor=#999999;fontSize=10;fontColor=#999999;" edge="1" source="t4_uc3" target="t4_uc4" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

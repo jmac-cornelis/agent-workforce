@@ -1,0 +1,233 @@
+<mxfile host="app.diagrams.net" modified="2026-03-16T12:00:00.000Z" agent="Codex" version="24.7.17" type="device">
+  <diagram id="seq-cmd-flow" name="Standard Command Flow">
+    <mxGraphModel dx="1400" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="t1" value="Shannon — Standard Command Flow" style="text;html=1;fontSize=18;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="20" y="10" width="450" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="Engineer sends /stats in #agent-josephine; Shannon routes to Josephine API and posts Adaptive Card" style="text;html=1;fontSize=11;fontColor=#666666;align=left;" vertex="1" parent="1">
+          <mxGeometry x="20" y="38" width="700" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Lifelines -->
+        <mxCell id="a1" value="User" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="40" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="a2" value="Microsoft&#xa;Teams" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="200" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="a3" value="Shannon&#xa;Webhook" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="360" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="a4" value="Command&#xa;Router" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="520" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="a5" value="Agent&#xa;Registry" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="680" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="a6" value="Agent&#xa;API" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="840" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="a7" value="Card&#xa;Renderer" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+        <mxCell id="a8" value="PostgreSQL" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="1160" y="80" width="100" height="560" as="geometry"/>
+        </mxCell>
+
+        <!-- Messages -->
+        <!-- 1. User → Teams: "/stats" in #agent-josephine -->
+        <mxCell id="m1" value="/stats in #agent-josephine" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="90" y="160" as="sourcePoint"/>
+            <mxPoint x="250" y="160" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 2. Teams → Shannon Webhook: message received -->
+        <mxCell id="m2" value="message received (webhook)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="250" y="200" as="sourcePoint"/>
+            <mxPoint x="410" y="200" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 3. Shannon Webhook → Command Router: parse command -->
+        <mxCell id="m3" value="parse command" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="410" y="240" as="sourcePoint"/>
+            <mxPoint x="570" y="240" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 4. Command Router → Agent Registry: lookup channel → agent -->
+        <mxCell id="m4" value="lookup channel → agent" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="570" y="280" as="sourcePoint"/>
+            <mxPoint x="730" y="280" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 5. Agent Registry → Command Router: agent=josephine, url=http://... -->
+        <mxCell id="m5" value="agent=josephine, url=http://..." style="html=1;verticalAlign=bottom;endArrow=block;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="730" y="320" as="sourcePoint"/>
+            <mxPoint x="570" y="320" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 6. Command Router → Agent API: GET /v1/status/stats -->
+        <mxCell id="m6" value="GET /v1/status/stats" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="570" y="360" as="sourcePoint"/>
+            <mxPoint x="890" y="360" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 7. Agent API → Command Router: stats JSON -->
+        <mxCell id="m7" value="stats JSON" style="html=1;verticalAlign=bottom;endArrow=block;dashed=1;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="890" y="400" as="sourcePoint"/>
+            <mxPoint x="570" y="400" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 8. Command Router → Card Renderer: format stats card -->
+        <mxCell id="m8" value="format stats card" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="570" y="440" as="sourcePoint"/>
+            <mxPoint x="1050" y="440" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 9. Card Renderer → Teams: post Adaptive Card -->
+        <mxCell id="m9" value="post Adaptive Card" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1050" y="480" as="sourcePoint"/>
+            <mxPoint x="250" y="480" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 10. Shannon → PostgreSQL: log interaction -->
+        <mxCell id="m10" value="log interaction" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="570" y="520" as="sourcePoint"/>
+            <mxPoint x="1210" y="520" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="seq-approval" name="Approval Flow">
+    <mxGraphModel dx="1400" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="t1" value="Shannon — Approval Flow" style="text;html=1;fontSize=18;fontStyle=1;align=left;" vertex="1" parent="1">
+          <mxGeometry x="20" y="10" width="400" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2" value="Hedy requests release approval; Shannon posts Adaptive Card; approver responds; Shannon records and forwards" style="text;html=1;fontSize=11;fontColor=#666666;align=left;" vertex="1" parent="1">
+          <mxGeometry x="20" y="38" width="700" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- Lifelines -->
+        <mxCell id="a1" value="Hedy&#xa;API" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="80" y="80" width="100" height="580" as="geometry"/>
+        </mxCell>
+        <mxCell id="a2" value="Shannon&#xa;Bot API" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="320" y="80" width="100" height="580" as="geometry"/>
+        </mxCell>
+        <mxCell id="a3" value="PostgreSQL" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="560" y="80" width="100" height="580" as="geometry"/>
+        </mxCell>
+        <mxCell id="a4" value="Microsoft&#xa;Teams" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="800" y="80" width="100" height="580" as="geometry"/>
+        </mxCell>
+        <mxCell id="a5" value="Release&#xa;Approver" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="1040" y="80" width="100" height="580" as="geometry"/>
+        </mxCell>
+
+        <!-- Messages -->
+        <!-- 1. Hedy → Shannon Bot API: POST /v1/bot/request-approval -->
+        <mxCell id="m1" value="POST /v1/bot/request-approval" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="130" y="160" as="sourcePoint"/>
+            <mxPoint x="370" y="160" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 2. Shannon → PostgreSQL: create approval record (pending) -->
+        <mxCell id="m2" value="create approval record (pending)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="370" y="200" as="sourcePoint"/>
+            <mxPoint x="610" y="200" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 3. Shannon → Teams: post Approval Card (approve/reject buttons) -->
+        <mxCell id="m3" value="post Approval Card (approve/reject)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="370" y="240" as="sourcePoint"/>
+            <mxPoint x="850" y="240" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 4. Release Approver → Teams: clicks "Approve" -->
+        <mxCell id="m4" value="clicks &quot;Approve&quot;" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="1090" y="300" as="sourcePoint"/>
+            <mxPoint x="850" y="300" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 5. Teams → Shannon Webhook: card action received -->
+        <mxCell id="m5" value="card action received" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="850" y="340" as="sourcePoint"/>
+            <mxPoint x="370" y="340" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 6. Shannon → PostgreSQL: update approval (approved, user_id) -->
+        <mxCell id="m6" value="update approval (approved, user_id)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="370" y="380" as="sourcePoint"/>
+            <mxPoint x="610" y="380" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 7. Shannon → Hedy API: POST /v1/approvals/{id}/respond -->
+        <mxCell id="m7" value="POST /v1/approvals/{id}/respond" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="370" y="420" as="sourcePoint"/>
+            <mxPoint x="130" y="420" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 8. Shannon → Teams: post confirmation (threaded) -->
+        <mxCell id="m8" value="post confirmation (threaded)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="370" y="460" as="sourcePoint"/>
+            <mxPoint x="850" y="460" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 9. Note: alt path — timeout after 4h → re-post with @mention -->
+        <mxCell id="n1" value="alt: timeout after 4h →&#xa;re-post with @mention escalation" style="shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;size=15;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;align=left;spacingLeft=5;" vertex="1" parent="1">
+          <mxGeometry x="400" y="510" width="230" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="n1_link" style="endArrow=none;dashed=1;html=1;strokeColor=#d6b656;" edge="1" source="n1" target="a2" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
