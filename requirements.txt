@@ -19,6 +19,8 @@ Pillow>=10.0.0                 # Image processing
 
 # Data handling
 pyyaml>=6.0                    # YAML file support
+fastapi>=0.115.0               # Shannon Teams bot service API
+uvicorn>=0.30.0                # Shannon Teams bot service runner
 
 # MCP server
 mcp>=1.0.0                     # Model Context Protocol server SDK

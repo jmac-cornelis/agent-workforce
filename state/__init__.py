@@ -15,6 +15,7 @@ from state.drucker_report_store import DruckerReportStore
 from state.gantt_dependency_review_store import GanttDependencyReviewStore
 from state.gantt_snapshot_store import GanttSnapshotStore
 from state.hypatia_record_store import HypatiaRecordStore
+from state.shannon_state_store import ShannonStateStore
 
 __all__ = [
     'SessionState',
@@ -26,4 +27,5 @@ __all__ = [
     'GanttDependencyReviewStore',
     'GanttSnapshotStore',
     'HypatiaRecordStore',
+    'ShannonStateStore',
 ]

@@ -98,6 +98,18 @@ def test_import_hypatia_agent_class():
     assert HypatiaDocumentationAgent is not None
 
 
+def test_import_shannon_service_package():
+    import shannon
+
+    assert shannon is not None
+
+
+def test_import_shannon_state_store():
+    from state.shannon_state_store import ShannonStateStore
+
+    assert ShannonStateStore is not None
+
+
 def test_import_gantt_components():
     from agents.gantt_components import (
         BacklogInterpreter,

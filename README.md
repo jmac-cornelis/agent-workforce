@@ -233,6 +233,37 @@ python3 pm_agent.py --env .env_sandbox --workflow feature-plan --project STLSB -
 
 ---
 
+## Shannon Teams Bot
+
+This repo now includes the first Shannon service slice for Microsoft Teams. It is
+designed around the lowest-permission bot model: a single bot installed at
+**team scope** that listens in `#agent-shannon` when users `@mention` it.
+
+What the first slice provides:
+
+- Teams webhook endpoint: `POST /api/messages`
+- Internal notification API: `POST /v1/bot/notify`
+- Shannon self-service commands in `#agent-shannon`:
+  ` /stats`, ` /busy`, ` /work-today`, ` /token-status`, ` /decision-tree`,
+  and ` /why <record-id>`
+- Durable conversation-reference and audit-log storage under `data/shannon/`
+
+Run it locally:
+
+```bash
+.venv/bin/python -m uvicorn shannon.app:app --host 0.0.0.0 --port 8200
+```
+
+Setup guide:
+[docs/shannon-teams-setup.md](docs/shannon-teams-setup.md)
+
+Registry and manifest templates:
+
+- [config/shannon/agent_registry.yaml](config/shannon/agent_registry.yaml)
+- [config/shannon/teams-app-manifest.template.json](config/shannon/teams-app-manifest.template.json)
+
+---
+
 ## Agentic Workflows
 
 Agentic workflows are multi-phase AI pipelines orchestrated by [`pm_agent.py`](pm_agent.py). They require an LLM and use specialized agents to research, analyze, scope, and plan.

@@ -1,0 +1,37 @@
+agents:
+  - agent_id: shannon
+    display_name: Shannon
+    role: Communications
+    description: Single Teams bot and routing surface for the Cornelis agent workforce.
+    zone: service_infrastructure
+    channel_name: agent-shannon
+    channel_id: ""
+    team_id: ""
+    api_base_url: ""
+    approval_types: []
+    custom_commands:
+      - command: /stats
+        description: Shannon service status and throughput
+        api_method: GET
+        api_path: /v1/status/stats
+      - command: /busy
+        description: Current Shannon load summary
+        api_method: GET
+        api_path: /v1/status/load
+      - command: /work-today
+        description: Today’s work summary for Shannon
+        api_method: GET
+        api_path: /v1/status/work-summary
+      - command: /token-status
+        description: Deterministic/token execution summary
+        api_method: GET
+        api_path: /v1/status/tokens
+      - command: /decision-tree
+        description: Recent routing and posting decisions
+        api_method: GET
+        api_path: /v1/status/decisions
+      - command: /why
+        description: Deep dive into a specific decision
+        api_method: GET
+        api_path: /v1/status/decisions/{record_id}
+    timeout_seconds: 15
