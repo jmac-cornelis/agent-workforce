@@ -1,0 +1,33 @@
+##########################################################################################
+# Linus Code Review Agent Configuration
+# Author: Cornelis Networks
+##########################################################################################
+
+agent_id: linus
+display_name: Linus
+zone: execution_spine
+phase: 5
+description: >
+  Code Review Agent. Evaluates PRs against policy profiles (kernel,
+  embedded C++, Python) and emits structured findings and cross-agent
+  impact signals for documentation, build, and test attention.
+
+model: null
+temperature: 0.3
+max_iterations: 10
+timeout_seconds: 300
+
+events:
+  consumes:
+    - github.pr_opened
+    - github.pr_updated
+    - github.pr_review_requested
+  produces:
+    - review.completed
+    - review.policy_failed
+    - review.documentation_impact_detected
+    - review.test_attention_detected
+
+dependencies:
+  - github
+  - event_bus

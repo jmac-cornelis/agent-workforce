@@ -1,0 +1,29 @@
+agent_id: nightingale
+agent_name: Nightingale Bug Investigation
+zone: intelligence
+phase: 5
+
+description: >
+  Reacts to Jira bugs, assembles build/test/release context, drives targeted
+  reproduction, and produces investigation summaries.
+
+llm:
+  temperature: 0.3
+  max_tokens: 8192
+  max_iterations: 15
+
+events:
+  emits:
+    - bug.investigation_started
+    - bug.missing_data_detected
+    - bug.reproduction_requested
+    - bug.reproduced
+    - bug.investigation_summarized
+  consumes:
+    - jira.bug_created
+    - jira.bug_updated
+    - jira.bug_reopened
+
+api:
+  prefix: /v1/bugs
+  port: 8213

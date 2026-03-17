@@ -1,0 +1,32 @@
+##########################################################################################
+# Ada Test Planner Agent Configuration
+# Author: Cornelis Networks
+##########################################################################################
+
+agent_id: ada
+display_name: Ada
+zone: execution_spine
+phase: 2
+description: >
+  Test Planner Agent. Determines what to test based on trigger class
+  (PR, merge, nightly, release), coverage targets, and environment
+  constraints. Produces durable TestPlan records for downstream agents.
+
+model: null
+temperature: 0.3
+max_iterations: 12
+timeout_seconds: 300
+
+events:
+  consumes:
+    - build.completed
+    - test.execution_completed
+  produces:
+    - test.plan_selected
+    - test.coverage_gap_detected
+    - test.plan_invalidated
+
+dependencies:
+  - josephine
+  - event_bus
+  - metadata_store

@@ -1,0 +1,30 @@
+##########################################################################################
+# Curie Test Generator Agent Configuration
+# Author: Cornelis Networks
+##########################################################################################
+
+agent_id: curie
+display_name: Curie
+zone: execution_spine
+phase: 2
+description: >
+  Test Generator Agent. Materializes Ada's TestPlan into concrete Fuze Test
+  runtime inputs — explicit suite lists, runtime overlays, and DUT filters —
+  that Faraday can execute reproducibly.
+
+model: null
+temperature: 0.3
+max_iterations: 10
+timeout_seconds: 300
+
+events:
+  consumes:
+    - test.plan_selected
+  produces:
+    - test.input_generated
+    - test.input_generation_failed
+
+dependencies:
+  - ada
+  - artifact_store
+  - event_bus

@@ -1,0 +1,33 @@
+##########################################################################################
+# Tesla Environment Manager Agent Configuration
+# Author: Cornelis Networks
+##########################################################################################
+
+agent_id: tesla
+display_name: Tesla
+zone: execution_spine
+phase: 2
+description: >
+  Environment Manager Agent. Manages lab and mock-environment reservations
+  for the test agents, preventing conflicting use of scarce DUT or lab
+  partitions. Exposes health, capability, and utilization data.
+
+model: null
+temperature: 0.2
+max_iterations: 10
+timeout_seconds: 300
+
+events:
+  consumes:
+    - reservation.requested
+  produces:
+    - reservation.granted
+    - reservation.rejected
+    - reservation.expired
+    - reservation.released
+    - environment.status_changed
+    - environment.quarantined
+
+dependencies:
+  - atf_resource_files
+  - event_bus

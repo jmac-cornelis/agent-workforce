@@ -1,0 +1,56 @@
+agent_id: shannon
+agent_name: Shannon Communications
+zone: service_infrastructure
+phase: 0
+
+description: >
+  Single Teams bot serving all agent channels. Routes commands, manages
+  approvals, posts notifications, and logs all human-agent interactions.
+
+llm:
+  temperature: 0.1
+  max_tokens: 2048
+  max_iterations: 10
+
+events:
+  emits:
+    - approval.completed
+    - approval.timeout
+    - approval.escalated
+    - message.routed
+    - message.failed
+    - input.received
+  consumes:
+    - approval.requested
+    - input.requested
+
+api:
+  prefix: /v1/bot
+  port: 8200
+
+# Microsoft Teams channel registry
+# Populate team_id and channel_id from Azure portal or via CLI discovery
+teams:
+  default_team_id: ''
+  default_team_name: 'Cornelis Agent Workforce'
+
+channels:
+  drucker:
+    channel_id: ''
+    display_name: '#agent-drucker'
+    enabled: true
+
+  gantt:
+    channel_id: ''
+    display_name: '#agent-gantt'
+    enabled: true
+
+  hypatia:
+    channel_id: ''
+    display_name: '#agent-hypatia'
+    enabled: true
+
+  shannon:
+    channel_id: ''
+    display_name: '#agent-shannon'
+    enabled: true

@@ -1,0 +1,33 @@
+##########################################################################################
+# Josephine Build & Package Agent Configuration
+# Author: Cornelis Networks
+##########################################################################################
+
+agent_id: josephine
+display_name: Josephine
+zone: execution_spine
+phase: 1
+description: >
+  Build & Package Agent. Accepts build jobs through an API, executes them
+  on dedicated workers using the extracted fuze core, and publishes packages,
+  logs, and provenance in a Fuze-compatible format.
+
+model: null
+temperature: 0.3
+max_iterations: 15
+timeout_seconds: 600
+
+events:
+  consumes:
+    - build.requested
+    - build.retry_requested
+  produces:
+    - build.completed
+    - build.failed
+    - build.cancelled
+
+dependencies:
+  - fuze_core
+  - artifact_store
+  - metadata_store
+  - event_bus

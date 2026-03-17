@@ -1,0 +1,27 @@
+agent_id: herodotus
+agent_name: Herodotus Knowledge Capture
+zone: intelligence
+phase: 4
+
+description: >
+  Ingests Teams meeting transcripts and produces structured summaries,
+  decisions, and action items.
+
+llm:
+  temperature: 0.5
+  max_tokens: 8192
+  max_iterations: 10
+
+events:
+  emits:
+    - meeting.transcript_ingested
+    - meeting.summary_created
+    - meeting.action_items_extracted
+    - meeting.publication_requested
+    - meeting.publication_completed
+  consumes:
+    - teams.transcript_ready
+
+api:
+  prefix: /v1/meetings
+  port: 8212

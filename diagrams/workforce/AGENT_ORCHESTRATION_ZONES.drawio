@@ -1,0 +1,232 @@
+<mxfile host="app.diagrams.net" modified="2026-03-14T18:00:00.000Z" agent="Codex" version="24.7.17" type="device">
+  <diagram id="agent-zones" name="Agent Zones">
+    <mxGraphModel dx="1800" dy="1100" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1800" pageHeight="700" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title" value="Agent Workforce — Zone Map" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=24;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="500" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitle" value="Where each agent and system lives — no interaction lines" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=13;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="52" width="500" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- ZONE BACKGROUNDS (swim lanes)                  -->
+        <!-- ═══════════════════════════════════════════════ -->
+
+        <!-- External Systems zone background -->
+        <mxCell id="zone_ext" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="30" y="80" width="270" height="580" as="geometry"/>
+        </mxCell>
+        <!-- Execution Spine zone background -->
+        <mxCell id="zone_exec" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="320" y="80" width="310" height="580" as="geometry"/>
+        </mxCell>
+        <!-- Intelligence & Knowledge zone background -->
+        <mxCell id="zone_intel" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="650" y="80" width="420" height="580" as="geometry"/>
+        </mxCell>
+        <!-- Planning & Delivery zone background -->
+        <mxCell id="zone_pm" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="80" width="220" height="580" as="geometry"/>
+        </mxCell>
+        <!-- Humans zone background -->
+        <mxCell id="zone_human" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="1330" y="80" width="220" height="580" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- ZONE HEADERS                                   -->
+        <!-- ═══════════════════════════════════════════════ -->
+
+        <mxCell id="ext_header" value="External Systems" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="30" y="80" width="270" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="exec_header" value="Execution Spine" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="320" y="80" width="310" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="intel_header" value="Intelligence &amp; Knowledge" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="650" y="80" width="420" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm_header" value="Planning &amp; Delivery" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="80" width="220" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="human_header" value="Humans" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1330" y="80" width="220" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- EXTERNAL SYSTEMS                               -->
+        <!-- ═══════════════════════════════════════════════ -->
+
+        <mxCell id="gh" value="GitHub" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="150" width="110" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="jira" value="Jira" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="175" y="150" width="110" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="teams" value="Microsoft&lt;br&gt;Teams" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="230" width="110" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="fuze" value="Fuze Config&lt;br&gt;/ Build Maps" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="175" y="230" width="110" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="atf" value="Fuze Test&lt;br&gt;/ ATF" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="315" width="110" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="lab" value="HW / Mock&lt;br&gt;Environments" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="175" y="315" width="110" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="docs_target" value="Docs Publish&lt;br&gt;Target" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="400" width="110" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="kb" value="Knowledge&lt;br&gt;Store" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="175" y="400" width="110" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="artifact_store" value="Artifact&lt;br&gt;Store" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="485" width="110" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="event_bus" value="Event Bus" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="175" y="485" width="110" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- EXECUTION SPINE AGENTS                         -->
+        <!-- ═══════════════════════════════════════════════ -->
+
+        <mxCell id="josephine" value="&lt;b&gt;Josephine&lt;/b&gt;&lt;br&gt;Build &amp; Package" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="340" y="150" width="130" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="linus" value="&lt;b&gt;Linus&lt;/b&gt;&lt;br&gt;Code Review" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="485" y="150" width="130" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="hedy" value="&lt;b&gt;Hedy&lt;/b&gt;&lt;br&gt;Release Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="340" y="235" width="130" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="ada" value="&lt;b&gt;Ada&lt;/b&gt;&lt;br&gt;Test Planner" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="485" y="235" width="130" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="curie" value="&lt;b&gt;Curie&lt;/b&gt;&lt;br&gt;Test Generator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="340" y="320" width="130" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="faraday" value="&lt;b&gt;Faraday&lt;/b&gt;&lt;br&gt;Test Executor" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="485" y="320" width="130" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="tesla" value="&lt;b&gt;Tesla&lt;/b&gt;&lt;br&gt;Environment Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="400" y="410" width="145" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- INTELLIGENCE & KNOWLEDGE AGENTS                -->
+        <!-- ═══════════════════════════════════════════════ -->
+
+        <mxCell id="nightingale" value="&lt;b&gt;Nightingale&lt;/b&gt;&lt;br&gt;Bug Investigation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="670" y="150" width="130" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="drucker" value="&lt;b&gt;Drucker&lt;/b&gt;&lt;br&gt;Jira Coordinator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="815" y="150" width="130" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="linnaeus" value="&lt;b&gt;Linnaeus&lt;/b&gt;&lt;br&gt;Traceability" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="670" y="235" width="130" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="babbage" value="&lt;b&gt;Babbage&lt;/b&gt;&lt;br&gt;Version Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="815" y="235" width="130" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="herodotus" value="&lt;b&gt;Herodotus&lt;/b&gt;&lt;br&gt;Knowledge Capture" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="670" y="320" width="130" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="hypatia" value="&lt;b&gt;Hypatia&lt;/b&gt;&lt;br&gt;Documentation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="815" y="320" width="130" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- PLANNING & DELIVERY AGENTS                     -->
+        <!-- ═══════════════════════════════════════════════ -->
+
+        <mxCell id="gantt" value="&lt;b&gt;Gantt&lt;/b&gt;&lt;br&gt;Project Planner" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1110" y="180" width="130" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="brooks" value="&lt;b&gt;Brooks&lt;/b&gt;&lt;br&gt;Delivery Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1110" y="280" width="130" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- HUMANS                                         -->
+        <!-- ═══════════════════════════════════════════════ -->
+
+        <mxCell id="eng" value="&lt;b&gt;Engineers /&lt;br&gt;Reviewers&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1365" y="150" width="130" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="rel" value="&lt;b&gt;Release&lt;br&gt;Approvers&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1365" y="250" width="130" height="55" as="geometry"/>
+        </mxCell>
+        <mxCell id="pm_people" value="&lt;b&gt;Project /&lt;br&gt;Delivery Leads&lt;/b&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1365" y="350" width="130" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- SERVICE INFRASTRUCTURE                         -->
+        <!-- ═══════════════════════════════════════════════ -->
+
+        <!-- Service Infrastructure zone background (between Planning and Humans) -->
+        <mxCell id="zone_svc" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;opacity=30;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="380" width="220" height="160" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_header" value="Service Infrastructure" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=14;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="380" width="220" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="shannon" value="&lt;b&gt;Shannon&lt;/b&gt;&lt;br&gt;Communications" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="1135" y="440" width="130" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- LEGEND                                         -->
+        <!-- ═══════════════════════════════════════════════ -->
+
+        <mxCell id="legend_title" value="&lt;b&gt;Legend&lt;/b&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="50" y="570" width="60" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;opacity=50;" vertex="1" parent="1">
+          <mxGeometry x="50" y="595" width="20" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg1t" value="External Systems &amp; Infrastructure" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="75" y="592" width="220" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg2" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;opacity=50;" vertex="1" parent="1">
+          <mxGeometry x="50" y="618" width="20" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg2t" value="Execution Spine — build, test, release, review" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="75" y="615" width="280" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg3" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=50;" vertex="1" parent="1">
+          <mxGeometry x="50" y="641" width="20" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg3t" value="Intelligence &amp; Knowledge — bugs, traceability, versions, docs, knowledge" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="75" y="638" width="420" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg4" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;opacity=50;" vertex="1" parent="1">
+          <mxGeometry x="550" y="595" width="20" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg4t" value="Planning &amp; Delivery — project planning, delivery tracking" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="575" y="592" width="350" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg5" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;opacity=50;" vertex="1" parent="1">
+          <mxGeometry x="550" y="618" width="20" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg5t" value="Humans — engineers, approvers, leads" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="575" y="615" width="280" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg6" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;opacity=50;" vertex="1" parent="1">
+          <mxGeometry x="550" y="641" width="20" height="15" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg6t" value="Service Infrastructure — communications, routing" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="575" y="638" width="350" height="20" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
