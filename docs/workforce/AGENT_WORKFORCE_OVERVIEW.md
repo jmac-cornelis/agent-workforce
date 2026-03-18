@@ -11,7 +11,7 @@ This document does not address the details of human responsibilities, other than
 
 **Coordinated software engineering, testing, release, bug investigation, knowledge capture, and planning agents for the Cornelis Networks development organization.**
 
-The AI Agent Workforce is a system of 16 specialized agents that automate and coordinate the full software development lifecycle at Cornelis Networks. Each agent owns a distinct responsibility — from build orchestration and test generation to release management and project planning — and communicates through well-defined interfaces to deliver reliable, traceable, and auditable engineering outcomes.
+The AI Agent Workforce is a system of 17 specialized agents that automate and coordinate the full software development lifecycle at Cornelis Networks. Each agent owns a distinct responsibility — from build orchestration and test generation to release management and project planning — and communicates through well-defined interfaces to deliver reliable, traceable, and auditable engineering outcomes.
 
 Agents are organized into three operational zones: the **Execution Spine** handles build, test, and release workflows; **Intelligence & Knowledge** manages versioning, traceability, documentation, and bug investigation; and **Planning & Delivery** coordinates project schedules and delivery milestones.
 
@@ -21,8 +21,8 @@ Agents are organized into three operational zones: the **Execution Spine** handl
 
 | Metric | Value |
 |--------|-------|
-| Agents | 16 |
-| Zones | 5 |
+| Agents | 17 |
+| Zones | 6 |
 
 ---
 
@@ -62,7 +62,8 @@ Event Bus
 **Ada** — Test Planner<br>
 **Curie** — Test Generator<br>
 **Faraday** — Test Executor<br>
-**Tesla** — Environment Manager
+**Tesla** — Environment Manager<br>
+**Brandeis** — Legal Compliance
 
 </td>
 <td valign="top">
@@ -113,6 +114,7 @@ These agents form the core build-test-release pipeline.
 | **[Tesla](../agents/TESLA_TEST_ENVIRONMENT_MANAGER_PLAN.md)** | Environment Mgmt | Shared reservation service for HIL and mock environments with capability matching and health monitoring. |
 | **[Hedy](../agents/HEDY_RELEASE_MANAGER_PLAN.md)** | Release Mgmt | Orchestrates release decisions using the Fuze release model with stage promotion (sit, qa, release) and human approval gates. |
 | **[Linus](../agents/LINUS_CODE_REVIEW_AGENT_PLAN.md)** | Code Review | Evaluates PRs against policy profiles (kernel, embedded C++, Python) and emits cross-agent impact signals. |
+| **[Brandeis](../agents/BRANDEIS_COMPLIANCE_AGENT_PLAN.md)** | Legal Compliance & Code Scanning | Scans dependencies for license compliance, flags policy violations on PRs, and manages license exception workflows. Named after Louis Brandeis, champion of transparency and the right to privacy. |
 
 ### Intelligence & Knowledge
 
