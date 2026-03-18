@@ -15,9 +15,10 @@ import os
 import sys
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from shannon.outgoing_webhook import verify_hmac_signature
 from shannon.service import ShannonService
 
 # Logging config - follows jira_utils.py pattern
@@ -104,6 +105,28 @@ def create_app(service: Optional[ShannonService] = None) -> FastAPI:
     @app.post('/v1/teams/activities')
     def teams_activities(activity: Dict[str, Any]) -> Dict[str, Any]:
         return bot_messages(activity)
+
+    @app.post('/v1/teams/outgoing-webhook')
+    async def teams_outgoing_webhook(
+        request: Request,
+        authorization: Optional[str] = Header(default=None),
+    ) -> Dict[str, Any]:
+        secret = str(os.getenv('SHANNON_TEAMS_OUTGOING_WEBHOOK_SECRET') or '').strip()
+        body_bytes = await request.body()
+
+        if not verify_hmac_signature(authorization, secret, body_bytes):
+            raise HTTPException(status_code=401, detail='Invalid outgoing webhook signature')
+
+        try:
+            activity = await request.json()
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail='Invalid JSON payload') from exc
+
+        try:
+            return shannon_service.process_outgoing_webhook_activity(activity)
+        except Exception as exc:
+            log.exception('Failed to process Teams outgoing webhook activity')
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     return app
 

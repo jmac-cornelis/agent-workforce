@@ -538,6 +538,40 @@ None of substance in the current repo.
 
 Not started.
 
+#### Brandeis — Legal Compliance & Code Scanning
+
+**Workforce intent**
+
+`Brandeis` owns software composition analysis, license compliance, regulatory scanning, and legal-risk governance. Named after Louis Brandeis, the Supreme Court Justice who championed transparency and regulatory reform. Brandeis ensures that what ships is legally clean, license-compatible, and compliant with organizational and regulatory policy.
+
+**Core capabilities**
+
+- Orchestrate and interpret BlackDuck (Synopsys) scan results for open-source license compliance and known vulnerabilities
+- Maintain a current software bill of materials (SBOM) for tracked products and releases
+- Evaluate license compatibility across dependency trees and flag conflicts before release gates
+- Surface regulatory compliance gaps (export control, FIPS, FedRAMP, or sector-specific requirements)
+- Produce structured compliance reports that `Hedy` can consume as release-readiness evidence
+- Track remediation status for flagged findings via `Drucker`-coordinated Jira work
+- Detect new or changed dependencies that require legal review
+- Emit compliance signals to `Hedy` (release gating), `Linus` (code-review context), and `Linnaeus` (traceability)
+
+**Current mapping in `jira-utilities`**
+
+None. No scanning, SBOM, or license-compliance tooling exists in the current repo.
+
+**Maturity**
+
+Not started.
+
+**Main gaps**
+
+- no BlackDuck / Synopsys integration
+- no SBOM generation or storage
+- no license-compatibility evaluation engine
+- no regulatory-policy rule model
+- no compliance evidence format for release gating
+- no remediation tracking workflow
+
 ## Direct Mapping from Current `jira-utilities` Agents
 
 This is the inverse view: starting from the agents that already exist here and showing where they land in `agent_workforce`.
@@ -588,6 +622,7 @@ This repo should not yet claim:
 - release readiness control-plane automation
 - bug reproduction automation
 - Teams transcript knowledge capture
+- software composition analysis, license compliance, or regulatory scanning (`Brandeis`)
 
 ## Suggested Next Steps
 
@@ -600,7 +635,9 @@ If the goal is to converge this repo toward the workforce model, the most sensib
    doc-impact detection, stronger validation, and richer documentation classes.
 4. Standardize service interfaces around these agents:
    request model, response model, audit metadata, and approval hooks.
-5. Leave execution-spine agents for a separate phase, since they depend on systems this repo does not currently model.
+5. Stand up `Brandeis` as the compliance gate:
+   BlackDuck integration, SBOM generation, license-compatibility checks, and compliance evidence that `Hedy` can consume for release gating.
+6. Leave execution-spine agents for a separate phase, since they depend on systems this repo does not currently model.
 
 ## Bottom Line
 

@@ -235,12 +235,15 @@ python3 pm_agent.py --env .env_sandbox --workflow feature-plan --project STLSB -
 
 ## Shannon Teams Bot
 
-This repo now includes the first Shannon service slice for Microsoft Teams. It is
-designed around the lowest-permission bot model: a single bot installed at
-**team scope** that listens in `#agent-shannon` when users `@mention` it.
+This repo now includes the first Shannon service slice for Microsoft Teams. It
+supports two transport models:
+
+- Teams Outgoing Webhook for the zero-subscription path
+- Bot-style `/api/messages` plumbing for future fuller integrations
 
 What the first slice provides:
 
+- Teams Outgoing Webhook endpoint: `POST /v1/teams/outgoing-webhook`
 - Teams webhook endpoint: `POST /api/messages`
 - Internal notification API: `POST /v1/bot/notify`
 - Shannon self-service commands in `#agent-shannon`:

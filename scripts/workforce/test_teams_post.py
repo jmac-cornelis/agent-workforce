@@ -10,7 +10,6 @@ import os
 import sys
 from pathlib import Path
 
-import msal
 import requests
 from dotenv import load_dotenv
 
@@ -30,6 +29,13 @@ SCOPES = ["https://graph.microsoft.com/.default"]
 
 def get_access_token() -> str:
     """Acquire an app-only access token via MSAL client credentials flow."""
+    try:
+        import msal
+    except ImportError as exc:
+        print("ERROR: msal is required to use this helper script.")
+        print("Install it with: pip install msal")
+        raise SystemExit(1) from exc
+
     app = msal.ConfidentialClientApplication(
         CLIENT_ID,
         authority=f"https://login.microsoftonline.com/{TENANT_ID}",

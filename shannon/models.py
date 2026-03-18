@@ -175,6 +175,18 @@ class ShannonResponse:
             }]
         return activity
 
+    def to_outgoing_webhook_response(self) -> Dict[str, Any]:
+        '''
+        Convert to the response shape expected by Teams Outgoing Webhooks.
+        '''
+        response = self.to_message_activity()
+        if 'attachments' in response:
+            for attachment in response['attachments']:
+                attachment.setdefault('contentUrl', None)
+                attachment.setdefault('name', None)
+                attachment.setdefault('thumbnailUrl', None)
+        return response
+
 
 MENTION_RE = re.compile(r'<at>.*?</at>', re.IGNORECASE | re.DOTALL)
 TAG_RE = re.compile(r'<[^>]+>')

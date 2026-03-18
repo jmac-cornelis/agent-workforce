@@ -1,6 +1,12 @@
+import base64
+import hashlib
+import hmac
+import json
+
 from fastapi.testclient import TestClient
 
 from shannon.app import create_app
+from shannon.outgoing_webhook import extract_hmac_signature
 from shannon.poster import MemoryPoster
 from shannon.registry import ShannonAgentRegistry
 from shannon.service import ShannonService
@@ -127,3 +133,64 @@ def test_notify_endpoint_requires_stored_reference(tmp_path):
 
     assert response.status_code == 400
     assert 'No stored conversation reference' in response.json()['detail']
+
+
+def test_outgoing_webhook_signature_helpers():
+    body = b'{"type":"message"}'
+    secret = base64.b64encode(b'shannon-secret').decode('utf-8')
+    digest = hmac.new(
+        base64.b64decode(secret),
+        body,
+        hashlib.sha256,
+    ).digest()
+    provided = base64.b64encode(digest).decode('utf-8')
+
+    assert extract_hmac_signature(f'HMAC {provided}') == provided
+
+
+def test_outgoing_webhook_endpoint_validates_hmac_and_returns_sync_reply(tmp_path, monkeypatch):
+    secret = base64.b64encode(b'shannon-secret').decode('utf-8')
+    monkeypatch.setenv('SHANNON_TEAMS_OUTGOING_WEBHOOK_SECRET', secret)
+
+    service, _poster = _service(tmp_path)
+    client = TestClient(create_app(service))
+
+    payload = _message_activity('<at>Shannon</at> /stats')
+    body = json.dumps(payload).encode('utf-8')
+    digest = hmac.new(
+        base64.b64decode(secret),
+        body,
+        hashlib.sha256,
+    ).digest()
+    signature = base64.b64encode(digest).decode('utf-8')
+
+    response = client.post(
+        '/v1/teams/outgoing-webhook',
+        content=body,
+        headers={
+            'Content-Type': 'application/json',
+            'Authorization': f'HMAC {signature}',
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()['type'] == 'message'
+    assert 'Shannon is online.' in response.json()['text']
+
+
+def test_outgoing_webhook_endpoint_rejects_bad_signature(tmp_path, monkeypatch):
+    monkeypatch.setenv(
+        'SHANNON_TEAMS_OUTGOING_WEBHOOK_SECRET',
+        base64.b64encode(b'shannon-secret').decode('utf-8'),
+    )
+
+    service, _poster = _service(tmp_path)
+    client = TestClient(create_app(service))
+
+    response = client.post(
+        '/v1/teams/outgoing-webhook',
+        json=_message_activity('<at>Shannon</at> /stats'),
+        headers={'Authorization': 'HMAC invalid'},
+    )
+
+    assert response.status_code == 401

@@ -363,6 +363,35 @@ class ShannonService:
             decision='agent_bridge_not_implemented',
         )
 
+    def _resolve_activity_agent(self, activity: Dict[str, Any]) -> str:
+        channel_data = activity.get('channelData') or {}
+        channel = channel_data.get('channel') or {}
+        team = channel_data.get('team') or {}
+        registration = self.registry.resolve_channel(
+            channel_id=str(channel.get('id') or '').strip(),
+            team_id=str(team.get('id') or '').strip(),
+            channel_name=str(channel.get('name') or '').strip(),
+        ) or self.registry.get_agent('shannon')
+        return registration.agent_id if registration else 'shannon'
+
+    def _build_command_response(
+        self,
+        activity: Dict[str, Any],
+    ) -> tuple[ConversationReference, ShannonResponse]:
+        agent_id = self._resolve_activity_agent(activity)
+        reference = ConversationReference.from_activity(activity, agent_id=agent_id)
+        raw_text = str(activity.get('text') or '').strip()
+        command_text = normalize_command_text(raw_text)
+        if not command_text:
+            command_text = '/help'
+
+        if agent_id == 'shannon':
+            response = self._handle_shannon_command(command_text)
+        else:
+            response = self._handle_registered_agent_command(agent_id, command_text)
+
+        return reference, response
+
     def _post_response(
         self,
         reference: ConversationReference,
@@ -380,16 +409,7 @@ class ShannonService:
         Process a Teams activity and return a structured result for the webhook.
         '''
         raw_type = str(activity.get('type') or '').strip()
-        channel_data = activity.get('channelData') or {}
-        channel_name = str((channel_data.get('channel') or {}).get('name') or '').strip()
-
-        registration = self.registry.resolve_channel(
-            channel_id=str((channel_data.get('channel') or {}).get('id') or '').strip(),
-            team_id=str((channel_data.get('team') or {}).get('id') or '').strip(),
-            channel_name=channel_name,
-        ) or self.registry.get_agent('shannon')
-
-        agent_id = registration.agent_id if registration else 'shannon'
+        agent_id = self._resolve_activity_agent(activity)
         reference = ConversationReference.from_activity(activity, agent_id=agent_id)
         self.state_store.save_conversation_reference(reference)
         self._record(
@@ -441,23 +461,15 @@ class ShannonService:
                 'ignored': True,
             }
 
-        raw_text = str(activity.get('text') or '').strip()
-        command_text = normalize_command_text(raw_text)
-        if not command_text:
-            command_text = '/help'
-
-        if agent_id == 'shannon':
-            response = self._handle_shannon_command(command_text)
-        else:
-            response = self._handle_registered_agent_command(agent_id, command_text)
+        reference, response = self._build_command_response(activity)
 
         decision_record = self._record(
             'decision',
             reference=reference,
             agent_id=agent_id,
-            command=response.command or command_text.split()[0],
+            command=response.command or '/help',
             decision=response.decision,
-            details={'input': command_text},
+            details={'input': normalize_command_text(str(activity.get('text') or ''))},
         )
         post_result = self._post_response(reference, response, reply=True)
         self._record(
@@ -478,6 +490,43 @@ class ShannonService:
             'decision_id': decision_record.record_id,
             'post_result': post_result,
         }
+
+    def process_outgoing_webhook_activity(self, activity: Dict[str, Any]) -> Dict[str, Any]:
+        '''
+        Process a Teams Outgoing Webhook activity and return the synchronous
+        response body expected by Teams.
+        '''
+        raw_type = str(activity.get('type') or '').strip()
+        agent_id = self._resolve_activity_agent(activity)
+        reference = ConversationReference.from_activity(activity, agent_id=agent_id)
+        self.state_store.save_conversation_reference(reference)
+        self._record(
+            'activity_received',
+            reference=reference,
+            agent_id=agent_id,
+            details={'activity_type': raw_type, 'transport': 'outgoing_webhook'},
+        )
+
+        if raw_type != 'message':
+            response = ShannonResponse(
+                text='Shannon only handles message activities through the outgoing webhook.',
+                decision='ignored_non_message_outgoing_webhook_activity',
+            )
+        else:
+            reference, response = self._build_command_response(activity)
+
+        self._record(
+            'decision',
+            reference=reference,
+            agent_id=agent_id,
+            command=response.command or '/help',
+            decision=response.decision,
+            details={
+                'input': normalize_command_text(str(activity.get('text') or '')),
+                'transport': 'outgoing_webhook',
+            },
+        )
+        return response.to_outgoing_webhook_response()
 
     def post_notification(
         self,
