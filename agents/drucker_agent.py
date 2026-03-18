@@ -28,6 +28,7 @@ from agents.drucker_models import (
 )
 from agents.review_agent import ReviewAgent, ReviewItem, ReviewSession
 from tools.jira_tools import JiraTools, get_project_info, search_tickets
+from tools.knowledge_tools import search_knowledge, list_knowledge_files, read_knowledge_file
 
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
@@ -84,6 +85,9 @@ class DruckerCoordinatorAgent(BaseAgent):
         )
 
         super().__init__(config=config, tools=[JiraTools()], **kwargs)
+        self.register_tool(search_knowledge)
+        self.register_tool(list_knowledge_files)
+        self.register_tool(read_knowledge_file)
         self.project_key = project_key
         self._review_agent: Optional[ReviewAgent] = None
 

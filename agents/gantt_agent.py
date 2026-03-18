@@ -37,6 +37,7 @@ from agents.gantt_models import (
 from core.evidence import EvidenceBundle, load_evidence_bundle
 from state.gantt_dependency_review_store import GanttDependencyReviewStore
 from tools.jira_tools import JiraTools, get_jira, get_project_info, get_releases
+from tools.knowledge_tools import search_knowledge, list_knowledge_files, read_knowledge_file
 
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
@@ -72,6 +73,11 @@ class GanttProjectPlannerAgent(BaseAgent):
         )
 
         super().__init__(config=config, tools=[JiraTools()], **kwargs)
+
+        self.register_tool(search_knowledge)
+        self.register_tool(list_knowledge_files)
+        self.register_tool(read_knowledge_file)
+
         self.project_key = project_key
         self.backlog_interpreter = BacklogInterpreter(
             jira_provider=get_jira,
