@@ -35,6 +35,24 @@ Epic (Major Feature/Initiative)
 - Written from user perspective when possible
 - Example: "As an admin, I can configure fabric topology"
 
+### Story = Branch Rule
+A Story maps 1-to-1 with a development branch in the repository.
+When planning Stories, apply this test: "Would a developer naturally
+do all of this work in a single branch and PR?" If yes, it is one Story.
+
+**Combine into a single Story when:**
+- The work touches the same files or subsystem and would land in one PR
+- Items share the same developer, component, and review cycle
+- Splitting would create trivially small Stories (< 1 day each)
+- One item is meaningless without the other (e.g., a register write
+  function and the init sequence that calls it)
+
+**Keep as separate Stories when:**
+- Different developers or teams own the work
+- Items can be merged independently without breaking anything
+- The combined scope would exceed a single sprint
+- The items target different subsystems or repos
+
 ### Task Guidelines
 - Represents implementation work
 - Should be completable in 1-3 days
@@ -95,3 +113,4 @@ SUMMARY:
 3. **Use Components** - Always assign relevant components
 4. **Consider Dependencies** - Note blocking relationships
 5. **Balance Work** - Distribute across team members fairly
+6. **Story = Branch** - Each Story should map to exactly one branch; combine small related items that a developer would naturally implement together in a single PR
