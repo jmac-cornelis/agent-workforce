@@ -1128,6 +1128,53 @@ def markdown_to_storage(
             i += 1
             continue
 
+        # --- Markdown pipe tables ---
+        # A table starts with a header row of pipe-separated cells,
+        # followed by a separator row like |---|---|---|
+        table_header = re.match(r'^\|(.+)\|$', stripped)
+        if table_header and i + 1 < len(lines):
+            next_stripped = lines[i + 1].strip()
+            separator = re.match(r'^\|[-:\s|]+\|$', next_stripped)
+            if separator:
+                _flush_paragraph()
+                # Parse header cells
+                header_cells = [
+                    c.strip()
+                    for c in table_header.group(1).split('|')
+                ]
+                header_html = ''.join(
+                    f'<th><p>{_inline_markdown_to_storage(c, extra_fragments)}</p></th>'
+                    for c in header_cells
+                )
+                rows_html = [f'<tr>{header_html}</tr>']
+                i += 2  # skip header and separator
+                # Parse data rows
+                while i < len(lines):
+                    row_stripped = lines[i].strip()
+                    row_match = re.match(r'^\|(.+)\|$', row_stripped)
+                    if not row_match:
+                        break
+                    # Skip if it looks like another separator row
+                    if re.match(r'^\|[-:\s|]+\|$', row_stripped):
+                        i += 1
+                        continue
+                    cells = [
+                        c.strip()
+                        for c in row_match.group(1).split('|')
+                    ]
+                    cells_html = ''.join(
+                        f'<td><p>{_inline_markdown_to_storage(c, extra_fragments)}</p></td>'
+                        for c in cells
+                    )
+                    rows_html.append(f'<tr>{cells_html}</tr>')
+                    i += 1
+                blocks.append(
+                    f'<table data-layout="default"><tbody>'
+                    f'{"".join(rows_html)}'
+                    f'</tbody></table>'
+                )
+                continue
+
         if re.fullmatch(r'[-*_]{3,}', stripped):
             _flush_paragraph()
             blocks.append('<hr />')
