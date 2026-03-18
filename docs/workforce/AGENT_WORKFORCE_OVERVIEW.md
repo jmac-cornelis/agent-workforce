@@ -1,5 +1,14 @@
 # AI Agent Workforce
 
+## Introduction 
+
+This document provides a working proposal for a new paradigm for the design of an embedded systems software organization. It creates a hybrid Human-Agent organization where the people add the most value that people can, and the agents add value where they can, including in helping the people do their work better.
+
+This document focus's on the what can loosely be described as the "DevOps" parts of the organization -- project planning and status, bug tracking and triaging, build automation and management, release automation and managmement, code quality and scanning, and test generationa, execution, and tracking.
+
+[!NOTE]
+This document does not address the details of human responsibilities, other than calling out the roles that they will continue to perform. 
+
 **Coordinated software engineering, testing, release, bug investigation, knowledge capture, and planning agents for the Cornelis Networks development organization.**
 
 The AI Agent Workforce is a system of 16 specialized agents that automate and coordinate the full software development lifecycle at Cornelis Networks. Each agent owns a distinct responsibility — from build orchestration and test generation to release management and project planning — and communicates through well-defined interfaces to deliver reliable, traceable, and auditable engineering outcomes.
@@ -79,9 +88,11 @@ Event Bus
 </td>
 <td valign="top">
 
-Engineers / Reviewers<br>
-Release Approvers<br>
-Project / Delivery Leads
+Developers<br>
+Management<br>
+DevOps<br>
+Project Management<br>
+Test Engineering
 
 </td>
 </tr>
@@ -259,11 +270,13 @@ Full details: [Infrastructure Architecture](reference/INFRASTRUCTURE_ARCHITECTUR
 
 ## Human Roles
 
-| Role | Interaction |
-|------|-------------|
-| **Engineers / Reviewers** | Submit builds, review PRs, inspect test results, provide missing bug info |
-| **Release Approvers** | Approve/block release promotions at stage gates |
-| **Project / Delivery Leads** | Review planning snapshots, acknowledge escalations, set priorities |
+| Role | Responsibilities |
+|------|-----------------|
+| **Developers** | Generate designs, develop production code, responsible for functionality, schedule, documentation, and quality of that code. Review and approval of code merges. |
+| **Management** | Manage team responsibilities, priorities, and projects. Overall responsibilities for the delivery of the product and team components. Review and approval of code merges and release decisions. |
+| **DevOps** | Build configuration and output, release configuration and output, build and release quality (CI), compliance, test execution and results visibility, infrastructure to support this agent workforce. Review and quality of all related code, infrastructure, and documentation. |
+| **Project Management** | Release planning, release decision-making, project status, bug prioritization, continuous improvement. (Note: could also be team management.) |
+| **Test Engineering** | Test development, requirements verification, test execution and automation. |
 
 ---
 
