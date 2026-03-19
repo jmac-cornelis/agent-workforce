@@ -28,14 +28,18 @@
 ##########################################################################################
 
 import argparse
+import hashlib
 import html
 import json
 import logging
 import os
 import re
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import unquote, urlparse
@@ -87,6 +91,9 @@ __all__ = [
     # Content helpers
     'read_markdown_file', 'parse_front_matter', 'load_markdown_document',
     'markdown_to_storage', 'storage_to_markdown',
+    # Diagram rendering & full conversion pipeline
+    'render_diagrams', 'convert_markdown_to_confluence',
+    'DiagramRenderResult',
     # Display
     'output',
     # Exceptions
@@ -115,6 +122,26 @@ class MarkdownDocument:
     space: Optional[str] = None
     parent_id: Optional[str] = None
     version_message: Optional[str] = None
+
+
+@dataclass
+class DiagramRenderResult:
+    '''
+    Result of rendering diagrams found in Markdown content.
+
+    Attributes:
+        markdown: The rewritten Markdown with diagram fenced blocks replaced
+                  by image references to the rendered PNG files.
+        attachments: List of dicts with 'source_path' and 'filename' for each
+                     rendered diagram PNG that should be uploaded as a
+                     Confluence attachment.
+        rendered_count: Number of diagrams successfully rendered.
+        errors: List of error messages for diagrams that failed to render.
+    '''
+    markdown: str
+    attachments: list[dict[str, str]] = field(default_factory=list)
+    rendered_count: int = 0
+    errors: list[str] = field(default_factory=list)
 
 
 def get_confluence_url() -> str:
@@ -1013,12 +1040,203 @@ def read_markdown_file(input_file: str) -> str:
     return path.read_text(encoding='utf-8')
 
 
+# ---------------------------------------------------------------------------
+# Diagram rendering helpers
+# ---------------------------------------------------------------------------
+
+# Diagram languages that can be rendered to PNG via external CLI tools.
+# Each entry maps a fenced-code language tag to a renderer function.
+DIAGRAM_LANGUAGES = {'mermaid'}
+
+
+def _find_mmdc() -> Optional[str]:
+    '''Locate the mermaid-cli ``mmdc`` binary on PATH.'''
+    return shutil.which('mmdc')
+
+
+def _render_mermaid(source: str, output_path: Path) -> None:
+    '''
+    Render a Mermaid diagram to PNG using ``mmdc`` (mermaid-cli).
+
+    Raises ``RuntimeError`` if the render fails.
+    '''
+    mmdc = _find_mmdc()
+    if not mmdc:
+        raise RuntimeError(
+            'mmdc (mermaid-cli) not found on PATH. '
+            'Install with: npm install -g @mermaid-js/mermaid-cli'
+        )
+
+    # Write source to a temp file so mmdc can read it
+    with tempfile.NamedTemporaryFile(
+        mode='w', suffix='.mmd', delete=False, encoding='utf-8',
+    ) as tmp:
+        tmp.write(source)
+        tmp_path = tmp.name
+
+    try:
+        result = subprocess.run(
+            [mmdc, '-i', tmp_path, '-o', str(output_path), '-b', 'transparent'],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode != 0:
+            stderr = result.stderr.strip() or result.stdout.strip()
+            raise RuntimeError(f'mmdc exited with code {result.returncode}: {stderr}')
+        if not output_path.exists():
+            raise RuntimeError(f'mmdc did not produce output file: {output_path}')
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+
+def render_diagrams(
+    markdown_text: str,
+    output_dir: Optional[str] = None,
+) -> DiagramRenderResult:
+    '''
+    Find diagram fenced-code blocks in *markdown_text*, render each to PNG,
+    and replace the fenced block with a Markdown image reference.
+
+    Supported diagram types:
+    - ``mermaid`` — rendered via ``mmdc`` (mermaid-cli)
+
+    If *output_dir* is ``None``, a temporary directory is created and the
+    caller is responsible for the lifecycle of the rendered files (they are
+    referenced in the returned attachments list).
+
+    Returns a ``DiagramRenderResult`` with the rewritten Markdown, a list of
+    attachment dicts (``source_path``, ``filename``), the count of successful
+    renders, and any error messages.
+    '''
+    if output_dir is None:
+        output_dir = tempfile.mkdtemp(prefix='confluence_diagrams_')
+    out_path = Path(output_dir)
+    out_path.mkdir(parents=True, exist_ok=True)
+
+    lines = markdown_text.split('\n')
+    result_lines: list[str] = []
+    attachments: list[dict[str, str]] = []
+    rendered_count = 0
+    errors: list[str] = []
+    i = 0
+
+    while i < len(lines):
+        stripped = lines[i].strip()
+        # Detect fenced code block with a diagram language
+        fence_match = re.match(r'^```([\w+-]+)\s*$', stripped)
+        if fence_match and fence_match.group(1).lower() in DIAGRAM_LANGUAGES:
+            language = fence_match.group(1).lower()
+            # Collect the diagram source
+            diagram_lines: list[str] = []
+            i += 1
+            while i < len(lines) and not re.match(r'^```\s*$', lines[i].strip()):
+                diagram_lines.append(lines[i])
+                i += 1
+            # Skip closing fence
+            if i < len(lines):
+                i += 1
+
+            source = '\n'.join(diagram_lines)
+            # Generate a stable filename from content hash
+            content_hash = hashlib.sha256(source.encode('utf-8')).hexdigest()[:12]
+            filename = f'diagram_{language}_{content_hash}.png'
+            png_path = out_path / filename
+
+            try:
+                if language == 'mermaid':
+                    _render_mermaid(source, png_path)
+                else:
+                    raise RuntimeError(f'Unsupported diagram language: {language}')
+
+                # Replace the fenced block with an image reference
+                result_lines.append(f'![{language} diagram]({png_path})')
+                attachments.append({
+                    'source_path': str(png_path.resolve()),
+                    'filename': filename,
+                })
+                rendered_count += 1
+                log.info(f'Rendered {language} diagram → {filename}')
+            except Exception as exc:
+                # On failure, preserve the original fenced block and log the error
+                error_msg = f'Failed to render {language} diagram: {exc}'
+                errors.append(error_msg)
+                log.warning(error_msg)
+                result_lines.append(f'```{language}')
+                result_lines.extend(diagram_lines)
+                result_lines.append('```')
+        else:
+            result_lines.append(lines[i])
+            i += 1
+
+    return DiagramRenderResult(
+        markdown='\n'.join(result_lines),
+        attachments=attachments,
+        rendered_count=rendered_count,
+        errors=errors,
+    )
+
+
+def convert_markdown_to_confluence(
+    markdown_text: str,
+    render_diagrams_flag: bool = True,
+    output_dir: Optional[str] = None,
+) -> dict[str, Any]:
+    '''
+    Convert raw Markdown text to Confluence storage XHTML.
+
+    This is the primary "markdown to confluence" entry point for agents and
+    tools.  It performs the full conversion pipeline:
+
+    1. Render diagrams (mermaid, etc.) to PNG images if *render_diagrams_flag*
+       is True and the appropriate CLI tools are available.
+    2. Convert the (possibly rewritten) Markdown to Confluence storage XHTML
+       via ``markdown_to_storage()``.
+
+    Returns a dict with:
+        - ``storage``: The Confluence storage XHTML string.
+        - ``attachments``: List of attachment dicts (``source_path``,
+          ``filename``) for any rendered diagram PNGs.
+        - ``diagrams_rendered``: Number of diagrams successfully rendered.
+        - ``diagram_errors``: List of error messages for failed renders.
+    '''
+    attachments: list[dict[str, str]] = []
+    diagrams_rendered = 0
+    diagram_errors: list[str] = []
+
+    # Step 1: Render diagrams if requested
+    if render_diagrams_flag:
+        diagram_result = render_diagrams(markdown_text, output_dir=output_dir)
+        markdown_text = diagram_result.markdown
+        attachments.extend(diagram_result.attachments)
+        diagrams_rendered = diagram_result.rendered_count
+        diagram_errors = diagram_result.errors
+
+    # Step 2: Convert Markdown to Confluence storage XHTML
+    storage = markdown_to_storage(markdown_text)
+
+    return {
+        'storage': storage,
+        'attachments': attachments,
+        'diagrams_rendered': diagrams_rendered,
+        'diagram_errors': diagram_errors,
+    }
+
+
 def _inline_markdown_to_storage(
     text: str,
     extra_fragments: Optional[dict[str, str]] = None,
 ) -> str:
     '''
-    Convert a small subset of inline Markdown to Confluence storage XHTML.
+    Convert inline Markdown to Confluence storage XHTML.
+
+    Supported constructs:
+    - Inline code: `code`
+    - Links: [label](url)
+    - Images: ![alt](src)
+    - Bold: **text** or __text__
+    - Italic: *text* or _text_
+    - Strikethrough: ~~text~~
     '''
     placeholders: dict[str, str] = {}
 
@@ -1027,11 +1245,29 @@ def _inline_markdown_to_storage(
         placeholders[token] = fragment
         return token
 
+    # Inline code — protect from further processing
     text = re.sub(
         r'`([^`]+)`',
         lambda m: _store(f'<code>{html.escape(m.group(1))}</code>'),
         text,
     )
+    # Inline images — ![alt](src)
+    text = re.sub(
+        r'!\[([^\]]*)\]\(([^)]+)\)',
+        lambda m: _store(
+            f'<ac:image ac:alt="{html.escape(m.group(1), quote=True)}">'
+            f'<ri:url ri:value="{html.escape(m.group(2), quote=True)}" />'
+            f'</ac:image>'
+            if m.group(2).startswith(('http://', 'https://'))
+            else (
+                f'<ac:image ac:alt="{html.escape(m.group(1), quote=True)}">'
+                f'<ri:attachment ri:filename="{html.escape(Path(m.group(2)).name, quote=True)}" />'
+                f'</ac:image>'
+            )
+        ),
+        text,
+    )
+    # Links — [label](url)
     text = re.sub(
         r'\[([^\]]+)\]\(([^)]+)\)',
         lambda m: _store(
@@ -1042,8 +1278,12 @@ def _inline_markdown_to_storage(
     )
 
     escaped = html.escape(text)
+    # Bold — **text** or __text__
     escaped = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', escaped)
     escaped = re.sub(r'__(.+?)__', r'<strong>\1</strong>', escaped)
+    # Strikethrough — ~~text~~
+    escaped = re.sub(r'~~(.+?)~~', r'<del>\1</del>', escaped)
+    # Italic — *text* or _text_
     escaped = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<em>\1</em>', escaped)
     escaped = re.sub(r'(?<!_)_(?!_)(.+?)(?<!_)_(?!_)', r'<em>\1</em>', escaped)
 
@@ -1073,17 +1313,138 @@ def _code_block_to_storage(language: str, code: list[str]) -> str:
     )
 
 
+def _admonition_macro(admonition_type: str, body_lines: list[str],
+                       extra_fragments: Optional[dict[str, str]] = None) -> str:
+    '''
+    Render a GitHub-style admonition (> [!NOTE], > [!WARNING], etc.)
+    as a Confluence structured macro (info, note, warning, tip).
+    '''
+    # Map GitHub admonition types to Confluence macro names
+    macro_map = {
+        'NOTE': 'info',
+        'TIP': 'tip',
+        'IMPORTANT': 'note',
+        'WARNING': 'warning',
+        'CAUTION': 'warning',
+    }
+    macro_name = macro_map.get(admonition_type.upper(), 'info')
+    # Convert body lines to storage XHTML
+    body_storage = markdown_to_storage('\n'.join(body_lines), extra_fragments=extra_fragments)
+    return (
+        f'<ac:structured-macro ac:name="{macro_name}">'
+        f'<ac:rich-text-body>{body_storage}</ac:rich-text-body>'
+        f'</ac:structured-macro>'
+    )
+
+
+def _parse_list_block(lines: list[str], start: int,
+                       extra_fragments: Optional[dict[str, str]] = None) -> tuple[str, int]:
+    '''
+    Parse a nested Markdown list (unordered or ordered) starting at *start*.
+
+    Returns the storage XHTML for the list and the index of the first line
+    after the list.  Supports arbitrary nesting via indentation.
+    '''
+    # Determine the base indent and list type of the first item
+    first_line = lines[start]
+    base_indent = len(first_line) - len(first_line.lstrip())
+    is_ordered = bool(re.match(r'^\s*\d+\.\s+', first_line))
+    tag = 'ol' if is_ordered else 'ul'
+    item_re = re.compile(r'^(\s*)([-*+]|\d+\.)\s+(.+)$')
+
+    items_html: list[str] = []
+    i = start
+
+    while i < len(lines):
+        line = lines[i]
+        # Blank line ends the list block (unless followed by an indented continuation)
+        if not line.strip():
+            # Peek ahead: if the next non-blank line is still indented at list level, continue
+            j = i + 1
+            while j < len(lines) and not lines[j].strip():
+                j += 1
+            if j < len(lines):
+                peek_indent = len(lines[j]) - len(lines[j].lstrip())
+                if peek_indent > base_indent and item_re.match(lines[j]):
+                    i += 1
+                    continue
+            break
+
+        m = item_re.match(line)
+        if not m:
+            # Non-list line — end the list
+            break
+
+        indent = len(m.group(1))
+        if indent < base_indent:
+            break  # Dedented past our list level
+
+        if indent > base_indent:
+            # Nested list — recurse
+            nested_html, i = _parse_list_block(lines, i, extra_fragments)
+            # Attach nested list to the last <li>
+            if items_html:
+                # Remove closing </li> and append nested list before re-closing
+                last = items_html[-1]
+                if last.endswith('</li>'):
+                    items_html[-1] = last[:-5] + nested_html + '</li>'
+                else:
+                    items_html[-1] = last + nested_html
+            else:
+                items_html.append(f'<li>{nested_html}</li>')
+            continue
+
+        # Same-level item
+        content = m.group(3).strip()
+        # Task list checkbox support: - [ ] or - [x]
+        task_match = re.match(r'^\[([ xX])\]\s*(.*)', content)
+        if task_match:
+            checked = task_match.group(1).lower() == 'x'
+            task_text = task_match.group(2)
+            inline = _inline_markdown_to_storage(task_text, extra_fragments)
+            status = '<ac:task-status>complete</ac:task-status>' if checked else '<ac:task-status>incomplete</ac:task-status>'
+            items_html.append(
+                f'<ac:task><ac:task-body>{inline}</ac:task-body>{status}</ac:task>'
+            )
+        else:
+            inline = _inline_markdown_to_storage(content, extra_fragments)
+            items_html.append(f'<li>{inline}</li>')
+        i += 1
+
+    # If we collected task items, wrap in ac:task-list instead of ul/ol
+    if items_html and '<ac:task>' in items_html[0]:
+        return f'<ac:task-list>{"".join(items_html)}</ac:task-list>', i
+
+    return f'<{tag}>{"".join(items_html)}</{tag}>', i
+
+
 def markdown_to_storage(
     markdown_text: str,
     extra_fragments: Optional[dict[str, str]] = None,
 ) -> str:
     '''
-    Convert a lightweight subset of Markdown into Confluence storage XHTML.
+    Convert Markdown into Confluence storage XHTML.
 
-    This is intentionally conservative: headings, paragraphs, single-level
-    ordered/unordered lists, fenced code blocks, inline links, bold, italics,
-    and inline code are supported. More advanced Markdown constructs are left
-    as plain text so page creation remains predictable.
+    Supported block constructs:
+    - Headings (h1–h6)
+    - Paragraphs with line breaks
+    - Fenced code blocks (``` with optional language)
+    - Pipe tables with header/separator/data rows
+    - Unordered lists (-, *, +) with nesting
+    - Ordered lists (1., 2., …) with nesting
+    - Task lists (- [ ] / - [x])
+    - Blockquotes (> text) with nesting
+    - GitHub-style admonitions (> [!NOTE], > [!WARNING], etc.)
+    - Horizontal rules (---, ***, ___)
+    - Standalone images on their own line
+
+    Inline constructs (via _inline_markdown_to_storage):
+    - Bold (**text** / __text__)
+    - Italic (*text* / _text_)
+    - Strikethrough (~~text~~)
+    - Inline code (`code`)
+    - Links [label](url)
+    - Inline images ![alt](src)
     '''
     normalized = markdown_text.replace('\r\n', '\n').replace('\r', '\n')
     lines = normalized.split('\n')
@@ -1101,11 +1462,13 @@ def markdown_to_storage(
         line = lines[i]
         stripped = line.strip()
 
+        # --- Blank line: flush current paragraph ---
         if not stripped:
             _flush_paragraph()
             i += 1
             continue
 
+        # --- Fenced code blocks ---
         fence = re.match(r'^```([\w+-]*)\s*$', stripped)
         if fence:
             _flush_paragraph()
@@ -1119,6 +1482,7 @@ def markdown_to_storage(
             i += 1
             continue
 
+        # --- Headings ---
         heading = re.match(r'^(#{1,6})\s+(.+)$', stripped)
         if heading:
             _flush_paragraph()
@@ -1129,15 +1493,12 @@ def markdown_to_storage(
             continue
 
         # --- Markdown pipe tables ---
-        # A table starts with a header row of pipe-separated cells,
-        # followed by a separator row like |---|---|---|
         table_header = re.match(r'^\|(.+)\|$', stripped)
         if table_header and i + 1 < len(lines):
             next_stripped = lines[i + 1].strip()
             separator = re.match(r'^\|[-:\s|]+\|$', next_stripped)
             if separator:
                 _flush_paragraph()
-                # Parse header cells
                 header_cells = [
                     c.strip()
                     for c in table_header.group(1).split('|')
@@ -1147,14 +1508,12 @@ def markdown_to_storage(
                     for c in header_cells
                 )
                 rows_html = [f'<tr>{header_html}</tr>']
-                i += 2  # skip header and separator
-                # Parse data rows
+                i += 2
                 while i < len(lines):
                     row_stripped = lines[i].strip()
                     row_match = re.match(r'^\|(.+)\|$', row_stripped)
                     if not row_match:
                         break
-                    # Skip if it looks like another separator row
                     if re.match(r'^\|[-:\s|]+\|$', row_stripped):
                         i += 1
                         continue
@@ -1175,42 +1534,91 @@ def markdown_to_storage(
                 )
                 continue
 
+        # --- Blockquotes (including GitHub admonitions) ---
+        if stripped.startswith('>'):
+            _flush_paragraph()
+            quote_lines: list[str] = []
+            while i < len(lines):
+                ql = lines[i]
+                qs = ql.strip()
+                if qs.startswith('>'):
+                    # Strip the leading '>' and optional space
+                    inner = re.sub(r'^>\s?', '', qs)
+                    quote_lines.append(inner)
+                elif not qs:
+                    # Blank line inside blockquote — peek ahead
+                    j = i + 1
+                    if j < len(lines) and lines[j].strip().startswith('>'):
+                        quote_lines.append('')
+                    else:
+                        break
+                else:
+                    break
+                i += 1
+
+            # Check for GitHub-style admonition: [!NOTE], [!WARNING], etc.
+            admonition_match = re.match(
+                r'^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]$',
+                quote_lines[0].strip() if quote_lines else '',
+            )
+            if admonition_match:
+                admonition_type = admonition_match.group(1)
+                body = quote_lines[1:]  # skip the [!TYPE] line
+                # Strip leading blank lines from body
+                while body and not body[0].strip():
+                    body.pop(0)
+                blocks.append(_admonition_macro(admonition_type, body, extra_fragments))
+            else:
+                # Regular blockquote — recursively convert inner content
+                inner_storage = markdown_to_storage('\n'.join(quote_lines), extra_fragments=extra_fragments)
+                blocks.append(
+                    f'<blockquote>{inner_storage}</blockquote>'
+                )
+            continue
+
+        # --- Horizontal rules ---
         if re.fullmatch(r'[-*_]{3,}', stripped):
             _flush_paragraph()
             blocks.append('<hr />')
             i += 1
             continue
 
-        unordered = re.match(r'^\s*[-*+]\s+(.+)$', line)
-        if unordered:
+        # --- Standalone image on its own line ---
+        standalone_image = re.match(r'^!\[([^\]]*)\]\(([^)]+)\)$', stripped)
+        if standalone_image:
             _flush_paragraph()
-            items: list[str] = []
-            while i < len(lines):
-                match = re.match(r'^\s*[-*+]\s+(.+)$', lines[i])
-                if not match:
-                    break
-                items.append(
-                    f'<li>{_inline_markdown_to_storage(match.group(1).strip(), extra_fragments)}</li>'
+            alt = standalone_image.group(1)
+            src = standalone_image.group(2)
+            if src.startswith(('http://', 'https://')):
+                blocks.append(
+                    f'<p><ac:image ac:alt="{html.escape(alt, quote=True)}">'
+                    f'<ri:url ri:value="{html.escape(src, quote=True)}" />'
+                    f'</ac:image></p>'
                 )
-                i += 1
-            blocks.append(f'<ul>{"".join(items)}</ul>')
+            else:
+                blocks.append(
+                    f'<p><ac:image ac:alt="{html.escape(alt, quote=True)}">'
+                    f'<ri:attachment ri:filename="{html.escape(Path(src).name, quote=True)}" />'
+                    f'</ac:image></p>'
+                )
+            i += 1
             continue
 
-        ordered = re.match(r'^\s*\d+\.\s+(.+)$', line)
-        if ordered:
+        # --- Unordered lists (with nesting support) ---
+        if re.match(r'^\s*[-*+]\s+', line):
             _flush_paragraph()
-            items = []
-            while i < len(lines):
-                match = re.match(r'^\s*\d+\.\s+(.+)$', lines[i])
-                if not match:
-                    break
-                items.append(
-                    f'<li>{_inline_markdown_to_storage(match.group(1).strip(), extra_fragments)}</li>'
-                )
-                i += 1
-            blocks.append(f'<ol>{"".join(items)}</ol>')
+            list_html, i = _parse_list_block(lines, i, extra_fragments)
+            blocks.append(list_html)
             continue
 
+        # --- Ordered lists (with nesting support) ---
+        if re.match(r'^\s*\d+\.\s+', line):
+            _flush_paragraph()
+            list_html, i = _parse_list_block(lines, i, extra_fragments)
+            blocks.append(list_html)
+            continue
+
+        # --- Default: paragraph text ---
         paragraph.append(_inline_markdown_to_storage(stripped, extra_fragments))
         i += 1
 

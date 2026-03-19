@@ -38,6 +38,8 @@ try:
         list_page_children as _cu_list_page_children,
         build_page_tree as _cu_build_page_tree,
         export_page_to_markdown as _cu_export_page_to_markdown,
+        convert_markdown_to_confluence as _cu_convert_markdown,
+        render_diagrams as _cu_render_diagrams,
     )
 
     CONFLUENCE_UTILS_AVAILABLE = True
@@ -357,6 +359,56 @@ def export_confluence_page(
         return ToolResult.failure(f'Confluence export failed: {e}')
 
 
+@tool(
+    description='Convert Markdown text to Confluence storage XHTML with diagram rendering'
+)
+def convert_markdown_to_confluence(
+    markdown_text: str,
+    render_diagrams: bool = True,
+) -> ToolResult:
+    '''
+    Convert raw Markdown text to Confluence storage XHTML.
+
+    This is the primary "markdown to confluence" conversion tool.  It performs
+    the full pipeline:
+
+    1. Render diagrams (mermaid fenced blocks, etc.) to PNG images when
+       *render_diagrams* is True and the appropriate CLI tools (e.g. ``mmdc``)
+       are available on PATH.
+    2. Convert the (possibly rewritten) Markdown to Confluence storage XHTML
+       using the enhanced ``markdown_to_storage()`` converter which supports:
+       headings, paragraphs, fenced code blocks, pipe tables, nested lists,
+       task lists, blockquotes, GitHub admonitions, horizontal rules, images,
+       bold, italic, strikethrough, inline code, and links.
+
+    Input:
+        markdown_text: The Markdown content to convert.
+        render_diagrams: Whether to render diagram fenced blocks (mermaid)
+                         to PNG images.  Defaults to True.
+
+    Output:
+        ToolResult with:
+        - storage: Confluence storage XHTML string.
+        - attachments: List of rendered diagram PNGs (source_path, filename).
+        - diagrams_rendered: Count of successfully rendered diagrams.
+        - diagram_errors: List of error messages for failed renders.
+    '''
+    log.debug(
+        f'convert_markdown_to_confluence(render_diagrams={render_diagrams}, '
+        f'text_length={len(markdown_text)})'
+    )
+
+    try:
+        result = _cu_convert_markdown(
+            markdown_text,
+            render_diagrams_flag=render_diagrams,
+        )
+        return ToolResult.success(result)
+    except Exception as e:
+        log.error(f'Failed to convert Markdown to Confluence: {e}')
+        return ToolResult.failure(f'Markdown to Confluence conversion failed: {e}')
+
+
 class ConfluenceTools(BaseTool):
     '''
     Collection of Confluence tools for agent use.
@@ -444,3 +496,11 @@ class ConfluenceTools(BaseTool):
         space: Optional[str] = None,
     ) -> ToolResult:
         return export_confluence_page(page_id_or_title, output_file, space)
+
+    @tool(description='Convert Markdown text to Confluence storage XHTML with diagram rendering')
+    def convert_markdown_to_confluence(
+        self,
+        markdown_text: str,
+        render_diagrams: bool = True,
+    ) -> ToolResult:
+        return convert_markdown_to_confluence(markdown_text, render_diagrams)

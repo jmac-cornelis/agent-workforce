@@ -758,6 +758,47 @@ async def export_confluence_page(
         return _error_result(str(e))
 
 
+@_tool_decorator()
+async def convert_markdown_to_confluence(
+    markdown_text: str,
+    render_diagrams: bool = True,
+) -> list[Any]:
+    """Convert Markdown text to Confluence storage XHTML with diagram rendering.
+
+    This is the primary "markdown to confluence" conversion tool.  It performs
+    the full pipeline:
+
+    1. Render diagrams (mermaid fenced blocks, etc.) to PNG images when
+       *render_diagrams* is True and the appropriate CLI tools (e.g. ``mmdc``)
+       are available on PATH.
+    2. Convert the (possibly rewritten) Markdown to Confluence storage XHTML
+       using the enhanced converter which supports: headings, paragraphs,
+       fenced code blocks, pipe tables, nested lists, task lists, blockquotes,
+       GitHub admonitions, horizontal rules, images, bold, italic,
+       strikethrough, inline code, and links.
+
+    Args:
+        markdown_text: The Markdown content to convert.
+        render_diagrams: Whether to render diagram fenced blocks (mermaid)
+                         to PNG images.  Defaults to True.
+    """
+    try:
+        result = confluence_utils.convert_markdown_to_confluence(
+            markdown_text,
+            render_diagrams_flag=render_diagrams,
+        )
+        return _json_result({
+            'storage': result['storage'],
+            'attachments': result.get('attachments', []),
+            'diagrams_rendered': result.get('diagrams_rendered', 0),
+            'diagram_errors': result.get('diagram_errors', []),
+            'message': 'Markdown converted to Confluence storage XHTML successfully',
+        })
+    except Exception as e:
+        log.error(f'convert_markdown_to_confluence failed: {e}')
+        return _error_result(str(e))
+
+
 # ---------------------------------------------------------------------------
 # Gantt planning tools
 # ---------------------------------------------------------------------------

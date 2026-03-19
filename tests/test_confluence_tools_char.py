@@ -102,3 +102,4 @@ def test_confluence_tools_collection_registers_methods():
     assert tools.get_tool('update_confluence_section') is not None
     assert tools.get_tool('list_confluence_children') is not None
     assert tools.get_tool('export_confluence_page') is not None
+    assert tools.get_tool('convert_markdown_to_confluence') is not None
