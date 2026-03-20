@@ -604,13 +604,14 @@ def load_markdown_document(
     front_matter, body_markdown = parse_front_matter(raw_markdown)
     base_dir = Path(input_file).resolve().parent
 
-    # Step 1: Render diagrams (mermaid, etc.) to PNG before asset rewriting.
-    # This replaces fenced diagram blocks with Markdown image references
-    # pointing to rendered PNGs, which _rewrite_markdown_assets will then
-    # pick up as local attachment images.
+    # Step 1: Render diagrams (mermaid, draw.io, etc.) to PNG before asset
+    # rewriting.  This replaces fenced diagram blocks and draw.io image
+    # references with Markdown image references pointing to rendered PNGs,
+    # which _rewrite_markdown_assets will then pick up as local attachment
+    # images.
     diagram_attachments: list[dict[str, str]] = []
     if render_diagrams_flag:
-        diagram_result = render_diagrams(body_markdown)
+        diagram_result = render_diagrams(body_markdown, base_dir=base_dir)
         body_markdown = diagram_result.markdown
         diagram_attachments = diagram_result.attachments
         if diagram_result.errors:
@@ -1074,10 +1075,112 @@ def read_markdown_file(input_file: str) -> str:
 # Each entry maps a fenced-code language tag to a renderer function.
 DIAGRAM_LANGUAGES = {'mermaid'}
 
+# Regex matching a Markdown image whose target ends with .drawio (any case).
+# Used by render_diagrams() to detect draw.io file references.
+_DRAWIO_IMAGE_RE = re.compile(
+    r'^!\[([^\]]*)\]\(([^)]+\.drawio)\)\s*$', re.IGNORECASE,
+)
+
 
 def _find_mmdc() -> Optional[str]:
     '''Locate the mermaid-cli ``mmdc`` binary on PATH.'''
     return shutil.which('mmdc')
+
+
+def _find_drawio() -> Optional[str]:
+    '''Locate the draw.io desktop CLI binary on PATH.
+
+    The ``drawio`` CLI is provided by the draw.io desktop application.
+    On macOS it is typically installed via ``brew install drawio`` which
+    symlinks a wrapper to ``/opt/homebrew/bin/drawio``.
+    '''
+    return shutil.which('drawio')
+
+
+def _get_drawio_tab_names(drawio_path: str) -> list[str]:
+    '''Return the list of diagram tab names from a ``.drawio`` XML file.
+
+    Each ``<diagram name="...">`` element in the file represents one tab.
+    The draw.io XML may contain HTML entities (e.g. ``&#xa;``) that are not
+    well-formed strict XML, so we fall back to a regex scan when the standard
+    XML parser fails.
+    '''
+    try:
+        import xml.etree.ElementTree as ET
+        tree = ET.parse(drawio_path)
+        root = tree.getroot()
+        return [d.get('name', f'Page {i+1}')
+                for i, d in enumerate(root.findall('diagram'))]
+    except Exception:
+        # Fallback: regex scan for <diagram ... name="..."> attributes
+        try:
+            content = Path(drawio_path).read_text(encoding='utf-8')
+            return re.findall(r'<diagram[^>]*\bname="([^"]*)"', content)
+        except Exception:
+            return []
+
+
+def _render_drawio(
+    drawio_path: str,
+    output_dir: Path,
+    base_name: str,
+) -> list[dict[str, str]]:
+    '''Render all tabs of a ``.drawio`` file to PNG images.
+
+    Uses the ``drawio`` CLI (draw.io desktop) to export each diagram tab.
+    Returns a list of dicts with ``source_path``, ``filename``, and
+    ``tab_name`` for each successfully rendered tab.
+
+    Raises ``RuntimeError`` if the ``drawio`` CLI is not available.
+    '''
+    drawio_bin = _find_drawio()
+    if not drawio_bin:
+        raise RuntimeError(
+            'drawio CLI not found on PATH. '
+            'Install with: brew install drawio (macOS) or install draw.io desktop'
+        )
+
+    tab_names = _get_drawio_tab_names(drawio_path)
+    if not tab_names:
+        tab_names = ['Page 1']  # assume at least one tab
+
+    rendered: list[dict[str, str]] = []
+    for page_index, tab_name in enumerate(tab_names):
+        filename = f'{base_name}_tab{page_index + 1}.png'
+        png_path = output_dir / filename
+
+        result = subprocess.run(
+            [
+                drawio_bin,
+                '--export',
+                '--format', 'png',
+                '--page-index', str(page_index),
+                '--output', str(png_path),
+                str(drawio_path),
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+        if result.returncode != 0:
+            stderr = result.stderr.strip() or result.stdout.strip()
+            raise RuntimeError(
+                f'drawio export failed for tab {page_index} '
+                f'("{tab_name}"): {stderr}'
+            )
+        if not png_path.exists():
+            raise RuntimeError(
+                f'drawio did not produce output file: {png_path}'
+            )
+
+        rendered.append({
+            'source_path': str(png_path.resolve()),
+            'filename': filename,
+            'tab_name': tab_name,
+        })
+        log.info(f'Rendered draw.io tab "{tab_name}" → {filename}')
+
+    return rendered
 
 
 def _render_mermaid(source: str, output_path: Path) -> None:
@@ -1119,13 +1222,22 @@ def _render_mermaid(source: str, output_path: Path) -> None:
 def render_diagrams(
     markdown_text: str,
     output_dir: Optional[str] = None,
+    base_dir: Optional[Path] = None,
 ) -> DiagramRenderResult:
     '''
-    Find diagram fenced-code blocks in *markdown_text*, render each to PNG,
-    and replace the fenced block with a Markdown image reference.
+    Find diagram constructs in *markdown_text*, render each to PNG, and
+    replace the original construct with Markdown image reference(s).
 
     Supported diagram types:
-    - ``mermaid`` — rendered via ``mmdc`` (mermaid-cli)
+
+    - **Mermaid fenced blocks** — ````` ```mermaid ````` blocks rendered via
+      ``mmdc`` (mermaid-cli).
+    - **Draw.io image references** — ``![alt](path/to/file.drawio)`` lines
+      rendered via the ``drawio`` desktop CLI.  Multi-tab ``.drawio`` files
+      produce one PNG per tab, each inserted as a separate image line.
+
+    *base_dir* is used to resolve relative ``.drawio`` paths.  When ``None``
+    the current working directory is assumed.
 
     If *output_dir* is ``None``, a temporary directory is created and the
     caller is responsible for the lifecycle of the rendered files (they are
@@ -1140,6 +1252,9 @@ def render_diagrams(
     out_path = Path(output_dir)
     out_path.mkdir(parents=True, exist_ok=True)
 
+    if base_dir is None:
+        base_dir = Path.cwd()
+
     lines = markdown_text.split('\n')
     result_lines: list[str] = []
     attachments: list[dict[str, str]] = []
@@ -1149,7 +1264,56 @@ def render_diagrams(
 
     while i < len(lines):
         stripped = lines[i].strip()
-        # Detect fenced code block with a diagram language
+
+        # ----- Draw.io image reference: ![alt](path/to.drawio) -----
+        drawio_match = _DRAWIO_IMAGE_RE.match(stripped)
+        if drawio_match:
+            alt_text = drawio_match.group(1) or 'draw.io diagram'
+            drawio_target = drawio_match.group(2)
+            # Resolve the .drawio file path relative to base_dir
+            drawio_file = Path(drawio_target)
+            if not drawio_file.is_absolute():
+                drawio_file = base_dir / drawio_file
+            drawio_file = drawio_file.resolve()
+
+            if not drawio_file.exists():
+                error_msg = f'Draw.io file not found: {drawio_file}'
+                errors.append(error_msg)
+                log.warning(error_msg)
+                result_lines.append(lines[i])
+                i += 1
+                continue
+
+            # Generate a stable base name from the file path hash
+            path_hash = hashlib.sha256(
+                str(drawio_file).encode('utf-8')
+            ).hexdigest()[:12]
+            base_name = f'diagram_drawio_{path_hash}'
+
+            try:
+                tab_results = _render_drawio(
+                    str(drawio_file), out_path, base_name,
+                )
+                for tab in tab_results:
+                    tab_label = tab.get('tab_name', alt_text)
+                    result_lines.append(
+                        f'![{tab_label}]({tab["source_path"]})'
+                    )
+                    attachments.append({
+                        'source_path': tab['source_path'],
+                        'filename': tab['filename'],
+                    })
+                rendered_count += len(tab_results)
+            except Exception as exc:
+                error_msg = f'Failed to render draw.io diagram {drawio_target}: {exc}'
+                errors.append(error_msg)
+                log.warning(error_msg)
+                result_lines.append(lines[i])
+
+            i += 1
+            continue
+
+        # ----- Mermaid fenced code block: ```mermaid ... ``` -----
         fence_match = re.match(r'^```([\w+-]+)\s*$', stripped)
         if fence_match and fence_match.group(1).lower() in DIAGRAM_LANGUAGES:
             language = fence_match.group(1).lower()
@@ -1207,6 +1371,7 @@ def convert_markdown_to_confluence(
     markdown_text: str,
     render_diagrams_flag: bool = True,
     output_dir: Optional[str] = None,
+    base_dir: Optional[str] = None,
 ) -> dict[str, Any]:
     '''
     Convert raw Markdown text to Confluence storage XHTML.
@@ -1214,10 +1379,14 @@ def convert_markdown_to_confluence(
     This is the primary "markdown to confluence" entry point for agents and
     tools.  It performs the full conversion pipeline:
 
-    1. Render diagrams (mermaid, etc.) to PNG images if *render_diagrams_flag*
-       is True and the appropriate CLI tools are available.
+    1. Render diagrams (mermaid fenced blocks, draw.io image references) to
+       PNG images if *render_diagrams_flag* is True and the appropriate CLI
+       tools are available.
     2. Convert the (possibly rewritten) Markdown to Confluence storage XHTML
        via ``markdown_to_storage()``.
+
+    *base_dir* is used to resolve relative ``.drawio`` file paths.  When
+    ``None`` the current working directory is assumed.
 
     Returns a dict with:
         - ``storage``: The Confluence storage XHTML string.
@@ -1232,7 +1401,11 @@ def convert_markdown_to_confluence(
 
     # Step 1: Render diagrams if requested
     if render_diagrams_flag:
-        diagram_result = render_diagrams(markdown_text, output_dir=output_dir)
+        diagram_result = render_diagrams(
+            markdown_text,
+            output_dir=output_dir,
+            base_dir=Path(base_dir) if base_dir else None,
+        )
         markdown_text = diagram_result.markdown
         attachments.extend(diagram_result.attachments)
         diagrams_rendered = diagram_result.rendered_count

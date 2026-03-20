@@ -20,6 +20,7 @@ import pytest
 import confluence_utils
 from confluence_utils import (
     DiagramRenderResult,
+    _get_drawio_tab_names,
     convert_markdown_to_confluence,
     load_markdown_document,
     markdown_to_storage,
@@ -832,3 +833,311 @@ class TestLoadMarkdownDocumentDiagrams:
         # Two different diagrams → two different content hashes → two attachments
         assert len(diagram_attachments) == 2
         assert diagram_attachments[0]['filename'] != diagram_attachments[1]['filename']
+
+
+# ---------------------------------------------------------------------------
+# Draw.io helpers
+# ---------------------------------------------------------------------------
+
+class TestDrawioHelpers:
+    '''Tests for draw.io rendering helper functions.'''
+
+    def test_find_drawio_returns_path_or_none(self):
+        '''_find_drawio should return a string path or None.'''
+        result = confluence_utils._find_drawio()
+        assert result is None or isinstance(result, str)
+
+    def test_get_drawio_tab_names_from_valid_xml(self, tmp_path):
+        '''_get_drawio_tab_names should extract tab names from a .drawio file.'''
+        drawio_file = tmp_path / 'test.drawio'
+        drawio_file.write_text(
+            '<mxfile>'
+            '<diagram id="d1" name="Tab One"><mxGraphModel/></diagram>'
+            '<diagram id="d2" name="Tab Two"><mxGraphModel/></diagram>'
+            '</mxfile>',
+            encoding='utf-8',
+        )
+        names = _get_drawio_tab_names(str(drawio_file))
+        assert names == ['Tab One', 'Tab Two']
+
+    def test_get_drawio_tab_names_fallback_regex(self, tmp_path):
+        '''When XML parsing fails, _get_drawio_tab_names falls back to regex.'''
+        drawio_file = tmp_path / 'test.drawio'
+        # Include an HTML entity that breaks strict XML parsing
+        drawio_file.write_text(
+            '<mxfile>'
+            '<diagram id="d1" name="First Tab">'
+            '<mxGraphModel><root>'
+            '<mxCell id="0" value="A&#xa;B"/>'
+            '</root></mxGraphModel></diagram>'
+            '</mxfile>',
+            encoding='utf-8',
+        )
+        names = _get_drawio_tab_names(str(drawio_file))
+        assert names == ['First Tab']
+
+    def test_get_drawio_tab_names_missing_file(self, tmp_path):
+        '''Missing file returns empty list.'''
+        names = _get_drawio_tab_names(str(tmp_path / 'nonexistent.drawio'))
+        assert names == []
+
+    def test_render_drawio_raises_without_cli(self, tmp_path):
+        '''When drawio CLI is not on PATH, _render_drawio raises RuntimeError.'''
+        drawio_file = tmp_path / 'test.drawio'
+        drawio_file.write_text(
+            '<mxfile><diagram id="d1" name="Page 1">'
+            '<mxGraphModel/></diagram></mxfile>',
+            encoding='utf-8',
+        )
+        with patch('confluence_utils._find_drawio', return_value=None):
+            with pytest.raises(RuntimeError, match='drawio CLI.*not found'):
+                confluence_utils._render_drawio(
+                    str(drawio_file), tmp_path, 'test_diagram',
+                )
+
+
+# ---------------------------------------------------------------------------
+# render_diagrams — draw.io image references
+# ---------------------------------------------------------------------------
+
+class TestRenderDiagramsDrawio:
+    '''Tests for draw.io image reference handling in render_diagrams().'''
+
+    def test_drawio_image_detected_and_rendered(self, tmp_path):
+        '''A ![alt](file.drawio) line should be detected and rendered.'''
+        drawio_file = tmp_path / 'arch.drawio'
+        drawio_file.write_text(
+            '<mxfile>'
+            '<diagram id="d1" name="Overview"><mxGraphModel/></diagram>'
+            '</mxfile>',
+            encoding='utf-8',
+        )
+        md = f'# Title\n\n![Architecture]({drawio_file.name})\n\nAfter.'
+
+        def fake_render(drawio_path, output_dir, base_name):
+            png = output_dir / f'{base_name}_tab1.png'
+            png.write_bytes(b'FAKEPNG')
+            return [{'source_path': str(png), 'filename': png.name, 'tab_name': 'Overview'}]
+
+        with patch('confluence_utils._render_drawio', side_effect=fake_render):
+            result = render_diagrams(md, output_dir=str(tmp_path), base_dir=tmp_path)
+
+        assert result.rendered_count == 1
+        assert len(result.attachments) == 1
+        assert result.attachments[0]['filename'].endswith('.png')
+        assert 'arch.drawio' not in result.markdown
+        assert '![Overview]' in result.markdown
+        assert 'After.' in result.markdown
+
+    def test_drawio_multi_tab_produces_multiple_images(self, tmp_path):
+        '''A multi-tab .drawio file should produce one image per tab.'''
+        drawio_file = tmp_path / 'multi.drawio'
+        drawio_file.write_text(
+            '<mxfile>'
+            '<diagram id="d1" name="Tab A"><mxGraphModel/></diagram>'
+            '<diagram id="d2" name="Tab B"><mxGraphModel/></diagram>'
+            '</mxfile>',
+            encoding='utf-8',
+        )
+        md = f'![Diagram]({drawio_file.name})'
+
+        def fake_render(drawio_path, output_dir, base_name):
+            results = []
+            for i, name in enumerate(['Tab A', 'Tab B'], 1):
+                png = output_dir / f'{base_name}_tab{i}.png'
+                png.write_bytes(b'FAKEPNG')
+                results.append({
+                    'source_path': str(png),
+                    'filename': png.name,
+                    'tab_name': name,
+                })
+            return results
+
+        with patch('confluence_utils._render_drawio', side_effect=fake_render):
+            result = render_diagrams(md, output_dir=str(tmp_path), base_dir=tmp_path)
+
+        assert result.rendered_count == 2
+        assert len(result.attachments) == 2
+        assert '![Tab A]' in result.markdown
+        assert '![Tab B]' in result.markdown
+
+    def test_drawio_missing_file_produces_error(self, tmp_path):
+        '''A reference to a non-existent .drawio file should produce an error.'''
+        md = '![Missing](nonexistent.drawio)'
+        result = render_diagrams(md, output_dir=str(tmp_path), base_dir=tmp_path)
+        assert result.rendered_count == 0
+        assert len(result.errors) == 1
+        assert 'not found' in result.errors[0]
+        # Original line preserved
+        assert '![Missing](nonexistent.drawio)' in result.markdown
+
+    def test_drawio_render_failure_preserves_line(self, tmp_path):
+        '''When drawio CLI fails, the original image line is preserved.'''
+        drawio_file = tmp_path / 'broken.drawio'
+        drawio_file.write_text(
+            '<mxfile><diagram id="d1" name="P1"><mxGraphModel/></diagram></mxfile>',
+            encoding='utf-8',
+        )
+        md = f'![Broken]({drawio_file.name})'
+
+        def failing_render(drawio_path, output_dir, base_name):
+            raise RuntimeError('drawio export failed')
+
+        with patch('confluence_utils._render_drawio', side_effect=failing_render):
+            result = render_diagrams(md, output_dir=str(tmp_path), base_dir=tmp_path)
+
+        assert result.rendered_count == 0
+        assert len(result.errors) == 1
+        assert 'drawio export failed' in result.errors[0]
+        assert f'![Broken]({drawio_file.name})' in result.markdown
+
+    def test_drawio_not_matched_when_not_standalone(self, tmp_path):
+        '''A .drawio reference inside a paragraph should NOT be matched.'''
+        md = 'See the diagram at ![arch](arch.drawio) for details.'
+        result = render_diagrams(md, output_dir=str(tmp_path), base_dir=tmp_path)
+        # The regex requires the image to be the only thing on the line
+        assert result.rendered_count == 0
+        assert 'arch.drawio' in result.markdown
+
+    def test_mixed_mermaid_and_drawio(self, tmp_path):
+        '''Both mermaid blocks and draw.io references should be rendered.'''
+        drawio_file = tmp_path / 'flow.drawio'
+        drawio_file.write_text(
+            '<mxfile><diagram id="d1" name="Flow"><mxGraphModel/></diagram></mxfile>',
+            encoding='utf-8',
+        )
+        md = (
+            '```mermaid\ngraph TD\n  A --> B\n```\n\n'
+            f'![Flow]({drawio_file.name})\n'
+        )
+
+        def fake_mermaid(source, output_path):
+            output_path.write_bytes(b'FAKEPNG')
+
+        def fake_drawio(drawio_path, output_dir, base_name):
+            png = output_dir / f'{base_name}_tab1.png'
+            png.write_bytes(b'FAKEPNG')
+            return [{'source_path': str(png), 'filename': png.name, 'tab_name': 'Flow'}]
+
+        with patch('confluence_utils._render_mermaid', side_effect=fake_mermaid), \
+             patch('confluence_utils._render_drawio', side_effect=fake_drawio):
+            result = render_diagrams(md, output_dir=str(tmp_path), base_dir=tmp_path)
+
+        assert result.rendered_count == 2
+        assert len(result.attachments) == 2
+        # One mermaid, one drawio
+        mermaid_att = [a for a in result.attachments if 'mermaid' in a['filename']]
+        drawio_att = [a for a in result.attachments if 'drawio' in a['filename']]
+        assert len(mermaid_att) == 1
+        assert len(drawio_att) == 1
+
+
+# ---------------------------------------------------------------------------
+# load_markdown_document — draw.io diagram rendering integration
+# ---------------------------------------------------------------------------
+
+class TestLoadMarkdownDocumentDrawio:
+    '''Tests that load_markdown_document() renders draw.io diagrams to attachments.'''
+
+    def test_drawio_image_rendered_to_attachment(self, tmp_path):
+        '''A ![alt](file.drawio) in a .md file should be rendered to PNG
+        attachments and replaced with <ac:image> tags in body_storage.'''
+        drawio_file = tmp_path / 'arch.drawio'
+        drawio_file.write_text(
+            '<mxfile>'
+            '<diagram id="d1" name="Overview"><mxGraphModel/></diagram>'
+            '</mxfile>',
+            encoding='utf-8',
+        )
+        md_file = tmp_path / 'page.md'
+        md_file.write_text(
+            '---\ntitle: Test\n---\n\n'
+            '# Architecture\n\n'
+            '![Architecture](arch.drawio)\n\n'
+            'After the diagram.\n',
+            encoding='utf-8',
+        )
+
+        def fake_render(drawio_path, output_dir, base_name):
+            png = output_dir / f'{base_name}_tab1.png'
+            png.write_bytes(b'FAKEPNG')
+            return [{'source_path': str(png), 'filename': png.name, 'tab_name': 'Overview'}]
+
+        with patch('confluence_utils._render_drawio', side_effect=fake_render):
+            doc = load_markdown_document(str(md_file))
+
+        # The diagram should appear as an <ac:image> attachment reference
+        assert 'ac:image' in doc.body_storage
+        assert 'ri:attachment ri:filename="diagram_drawio_' in doc.body_storage
+        # The original .drawio reference should NOT appear
+        assert 'arch.drawio' not in doc.body_storage
+
+        # There should be a PNG attachment in the attachments list
+        diagram_attachments = [
+            a for a in doc.attachments if a['filename'].startswith('diagram_drawio_')
+        ]
+        assert len(diagram_attachments) >= 1
+        assert diagram_attachments[0]['filename'].endswith('.png')
+
+    def test_drawio_rendering_disabled(self, tmp_path):
+        '''When render_diagrams_flag=False, .drawio references are left as-is.'''
+        drawio_file = tmp_path / 'arch.drawio'
+        drawio_file.write_text(
+            '<mxfile><diagram id="d1" name="P1"><mxGraphModel/></diagram></mxfile>',
+            encoding='utf-8',
+        )
+        md_file = tmp_path / 'page.md'
+        md_file.write_text(
+            '---\ntitle: Test\n---\n\n'
+            '![Architecture](arch.drawio)\n',
+            encoding='utf-8',
+        )
+
+        doc = load_markdown_document(str(md_file), render_diagrams_flag=False)
+
+        # No diagram attachments should be present
+        diagram_attachments = [
+            a for a in doc.attachments if a['filename'].startswith('diagram_drawio_')
+        ]
+        assert len(diagram_attachments) == 0
+
+    def test_mixed_mermaid_and_drawio_in_document(self, tmp_path):
+        '''A file with both mermaid and draw.io diagrams should produce
+        attachments for both types.'''
+        drawio_file = tmp_path / 'flow.drawio'
+        drawio_file.write_text(
+            '<mxfile><diagram id="d1" name="Flow"><mxGraphModel/></diagram></mxfile>',
+            encoding='utf-8',
+        )
+        md_file = tmp_path / 'page.md'
+        md_file.write_text(
+            '---\ntitle: Mixed\n---\n\n'
+            '```mermaid\n'
+            'graph TD\n'
+            '    A --> B\n'
+            '```\n\n'
+            '![Flow](flow.drawio)\n',
+            encoding='utf-8',
+        )
+
+        def fake_mermaid(source, output_path):
+            output_path.write_bytes(b'FAKEPNG')
+
+        def fake_drawio(drawio_path, output_dir, base_name):
+            png = output_dir / f'{base_name}_tab1.png'
+            png.write_bytes(b'FAKEPNG')
+            return [{'source_path': str(png), 'filename': png.name, 'tab_name': 'Flow'}]
+
+        with patch('confluence_utils._render_mermaid', side_effect=fake_mermaid), \
+             patch('confluence_utils._render_drawio', side_effect=fake_drawio):
+            doc = load_markdown_document(str(md_file))
+
+        filenames = {a['filename'] for a in doc.attachments}
+        mermaid_files = [f for f in filenames if f.startswith('diagram_mermaid_')]
+        drawio_files = [f for f in filenames if f.startswith('diagram_drawio_')]
+        assert len(mermaid_files) == 1
+        assert len(drawio_files) >= 1
+
+        # Both should appear as <ac:image> in the storage
+        assert 'ri:attachment ri:filename="diagram_mermaid_' in doc.body_storage
+        assert 'ri:attachment ri:filename="diagram_drawio_' in doc.body_storage
