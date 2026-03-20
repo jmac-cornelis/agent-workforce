@@ -4116,7 +4116,8 @@ def create_ticket(
 
 
 def bulk_update_tickets(jira, input_file, set_release=None, remove_release=False,
-                        transition=None, assign=None, dry_run=True, max_updates=None):
+                        transition=None, assign=None, dry_run=True, max_updates=None,
+                        fix_version_mode='replace'):
     '''
     Perform bulk updates on tickets loaded from a CSV file.
 
@@ -4124,11 +4125,20 @@ def bulk_update_tickets(jira, input_file, set_release=None, remove_release=False
         jira: JIRA object with active connection.
         input_file: Path to the CSV file containing ticket keys.
         set_release: Release/version name to set on tickets, or None.
+            If the CSV contains a 'fix_version' column, that column
+            takes precedence over this flag (per-ticket fix versions).
+            The column supports comma-separated values for multiple
+            versions, e.g. "12.2.0.x, 14.0.0.x".
         remove_release: If True, remove all releases from tickets.
         transition: Status name to transition tickets to, or None.
         assign: Username or email to assign tickets to, or None.
         dry_run: If True, only preview changes without applying them.
         max_updates: Maximum number of tickets to update, or None for all.
+        fix_version_mode: How to apply fix versions from the CSV column.
+            'replace' — set fix versions to exactly what the CSV specifies
+                        (removes any versions not listed).
+            'add'     — append the CSV versions to existing fix versions
+                        without removing any.
 
     Output:
         None; prints results to stdout.
@@ -4150,9 +4160,13 @@ def bulk_update_tickets(jira, input_file, set_release=None, remove_release=False
         log.debug(f'Limiting updates to {max_updates} tickets (out of {len(tickets)})')
         tickets = tickets[:max_updates]
     
+    has_csv_fix_version = any('fix_version' in t for t in tickets)
+
     # Determine what operations to perform
     operations = []
-    if set_release:
+    if has_csv_fix_version:
+        operations.append(f'Set fix versions from CSV column (mode={fix_version_mode})')
+    elif set_release:
         operations.append(f'Set release to: {set_release}')
     if remove_release:
         operations.append('Remove release')
@@ -4164,6 +4178,7 @@ def bulk_update_tickets(jira, input_file, set_release=None, remove_release=False
     if not operations:
         output('ERROR: No update operations specified.')
         output('Use --set-release, --remove-release, --transition, or --assign')
+        output('Or include a fix_version column in the CSV.')
         return
     
     # Print summary
@@ -4201,23 +4216,34 @@ def bulk_update_tickets(jira, input_file, set_release=None, remove_release=False
         # Show progress
         status_str = f'[{i}/{len(tickets)}] {ticket_key}'
         
+        csv_fix_versions = ticket.get('fix_version', '').strip()
+        per_ticket_versions = None
+        if has_csv_fix_version and csv_fix_versions:
+            per_ticket_versions = [v.strip() for v in csv_fix_versions.split(',') if v.strip()]
+
         if dry_run:
-            # Dry run - just show what would happen
-            log.debug(f'{ticket_key}: Dry run - would apply operations')
-            output(f'{status_str}: Would apply: {", ".join(operations)}')
+            dry_ops = list(operations)
+            if per_ticket_versions:
+                dry_ops = [f'Set fix versions to: {", ".join(per_ticket_versions)} (mode={fix_version_mode})']
+                dry_ops += [op for op in operations if 'fix version' not in op.lower() and 'release' not in op.lower()]
+            output(f'{status_str}: Would apply: {", ".join(dry_ops)}')
             success_count += 1
         else:
-            # Execute the updates
             try:
-                log.debug(f'{ticket_key}: Fetching issue from Jira')
                 issue = jira.issue(ticket_key)
                 
-                # Set release
-                if set_release:
+                if per_ticket_versions:
+                    if fix_version_mode == 'add':
+                        existing = [v.name for v in (issue.fields.fixVersions or [])]
+                        merged = list(set(existing + per_ticket_versions))
+                        issue.update(fields={'fixVersions': [{'name': v} for v in merged]})
+                    else:
+                        issue.update(fields={'fixVersions': [{'name': v} for v in per_ticket_versions]})
+                    log.debug(f'{ticket_key}: Set fix versions to {per_ticket_versions} (mode={fix_version_mode})')
+                elif set_release:
                     issue.update(fields={'fixVersions': [{'name': set_release}]})
                     log.debug(f'{ticket_key}: Set release to {set_release}')
                 
-                # Remove release
                 if remove_release:
                     issue.update(fields={'fixVersions': []})
                     log.debug(f'{ticket_key}: Removed release')

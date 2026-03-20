@@ -416,7 +416,7 @@ class GanttProjectPlannerAgent(BaseAgent):
 
         # Step 5: Generate xlsx
         if request.output_file:
-            output_path = self._write_xlsx(snapshot, request.output_file)
+            output_path = self._write_xlsx(snapshot, request.output_file, request)
             log.info(f'Wrote roadmap xlsx to {output_path}')
 
         return snapshot
@@ -752,7 +752,17 @@ class GanttProjectPlannerAgent(BaseAgent):
 
     # -- XLSX generation — 3-sheet workbook ------------------------------------
 
-    def _write_xlsx(self, snapshot: RoadmapSnapshot, output_file: str) -> str:
+    @staticmethod
+    def _col(headers: List[str], name: str) -> int:
+        '''Return 1-based column index for *name* in *headers*.'''
+        return headers.index(name) + 1
+
+    def _write_xlsx(
+        self,
+        snapshot: RoadmapSnapshot,
+        output_file: str,
+        request: Optional[RoadmapRequest] = None,
+    ) -> str:
         '''
         Generate a 3-sheet xlsx workbook from the roadmap snapshot.
 
@@ -762,20 +772,23 @@ class GanttProjectPlannerAgent(BaseAgent):
 
         Uses excel_utils formatting helpers for consistent styling.
         '''
+        if request is None:
+            request = RoadmapRequest()
+
         wb = Workbook()
 
         # -- Sheet 1: Current Jira --
         ws_jira = wb.active or wb.create_sheet()
         ws_jira.title = 'Current Jira'
-        self._write_jira_sheet(ws_jira, snapshot)
+        self._write_jira_sheet(ws_jira, snapshot, request)
 
         # -- Sheet 2: Proposed (Gaps) --
         ws_gaps = wb.create_sheet('Proposed (Gaps)')
-        self._write_gaps_sheet(ws_gaps, snapshot)
+        self._write_gaps_sheet(ws_gaps, snapshot, request)
 
         # -- Sheet 3: Merged Roadmap --
         ws_merged = wb.create_sheet('Merged Roadmap')
-        self._write_merged_sheet(ws_merged, snapshot)
+        self._write_merged_sheet(ws_merged, snapshot, request)
 
         # Save workbook
         os.makedirs(os.path.dirname(output_file) or '.', exist_ok=True)
@@ -786,6 +799,7 @@ class GanttProjectPlannerAgent(BaseAgent):
         self,
         ws: Any,
         snapshot: RoadmapSnapshot,
+        request: RoadmapRequest,
     ) -> None:
         '''Write the "Current Jira" sheet with all Jira-sourced items.'''
         headers = [
@@ -793,6 +807,8 @@ class GanttProjectPlannerAgent(BaseAgent):
             'project', 'issue_type', 'status', 'priority', 'key',
             'summary', 'assignee', 'fix_version', 'component', 'labels',
         ]
+        if not request.show_priority:
+            headers.remove('priority')
 
         for col_idx, header in enumerate(headers, 1):
             ws.cell(row=1, column=col_idx, value=header)
@@ -804,12 +820,15 @@ class GanttProjectPlannerAgent(BaseAgent):
             for item in section.items:
                 if item.source != 'Jira':
                     continue
-                self._write_jira_item_row(ws, row, item, snapshot.project_key)
+                self._write_jira_item_row(
+                    ws, row, item, snapshot.project_key, headers, request,
+                )
                 row += 1
 
         _apply_header_style(ws, len(headers))
         _apply_status_conditional_formatting(ws, headers)
-        _apply_priority_conditional_formatting(ws, headers)
+        if request.show_priority:
+            _apply_priority_conditional_formatting(ws, headers)
         ws.freeze_panes = 'A2'
         ws.auto_filter.ref = f'A1:{get_column_letter(len(headers))}{max(row - 1, 1)}'
         self._set_column_widths(ws, headers)
@@ -820,35 +839,53 @@ class GanttProjectPlannerAgent(BaseAgent):
         row: int,
         item: RoadmapItem,
         project_key: str,
+        headers: List[str],
+        request: RoadmapRequest,
     ) -> None:
         '''Write a single Jira item row to the Current Jira sheet.'''
+        c = self._col
         for d in range(3):
+            depth_header = ['Depth 0 (Initiative)', 'Depth 1 (Epic)', 'Depth 2 (Story)'][d]
             if item.depth == d:
-                ws.cell(row=row, column=d + 1, value=item.key)
+                ws.cell(row=row, column=c(headers, depth_header), value=item.key)
             else:
-                ws.cell(row=row, column=d + 1, value='')
+                ws.cell(row=row, column=c(headers, depth_header), value='')
 
-        ws.cell(row=row, column=4, value=project_key)
-        ws.cell(row=row, column=5, value=item.issue_type)
-        ws.cell(row=row, column=6, value=item.status)
-        ws.cell(row=row, column=7, value=item.priority)
+        ws.cell(row=row, column=c(headers, 'project'), value=project_key)
 
-        key_cell = ws.cell(row=row, column=8, value=item.key)
+        issue_type_cell = ws.cell(
+            row=row, column=c(headers, 'issue_type'), value=item.issue_type,
+        )
+        if request.bold_stories and item.issue_type == 'Story':
+            issue_type_cell.font = Font(bold=True)
+
+        ws.cell(row=row, column=c(headers, 'status'), value=item.status)
+
+        if 'priority' in headers:
+            ws.cell(row=row, column=c(headers, 'priority'), value=item.priority)
+
+        key_cell = ws.cell(row=row, column=c(headers, 'key'), value=item.key)
         if item.key:
             key_cell.hyperlink = f'{JIRA_BASE_URL}/browse/{item.key}'
             key_cell.font = Font(color='0563C1', underline='single')
 
-        ws.cell(row=row, column=9, value=item.summary)
-        ws.cell(row=row, column=10, value=item.assignee)
-        ws.cell(row=row, column=11, value=item.fix_version)
-        ws.cell(row=row, column=12, value=item.component)
-        ws.cell(row=row, column=13, value=item.labels)
+        ws.cell(row=row, column=c(headers, 'summary'), value=item.summary)
+
+        assignee_val = item.assignee
+        if request.blank_unassigned and assignee_val in ('Unassigned', '', None):
+            assignee_val = ''
+        ws.cell(row=row, column=c(headers, 'assignee'), value=assignee_val)
+
+        ws.cell(row=row, column=c(headers, 'fix_version'), value=item.fix_version)
+        ws.cell(row=row, column=c(headers, 'component'), value=item.component)
+        ws.cell(row=row, column=c(headers, 'labels'), value=item.labels)
 
         if item.depth == 0:
             bold_font = Font(bold=True)
-            for col_idx in range(1, 14):
+            key_col = c(headers, 'key')
+            for col_idx in range(1, len(headers) + 1):
                 cell = ws.cell(row=row, column=col_idx)
-                if col_idx == 8 and item.key:
+                if col_idx == key_col and item.key:
                     cell.font = Font(
                         bold=True, color='0563C1', underline='single'
                     )
@@ -859,6 +896,7 @@ class GanttProjectPlannerAgent(BaseAgent):
         self,
         ws: Any,
         snapshot: RoadmapSnapshot,
+        request: RoadmapRequest,
     ) -> None:
         '''Write the "Proposed (Gaps)" sheet with LLM-identified gaps.'''
         headers = [
@@ -867,6 +905,8 @@ class GanttProjectPlannerAgent(BaseAgent):
             'suggested_component', 'acceptance_criteria', 'dependencies',
             'suggested_fix_version', 'labels',
         ]
+        if not request.show_priority:
+            headers.remove('priority')
 
         for col_idx, header in enumerate(headers, 1):
             ws.cell(row=1, column=col_idx, value=header)
@@ -879,11 +919,14 @@ class GanttProjectPlannerAgent(BaseAgent):
             row = self._write_section_divider(ws, row, section.title, len(headers))
 
             for gap in section.gaps:
-                self._write_gap_row(ws, row, gap, snapshot.project_key)
+                self._write_gap_row(
+                    ws, row, gap, snapshot.project_key, headers, request,
+                )
                 row += 1
 
         _apply_header_style(ws, len(headers))
-        _apply_priority_conditional_formatting(ws, headers)
+        if request.show_priority:
+            _apply_priority_conditional_formatting(ws, headers)
         ws.freeze_panes = 'A2'
         ws.auto_filter.ref = f'A1:{get_column_letter(len(headers))}{max(row - 1, 1)}'
         self._set_column_widths(ws, headers, is_gaps_sheet=True)
@@ -894,28 +937,41 @@ class GanttProjectPlannerAgent(BaseAgent):
         row: int,
         gap: RoadmapGap,
         project_key: str,
+        headers: List[str],
+        request: RoadmapRequest,
     ) -> None:
         '''Write a single gap row to the Proposed (Gaps) sheet.'''
+        c = self._col
         for d in range(3):
+            depth_header = ['Depth 0 (Initiative)', 'Depth 1 (Epic)', 'Depth 2 (Story)'][d]
             if gap.depth == d:
-                ws.cell(row=row, column=d + 1, value=gap.summary[:40])
+                ws.cell(row=row, column=c(headers, depth_header), value=gap.summary[:40])
             else:
-                ws.cell(row=row, column=d + 1, value='')
+                ws.cell(row=row, column=c(headers, depth_header), value='')
 
-        ws.cell(row=row, column=4, value=project_key)
-        ws.cell(row=row, column=5, value=gap.issue_type)
-        ws.cell(row=row, column=6, value=gap.priority)
-        ws.cell(row=row, column=7, value=gap.summary)
-        ws.cell(row=row, column=8, value=gap.suggested_component)
-        ws.cell(row=row, column=9, value=gap.acceptance_criteria)
-        ws.cell(row=row, column=10, value=gap.dependencies)
-        ws.cell(row=row, column=11, value=gap.suggested_fix_version)
-        ws.cell(row=row, column=12, value=gap.labels)
+        ws.cell(row=row, column=c(headers, 'project'), value=project_key)
+
+        issue_type_cell = ws.cell(
+            row=row, column=c(headers, 'issue_type'), value=gap.issue_type,
+        )
+        if request.bold_stories and gap.issue_type == 'Story':
+            issue_type_cell.font = Font(bold=True)
+
+        if 'priority' in headers:
+            ws.cell(row=row, column=c(headers, 'priority'), value=gap.priority)
+
+        ws.cell(row=row, column=c(headers, 'summary'), value=gap.summary)
+        ws.cell(row=row, column=c(headers, 'suggested_component'), value=gap.suggested_component)
+        ws.cell(row=row, column=c(headers, 'acceptance_criteria'), value=gap.acceptance_criteria)
+        ws.cell(row=row, column=c(headers, 'dependencies'), value=gap.dependencies)
+        ws.cell(row=row, column=c(headers, 'suggested_fix_version'), value=gap.suggested_fix_version)
+        ws.cell(row=row, column=c(headers, 'labels'), value=gap.labels)
 
     def _write_merged_sheet(
         self,
         ws: Any,
         snapshot: RoadmapSnapshot,
+        request: RoadmapRequest,
     ) -> None:
         '''Write the "Merged Roadmap" sheet with both Jira and proposed items.'''
         headers = [
@@ -924,6 +980,8 @@ class GanttProjectPlannerAgent(BaseAgent):
             'summary', 'assignee', 'fix_version', 'component', 'labels',
             'source', 'acceptance_criteria', 'dependencies',
         ]
+        if not request.show_priority:
+            headers.remove('priority')
 
         for col_idx, header in enumerate(headers, 1):
             ws.cell(row=1, column=col_idx, value=header)
@@ -940,19 +998,21 @@ class GanttProjectPlannerAgent(BaseAgent):
                 if item.source != 'Jira':
                     continue
                 self._write_merged_jira_row(
-                    ws, row, item, snapshot.project_key
+                    ws, row, item, snapshot.project_key, headers, request,
                 )
                 row += 1
 
             for gap in section.gaps:
                 self._write_merged_gap_row(
-                    ws, row, gap, snapshot.project_key, proposed_fill
+                    ws, row, gap, snapshot.project_key, proposed_fill,
+                    headers, request,
                 )
                 row += 1
 
         _apply_header_style(ws, len(headers))
         _apply_status_conditional_formatting(ws, headers)
-        _apply_priority_conditional_formatting(ws, headers)
+        if request.show_priority:
+            _apply_priority_conditional_formatting(ws, headers)
         ws.freeze_panes = 'A2'
         ws.auto_filter.ref = f'A1:{get_column_letter(len(headers))}{max(row - 1, 1)}'
         self._set_column_widths(ws, headers, is_merged_sheet=True)
@@ -963,38 +1023,56 @@ class GanttProjectPlannerAgent(BaseAgent):
         row: int,
         item: RoadmapItem,
         project_key: str,
+        headers: List[str],
+        request: RoadmapRequest,
     ) -> None:
         '''Write a Jira item row to the Merged Roadmap sheet.'''
+        c = self._col
         for d in range(3):
+            depth_header = ['Depth 0 (Initiative)', 'Depth 1 (Epic)', 'Depth 2 (Story)'][d]
             if item.depth == d:
-                ws.cell(row=row, column=d + 1, value=item.key)
+                ws.cell(row=row, column=c(headers, depth_header), value=item.key)
             else:
-                ws.cell(row=row, column=d + 1, value='')
+                ws.cell(row=row, column=c(headers, depth_header), value='')
 
-        ws.cell(row=row, column=4, value=project_key)
-        ws.cell(row=row, column=5, value=item.issue_type)
-        ws.cell(row=row, column=6, value=item.status)
-        ws.cell(row=row, column=7, value=item.priority)
+        ws.cell(row=row, column=c(headers, 'project'), value=project_key)
 
-        key_cell = ws.cell(row=row, column=8, value=item.key)
+        issue_type_cell = ws.cell(
+            row=row, column=c(headers, 'issue_type'), value=item.issue_type,
+        )
+        if request.bold_stories and item.issue_type == 'Story':
+            issue_type_cell.font = Font(bold=True)
+
+        ws.cell(row=row, column=c(headers, 'status'), value=item.status)
+
+        if 'priority' in headers:
+            ws.cell(row=row, column=c(headers, 'priority'), value=item.priority)
+
+        key_cell = ws.cell(row=row, column=c(headers, 'key'), value=item.key)
         if item.key:
             key_cell.hyperlink = f'{JIRA_BASE_URL}/browse/{item.key}'
             key_cell.font = Font(color='0563C1', underline='single')
 
-        ws.cell(row=row, column=9, value=item.summary)
-        ws.cell(row=row, column=10, value=item.assignee)
-        ws.cell(row=row, column=11, value=item.fix_version)
-        ws.cell(row=row, column=12, value=item.component)
-        ws.cell(row=row, column=13, value=item.labels)
-        ws.cell(row=row, column=14, value='Jira')
-        ws.cell(row=row, column=15, value='')
-        ws.cell(row=row, column=16, value='')
+        ws.cell(row=row, column=c(headers, 'summary'), value=item.summary)
+
+        assignee_val = item.assignee
+        if request.blank_unassigned and assignee_val in ('Unassigned', '', None):
+            assignee_val = ''
+        ws.cell(row=row, column=c(headers, 'assignee'), value=assignee_val)
+
+        ws.cell(row=row, column=c(headers, 'fix_version'), value=item.fix_version)
+        ws.cell(row=row, column=c(headers, 'component'), value=item.component)
+        ws.cell(row=row, column=c(headers, 'labels'), value=item.labels)
+        ws.cell(row=row, column=c(headers, 'source'), value='Jira')
+        ws.cell(row=row, column=c(headers, 'acceptance_criteria'), value='')
+        ws.cell(row=row, column=c(headers, 'dependencies'), value='')
 
         if item.depth == 0:
             bold_font = Font(bold=True)
-            for col_idx in range(1, 17):
+            key_col = c(headers, 'key')
+            for col_idx in range(1, len(headers) + 1):
                 cell = ws.cell(row=row, column=col_idx)
-                if col_idx == 8 and item.key:
+                if col_idx == key_col and item.key:
                     cell.font = Font(
                         bold=True, color='0563C1', underline='single'
                     )
@@ -1008,29 +1086,42 @@ class GanttProjectPlannerAgent(BaseAgent):
         gap: RoadmapGap,
         project_key: str,
         proposed_fill: PatternFill,
+        headers: List[str],
+        request: RoadmapRequest,
     ) -> None:
         '''Write a proposed gap row to the Merged Roadmap sheet (highlighted).'''
+        c = self._col
         for d in range(3):
+            depth_header = ['Depth 0 (Initiative)', 'Depth 1 (Epic)', 'Depth 2 (Story)'][d]
             if gap.depth == d:
-                ws.cell(row=row, column=d + 1, value=gap.summary[:40])
+                ws.cell(row=row, column=c(headers, depth_header), value=gap.summary[:40])
             else:
-                ws.cell(row=row, column=d + 1, value='')
+                ws.cell(row=row, column=c(headers, depth_header), value='')
 
-        ws.cell(row=row, column=4, value=project_key)
-        ws.cell(row=row, column=5, value=gap.issue_type)
-        ws.cell(row=row, column=6, value='')
-        ws.cell(row=row, column=7, value=gap.priority)
-        ws.cell(row=row, column=8, value='')
-        ws.cell(row=row, column=9, value=gap.summary)
-        ws.cell(row=row, column=10, value='')
-        ws.cell(row=row, column=11, value=gap.suggested_fix_version)
-        ws.cell(row=row, column=12, value=gap.suggested_component)
-        ws.cell(row=row, column=13, value=gap.labels)
-        ws.cell(row=row, column=14, value='Proposed')
-        ws.cell(row=row, column=15, value=gap.acceptance_criteria)
-        ws.cell(row=row, column=16, value=gap.dependencies)
+        ws.cell(row=row, column=c(headers, 'project'), value=project_key)
 
-        for col_idx in range(1, 17):
+        issue_type_cell = ws.cell(
+            row=row, column=c(headers, 'issue_type'), value=gap.issue_type,
+        )
+        if request.bold_stories and gap.issue_type == 'Story':
+            issue_type_cell.font = Font(bold=True)
+
+        ws.cell(row=row, column=c(headers, 'status'), value='')
+
+        if 'priority' in headers:
+            ws.cell(row=row, column=c(headers, 'priority'), value=gap.priority)
+
+        ws.cell(row=row, column=c(headers, 'key'), value='')
+        ws.cell(row=row, column=c(headers, 'summary'), value=gap.summary)
+        ws.cell(row=row, column=c(headers, 'assignee'), value='')
+        ws.cell(row=row, column=c(headers, 'fix_version'), value=gap.suggested_fix_version)
+        ws.cell(row=row, column=c(headers, 'component'), value=gap.suggested_component)
+        ws.cell(row=row, column=c(headers, 'labels'), value=gap.labels)
+        ws.cell(row=row, column=c(headers, 'source'), value='Proposed')
+        ws.cell(row=row, column=c(headers, 'acceptance_criteria'), value=gap.acceptance_criteria)
+        ws.cell(row=row, column=c(headers, 'dependencies'), value=gap.dependencies)
+
+        for col_idx in range(1, len(headers) + 1):
             ws.cell(row=row, column=col_idx).fill = proposed_fill
 
     @staticmethod
@@ -1069,19 +1160,42 @@ class GanttProjectPlannerAgent(BaseAgent):
         Set explicit column widths for the worksheet.
 
         Column widths are tuned for readability in each sheet type.
+        Uses header-name lookup so widths stay correct when columns are
+        added or removed (e.g. priority omitted).
         '''
-        base_widths = [42, 42, 48, 7, 12, 12, 6, 12, 65, 20, 18, 30, 14]
+        _BASE: Dict[str, int] = {
+            'Depth 0 (Initiative)': 42,
+            'Depth 1 (Epic)': 42,
+            'Depth 2 (Story)': 48,
+            'project': 7,
+            'issue_type': 12,
+            'status': 12,
+            'priority': 6,
+            'key': 12,
+            'summary': 65,
+            'assignee': 20,
+            'fix_version': 18,
+            'component': 30,
+            'labels': 14,
+            'source': 50,
+            'acceptance_criteria': 25,
+            'dependencies': 25,
+        }
 
-        if is_gaps_sheet:
-            widths = [42, 42, 48, 7, 12, 6, 65, 25, 50, 25, 18, 25]
-        elif is_merged_sheet:
-            widths = base_widths + [50, 25, 25]
-        else:
-            widths = base_widths
+        _GAPS: Dict[str, int] = {
+            'summary': 65,
+            'suggested_component': 25,
+            'acceptance_criteria': 50,
+            'dependencies': 25,
+            'suggested_fix_version': 18,
+            'labels': 25,
+        }
 
-        for col_idx, width in enumerate(widths, 1):
+        width_map = {**_BASE, **(_GAPS if is_gaps_sheet else {})}
+
+        for col_idx, header in enumerate(headers, 1):
             col_letter = get_column_letter(col_idx)
-            ws.column_dimensions[col_letter].width = width
+            ws.column_dimensions[col_letter].width = width_map.get(header, 14)
 
     @staticmethod
     def _format_summary(snapshot: RoadmapSnapshot) -> str:

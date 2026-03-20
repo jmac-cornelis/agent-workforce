@@ -276,6 +276,9 @@ def create_roadmap_snapshot(
     output_file: Optional[str] = None,
     include_gap_analysis: bool = True,
     persist: bool = True,
+    show_priority: bool = True,
+    blank_unassigned: bool = True,
+    bold_stories: bool = True,
 ) -> ToolResult:
     '''
     Create a roadmap analysis snapshot from Jira initiative hierarchy.
@@ -338,6 +341,9 @@ def create_roadmap_snapshot(
             include_closed=include_closed,
             output_file=resolved_output_file,
             include_gap_analysis=include_gap_analysis,
+            show_priority=show_priority,
+            blank_unassigned=blank_unassigned,
+            bold_stories=bold_stories,
         )
 
         agent = GanttProjectPlannerAgent(project_key=project_key)
@@ -648,6 +654,9 @@ class GanttTools(BaseTool):
         output_file: Optional[str] = None,
         include_gap_analysis: bool = True,
         persist: bool = True,
+        show_priority: bool = True,
+        blank_unassigned: bool = True,
+        bold_stories: bool = True,
     ) -> ToolResult:
         return create_roadmap_snapshot(
             project_key,
@@ -659,6 +668,9 @@ class GanttTools(BaseTool):
             output_file,
             include_gap_analysis,
             persist,
+            show_priority,
+            blank_unassigned,
+            bold_stories,
         )
 
     @tool(description='Get a persisted roadmap snapshot by project key and snapshot ID')

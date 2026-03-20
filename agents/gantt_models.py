@@ -267,6 +267,10 @@ class RoadmapRequest:
     output_file: Optional[str] = None
     include_gap_analysis: bool = True
 
+    show_priority: bool = True
+    blank_unassigned: bool = True
+    bold_stories: bool = True
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             'project_key': self.project_key,
