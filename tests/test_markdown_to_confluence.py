@@ -21,6 +21,7 @@ import confluence_utils
 from confluence_utils import (
     DiagramRenderResult,
     convert_markdown_to_confluence,
+    load_markdown_document,
     markdown_to_storage,
     render_diagrams,
 )
@@ -677,3 +678,157 @@ class TestEdgeCases:
         fragments = {'@@TOKEN@@': '<ac:link>custom</ac:link>'}
         result = markdown_to_storage('See @@TOKEN@@ here', extra_fragments=fragments)
         assert '<ac:link>custom</ac:link>' in result
+
+
+# ---------------------------------------------------------------------------
+# load_markdown_document — diagram rendering integration
+# ---------------------------------------------------------------------------
+
+class TestLoadMarkdownDocumentDiagrams:
+    '''Tests that load_markdown_document() renders diagrams to attachments.'''
+
+    def test_mermaid_diagram_rendered_to_attachment(self, tmp_path):
+        '''A mermaid fenced block in a .md file should be rendered to a PNG
+        attachment and replaced with an <ac:image> tag in body_storage.'''
+        md_file = tmp_path / 'page.md'
+        md_file.write_text(
+            '---\ntitle: Test\n---\n\n'
+            '# Architecture\n\n'
+            '```mermaid\n'
+            'graph TD\n'
+            '    A[Start] --> B[End]\n'
+            '```\n\n'
+            'After the diagram.\n',
+            encoding='utf-8',
+        )
+
+        # Mock _render_mermaid so we don't need mmdc installed in CI
+        def fake_render(source, output_path):
+            output_path.write_bytes(b'FAKEPNG')
+
+        with patch('confluence_utils._render_mermaid', side_effect=fake_render):
+            doc = load_markdown_document(str(md_file))
+
+        # The diagram should appear as an <ac:image> attachment reference
+        assert 'ri:attachment ri:filename="diagram_mermaid_' in doc.body_storage
+        assert 'ac:image' in doc.body_storage
+        # The original mermaid code block should NOT appear
+        assert 'graph TD' not in doc.body_storage
+        assert 'ac:name="code"' not in doc.body_storage or 'mermaid' not in doc.body_storage
+
+        # There should be a PNG attachment in the attachments list
+        diagram_attachments = [
+            a for a in doc.attachments if a['filename'].startswith('diagram_mermaid_')
+        ]
+        assert len(diagram_attachments) == 1
+        assert diagram_attachments[0]['filename'].endswith('.png')
+
+    def test_diagram_rendering_disabled(self, tmp_path):
+        '''When render_diagrams_flag=False, mermaid blocks stay as code blocks.'''
+        md_file = tmp_path / 'page.md'
+        md_file.write_text(
+            '---\ntitle: Test\n---\n\n'
+            '```mermaid\n'
+            'graph TD\n'
+            '    A --> B\n'
+            '```\n',
+            encoding='utf-8',
+        )
+
+        doc = load_markdown_document(str(md_file), render_diagrams_flag=False)
+
+        # Should be a code block, not an image
+        assert 'ac:name="code"' in doc.body_storage
+        # No diagram attachments
+        diagram_attachments = [
+            a for a in doc.attachments if a['filename'].startswith('diagram_mermaid_')
+        ]
+        assert len(diagram_attachments) == 0
+
+    def test_diagram_render_failure_preserves_code_block(self, tmp_path):
+        '''When mmdc fails, the mermaid block should remain as a code block.'''
+        md_file = tmp_path / 'page.md'
+        md_file.write_text(
+            '---\ntitle: Test\n---\n\n'
+            '```mermaid\n'
+            'invalid diagram syntax\n'
+            '```\n',
+            encoding='utf-8',
+        )
+
+        def failing_render(source, output_path):
+            raise RuntimeError('mmdc failed')
+
+        with patch('confluence_utils._render_mermaid', side_effect=failing_render):
+            doc = load_markdown_document(str(md_file))
+
+        # Should fall back to a code block
+        assert 'ac:name="code"' in doc.body_storage
+        # No diagram attachments
+        diagram_attachments = [
+            a for a in doc.attachments if a['filename'].startswith('diagram_mermaid_')
+        ]
+        assert len(diagram_attachments) == 0
+
+    def test_mixed_diagrams_and_images(self, tmp_path):
+        '''A file with both a mermaid diagram and a regular image should
+        produce attachments for both.'''
+        img_file = tmp_path / 'photo.png'
+        img_file.write_bytes(b'PNG')
+
+        md_file = tmp_path / 'page.md'
+        md_file.write_text(
+            '---\ntitle: Mixed\n---\n\n'
+            '![Photo](photo.png)\n\n'
+            '```mermaid\n'
+            'graph LR\n'
+            '    X --> Y\n'
+            '```\n',
+            encoding='utf-8',
+        )
+
+        def fake_render(source, output_path):
+            output_path.write_bytes(b'FAKEPNG')
+
+        with patch('confluence_utils._render_mermaid', side_effect=fake_render):
+            doc = load_markdown_document(str(md_file))
+
+        filenames = {a['filename'] for a in doc.attachments}
+        # Should have the regular image attachment
+        assert 'photo.png' in filenames
+        # Should have the rendered diagram attachment
+        diagram_filenames = [f for f in filenames if f.startswith('diagram_mermaid_')]
+        assert len(diagram_filenames) == 1
+
+        # Both should appear as <ac:image> in the storage
+        assert 'ri:attachment ri:filename="photo.png"' in doc.body_storage
+        assert 'ri:attachment ri:filename="diagram_mermaid_' in doc.body_storage
+
+    def test_multiple_mermaid_diagrams(self, tmp_path):
+        '''Multiple mermaid blocks should each produce a separate attachment.'''
+        md_file = tmp_path / 'page.md'
+        md_file.write_text(
+            '---\ntitle: Multi\n---\n\n'
+            '```mermaid\n'
+            'graph TD\n'
+            '    A --> B\n'
+            '```\n\n'
+            '```mermaid\n'
+            'sequenceDiagram\n'
+            '    Alice->>Bob: Hello\n'
+            '```\n',
+            encoding='utf-8',
+        )
+
+        def fake_render(source, output_path):
+            output_path.write_bytes(b'FAKEPNG')
+
+        with patch('confluence_utils._render_mermaid', side_effect=fake_render):
+            doc = load_markdown_document(str(md_file))
+
+        diagram_attachments = [
+            a for a in doc.attachments if a['filename'].startswith('diagram_mermaid_')
+        ]
+        # Two different diagrams → two different content hashes → two attachments
+        assert len(diagram_attachments) == 2
+        assert diagram_attachments[0]['filename'] != diagram_attachments[1]['filename']

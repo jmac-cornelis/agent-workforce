@@ -588,18 +588,44 @@ def _rewrite_markdown_assets(
     return rewritten, extra_fragments, attachments
 
 
-def load_markdown_document(input_file: str) -> MarkdownDocument:
+def load_markdown_document(
+    input_file: str,
+    render_diagrams_flag: bool = True,
+) -> MarkdownDocument:
     '''
     Load a Markdown file, parse front matter, and prepare Confluence storage XHTML.
+
+    When *render_diagrams_flag* is True (the default), any diagram fenced-code
+    blocks (e.g. ``mermaid``) are rendered to PNG via external CLI tools and
+    replaced with image references.  The rendered PNGs are added to the
+    attachments list so they get uploaded alongside the page.
     '''
     raw_markdown = read_markdown_file(input_file)
     front_matter, body_markdown = parse_front_matter(raw_markdown)
     base_dir = Path(input_file).resolve().parent
 
+    # Step 1: Render diagrams (mermaid, etc.) to PNG before asset rewriting.
+    # This replaces fenced diagram blocks with Markdown image references
+    # pointing to rendered PNGs, which _rewrite_markdown_assets will then
+    # pick up as local attachment images.
+    diagram_attachments: list[dict[str, str]] = []
+    if render_diagrams_flag:
+        diagram_result = render_diagrams(body_markdown)
+        body_markdown = diagram_result.markdown
+        diagram_attachments = diagram_result.attachments
+        if diagram_result.errors:
+            for err in diagram_result.errors:
+                log.warning(err)
+
+    # Step 2: Rewrite remaining Markdown images/links to Confluence fragments
     rewritten_markdown, extra_fragments, attachments = _rewrite_markdown_assets(
         body_markdown,
         base_dir,
     )
+
+    # Step 3: Merge diagram-rendered attachments into the attachment list
+    for da in diagram_attachments:
+        _add_attachment(attachments, da['source_path'], filename=da['filename'])
 
     for attachment in _dedupe_string_list(front_matter.get('attachments')):
         resolved = base_dir / attachment
