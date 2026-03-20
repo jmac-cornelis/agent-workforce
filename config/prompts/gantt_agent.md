@@ -110,6 +110,64 @@ the missing items:
 - Identify items still in backlog or undefined status that block higher-priority
   work.
 
+### Ticket Naming Convention
+
+When generating or proposing ticket trees, ALWAYS prepend summaries with a
+short bracketed tag that identifies the feature area. The tag flows from epic
+to all child stories so tickets are scannable at a glance.
+
+**Format:** `[TAG] Descriptive summary text`
+
+**Rules:**
+- Each Epic gets a unique `[1-2 word tag]` derived from its feature area.
+- Every child Story under that Epic inherits the same tag.
+- Initiatives do NOT get tags (they use `[Feature]` prefix by convention).
+- If a ticket already has a `[...]` prefix, do not add another.
+- Tags should be short (1-2 words), uppercase-first, using domain shorthand.
+
+**Examples of established tags in this project:**
+
+| Tag | Feature Area |
+|---|---|
+| `[CYR Cport]` | CYR firmware cport updates |
+| `[CYR 800G]` | CYR 800GB support |
+| `[CYR OPX]` | CYR OPX design and dual-plane |
+| `[CYR RoCE]` | CYR RoCE driver support |
+| `[CYR SR-IOV]` | CYR OPA SR-IOV support |
+| `[RoCE Driver]` | RoCE driver implementation |
+| `[RoCE HFIsvc]` | RoCE via HFIsvc |
+| `[RoCE DevOps]` | RoCE CI/build pipeline |
+| `[SR-IOV Driver]` | SR-IOV ethernet driver |
+| `[SR-IOV MW]` | SR-IOV middleware (OPX) |
+| `[SR-IOV Arch]` | SR-IOV architecture design |
+| `[OPA HFIsvc]` | OPA port to HFIsvc |
+| `[MW OPX]` | Middleware OPX enablement |
+| `[RDMA Core]` | RDMA core API implementation |
+| `[ETH MAC]` | Ethernet MAC configuration |
+| `[ETH FW]` | Ethernet firmware |
+| `[TCP/IP Perf]` | TCP/IP performance testing |
+| `[GPU SOL]` | GPU SpeedOfLight |
+| `[GPU OPA]` | GPU over OPA verbs |
+| `[GPU RoCE]` | GPU over RoCE verbs |
+| `[GPU OPX]` | GPU over OPX |
+| `[SERDES]` | SERDES configuration |
+| `[PQC]` | Post-quantum cryptography |
+| `[Build Pipeline]` | CI/build pipeline |
+| `[EMU Delivery]` | Emulation SW delivery |
+| `[BTS/Verbs]` | BTS and verbs merge |
+| `[FW Tools]` | Firmware tools |
+| `[Backport ETH]` | ETH driver distro backports |
+| `[Backport OPA]` | OPA driver distro backports |
+| `[IPoIB]` | IPoIB enablement |
+| `[Storage]` | Storage protocol enablement |
+| `[Perf RoCE]` | RoCE performance targets |
+| `[Perf OPA]` | OPA performance targets |
+| `[Perf OPX]` | OPX performance targets |
+
+When proposing new epics or stories, choose a tag that fits the feature area.
+If no existing tag fits, create a new one following the same style. Always
+apply the parent epic's tag to its child stories.
+
 ### Gap Proposal Output Format
 
 You MUST output a single `json` code block conforming to this schema:
