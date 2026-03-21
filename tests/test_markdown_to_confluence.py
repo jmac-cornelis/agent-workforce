@@ -1141,3 +1141,61 @@ class TestLoadMarkdownDocumentDrawio:
         # Both should appear as <ac:image> in the storage
         assert 'ri:attachment ri:filename="diagram_mermaid_' in doc.body_storage
         assert 'ri:attachment ri:filename="diagram_drawio_' in doc.body_storage
+
+    def test_drawio_cwd_fallback_resolution(self, tmp_path):
+        '''When a .drawio path is not found relative to base_dir, the resolver
+        should fall back to CWD-relative lookup (common for repo-root paths
+        referenced from a subdirectory Markdown file).'''
+        # Create a directory structure simulating repo layout:
+        #   tmp_path/docs/workforce/page.md  (base_dir = docs/workforce/)
+        #   tmp_path/diagrams/workforce/arch.drawio
+        docs_dir = tmp_path / 'docs' / 'workforce'
+        docs_dir.mkdir(parents=True)
+        diag_dir = tmp_path / 'diagrams' / 'workforce'
+        diag_dir.mkdir(parents=True)
+
+        drawio_file = diag_dir / 'arch.drawio'
+        drawio_file.write_text(
+            '<mxfile><diagram id="d1" name="Overview"><mxGraphModel/></diagram></mxfile>',
+            encoding='utf-8',
+        )
+
+        # The markdown references diagrams/workforce/arch.drawio — this is
+        # relative to the repo root (CWD), NOT to docs/workforce/.
+        md = '![Architecture](diagrams/workforce/arch.drawio)'
+
+        def fake_render(drawio_path, output_dir, base_name):
+            png = output_dir / f'{base_name}_tab1.png'
+            png.write_bytes(b'FAKEPNG')
+            return [{'source_path': str(png), 'filename': png.name, 'tab_name': 'Overview'}]
+
+        # Patch CWD to tmp_path so the fallback finds the file
+        with patch('confluence_utils._render_drawio', side_effect=fake_render), \
+             patch('confluence_utils.Path.cwd', return_value=tmp_path):
+            result = render_diagrams(md, output_dir=str(tmp_path / 'out'), base_dir=docs_dir)
+
+        assert result.rendered_count == 1
+        assert len(result.errors) == 0
+        assert '![Overview]' in result.markdown
+
+    def test_drawio_skip_in_rewrite_markdown_assets(self, tmp_path):
+        '''When render_diagrams_flag is False, a .drawio image reference should
+        NOT cause a FileNotFoundError in _rewrite_markdown_assets — the .drawio
+        file is simply passed through as-is.'''
+        drawio_file = tmp_path / 'arch.drawio'
+        drawio_file.write_text(
+            '<mxfile><diagram id="d1" name="P1"><mxGraphModel/></diagram></mxfile>',
+            encoding='utf-8',
+        )
+        md_file = tmp_path / 'page.md'
+        md_file.write_text(
+            '---\ntitle: Test\n---\n\n'
+            '![Architecture](arch.drawio)\n',
+            encoding='utf-8',
+        )
+
+        # With rendering disabled, the .drawio reference should survive without error
+        doc = load_markdown_document(str(md_file), render_diagrams_flag=False)
+        # The .drawio should NOT be in attachments (it was skipped)
+        drawio_attachments = [a for a in doc.attachments if 'drawio' in a['filename']]
+        assert len(drawio_attachments) == 0

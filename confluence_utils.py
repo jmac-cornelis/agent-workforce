@@ -557,6 +557,13 @@ def _rewrite_markdown_assets(
     def _replace_image(match: re.Match[str]) -> str:
         target = _normalize_markdown_target(match.group(2))
         if not _is_remote_target(target):
+            # Skip .drawio files — they are handled by render_diagrams()
+            # before this function runs.  If rendering succeeded the line
+            # was already replaced with PNG image references; if it failed
+            # the original line was preserved with an error logged.  Either
+            # way we must not try to attach the raw .drawio file.
+            if target.lower().endswith('.drawio'):
+                return match.group(0)
             resolved = base_dir / target
             if not resolved.exists():
                 raise FileNotFoundError(f'Attachment image not found: {resolved}')
@@ -1270,11 +1277,22 @@ def render_diagrams(
         if drawio_match:
             alt_text = drawio_match.group(1) or 'draw.io diagram'
             drawio_target = drawio_match.group(2)
-            # Resolve the .drawio file path relative to base_dir
+            # Resolve the .drawio file path relative to base_dir, falling
+            # back to the current working directory when the base_dir-relative
+            # path does not exist.  This handles the common case where a
+            # Markdown file in docs/workforce/ references a diagram via a
+            # repo-root-relative path like ``diagrams/workforce/foo.drawio``.
             drawio_file = Path(drawio_target)
             if not drawio_file.is_absolute():
-                drawio_file = base_dir / drawio_file
-            drawio_file = drawio_file.resolve()
+                candidate = (base_dir / drawio_file).resolve()
+                if candidate.exists():
+                    drawio_file = candidate
+                else:
+                    # Fallback: try CWD-relative (repo root)
+                    drawio_file = Path.cwd() / drawio_file
+                    drawio_file = drawio_file.resolve()
+            else:
+                drawio_file = drawio_file.resolve()
 
             if not drawio_file.exists():
                 error_msg = f'Draw.io file not found: {drawio_file}'
