@@ -6,8 +6,8 @@ This document provides a working proposal for a new paradigm for the design of a
 
 This document focus's on the what can loosely be described as the "DevOps" parts of the organization -- project planning and status, bug tracking and triaging, build automation and management, release automation and managmement, code quality and scanning, and test generationa, execution, and tracking.
 
-[!NOTE]
-This document does not address the details of human responsibilities, other than calling out the roles that they will continue to perform. 
+> [!NOTE]
+> This document does not address the details of human responsibilities, other than calling out the roles that they will continue to perform.
 
 **Coordinated software engineering, testing, release, bug investigation, knowledge capture, and planning agents for the Cornelis Networks development organization.**
 

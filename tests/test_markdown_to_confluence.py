@@ -680,6 +680,39 @@ class TestEdgeCases:
         result = markdown_to_storage('See @@TOKEN@@ here', extra_fragments=fragments)
         assert '<ac:link>custom</ac:link>' in result
 
+    def test_html_block_table_passthrough(self):
+        '''Raw HTML <table> blocks should pass through unchanged.'''
+        md = (
+            'Before\n\n'
+            '<table>\n<tr><th>A</th></tr>\n<tr><td>1</td></tr>\n</table>\n\n'
+            'After'
+        )
+        result = markdown_to_storage(md)
+        assert '<table>' in result
+        assert '<tr><th>A</th></tr>' in result
+        assert '</table>' in result
+        # Surrounding text should still be wrapped in <p>
+        assert '<p>Before</p>' in result
+        assert '<p>After</p>' in result
+
+    def test_html_block_nested_tables(self):
+        '''Nested HTML tables should be collected as a single block.'''
+        md = (
+            '<table>\n<tr><td>\n<table><tr><td>inner</td></tr></table>\n'
+            '</td></tr>\n</table>'
+        )
+        result = markdown_to_storage(md)
+        assert result.count('<table>') == 2
+        assert result.count('</table>') == 2
+        assert 'inner' in result
+
+    def test_html_block_div_passthrough(self):
+        '''Raw HTML <div> blocks should pass through unchanged.'''
+        md = '<div class="note">\nHello world\n</div>'
+        result = markdown_to_storage(md)
+        assert '<div class="note">' in result
+        assert '</div>' in result
+
 
 # ---------------------------------------------------------------------------
 # load_markdown_document — diagram rendering integration

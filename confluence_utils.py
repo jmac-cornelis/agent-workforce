@@ -1699,6 +1699,34 @@ def markdown_to_storage(
             i += 1
             continue
 
+        # --- Raw HTML blocks (e.g. <table>, <div>, <details>) ---
+        # Detect lines starting with an HTML block-level opening tag and
+        # collect everything through the matching closing tag, passing the
+        # content through to Confluence storage format unchanged.
+        html_block_match = re.match(
+            r'^<(table|div|details|section|aside|figure|nav|header|footer'
+            r'|article|main|dl|pre|fieldset|form)\b',
+            stripped, re.IGNORECASE,
+        )
+        if html_block_match:
+            _flush_paragraph()
+            html_tag = html_block_match.group(1).lower()
+            html_lines: list[str] = [line]
+            # Track nesting depth so we match the correct closing tag
+            depth = len(re.findall(rf'<{html_tag}\b', stripped, re.IGNORECASE))
+            depth -= len(re.findall(rf'</{html_tag}>', stripped, re.IGNORECASE))
+            i += 1
+            while i < len(lines) and depth > 0:
+                html_lines.append(lines[i])
+                depth += len(re.findall(rf'<{html_tag}\b', lines[i], re.IGNORECASE))
+                depth -= len(re.findall(rf'</{html_tag}>', lines[i], re.IGNORECASE))
+                i += 1
+            # If depth never reached 0, we consumed everything — still pass through
+            if depth > 0:
+                pass  # unclosed tag, best-effort passthrough
+            blocks.append('\n'.join(html_lines))
+            continue
+
         # --- Headings ---
         heading = re.match(r'^(#{1,6})\s+(.+)$', stripped)
         if heading:
