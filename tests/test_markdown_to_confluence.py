@@ -713,6 +713,38 @@ class TestEdgeCases:
         assert '<div class="note">' in result
         assert '</div>' in result
 
+    def test_html_block_inline_markdown_bold(self):
+        '''**bold** inside HTML table cells should become <strong>.'''
+        md = '<table>\n<tr><td>**Josephine** — Build</td></tr>\n</table>'
+        result = markdown_to_storage(md)
+        assert '<strong>Josephine</strong>' in result
+        # HTML structure should be preserved
+        assert '<table>' in result
+        assert '</table>' in result
+
+    def test_html_block_inline_markdown_italic(self):
+        '''*italic* inside HTML blocks should become <em>.'''
+        md = '<div>\n*emphasis here*\n</div>'
+        result = markdown_to_storage(md)
+        assert '<em>emphasis here</em>' in result
+
+    def test_html_block_inline_markdown_strikethrough(self):
+        '''~~strikethrough~~ inside HTML blocks should become <del>.'''
+        md = '<table>\n<tr><td>~~removed~~</td></tr>\n</table>'
+        result = markdown_to_storage(md)
+        assert '<del>removed</del>' in result
+
+    def test_html_block_inline_markdown_preserves_attributes(self):
+        '''Inline markdown conversion must not alter HTML tag attributes.'''
+        md = (
+            '<table>\n'
+            '<th style="background:#dae8fc;text-align:center">**Header**</th>\n'
+            '</table>'
+        )
+        result = markdown_to_storage(md)
+        assert 'style="background:#dae8fc;text-align:center"' in result
+        assert '<strong>Header</strong>' in result
+
 
 # ---------------------------------------------------------------------------
 # load_markdown_document — diagram rendering integration

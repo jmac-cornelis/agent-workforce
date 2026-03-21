@@ -1635,6 +1635,44 @@ def _parse_list_block(lines: list[str], start: int,
     return f'<{tag}>{"".join(items_html)}</{tag}>', i
 
 
+def _convert_inline_markdown_in_html(html_block: str) -> str:
+    '''Convert inline Markdown (bold, italic, strikethrough) inside an HTML block.
+
+    Only processes text segments that are between HTML tags — i.e. the text
+    content of elements — so that HTML attribute values are never modified.
+
+    Conversion rules (applied in order):
+    - ``**text**`` or ``__text__`` → ``<strong>text</strong>``
+    - ``*text*`` or ``_text_`` → ``<em>text</em>``
+    - ``~~text~~`` → ``<del>text</del>``
+    '''
+
+    def _convert_segment(segment: str) -> str:
+        '''Apply inline markdown conversions to a single text segment.'''
+        # Bold: **text** or __text__
+        segment = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', segment)
+        segment = re.sub(r'__(.+?)__', r'<strong>\1</strong>', segment)
+        # Italic: *text* or _text_ (but not inside words for underscore)
+        segment = re.sub(r'(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)', r'<em>\1</em>', segment)
+        segment = re.sub(r'(?<![_\w])_(?!_)(.+?)(?<!_)_(?![_\w])', r'<em>\1</em>', segment)
+        # Strikethrough: ~~text~~
+        segment = re.sub(r'~~(.+?)~~', r'<del>\1</del>', segment)
+        return segment
+
+    # Split the HTML block into tag tokens and text tokens.
+    # re.split with a capturing group keeps the delimiters in the list.
+    parts = re.split(r'(<[^>]+>)', html_block)
+    result: list[str] = []
+    for part in parts:
+        if part.startswith('<'):
+            # This is an HTML tag — pass through unchanged
+            result.append(part)
+        else:
+            # This is text content — convert inline markdown
+            result.append(_convert_segment(part))
+    return ''.join(result)
+
+
 def markdown_to_storage(
     markdown_text: str,
     extra_fragments: Optional[dict[str, str]] = None,
@@ -1724,7 +1762,13 @@ def markdown_to_storage(
             # If depth never reached 0, we consumed everything — still pass through
             if depth > 0:
                 pass  # unclosed tag, best-effort passthrough
-            blocks.append('\n'.join(html_lines))
+            # Convert inline markdown (bold, italic, strikethrough) that
+            # appears inside the raw HTML block so Confluence renders it
+            # properly.  We process line-by-line, only touching text that
+            # is NOT inside an HTML tag (i.e. between > and <).
+            html_block = '\n'.join(html_lines)
+            html_block = _convert_inline_markdown_in_html(html_block)
+            blocks.append(html_block)
             continue
 
         # --- Headings ---
