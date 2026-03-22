@@ -28,76 +28,7 @@ Agents are organized into three operational zones: the **Execution Spine** handl
 
 ## Agent Zone Map
 
-Where each agent and system lives — no interaction lines.
-
-<table>
-<tr>
-<th style="background:#dae8fc;text-align:center;padding:8px;">External Systems</th>
-<th style="background:#d5e8d4;text-align:center;padding:8px;">Execution Spine</th>
-<th style="background:#e1d5e7;text-align:center;padding:8px;">Intelligence &amp; Knowledge</th>
-<th style="background:#f8cecc;text-align:center;padding:8px;">Planning &amp; Delivery</th>
-<th style="background:#ffe6cc;text-align:center;padding:8px;">Service Infrastructure</th>
-<th style="background:#fff2cc;text-align:center;padding:8px;">Humans</th>
-</tr>
-<tr>
-<td valign="top">
-
-GitHub<br>
-Jira<br>
-Microsoft Teams<br>
-Fuze Config / Build Maps<br>
-Fuze Test / ATF<br>
-HW / Mock Environments<br>
-Docs Publish Target<br>
-Knowledge Store<br>
-Artifact Store<br>
-Event Bus
-
-</td>
-<td valign="top">
-
-**Josephine** — Build & Package<br>
-**Linus** — Code Review<br>
-**Hedy** — Release Manager<br>
-**Ada** — Test Planner<br>
-**Curie** — Test Generator<br>
-**Faraday** — Test Executor<br>
-**Tesla** — Environment Manager<br>
-**Brandeis** — Legal Compliance
-
-</td>
-<td valign="top">
-
-**Nightingale** — Bug Investigation<br>
-**Drucker** — Jira Coordinator<br>
-**Linnaeus** — Traceability<br>
-**Babbage** — Version Manager<br>
-**Herodotus** — Knowledge Capture<br>
-**Hypatia** — Documentation
-
-</td>
-<td valign="top">
-
-**Gantt** — Project Planner<br>
-**Brooks** — Delivery Manager
-
-</td>
-<td valign="top">
-
-**Shannon** — Communications
-
-</td>
-<td valign="top">
-
-Developers<br>
-Management<br>
-DevOps<br>
-Project Management<br>
-Test Engineering
-
-</td>
-</tr>
-</table>
+![Agent Zone Map](../../diagrams/workforce/AGENT_ZONE_MAP.drawio)
 
 ## Agents by Zone
 
