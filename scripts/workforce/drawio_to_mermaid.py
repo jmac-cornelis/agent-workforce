@@ -2,7 +2,7 @@
 """
 Convert AGENT_ORCHESTRATION_ZONES.drawio to a Mermaid block-beta diagram.
 
-Source of truth: diagrams/AGENT_ORCHESTRATION_ZONES.drawio
+Source of truth: docs/diagrams/workforce/AGENT_ORCHESTRATION_ZONES.drawio
 Outputs:
   - Mermaid block inserted into README.md and docs/AGENT_WORKFORCE_OVERVIEW.md
   - PNG rendered and uploaded to Confluence (separate step)
@@ -20,7 +20,7 @@ import html
 import sys
 import os
 
-DRAWIO_PATH = os.path.join(os.path.dirname(__file__), '..', 'diagrams', 'AGENT_ORCHESTRATION_ZONES.drawio')
+DRAWIO_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'docs', 'diagrams', 'workforce', 'AGENT_ORCHESTRATION_ZONES.drawio')
 
 # Zone definitions: map zone background IDs to their config
 ZONES = {

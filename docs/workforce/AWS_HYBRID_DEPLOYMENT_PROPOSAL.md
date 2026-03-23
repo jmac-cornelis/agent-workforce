@@ -6,7 +6,7 @@
 
 ## Architecture Overview
 
-![AWS Hybrid Architecture](../../diagrams/workforce/AWS_HYBRID_ARCHITECTURE.drawio)
+![AWS Hybrid Architecture](../diagrams/workforce/AWS_HYBRID_ARCHITECTURE.drawio)
 
 ## Why Consider AWS
 

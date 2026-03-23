@@ -1213,10 +1213,10 @@ class TestLoadMarkdownDocumentDrawio:
         referenced from a subdirectory Markdown file).'''
         # Create a directory structure simulating repo layout:
         #   tmp_path/docs/workforce/page.md  (base_dir = docs/workforce/)
-        #   tmp_path/diagrams/workforce/arch.drawio
+        #   tmp_path/docs/diagrams/workforce/arch.drawio
         docs_dir = tmp_path / 'docs' / 'workforce'
         docs_dir.mkdir(parents=True)
-        diag_dir = tmp_path / 'diagrams' / 'workforce'
+        diag_dir = tmp_path / 'docs' / 'diagrams' / 'workforce'
         diag_dir.mkdir(parents=True)
 
         drawio_file = diag_dir / 'arch.drawio'
@@ -1225,9 +1225,9 @@ class TestLoadMarkdownDocumentDrawio:
             encoding='utf-8',
         )
 
-        # The markdown references diagrams/workforce/arch.drawio — this is
-        # relative to the repo root (CWD), NOT to docs/workforce/.
-        md = '![Architecture](diagrams/workforce/arch.drawio)'
+        # The markdown references docs/diagrams/workforce/arch.drawio — this
+        # is relative to the repo root (CWD), NOT to docs/workforce/.
+        md = '![Architecture](docs/diagrams/workforce/arch.drawio)'
 
         def fake_render(drawio_path, output_dir, base_name):
             png = output_dir / f'{base_name}_tab1.png'

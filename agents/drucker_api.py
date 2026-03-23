@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from agents.drucker_agent import DruckerCoordinatorAgent
 from agents.drucker_models import DruckerRequest
+from core.reporting import bug_activity_today
 from state.drucker_report_store import DruckerReportStore
 
 log = logging.getLogger(os.path.basename(sys.argv[0]))
@@ -184,6 +185,27 @@ def create_app() -> FastAPI:
     ) -> Dict[str, Any]:
         reports = store.list_reports(project_key=project_key, limit=limit)
         return {'ok': True, 'data': reports}
+
+    class BugActivityRequest(BaseModel):
+        project_key: str = 'STL'
+        target_date: Optional[str] = None
+
+    @app.post('/v1/activity/bugs')
+    def activity_bugs(
+        body: Optional[BugActivityRequest] = None,
+        project_key: Optional[str] = Query(default=None),
+        target_date: Optional[str] = Query(default=None),
+    ) -> Dict[str, Any]:
+        from jira_utils import connect_to_jira
+        pk = (body.project_key if body and body.project_key else None) or project_key or 'STL'
+        td = (body.target_date if body and body.target_date else None) or target_date
+        try:
+            jira = connect_to_jira()
+            result = bug_activity_today(jira, pk, td)
+            return {'ok': True, 'data': result}
+        except Exception as e:
+            log.error(f'Bug activity report failed: {e}')
+            return {'ok': False, 'error': str(e)}
 
     return app
 

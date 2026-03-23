@@ -1295,7 +1295,7 @@ def render_diagrams(
             # back to the current working directory when the base_dir-relative
             # path does not exist.  This handles the common case where a
             # Markdown file in docs/workforce/ references a diagram via a
-            # repo-root-relative path like ``diagrams/workforce/foo.drawio``.
+            # repo-root-relative path like ``docs/diagrams/workforce/foo.drawio``.
             drawio_file = Path(drawio_target)
             if not drawio_file.is_absolute():
                 candidate = (base_dir / drawio_file).resolve()

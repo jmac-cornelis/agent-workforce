@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
-from shannon.cards import build_fact_card
+from shannon.cards import build_bug_activity_card, build_drucker_hygiene_card, build_drucker_summary_card, build_fact_card
 from shannon.models import AuditRecord, ConversationReference, ShannonResponse, normalize_command_text
 from shannon.poster import BasePoster, build_poster_from_env
 from shannon.registry import ShannonAgentRegistry
@@ -388,6 +388,12 @@ class ShannonService:
         except Exception as e:
             return {'ok': False, 'error': f'{registration.agent_id} error: {e}'}
 
+    DRUCKER_CARD_BUILDERS = {
+        '/hygiene-run': build_drucker_hygiene_card,
+        '/hygiene-report': build_drucker_hygiene_card,
+        '/bug-activity': build_bug_activity_card,
+    }
+
     def _agent_response_to_shannon(
         self,
         agent_id: str,
@@ -402,6 +408,29 @@ class ShannonService:
             )
 
         data = result.get('data', result)
+
+        card_builder = self.DRUCKER_CARD_BUILDERS.get(command) if agent_id == 'drucker' else None
+        if card_builder and isinstance(data, dict):
+            summary = data.get('summary', {})
+            total = summary.get('total_findings', len(data.get('findings', [])))
+            actions = len(data.get('proposed_actions', []))
+            card = card_builder(data)
+            return ShannonResponse(
+                text=f'{data.get("project_key", "")}: {total} findings, {actions} proposed actions',
+                card=card,
+                command=command,
+                decision='agent_call_success',
+            )
+
+        if agent_id == 'drucker' and command == '/stats' and isinstance(data, dict):
+            card = build_drucker_summary_card(data)
+            return ShannonResponse(
+                text=f'Reports: {data.get("reports_generated", 0)}, Findings: {data.get("total_findings", 0)}',
+                card=card,
+                command=command,
+                decision='agent_call_success',
+            )
+
         if isinstance(data, list):
             lines = [str(item) for item in data[:10]]
             if len(data) > 10:
@@ -502,13 +531,18 @@ class ShannonService:
                 path = cc.get('api_path', '')
                 json_body = None
                 params = None
+                args = parts[1:] if len(parts) > 1 else []
                 if method.upper() == 'POST':
                     json_body = {
-                        parts[i]: parts[i + 1]
-                        for i in range(1, len(parts) - 1, 2)
-                    } if len(parts) > 1 else {}
-                elif len(parts) > 1:
-                    params = {'args': ' '.join(parts[1:])}
+                        args[i]: args[i + 1]
+                        for i in range(0, len(args) - 1, 2)
+                    } if args else {}
+                elif args:
+                    # Append first arg as path segment (e.g. /hygiene-report <id>)
+                    # and pass remaining as query params
+                    path = f'{path.rstrip("/")}/{args[0]}'
+                    if len(args) > 1:
+                        params = {'args': ' '.join(args[1:])}
                 result = self._call_agent_api(
                     registration, method, path, params=params, json_body=json_body,
                 )

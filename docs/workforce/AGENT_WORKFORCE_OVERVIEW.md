@@ -28,7 +28,7 @@ Agents are organized into three operational zones: the **Execution Spine** handl
 
 ## Agent Zone Map
 
-![Agent Zone Map](../../diagrams/workforce/AGENT_ZONE_MAP.drawio)
+![Agent Zone Map](../diagrams/workforce/AGENT_ZONE_MAP.drawio)
 
 ## Agents by Zone
 

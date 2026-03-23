@@ -5,8 +5,8 @@ agents:
     description: Single Teams bot and routing surface for the Cornelis agent workforce.
     zone: service_infrastructure
     channel_name: agent-shannon
-    channel_id: ""
-    team_id: ""
+    channel_id: "19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2"
+    team_id: "19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2"
     api_base_url: ""
     approval_types: []
     custom_commands:
@@ -42,8 +42,8 @@ agents:
     description: Deterministic Jira hygiene analysis and remediation
     zone: service_infrastructure
     channel_name: agent-drucker
-    channel_id: ""
-    team_id: ""
+    channel_id: "19:966aaabccc2a4ecd879d427edc83aaf0@thread.tacv2"
+    team_id: "19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2"
     api_base_url: http://localhost:8201
     approval_types: []
     custom_commands:
@@ -59,4 +59,8 @@ agents:
         description: List stored reports
         api_method: GET
         api_path: /v1/hygiene/reports
+      - command: /bug-activity
+        description: Bug ticket activity today (opened, status changes, comments)
+        api_method: POST
+        api_path: /v1/activity/bugs
     timeout_seconds: 30
