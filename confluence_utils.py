@@ -229,9 +229,19 @@ class ConfluenceConnection:
     def request(self, method: str, path: str, retries: int = 3, **kwargs) -> requests.Response:
         '''
         Execute an authenticated request against the Confluence API.
+
+        Retries automatically on HTTP 429 (rate limit) and transient 500/502/503/504
+        server errors with exponential backoff.  The *retries* parameter controls
+        the maximum number of retry attempts (default 3).
         '''
         url = path if path.startswith('http') else f'{self.base_url}{path}'
         timeout = kwargs.pop('timeout', 30)
+
+        # Transient server errors that are safe to retry.  The 500 case covers
+        # the ``UnexpectedRollbackException`` race condition observed when
+        # Confluence processes concurrent attachment uploads and page body
+        # updates.
+        _RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
 
         for attempt in range(retries + 1):
             try:
@@ -239,13 +249,17 @@ class ConfluenceConnection:
             except requests.RequestException as exc:
                 raise ConfluenceConnectionError(f'Confluence request failed: {exc}') from exc
 
-            if response.status_code == 429 and attempt < retries:
-                retry_after = int(response.headers.get('Retry-After', 1))
+            if response.status_code in _RETRYABLE_STATUS_CODES and attempt < retries:
+                if response.status_code == 429:
+                    wait = int(response.headers.get('Retry-After', 1))
+                else:
+                    # Exponential backoff: 2s, 4s, 8s for transient server errors
+                    wait = 2 ** (attempt + 1)
                 log.warning(
-                    f'Rate limited by Confluence. Waiting {retry_after}s '
+                    f'Confluence returned {response.status_code}. Waiting {wait}s '
                     f'(retry {attempt + 1}/{retries})...'
                 )
-                time.sleep(retry_after)
+                time.sleep(wait)
                 continue
 
             if response.status_code >= 400:
@@ -2389,9 +2403,15 @@ def update_page(
     if resolved_version_message:
         payload['version']['message'] = resolved_version_message
 
+    # Upload attachments BEFORE updating the page body.  The storage XHTML
+    # may contain <ac:image> references to these attachments; if they are
+    # not yet present Confluence can fail with a transient 500 error
+    # (UnexpectedRollbackException).  Uploading first ensures the
+    # attachments exist when the body is saved.
+    uploaded_attachments = _upload_attachments(confluence, page_id, document.attachments)
+
     response = confluence.request('PUT', f'/api/v2/pages/{page_id}', json=payload)
     updated = _normalize_page_entity(confluence, _json(response))
-    uploaded_attachments = _upload_attachments(confluence, page_id, document.attachments)
     _apply_page_labels(confluence, page_id, document.labels)
     updated = _with_uploaded_assets(updated, uploaded_attachments)
 
@@ -2460,9 +2480,11 @@ def append_page(
     if resolved_version_message:
         payload['version']['message'] = resolved_version_message
 
+    # Upload attachments before body update — see update_page() for rationale.
+    uploaded_attachments = _upload_attachments(confluence, page_id, document.attachments)
+
     response = confluence.request('PUT', f'/api/v2/pages/{page_id}', json=payload)
     updated = _normalize_page_entity(confluence, _json(response))
-    uploaded_attachments = _upload_attachments(confluence, page_id, document.attachments)
     _apply_page_labels(confluence, page_id, document.labels)
     return _with_uploaded_assets(updated, uploaded_attachments)
 
@@ -2519,9 +2541,11 @@ def update_page_section(
     if resolved_version_message:
         payload['version']['message'] = resolved_version_message
 
+    # Upload attachments before body update — see update_page() for rationale.
+    uploaded_attachments = _upload_attachments(confluence, page_id, document.attachments)
+
     response = confluence.request('PUT', f'/api/v2/pages/{page_id}', json=payload)
     updated = _normalize_page_entity(confluence, _json(response))
-    uploaded_attachments = _upload_attachments(confluence, page_id, document.attachments)
     _apply_page_labels(confluence, page_id, document.labels)
     return _with_uploaded_assets(updated, uploaded_attachments)
 

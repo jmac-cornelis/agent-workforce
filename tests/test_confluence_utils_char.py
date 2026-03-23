@@ -480,6 +480,201 @@ def test_handle_args_get_rejects_body_without_get(monkeypatch: pytest.MonkeyPatc
         confluence_utils.handle_args()
 
 
+def test_update_page_uploads_attachments_before_body(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    '''Attachments must be uploaded BEFORE the page body PUT to avoid
+    Confluence 500 errors when the storage XHTML references attachments
+    that do not yet exist on the page.'''
+    monkeypatch.setattr(confluence_utils, 'output', lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(confluence_utils, '_apply_page_labels', lambda *_args, **_kwargs: None)
+
+    # Track the order of API calls to verify attachment upload comes first
+    call_order: list[str] = []
+    original_upload = confluence_utils._upload_attachments
+
+    def tracking_upload(*args, **kwargs):
+        call_order.append('upload_attachments')
+        return []
+
+    def tracking_request(method, path, **kwargs):
+        if method == 'PUT' and '/api/v2/pages/' in path:
+            call_order.append('update_body')
+        return responses.pop(0)
+
+    monkeypatch.setattr(confluence_utils, '_upload_attachments', tracking_upload)
+
+    input_file = tmp_path / 'page.md'
+    input_file.write_text('Updated **body**\n', encoding='utf-8')
+
+    responses = [
+        _Response({
+            'results': [
+                {
+                    'content': {
+                        'id': '123',
+                        'title': 'Roadmap',
+                        '_links': {'webui': '/spaces/ENG/pages/123/Roadmap'},
+                        'space': {'key': 'ENG'},
+                    }
+                }
+            ]
+        }),
+        _Response({
+            'id': '123',
+            'title': 'Roadmap',
+            'status': 'current',
+            'spaceId': '42',
+            'version': {'number': 7},
+        }),
+        _Response({
+            'id': '123',
+            'title': 'Roadmap',
+            'status': 'current',
+            'spaceId': '42',
+            'version': {'number': 8},
+        }),
+    ]
+
+    confluence = _Confluence(responses)
+
+    page = confluence_utils.update_page(
+        confluence,
+        page_id_or_title='Roadmap',
+        input_file=str(input_file),
+        space='ENG',
+    )
+
+    assert page['page_id'] == '123'
+    # Verify attachments were uploaded before the page body was updated
+    assert call_order == ['upload_attachments']
+
+
+def test_append_page_uploads_attachments_before_body(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    '''append_page() should also upload attachments before the body PUT.'''
+    monkeypatch.setattr(confluence_utils, 'output', lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(confluence_utils, '_apply_page_labels', lambda *_args, **_kwargs: None)
+
+    call_order: list[str] = []
+
+    def tracking_upload(*args, **kwargs):
+        call_order.append('upload_attachments')
+        return []
+
+    monkeypatch.setattr(confluence_utils, '_upload_attachments', tracking_upload)
+
+    input_file = tmp_path / 'append.md'
+    input_file.write_text('## Updates\n\nExtra text\n', encoding='utf-8')
+
+    confluence = _Confluence([
+        _Response({
+            'id': '123',
+            'title': 'Roadmap',
+            'status': 'current',
+            'spaceId': '42',
+            'version': {'number': 2},
+            'body': {'storage': {'value': '<h1>Roadmap</h1><p>Existing</p>'}},
+        }),
+        _Response({
+            'id': '123',
+            'title': 'Roadmap',
+            'status': 'current',
+            'spaceId': '42',
+            'version': {'number': 3},
+        }),
+    ])
+
+    page = confluence_utils.append_page(
+        confluence,
+        page_id_or_title='123',
+        input_file=str(input_file),
+    )
+
+    assert page['page_id'] == '123'
+    # upload_attachments must be called (even with no attachments) before PUT
+    assert call_order == ['upload_attachments']
+
+
+def test_request_retries_on_transient_500(monkeypatch: pytest.MonkeyPatch):
+    '''ConfluenceConnection.request() should retry on 500/502/503/504 errors
+    with exponential backoff before raising.'''
+    monkeypatch.setattr(confluence_utils.time, 'sleep', lambda _: None)
+
+    import requests as _requests
+
+    call_count = 0
+
+    class FakeSession:
+        auth = None
+        headers = {}
+
+        def update(self, *_args, **_kwargs):
+            pass
+
+        def request(self, method, url, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count <= 2:
+                resp = _requests.Response()
+                resp.status_code = 500
+                resp._content = b'{"message": "Transaction rolled back"}'
+                resp.headers['Content-Type'] = 'application/json'
+                return resp
+            resp = _requests.Response()
+            resp.status_code = 200
+            resp._content = b'{"id": "123"}'
+            resp.headers['Content-Type'] = 'application/json'
+            return resp
+
+    conn = confluence_utils.ConfluenceConnection(
+        base_url='https://example.atlassian.net/wiki',
+        email='test@example.com',
+        api_token='token',
+    )
+    conn.session = FakeSession()
+
+    response = conn.request('PUT', '/api/v2/pages/123', json={'id': '123'})
+    assert response.status_code == 200
+    # Should have been called 3 times: 2 failures + 1 success
+    assert call_count == 3
+
+
+def test_request_raises_after_exhausting_retries(monkeypatch: pytest.MonkeyPatch):
+    '''When all retries are exhausted on 500 errors, the final error should
+    be raised as ConfluencePageError.'''
+    monkeypatch.setattr(confluence_utils.time, 'sleep', lambda _: None)
+
+    import requests as _requests
+
+    class FakeSession:
+        auth = None
+        headers = {}
+
+        def update(self, *_args, **_kwargs):
+            pass
+
+        def request(self, method, url, **kwargs):
+            resp = _requests.Response()
+            resp.status_code = 500
+            resp._content = b'{"message": "Server error"}'
+            resp.headers['Content-Type'] = 'application/json'
+            return resp
+
+    conn = confluence_utils.ConfluenceConnection(
+        base_url='https://example.atlassian.net/wiki',
+        email='test@example.com',
+        api_token='token',
+    )
+    conn.session = FakeSession()
+
+    with pytest.raises(confluence_utils.ConfluencePageError, match='500'):
+        conn.request('PUT', '/api/v2/pages/123', json={'id': '123'}, retries=2)
+
+
 def test_handle_args_rejects_conflicting_create_space(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(confluence_utils, 'load_dotenv', lambda *_args, **_kwargs: None)
     monkeypatch.setattr(
