@@ -163,12 +163,139 @@ curl http://localhost:8200/v1/bot/health
 - `GET /v1/status/tokens`
 - `GET /v1/status/decisions`
 
+## Zero-cost bidirectional setup (Outgoing Webhook + Workflows Incoming Webhook)
+
+The v1 deployment uses two free Teams mechanisms to get full bidirectional
+communication without Azure Bot Service:
+
+| Direction | Mechanism | Cost |
+|---|---|---|
+| User → Shannon | Outgoing Webhook | Free |
+| Shannon → Channel | Workflows Incoming Webhook | Free |
+
+### Step 1 — Create the team and channel
+
+1. In Teams, create a team called `Agent Workforce` (or reuse an existing one).
+2. Create a standard channel called `#agent-shannon`.
+
+### Step 2 — Create the Outgoing Webhook (user → Shannon)
+
+This lets users `@mention` Shannon in the channel and get a response.
+
+1. Open the `Agent Workforce` team in Teams.
+2. Click `...` next to the team name → `Manage team`.
+3. Open the `Apps` tab.
+4. Click `Create an outgoing webhook`.
+5. Name: `Shannon`
+6. Callback URL: `https://<your-public-host>/v1/teams/outgoing-webhook`
+7. Description: `Cornelis AI agent communications service`
+8. Click `Create`.
+9. **Copy the HMAC secret** Teams shows you — you cannot retrieve it later.
+10. Set the env var:
+    ```bash
+    SHANNON_TEAMS_OUTGOING_WEBHOOK_SECRET=<the-secret>
+    ```
+
+### Step 3 — Create the Workflows Incoming Webhook (Shannon → channel)
+
+This lets Shannon proactively post Adaptive Cards into the channel.
+
+1. In `#agent-shannon`, click `+` (Add a tab) or the `...` menu.
+2. Search for `Workflows` and open it.
+3. Click `Create` and choose the template: **Post to a channel when a webhook request is received**.
+   - If you don't see the template, search for "webhook" in the Workflows template gallery.
+4. Name the flow (e.g. `Shannon Incoming`).
+5. Select the `Agent Workforce` team and `#agent-shannon` channel as the target.
+6. Click `Create flow`.  Workflows generates a webhook URL.
+7. **Copy the webhook URL.**
+8. Set the env var:
+    ```bash
+    SHANNON_TEAMS_WORKFLOWS_WEBHOOK_URL=<the-url>
+    ```
+
+### Step 4 — Configure Shannon
+
+Set your environment (`.env` or `.env_prod`):
+
+```bash
+SHANNON_AGENT_REGISTRY_PATH=./config/shannon/agent_registry.yaml
+SHANNON_STATE_DIR=./data/shannon
+SHANNON_TEAMS_BOT_NAME=Shannon
+SHANNON_TEAMS_POST_MODE=workflows
+SHANNON_TEAMS_OUTGOING_WEBHOOK_SECRET=<from-step-2>
+SHANNON_TEAMS_WORKFLOWS_WEBHOOK_URL=<from-step-3>
+SHANNON_SEND_WELCOME_ON_INSTALL=true
+SHANNON_HOST=0.0.0.0
+SHANNON_PORT=8200
+```
+
+### Step 5 — Expose Shannon publicly
+
+Shannon needs a public HTTPS URL for the outgoing webhook callback.
+Options (all free or low-cost):
+
+- **ngrok** (free tier): `ngrok http 8200` — good for dev/testing
+- **Cloudflare Tunnel** (free): `cloudflared tunnel --url http://localhost:8200`
+- **Any server with a public IP + TLS termination** (nginx, caddy, etc.)
+
+### Step 6 — Verify
+
+1. Start Shannon:
+   ```bash
+   .venv/bin/python -m uvicorn shannon.app:app --host 0.0.0.0 --port 8200
+   ```
+
+2. Confirm health:
+   ```bash
+   curl http://localhost:8200/v1/bot/health
+   ```
+
+3. In `#agent-shannon`, send: `@Shannon /stats`
+   - Shannon should reply in-thread with a status card.
+
+4. Test proactive posting:
+   ```bash
+   curl -X POST http://localhost:8200/v1/bot/notify \
+     -H 'Content-Type: application/json' \
+     -d '{"agent_id": "shannon", "title": "Test", "text": "Hello from Shannon"}'
+   ```
+   - A card should appear in `#agent-shannon` (posted by "Workflows").
+
+### How it works
+
+```
+User @mentions Shannon          Shannon posts notification
+  in #agent-shannon                to #agent-shannon
+         │                                │
+         ▼                                ▼
+┌─────────────────┐          ┌──────────────────────┐
+│ Outgoing Webhook │          │ Workflows Incoming    │
+│ (HMAC-verified)  │          │ Webhook (HTTP POST)   │
+└────────┬────────┘          └──────────┬───────────┘
+         │                              │
+         ▼                              │
+┌─────────────────────────────────────────────────────┐
+│              Shannon Service (FastAPI)               │
+│   Receives commands synchronously (5s timeout)       │
+│   Posts proactive messages via Workflows webhook     │
+└─────────────────────────────────────────────────────┘
+```
+
+### Limitations of the zero-cost path
+
+- **5-second response timeout** on outgoing webhooks. Long commands get a
+  "working on it" reply, with the full result posted via the Workflows webhook.
+- **No threading** on Workflows webhook posts — they appear as new messages.
+- **Adaptive Card actions** limited to `openURL` only (no interactive
+  approve/reject buttons). Use link-based approval workflows instead.
+- **Channel-only** — no personal or group chat DMs.
+- Proactive posts show as **"Workflows"** sender, not "Shannon".
+
 ## Current limitations
 
-- Only Shannon’s own commands are implemented in this first slice.
+- Only Shannon's own commands are implemented in this first slice.
 - Other agent channels are not routed yet.
 - Outgoing Webhooks are channel-only and synchronous.
 - Adaptive Cards in Teams Outgoing Webhooks support only `openURL` actions.
-- Proactive posting is still a later follow-on if we stay on the no-Azure path.
 
 Those are good next tasks after the Shannon bootstrap is standing up cleanly.

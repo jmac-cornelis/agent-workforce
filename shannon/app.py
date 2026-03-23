@@ -15,6 +15,10 @@ import os
 import sys
 from typing import Any, Dict, List, Optional
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from fastapi import FastAPI, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 

@@ -85,6 +85,93 @@ class MemoryPoster(BasePoster):
         return {'ok': True, 'id': f'memory-message-{len(self.sent)}', 'mode': 'memory'}
 
 
+class WorkflowsPoster(BasePoster):
+    '''
+    Post Adaptive Cards to a Teams channel via a Workflows incoming webhook.
+
+    Workflows webhook payload format::
+
+        {
+            "type": "message",
+            "attachments": [{
+                "contentType": "application/vnd.microsoft.card.adaptive",
+                "contentUrl": null,
+                "content": { <adaptive card JSON> }
+            }]
+        }
+    '''
+
+    def __init__(
+        self,
+        webhook_url: str,
+        session: Optional[requests.Session] = None,
+    ):
+        self.webhook_url = str(webhook_url or '').strip()
+        self.session = session or requests.Session()
+
+        if not self.webhook_url:
+            raise ValueError('WorkflowsPoster requires a webhook_url')
+
+    @staticmethod
+    def _extract_card(activity: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        for attachment in activity.get('attachments') or []:
+            if attachment.get('contentType') == 'application/vnd.microsoft.card.adaptive':
+                return attachment.get('content')
+        return None
+
+    def _build_payload(self, activity: Dict[str, Any]) -> Dict[str, Any]:
+        card = self._extract_card(activity)
+        if card is None:
+            text = str(activity.get('text') or 'Shannon notification')
+            card = {
+                '$schema': 'http://adaptivecards.io/schemas/adaptive-card.json',
+                'type': 'AdaptiveCard',
+                'version': '1.5',
+                'body': [{'type': 'TextBlock', 'text': text, 'wrap': True}],
+            }
+
+        return {
+            'type': 'message',
+            'attachments': [{
+                'contentType': 'application/vnd.microsoft.card.adaptive',
+                'contentUrl': None,
+                'content': card,
+            }],
+        }
+
+    def _post(self, activity: Dict[str, Any]) -> Dict[str, Any]:
+        payload = self._build_payload(activity)
+        response = self.session.post(
+            self.webhook_url,
+            json=payload,
+            headers={'Content-Type': 'application/json'},
+            timeout=30,
+        )
+        response.raise_for_status()
+        return {'ok': True, 'mode': 'workflows', 'status_code': response.status_code}
+
+    def reply_to_activity(
+        self,
+        reference: ConversationReference,
+        activity_id: str,
+        activity: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        log.debug(
+            'WorkflowsPoster: reply_to_activity posted as new message '
+            '(threading not supported on Workflows webhooks)'
+        )
+        result = self._post(activity)
+        result['threading'] = False
+        return result
+
+    def send_to_conversation(
+        self,
+        reference: ConversationReference,
+        activity: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        return self._post(activity)
+
+
 class BotFrameworkPoster(BasePoster):
     '''
     Send replies to Teams through the Bot Framework connector REST API.
@@ -175,8 +262,16 @@ class BotFrameworkPoster(BasePoster):
 def build_poster_from_env() -> BasePoster:
     '''
     Build the configured Shannon poster implementation.
+
+    Modes:
+        memory       — in-memory (local dev / tests)
+        workflows    — zero-cost Workflows incoming webhook
+        botframework — Azure Bot Framework (requires app registration)
     '''
     mode = str(os.getenv('SHANNON_TEAMS_POST_MODE', 'memory') or 'memory').strip().lower()
+    if mode == 'workflows':
+        webhook_url = os.getenv('SHANNON_TEAMS_WORKFLOWS_WEBHOOK_URL', '')
+        return WorkflowsPoster(webhook_url=webhook_url or '')
     if mode == 'botframework':
         app_id = os.getenv('SHANNON_TEAMS_APP_ID')
         app_password = os.getenv('SHANNON_TEAMS_APP_PASSWORD')
