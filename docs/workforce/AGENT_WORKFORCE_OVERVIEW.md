@@ -38,14 +38,14 @@ These agents form the core build-test-release pipeline.
 
 | Agent | Role | Description |
 |-------|------|-------------|
-| **[Josephine](../agents/JOSEPHINE_BUILD_AGENT_PLAN.md)** | Build & Package | Build orchestration, compilation management, and artifact production across all Cornelis repositories. Wraps Fuze build/package into an API-driven service. |
-| **[Ada](../agents/ADA_TEST_PLANNER_PLAN.md)** | Test Planning | Determines what to test based on trigger class (PR, merge, nightly, release), coverage targets, and environment constraints. |
-| **[Curie](../agents/CURIE_TEST_GENERATOR_PLAN.md)** | Test Generation | Materializes Ada's test plans into concrete Fuze Test runtime inputs with reproducible version hashes. |
-| **[Faraday](../agents/FARADAY_TEST_EXECUTOR_PLAN.md)** | Test Execution | Runs ATF/Fuze Test cycles, captures logs/artifacts/results, classifies failures, and produces structured TestExecutionRecords. |
-| **[Tesla](../agents/TESLA_TEST_ENVIRONMENT_MANAGER_PLAN.md)** | Environment Mgmt | Shared reservation service for HIL and mock environments with capability matching and health monitoring. |
-| **[Hedy](../agents/HEDY_RELEASE_MANAGER_PLAN.md)** | Release Mgmt | Orchestrates release decisions using the Fuze release model with stage promotion (sit, qa, release) and human approval gates. |
-| **[Linus](../agents/LINUS_CODE_REVIEW_AGENT_PLAN.md)** | Code Review | Evaluates PRs against policy profiles (kernel, embedded C++, Python) and emits cross-agent impact signals. |
-| **[Brandeis](../agents/BRANDEIS_COMPLIANCE_AGENT_PLAN.md)** | Legal Compliance & Code Scanning | Scans dependencies for license compliance, flags policy violations on PRs, and manages license exception workflows. Named after Louis Brandeis, champion of transparency and the right to privacy. |
+| **[Josephine](JOSEPHINE_BUILD_AGENT_PLAN.md)** | Build & Package | Build orchestration, compilation management, and artifact production across all Cornelis repositories. Wraps Fuze build/package into an API-driven service. |
+| **[Ada](ADA_TEST_PLANNER_PLAN.md)** | Test Planning | Determines what to test based on trigger class (PR, merge, nightly, release), coverage targets, and environment constraints. |
+| **[Curie](CURIE_TEST_GENERATOR_PLAN.md)** | Test Generation | Materializes Ada's test plans into concrete Fuze Test runtime inputs with reproducible version hashes. |
+| **[Faraday](FARADAY_TEST_EXECUTOR_PLAN.md)** | Test Execution | Runs ATF/Fuze Test cycles, captures logs/artifacts/results, classifies failures, and produces structured TestExecutionRecords. |
+| **[Tesla](TESLA_TEST_ENVIRONMENT_MANAGER_PLAN.md)** | Environment Mgmt | Shared reservation service for HIL and mock environments with capability matching and health monitoring. |
+| **[Hedy](HEDY_RELEASE_MANAGER_PLAN.md)** | Release Mgmt | Orchestrates release decisions using the Fuze release model with stage promotion (sit, qa, release) and human approval gates. |
+| **[Linus](LINUS_CODE_REVIEW_AGENT_PLAN.md)** | Code Review | Evaluates PRs against policy profiles (kernel, embedded C++, Python) and emits cross-agent impact signals. |
+| **[Brandeis](BRANDEIS_COMPLIANCE_AGENT_PLAN.md)** | Legal Compliance & Code Scanning | Scans dependencies for license compliance, flags policy violations on PRs, and manages license exception workflows. Named after Louis Brandeis, champion of transparency and the right to privacy. |
 
 ### Intelligence & Knowledge
 
@@ -53,12 +53,12 @@ These agents provide context, traceability, and institutional knowledge.
 
 | Agent | Role | Description |
 |-------|------|-------------|
-| **[Babbage](../agents/BABBAGE_VERSION_MANAGER_PLAN.md)** | Version Mapping | Maps Fuze internal build IDs to external customer-facing release versions with conflict detection and lineage tracking. |
-| **[Linnaeus](../agents/LINNAEUS_TRACEABILITY_AGENT_PLAN.md)** | Traceability | Maintains queryable relationships between requirements, Jira issues, commits, builds, tests, releases, and versions. |
-| **[Herodotus](../agents/HERODOTUS_KNOWLEDGE_CAPTURE_AGENT_PLAN.md)** | Knowledge Capture | Ingests Teams meeting transcripts and produces structured summaries, decisions, and action items. |
-| **[Hypatia](../agents/HYPATIA_DOCUMENTATION_AGENT_PLAN.md)** | Documentation | Produces as-built, user, and engineering docs from authoritative system records via Sphinx/ReadTheDocs. |
-| **[Nightingale](../agents/NIGHTINGALE_BUG_TRIAGE_REPRODUCTION_PLAN.md)** | Bug Investigation | Reacts to Jira bugs, assembles build/test/release context, drives targeted reproduction, and produces investigation summaries. |
-| **[Drucker](../agents/DRUCKER_JIRA_COORDINATOR_PLAN.md)** | Jira Coordination | Keeps Jira operationally coherent with triage, hygiene, routing, and evidence-backed workflow nudges. |
+| **[Babbage](BABBAGE_VERSION_MANAGER_PLAN.md)** | Version Mapping | Maps Fuze internal build IDs to external customer-facing release versions with conflict detection and lineage tracking. |
+| **[Linnaeus](LINNAEUS_TRACEABILITY_AGENT_PLAN.md)** | Traceability | Maintains queryable relationships between requirements, Jira issues, commits, builds, tests, releases, and versions. |
+| **[Herodotus](HERODOTUS_KNOWLEDGE_CAPTURE_AGENT_PLAN.md)** | Knowledge Capture | Ingests Teams meeting transcripts and produces structured summaries, decisions, and action items. |
+| **[Hypatia](HYPATIA_DOCUMENTATION_AGENT_PLAN.md)** | Documentation | Produces as-built, user, and engineering docs from authoritative system records via Sphinx/ReadTheDocs. |
+| **[Nightingale](NIGHTINGALE_BUG_TRIAGE_REPRODUCTION_PLAN.md)** | Bug Investigation | Reacts to Jira bugs, assembles build/test/release context, drives targeted reproduction, and produces investigation summaries. |
+| **[Drucker](DRUCKER_JIRA_COORDINATOR_PLAN.md)** | Jira Coordination | Keeps Jira operationally coherent with triage, hygiene, routing, and evidence-backed workflow nudges. |
 
 ### Planning & Delivery
 
@@ -66,8 +66,8 @@ These agents support project management and delivery tracking.
 
 | Agent | Role | Description |
 |-------|------|-------------|
-| **[Gantt](../agents/GANTT_PROJECT_PLANNER_PLAN.md)** | Project Planning | Converts Jira work state, technical evidence, and meeting decisions into milestone proposals, dependency graphs, and risk summaries. |
-| **[Brooks](../agents/BROOKS_DELIVERY_MANAGER_PLAN.md)** | Delivery Mgmt | Monitors execution against plan, detects schedule risk and coordination failures, produces forecasts and escalation prompts. |
+| **[Gantt](GANTT_PROJECT_PLANNER_PLAN.md)** | Project Planning | Converts Jira work state, technical evidence, and meeting decisions into milestone proposals, dependency graphs, and risk summaries. |
+| **[Brooks](BROOKS_DELIVERY_MANAGER_PLAN.md)** | Delivery Mgmt | Monitors execution against plan, detects schedule risk and coordination failures, produces forecasts and escalation prompts. |
 
 ### Service Infrastructure
 
@@ -75,7 +75,7 @@ This agent provides the shared communications layer for all other agents.
 
 | Agent | Role | Description |
 |-------|------|-------------|
-| **[Shannon](../agents/SHANNON_COMMUNICATIONS_AGENT_PLAN.md)** | Communications | Single Teams bot serving all agent channels. Routes commands, manages approvals, posts notifications, and logs all human-agent interactions. Named after Claude Shannon, father of information theory. |
+| **[Shannon](SHANNON_COMMUNICATIONS_AGENT_PLAN.md)** | Communications | Single Teams bot serving all agent channels. Routes commands, manages approvals, posts notifications, and logs all human-agent interactions. Named after Claude Shannon, father of information theory. |
 
 ---
 
