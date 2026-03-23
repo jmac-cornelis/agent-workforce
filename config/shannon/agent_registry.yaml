@@ -19,7 +19,7 @@ agents:
         api_method: GET
         api_path: /v1/status/load
       - command: /work-today
-        description: Today’s work summary for Shannon
+        description: Today's work summary for Shannon
         api_method: GET
         api_path: /v1/status/work-summary
       - command: /token-status
@@ -35,3 +35,28 @@ agents:
         api_method: GET
         api_path: /v1/status/decisions/{record_id}
     timeout_seconds: 15
+
+  - agent_id: drucker
+    display_name: Drucker
+    role: Jira Hygiene Analyst
+    description: Deterministic Jira hygiene analysis and remediation
+    zone: service_infrastructure
+    channel_name: agent-drucker
+    channel_id: ""
+    team_id: ""
+    api_base_url: http://localhost:8201
+    approval_types: []
+    custom_commands:
+      - command: /hygiene-run
+        description: Run hygiene analysis
+        api_method: POST
+        api_path: /v1/hygiene/run
+      - command: /hygiene-report
+        description: Get a stored report
+        api_method: GET
+        api_path: /v1/hygiene/report
+      - command: /hygiene-list
+        description: List stored reports
+        api_method: GET
+        api_path: /v1/hygiene/reports
+    timeout_seconds: 30

@@ -16,6 +16,8 @@ import os
 import sys
 from typing import Any, Dict, List, Optional
 
+import requests
+
 from shannon.cards import build_fact_card
 from shannon.models import AuditRecord, ConversationReference, ShannonResponse, normalize_command_text
 from shannon.poster import BasePoster, build_poster_from_env
@@ -349,18 +351,173 @@ class ShannonService:
             decision='unknown_command',
         )
 
+    STANDARD_COMMAND_ROUTES = {
+        '/stats': ('GET', '/v1/status/stats'),
+        '/busy': ('GET', '/v1/status/load'),
+        '/work-today': ('GET', '/v1/status/work-summary'),
+        '/token-status': ('GET', '/v1/status/tokens'),
+        '/decision-tree': ('GET', '/v1/status/decisions'),
+    }
+
+    def _call_agent_api(
+        self,
+        registration: Any,
+        method: str,
+        path: str,
+        params: Optional[Dict[str, Any]] = None,
+        json_body: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        url = f'{registration.api_base_url.rstrip("/")}{path}'
+        timeout = getattr(registration, 'timeout_seconds', 30) or 30
+        try:
+            resp = requests.request(
+                method=method.upper(),
+                url=url,
+                params=params,
+                json=json_body,
+                timeout=timeout,
+            )
+            resp.raise_for_status()
+            return resp.json()
+        except requests.Timeout:
+            return {'ok': False, 'error': f'{registration.agent_id} timed out after {timeout}s'}
+        except requests.ConnectionError:
+            return {'ok': False, 'error': f'{registration.agent_id} is not reachable at {registration.api_base_url}'}
+        except requests.HTTPError as e:
+            return {'ok': False, 'error': f'{registration.agent_id} returned {e.response.status_code}'}
+        except Exception as e:
+            return {'ok': False, 'error': f'{registration.agent_id} error: {e}'}
+
+    def _agent_response_to_shannon(
+        self,
+        agent_id: str,
+        command: str,
+        result: Dict[str, Any],
+    ) -> ShannonResponse:
+        if not result.get('ok', False):
+            return ShannonResponse(
+                text=f'{agent_id}: {result.get("error", "unknown error")}',
+                command=command,
+                decision='agent_call_failed',
+            )
+
+        data = result.get('data', result)
+        if isinstance(data, list):
+            lines = [str(item) for item in data[:10]]
+            if len(data) > 10:
+                lines.append(f'...and {len(data) - 10} more')
+            card = build_fact_card(
+                title=f'{agent_id.title()} — {command}',
+                body_lines=lines or ['No data returned.'],
+            )
+            return ShannonResponse(
+                text='\n'.join(lines) if lines else 'No data.',
+                card=card,
+                command=command,
+                decision='agent_call_success',
+            )
+
+        if isinstance(data, dict):
+            facts = {
+                str(k): str(v)
+                for k, v in data.items()
+                if not isinstance(v, (dict, list)) and v is not None
+            }
+            nested_lines = []
+            for k, v in data.items():
+                if isinstance(v, dict):
+                    nested_lines.append(f'{k}: {len(v)} entries')
+                elif isinstance(v, list):
+                    nested_lines.append(f'{k}: {len(v)} items')
+
+            card = build_fact_card(
+                title=f'{agent_id.title()} — {command}',
+                facts=facts or None,
+                body_lines=nested_lines or None,
+            )
+            text_parts = [f'{k}: {v}' for k, v in facts.items()]
+            return ShannonResponse(
+                text=', '.join(text_parts) if text_parts else str(data),
+                card=card,
+                command=command,
+                decision='agent_call_success',
+            )
+
+        return ShannonResponse(
+            text=str(data),
+            command=command,
+            decision='agent_call_success',
+        )
+
     def _handle_registered_agent_command(
         self,
         agent_id: str,
         command_text: str,
     ) -> ShannonResponse:
+        registration = self.registry.get_agent(agent_id)
+        if not registration or not getattr(registration, 'api_base_url', ''):
+            return ShannonResponse(
+                text=f'{agent_id} is registered but has no API endpoint configured.',
+                command=command_text.split()[0] if command_text else '',
+                decision='agent_no_api_base_url',
+            )
+
+        normalized = normalize_command_text(command_text)
+        parts = normalized.split()
+        command = parts[0].lower() if parts else '/help'
+
+        if command == '/help':
+            lines = list(self.STANDARD_COMMAND_ROUTES.keys())
+            custom_commands = getattr(registration, 'custom_commands', []) or []
+            for cc in custom_commands:
+                desc = cc.get('description', '')
+                lines.append(f'{cc["command"]}: {desc}' if desc else cc['command'])
+            card = build_fact_card(
+                title=f'{registration.display_name} Commands',
+                subtitle=f'Available commands for {agent_id}',
+                body_lines=lines,
+            )
+            return ShannonResponse(
+                text=f'Commands for {agent_id}:\n' + '\n'.join(lines),
+                card=card,
+                command='/help',
+                decision='reported_agent_help',
+            )
+
+        if command == '/why' and len(parts) >= 2:
+            result = self._call_agent_api(
+                registration, 'GET', f'/v1/status/decisions/{parts[1]}',
+            )
+            return self._agent_response_to_shannon(agent_id, command, result)
+
+        if command in self.STANDARD_COMMAND_ROUTES:
+            method, path = self.STANDARD_COMMAND_ROUTES[command]
+            result = self._call_agent_api(registration, method, path)
+            return self._agent_response_to_shannon(agent_id, command, result)
+
+        custom_commands = getattr(registration, 'custom_commands', []) or []
+        for cc in custom_commands:
+            if cc.get('command', '').lower() == command:
+                method = cc.get('api_method', 'GET')
+                path = cc.get('api_path', '')
+                json_body = None
+                params = None
+                if method.upper() == 'POST':
+                    json_body = {
+                        parts[i]: parts[i + 1]
+                        for i in range(1, len(parts) - 1, 2)
+                    } if len(parts) > 1 else {}
+                elif len(parts) > 1:
+                    params = {'args': ' '.join(parts[1:])}
+                result = self._call_agent_api(
+                    registration, method, path, params=params, json_body=json_body,
+                )
+                return self._agent_response_to_shannon(agent_id, command, result)
+
         return ShannonResponse(
-            text=(
-                f'Channel is registered to {agent_id}, but agent routing is not connected yet. '
-                f'Shannon received: {normalize_command_text(command_text)}'
-            ),
-            command=normalize_command_text(command_text).split()[0] if command_text else '',
-            decision='agent_bridge_not_implemented',
+            text=f'Unknown {agent_id} command: {command}. Try /help.',
+            command=command,
+            decision='unknown_agent_command',
         )
 
     def _resolve_activity_agent(self, activity: Dict[str, Any]) -> str:
