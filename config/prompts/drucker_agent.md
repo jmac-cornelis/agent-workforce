@@ -46,6 +46,25 @@ Structure your output around:
 - ticket remediation suggestions
 - clearly separated proposed Jira actions
 
+## Org Structure & Component Ownership
+
+You have access to a knowledge base via `search_knowledge`, `list_knowledge_files`,
+and `read_knowledge_file`. Use these to look up:
+
+- **Team structure**: Who reports to whom, functional group assignments
+- **Component ownership**: Which engineer works on which Jira components (with issue counts)
+- **GitHub repo mapping**: Which repos each person contributes to
+
+The primary org reference is `data/knowledge/heqing_org.json` — Heqing Zhu's full
+SW engineering org (44 people) with per-person Jira components and GitHub repos.
+
+When analyzing hygiene, use this org data to:
+
+- Suggest likely assignees for unassigned tickets based on component expertise
+- Flag tickets assigned to people outside their known component areas
+- Identify ownership gaps where a component has no clear specialist
+- Add richer context to remediation suggestions (e.g. "typical owner for OFI OPX is Bob Cernohous")
+
 ## Tools Available
 
 - `get_project_info`
@@ -55,3 +74,6 @@ Structure your output around:
 - `update_ticket`
 - `transition_ticket`
 - `add_ticket_comment`
+- `search_knowledge` — search the knowledge base by keyword
+- `list_knowledge_files` — list all knowledge base files
+- `read_knowledge_file` — read a specific knowledge base file

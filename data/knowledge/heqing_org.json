@@ -1,0 +1,1149 @@
+{
+  "org_chart": {
+    "generated": "2026-03-18",
+    "data_sources": {
+      "hierarchy": "general_bamboohr_org_chart-2.csv",
+      "components": "Jira (cornelisnetworks.atlassian.net) — issues updated within last 730 days",
+      "repos": "GitHub (cornelisnetworks org) — contributor data"
+    },
+    "root": {
+      "name": "Heqing Zhu",
+      "title": "VP Software Engineering",
+      "functional_group": "Software Engineering Leadership",
+      "jira": {
+        "issue_count": 100,
+        "primary_project": "STL",
+        "components": [
+          { "name": "JKR Host Driver", "count": 63 },
+          { "name": "WFR Host Driver", "count": 23 },
+          { "name": "JKR UEFI Driver", "count": 19 },
+          { "name": "CYR Ethernet Driver", "count": 19 },
+          { "name": "MYR Host Driver", "count": 18 },
+          { "name": "CYR UEFI Driver", "count": 9 },
+          { "name": "CN5000 Fabric Performance", "count": 3 },
+          { "name": "Customer Support", "count": 3 },
+          { "name": "BTS/verbs", "count": 2 },
+          { "name": "MYR FW", "count": 2 }
+        ]
+      },
+      "github_repos": [],
+      "children": [
+        {
+          "name": "Denny Dalessandro",
+          "functional_group": "Host/UEFI/Ethernet Drivers",
+          "role_signal": "Lead host driver engineer — kernel drivers",
+          "jira": {
+            "issue_count": 100,
+            "primary_project": "STL",
+            "components": [
+              { "name": "JKR Host Driver", "count": 79 },
+              { "name": "WFR Host Driver", "count": 18 },
+              { "name": "Customer Support", "count": 4 },
+              { "name": "MYR Host Driver", "count": 4 },
+              { "name": "DevOps", "count": 3 },
+              { "name": "CN5000 FM", "count": 2 },
+              { "name": "JKR UEFI Driver", "count": 2 },
+              { "name": "PSM2", "count": 1 },
+              { "name": "MYR FW", "count": 1 },
+              { "name": "CYR Ethernet Driver", "count": 1 }
+            ]
+          },
+          "github_repos": [
+            "wfr-driver",
+            "opa-hfi1",
+            "hfi1-utils-internal",
+            "hfi2_eprom",
+            "opa-distro-drivers",
+            "opa-distro-drivers-internal",
+            "engineering_docs",
+            "palladium_cn6000",
+            "palladium_opa400",
+            "libfabric-tests",
+            "wfr-pcie-gen3"
+          ],
+          "children": []
+        },
+        {
+          "name": "Doug Miller",
+          "functional_group": "Host/UEFI/Ethernet Drivers",
+          "role_signal": "JKR host driver + CYR driver work",
+          "jira": {
+            "issue_count": 100,
+            "primary_project": "STL",
+            "components": [
+              { "name": "JKR Host Driver", "count": 81 },
+              { "name": "CYR Ethernet Driver", "count": 6 },
+              { "name": "CYR OPA Driver", "count": 5 },
+              { "name": "L8sim", "count": 5 },
+              { "name": "JKR FW - ASIC Mgmt", "count": 2 },
+              { "name": "WFR Host Driver", "count": 2 },
+              { "name": "FM", "count": 1 },
+              { "name": "CN5000 FM", "count": 1 },
+              { "name": "CYR FW", "count": 1 },
+              { "name": "DevOps", "count": 1 }
+            ]
+          },
+          "github_repos": [
+            "wfr-driver"
+          ],
+          "children": []
+        },
+        {
+          "name": "Dean Luick",
+          "functional_group": "Host/UEFI/Ethernet Drivers",
+          "role_signal": "Core driver engineer — JKR/CYR/WFR",
+          "jira": {
+            "issue_count": 100,
+            "primary_project": "STL",
+            "components": [
+              { "name": "JKR Host Driver", "count": 56 },
+              { "name": "JKR UEFI Driver", "count": 22 },
+              { "name": "CYR Ethernet Driver", "count": 11 },
+              { "name": "WFR Host Driver", "count": 11 },
+              { "name": "L8sim", "count": 6 },
+              { "name": "CYR UEFI Driver", "count": 2 },
+              { "name": "JKR FW - ASIC Mgmt", "count": 1 },
+              { "name": "MYR Host Driver", "count": 1 }
+            ]
+          },
+          "github_repos": [
+            "wfr-driver",
+            "hfi2_eprom"
+          ],
+          "children": []
+        },
+        {
+          "name": "Nick Child",
+          "functional_group": "Host/UEFI/Ethernet Drivers",
+          "role_signal": "Driver engineer — JKR/MYR + performance",
+          "jira": {
+            "issue_count": 44,
+            "primary_project": "STL",
+            "components": [
+              { "name": "JKR Host Driver", "count": 23 },
+              { "name": "CN5000 Fabric Performance", "count": 11 },
+              { "name": "MYR Host Driver", "count": 7 },
+              { "name": "JKR FW - ASIC Mgmt", "count": 2 },
+              { "name": "OFI OPX", "count": 2 },
+              { "name": "WFR Host Driver", "count": 2 },
+              { "name": "ASIC-SW-Workaround", "count": 1 },
+              { "name": "CYR Ethernet Driver", "count": 1 }
+            ]
+          },
+          "github_repos": [
+            "wfr-driver",
+            "hfisvc_client"
+          ],
+          "children": []
+        },
+        {
+          "name": "Andy Tauferner",
+          "functional_group": "Host/UEFI/Ethernet Drivers",
+          "role_signal": "CYR Ethernet driver specialist",
+          "jira": {
+            "issue_count": 93,
+            "primary_project": "STL",
+            "components": [
+              { "name": "CYR Ethernet Driver", "count": 72 },
+              { "name": "CN6000 - Emulation - CYR", "count": 7 },
+              { "name": "CYR FW", "count": 4 },
+              { "name": "CN6000 - Emulation", "count": 3 },
+              { "name": "CYR OPA Driver", "count": 2 },
+              { "name": "L8sim", "count": 2 }
+            ]
+          },
+          "github_repos": [],
+          "children": []
+        },
+        {
+          "name": "Brian Hwang",
+          "functional_group": "Host/UEFI/Ethernet Drivers",
+          "role_signal": "Driver engineer — JKR",
+          "jira": {
+            "issue_count": 13,
+            "primary_project": "STL",
+            "components": [
+              { "name": "JKR Host Driver", "count": 9 },
+              { "name": "CN5000 Fabric Performance", "count": 1 },
+              { "name": "CYR Ethernet Driver", "count": 1 },
+              { "name": "WFR Host Driver", "count": 1 }
+            ]
+          },
+          "github_repos": [],
+          "children": []
+        },
+        {
+          "name": "Pooja Nara",
+          "functional_group": "Host/UEFI/Ethernet Drivers",
+          "role_signal": "Support/triage role",
+          "jira": {
+            "issue_count": 8,
+            "primary_project": "STL",
+            "components": [
+              { "name": "JKR Host Driver", "count": 4 },
+              { "name": "Customer Support", "count": 2 },
+              { "name": "OFI OPX", "count": 2 },
+              { "name": "CN5000 Fabric Performance", "count": 1 }
+            ]
+          },
+          "github_repos": [],
+          "children": []
+        },
+        {
+          "name": "Bob Cernohous",
+          "functional_group": "OFI/Libfabric (OPX Provider)",
+          "role_signal": "OFI OPX lead — libfabric provider",
+          "jira": {
+            "issue_count": 100,
+            "primary_project": "STL",
+            "components": [
+              { "name": "OFI OPX", "count": 78 },
+              { "name": "JKR Host Driver", "count": 11 },
+              { "name": "RoCE userspace", "count": 10 },
+              { "name": "OFI OPX Test", "count": 3 },
+              { "name": "ASIC-SW-Workaround", "count": 3 },
+              { "name": "CN5000 Fabric Performance", "count": 2 },
+              { "name": "Customer Support", "count": 2 },
+              { "name": "CYR Ethernet Driver", "count": 2 },
+              { "name": "GPU networking", "count": 1 }
+            ]
+          },
+          "github_repos": [
+            "libfabric-internal",
+            "libfabric-devel",
+            "libfabric-tests",
+            "libfabric-ue",
+            "palladium_cn6000",
+            "palladium_opa400"
+          ],
+          "children": []
+        },
+        {
+          "name": "Ben Lynam",
+          "functional_group": "OFI/Libfabric (OPX Provider)",
+          "role_signal": "OFI OPX senior + Ultra Ethernet",
+          "jira": {
+            "issue_count": 84,
+            "primary_project": "STL",
+            "components": [
+              { "name": "OFI OPX", "count": 69 },
+              { "name": "CN5000 Fabric Performance", "count": 11 },
+              { "name": "JKR Host Driver", "count": 5 },
+              { "name": "OFI OPX Test", "count": 4 },
+              { "name": "BTS/verbs", "count": 1 },
+              { "name": "OFI", "count": 1 }
+            ]
+          },
+          "github_repos": [
+            "libfabric",
+            "libfabric-internal",
+            "libfabric-devel",
+            "libfabric-ue",
+            "libfabric-tests",
+            "cn-forge-sw",
+            "hfisvc_client"
+          ],
+          "children": []
+        },
+        {
+          "name": "Lindsay Reiser",
+          "functional_group": "OFI/Libfabric (OPX Provider)",
+          "role_signal": "OFI OPX + GPU networking",
+          "jira": {
+            "issue_count": 62,
+            "primary_project": "STL",
+            "components": [
+              { "name": "OFI OPX", "count": 57 },
+              { "name": "GPU networking", "count": 5 },
+              { "name": "OFI OPX Test", "count": 3 },
+              { "name": "CN5000 Fabric Performance", "count": 2 },
+              { "name": "BTS/verbs", "count": 1 },
+              { "name": "RoCE userspace", "count": 1 }
+            ]
+          },
+          "github_repos": [],
+          "children": []
+        },
+        {
+          "name": "Mike Wilkins",
+          "functional_group": "OFI/Libfabric (OPX Provider)",
+          "role_signal": "GPU networking + OFI OPX + Ultra Ethernet / DPDK",
+          "jira": {
+            "issue_count": 67,
+            "primary_project": "STL",
+            "components": [
+              { "name": "OFI OPX", "count": 57 },
+              { "name": "GPU networking", "count": 7 },
+              { "name": "JKR Host Driver", "count": 4 },
+              { "name": "OFI OPX Test", "count": 2 },
+              { "name": "Customer Support", "count": 2 },
+              { "name": "SOS", "count": 1 }
+            ]
+          },
+          "github_repos": [
+            "libfabric-devel",
+            "cail",
+            "cn-hfisvc-ccl",
+            "cn_sw_test",
+            "dpdk-internal",
+            "dpdk-tests",
+            "gdb-trace",
+            "otter",
+            "uet-ccl-internal",
+            "uet-libfabric-internal"
+          ],
+          "children": []
+        },
+        {
+          "name": "Archana Venkatesha",
+          "functional_group": "OFI/Libfabric (OPX Provider)",
+          "role_signal": "OFI OPX developer",
+          "jira": {
+            "issue_count": 47,
+            "primary_project": "STL",
+            "components": [
+              { "name": "OFI OPX", "count": 47 },
+              { "name": "CN5000 Fabric Performance", "count": 1 },
+              { "name": "ASIC-SW-Workaround", "count": 1 }
+            ]
+          },
+          "github_repos": [
+            "libfabric-devel"
+          ],
+          "children": []
+        },
+        {
+          "name": "Cody Mann",
+          "functional_group": "OFI/Libfabric (OPX Provider)",
+          "role_signal": "OFI OPX dev + test automation",
+          "jira": {
+            "issue_count": 53,
+            "primary_project": "STL",
+            "components": [
+              { "name": "OFI OPX", "count": 46 },
+              { "name": "OFI OPX Test", "count": 13 },
+              { "name": "JKR Host Driver", "count": 5 },
+              { "name": "CN5000 Fabric Performance", "count": 2 },
+              { "name": "Gen1 Fabric Performance", "count": 2 }
+            ]
+          },
+          "github_repos": [
+            "libfabric-devel",
+            "libfabric-tests",
+            "MPICH-internal",
+            "opxrunner"
+          ],
+          "children": []
+        },
+        {
+          "name": "Garrett Weil",
+          "functional_group": "OFI/Libfabric (OPX Provider)",
+          "role_signal": "OFI OPX test lead",
+          "jira": {
+            "issue_count": 58,
+            "primary_project": "STL",
+            "components": [
+              { "name": "OFI OPX", "count": 45 },
+              { "name": "OFI OPX Test", "count": 33 },
+              { "name": "SOS", "count": 2 },
+              { "name": "JKR Host Driver", "count": 2 },
+              { "name": "BTS/verbs", "count": 1 },
+              { "name": "GPU networking", "count": 1 }
+            ]
+          },
+          "github_repos": [
+            "libfabric-devel",
+            "opxrunner",
+            "scm-ansible"
+          ],
+          "children": []
+        },
+        {
+          "name": "Armando Vinciguerra Lariot",
+          "functional_group": "OFI/Libfabric (OPX Provider)",
+          "role_signal": "OFI + SOS (OpenSHMEM)",
+          "jira": {
+            "issue_count": 12,
+            "primary_project": "STL",
+            "components": [
+              { "name": "OFI OPX", "count": 10 },
+              { "name": "SOS", "count": 2 },
+              { "name": "OFI OPX Test", "count": 2 },
+              { "name": "CN5000 Fabric Performance", "count": 1 }
+            ]
+          },
+          "github_repos": [
+            "SOS",
+            "sos-internal",
+            "ifs-all",
+            "iv-testlist",
+            "wfr-driver-test"
+          ],
+          "children": []
+        },
+        {
+          "name": "Andriy Kot",
+          "functional_group": "OFI/Libfabric (OPX Provider)",
+          "role_signal": "OFI + COPA provider",
+          "jira": {
+            "issue_count": 12,
+            "primary_project": "STL",
+            "components": [
+              { "name": "OFI OPX", "count": 5 },
+              { "name": "CN5000 Fabric Performance", "count": 4 },
+              { "name": "JKR Host Driver", "count": 2 }
+            ]
+          },
+          "github_repos": [
+            "libfabric-copa"
+          ],
+          "children": []
+        },
+        {
+          "name": "Brendan Cunningham",
+          "functional_group": "PSM2 / NCCL",
+          "role_signal": "PSM2 lead + NCCL + driver customer escalations",
+          "jira": {
+            "issue_count": 100,
+            "primary_project": "STL",
+            "components": [
+              { "name": "JKR Host Driver", "count": 37 },
+              { "name": "WFR Host Driver", "count": 32 },
+              { "name": "PSM2", "count": 17 },
+              { "name": "Customer Support", "count": 9 },
+              { "name": "OFI OPX", "count": 7 },
+              { "name": "CN5000 Fabric Performance", "count": 7 },
+              { "name": "FM", "count": 5 },
+              { "name": "Chassis Firmware", "count": 4 },
+              { "name": "Validation-OPA100-Tests", "count": 4 },
+              { "name": "DevOps", "count": 2 }
+            ]
+          },
+          "github_repos": [
+            "opa-psm2",
+            "opa-psm2-internal",
+            "psm2-nccl",
+            "psm2-nccl-internal",
+            "wfr-driver",
+            "opa-distro-drivers",
+            "opa-gpu-tests-internal",
+            "opa-psm2-tests",
+            "opa1x-lightspeed",
+            "libfabric-devel",
+            "libfabric-tests"
+          ],
+          "children": []
+        },
+        {
+          "name": "Michael Blocksome",
+          "functional_group": "BTS/Verbs + Performance",
+          "role_signal": "BTS/verbs lead + CN5000 performance + COPA",
+          "jira": {
+            "issue_count": 59,
+            "primary_project": "STL",
+            "components": [
+              { "name": "JKR Host Driver", "count": 16 },
+              { "name": "CN5000 Fabric Performance", "count": 14 },
+              { "name": "BTS/verbs", "count": 9 },
+              { "name": "OFI OPX", "count": 9 },
+              { "name": "Validation-CN5000", "count": 8 },
+              { "name": "OPA400", "count": 4 },
+              { "name": "OFI", "count": 3 },
+              { "name": "Bare Metal Validation", "count": 2 }
+            ]
+          },
+          "github_repos": [
+            "libfabric-copa",
+            "opa1x-lightspeed"
+          ],
+          "children": []
+        },
+        {
+          "name": "John Macdonald",
+          "title": "Sr. Software Project Manager",
+          "functional_group": "Project Management",
+          "role_signal": "Cross-org project management — FW, DevOps, drivers, tools",
+          "jira": {
+            "issue_count": 12,
+            "primary_project": "STL",
+            "components": [
+              { "name": "CYR FW", "count": 5 },
+              { "name": "8051 FW", "count": 3 },
+              { "name": "FW Tools", "count": 3 },
+              { "name": "JKR FW - ASIC Mgmt", "count": 3 },
+              { "name": "MYR FW", "count": 3 },
+              { "name": "CYR Ethernet Driver", "count": 2 },
+              { "name": "SW Release Tracking", "count": 2 },
+              { "name": "CN5000 FM", "count": 1 },
+              { "name": "DevOps", "count": 1 }
+            ]
+          },
+          "github_repos": [
+            "scm-tools",
+            "scm-jenkins-shared-library",
+            "wfr-driver",
+            "wfr-pcie-gen3",
+            "opa400-FirmwareTools",
+            "opa400-cli",
+            "opa400-meta-cornelis",
+            "opa400-port-manager",
+            "opa400-MFG",
+            "opa-distro-drivers-internal",
+            "brandy",
+            "cn-ai-tools",
+            "cn-forge-sw",
+            "cn-fabric-k8s",
+            "emb-dev-tools",
+            "hfisvc_client",
+            "jenkins",
+            "libfabric-devel",
+            "bmc-all",
+            "sandbox-ifs-all",
+            "sandbox-ofi-400-port-manager",
+            "swvl"
+          ],
+          "children": []
+        },
+        {
+          "name": "Eugene Novak",
+          "functional_group": "Chassis/FM/Switch Management",
+          "role_signal": "Chassis + FM lead — manages chassis platform and fabric manager teams",
+          "jira": {
+            "issue_count": 100,
+            "primary_project": "STL",
+            "components": [
+              { "name": "Chassis Mgmt", "count": 44 },
+              { "name": "Chassis GUI", "count": 21 },
+              { "name": "CN5000 FM", "count": 21 },
+              { "name": "Chassis Firmware", "count": 17 },
+              { "name": "FM", "count": 16 },
+              { "name": "Fast Fabric", "count": 13 },
+              { "name": "CN6000 FM", "count": 12 },
+              { "name": "MYR FW", "count": 9 },
+              { "name": "L8sim", "count": 8 },
+              { "name": "SW Release Tracking", "count": 4 },
+              { "name": "JKR FW - Platform Mgmt", "count": 4 },
+              { "name": "8051 FW", "count": 3 }
+            ]
+          },
+          "github_repos": [
+            "cn-forge",
+            "cn-forge-sw",
+            "cn-ai-tools",
+            "brandy",
+            "emb-dev-tools",
+            "opa400-FirmwareTools",
+            "opa400-meta-cornelis",
+            "opa400-port-manager",
+            "palladium_cn6000",
+            "palladium_opa400"
+          ],
+          "children": [
+            {
+              "name": "Charles King",
+              "functional_group": "Fabric Manager (FM)",
+              "role_signal": "FM (Fabric Manager) lead",
+              "jira": {
+                "issue_count": 100,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "CN5000 FM", "count": 64 },
+                  { "name": "FM", "count": 15 },
+                  { "name": "Chassis Firmware", "count": 6 },
+                  { "name": "MYR FW", "count": 4 },
+                  { "name": "Fast Fabric", "count": 4 },
+                  { "name": "CN6000 FM", "count": 3 },
+                  { "name": "Chassis Mgmt", "count": 3 },
+                  { "name": "JKR FW - ASIC Mgmt", "count": 2 },
+                  { "name": "Customer Support", "count": 2 },
+                  { "name": "HFI TMM", "count": 1 }
+                ]
+              },
+              "github_repos": [],
+              "children": []
+            },
+            {
+              "name": "Josh Fisher",
+              "functional_group": "Fabric Manager (FM)",
+              "role_signal": "FM developer — CN5000 FM specialist",
+              "jira": {
+                "issue_count": 100,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "CN5000 FM", "count": 76 },
+                  { "name": "Fast Fabric", "count": 18 },
+                  { "name": "FM", "count": 7 },
+                  { "name": "MYR FW", "count": 3 },
+                  { "name": "ASIC-SW-Workaround", "count": 1 },
+                  { "name": "Customer Support", "count": 1 }
+                ]
+              },
+              "github_repos": [
+                "libfabric-devel",
+                "libfabric-tests",
+                "opa1x-lightspeed",
+                "wfr-driver-test"
+              ],
+              "children": []
+            },
+            {
+              "name": "Aruna Ramanan",
+              "functional_group": "Fabric Manager (FM)",
+              "role_signal": "FM + SimUtil (SST simulation)",
+              "jira": {
+                "issue_count": 22,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "CN5000 FM", "count": 14 },
+                  { "name": "FM", "count": 6 },
+                  { "name": "OFI OPX", "count": 1 },
+                  { "name": "SW Architecture", "count": 1 }
+                ]
+              },
+              "github_repos": [
+                "opa-psm2",
+                "opa-psm2-internal",
+                "wfr-psm-test"
+              ],
+              "children": []
+            },
+            {
+              "name": "Robin Robin",
+              "functional_group": "Fabric Manager (FM)",
+              "role_signal": "FM + Kubernetes deployment",
+              "jira": {
+                "issue_count": 91,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "CN5000 FM", "count": 41 },
+                  { "name": "k8s", "count": 39 },
+                  { "name": "Fast Fabric", "count": 6 },
+                  { "name": "FM", "count": 5 },
+                  { "name": "Customer Support", "count": 2 },
+                  { "name": "JKR Host Driver", "count": 1 }
+                ]
+              },
+              "github_repos": [
+                "SOS",
+                "sos-internal"
+              ],
+              "children": []
+            },
+            {
+              "name": "Tom Reddington",
+              "functional_group": "Chassis Management",
+              "role_signal": "Chassis management lead — broadest OPA400 footprint",
+              "jira": {
+                "issue_count": 100,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "Chassis Mgmt", "count": 92 },
+                  { "name": "JKR FW - Platform Mgmt", "count": 10 },
+                  { "name": "Chassis GUI", "count": 5 },
+                  { "name": "MYR Host Driver", "count": 1 },
+                  { "name": "DevOps", "count": 1 }
+                ]
+              },
+              "github_repos": [
+                "opa400-FirmwareTools",
+                "opa400-cli",
+                "opa400-meta-cornelis",
+                "opa400-poc",
+                "opa400-port-manager",
+                "brandy",
+                "bmc-all",
+                "cn-forge",
+                "emb-dev-tools",
+                "meta-cn-dev",
+                "SOS",
+                "sos-internal",
+                "aws-ofi-nccl",
+                "aws-ofi-nccl-internal",
+                "libfabric-devel",
+                "libfabric-tests",
+                "swvl"
+              ],
+              "children": []
+            },
+            {
+              "name": "Alec Spinhirne",
+              "functional_group": "Chassis Management",
+              "role_signal": "Chassis management — OPA400 specialist",
+              "jira": {
+                "issue_count": 100,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "Chassis Mgmt", "count": 87 },
+                  { "name": "MYR FW", "count": 9 },
+                  { "name": "8051 FW", "count": 3 },
+                  { "name": "JKR FW - Platform Mgmt", "count": 2 },
+                  { "name": "Chassis Firmware", "count": 1 },
+                  { "name": "Chassis GUI", "count": 1 }
+                ]
+              },
+              "github_repos": [
+                "brandy",
+                "opa400-FirmwareTools",
+                "opa400-meta-cornelis",
+                "opa400-port-manager"
+              ],
+              "children": []
+            },
+            {
+              "name": "Gnaneshwar Nagarajan",
+              "functional_group": "Chassis Management",
+              "role_signal": "Chassis management engineer — OPA400 platform",
+              "jira": {
+                "issue_count": 100,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "Chassis Mgmt", "count": 84 },
+                  { "name": "Chassis Firmware", "count": 7 },
+                  { "name": "Chassis GUI", "count": 6 },
+                  { "name": "MYR FW", "count": 1 },
+                  { "name": "openbmc", "count": 1 },
+                  { "name": "Brandy - Core", "count": 1 }
+                ]
+              },
+              "github_repos": [
+                "brandy",
+                "opa400-FirmwareTools",
+                "opa400-cli",
+                "opa400-meta-cornelis",
+                "opa400-poc",
+                "opa400-port-manager",
+                "opa_pe-opa400_rrf_fan_psoc",
+                "platf_test_scripts"
+              ],
+              "children": []
+            },
+            {
+              "name": "Joe DeMario",
+              "functional_group": "Chassis GUI",
+              "role_signal": "Chassis GUI lead",
+              "jira": {
+                "issue_count": 100,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "Chassis GUI", "count": 60 },
+                  { "name": "Chassis Mgmt", "count": 30 },
+                  { "name": "Brandy - Core", "count": 4 },
+                  { "name": "FW Tools", "count": 4 },
+                  { "name": "Chassis Firmware", "count": 2 },
+                  { "name": "MYR FW", "count": 1 }
+                ]
+              },
+              "github_repos": [
+                "brandy",
+                "emb-dev-tools",
+                "meta-cn-dev",
+                "opa400-FirmwareTools",
+                "opa400-cli",
+                "opa400-meta-cornelis",
+                "opa400-port-manager",
+                "swvl"
+              ],
+              "children": []
+            },
+            {
+              "name": "Samuel Cook",
+              "functional_group": "Chassis GUI",
+              "role_signal": "Chassis GUI + management",
+              "jira": {
+                "issue_count": 100,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "Chassis GUI", "count": 48 },
+                  { "name": "Chassis Mgmt", "count": 47 },
+                  { "name": "Brandy - Core", "count": 4 },
+                  { "name": "Chassis Firmware", "count": 1 }
+                ]
+              },
+              "github_repos": [
+                "brandy",
+                "cn-gateway",
+                "emb-dev-tools",
+                "opa-hfi_functional_test",
+                "opa400-FirmwareTools",
+                "opa400-cli",
+                "opa400-meta-cornelis",
+                "opa400-port-manager",
+                "swvl"
+              ],
+              "children": []
+            },
+            {
+              "name": "Nathan Branscom",
+              "functional_group": "Chassis GUI",
+              "role_signal": "Chassis GUI developer",
+              "jira": {
+                "issue_count": 14,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "Chassis GUI", "count": 13 },
+                  { "name": "Chassis Mgmt", "count": 1 }
+                ]
+              },
+              "github_repos": [
+                "opa400-FirmwareTools",
+                "opa400-cli"
+              ],
+              "children": []
+            },
+            {
+              "name": "Sajeesh Mathew",
+              "functional_group": "Chassis Firmware",
+              "role_signal": "Minimal recent activity",
+              "jira": {
+                "issue_count": 1,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "Chassis Firmware", "count": 1 }
+                ]
+              },
+              "github_repos": [],
+              "children": []
+            }
+          ]
+        },
+        {
+          "name": "Paul Davis",
+          "functional_group": "ASIC Firmware",
+          "role_signal": "Firmware lead — all ASIC generations",
+          "jira": {
+            "issue_count": 100,
+            "primary_project": "STL",
+            "components": [
+              { "name": "JKR FW - ASIC Mgmt", "count": 46 },
+              { "name": "MYR FW", "count": 28 },
+              { "name": "JKR FW - Platform Mgmt", "count": 17 },
+              { "name": "CYR FW", "count": 13 },
+              { "name": "8051 FW", "count": 11 },
+              { "name": "Customer Support", "count": 10 },
+              { "name": "FW Tools", "count": 7 },
+              { "name": "JKR Host Driver", "count": 3 },
+              { "name": "CN5000 FM", "count": 3 },
+              { "name": "DevOps", "count": 2 },
+              { "name": "JKR UEFI Driver", "count": 2 },
+              { "name": "SW Release Tracking", "count": 2 }
+            ]
+          },
+          "github_repos": [
+            "emb-dev-tools",
+            "opa400-FirmwareTools",
+            "opa400-port-manager",
+            "platf_test_scripts"
+          ],
+          "children": [
+            {
+              "name": "Daniel Gailey",
+              "functional_group": "ASIC Firmware",
+              "role_signal": "FW engineer — MYR/JKR/CYR",
+              "jira": {
+                "issue_count": 100,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "MYR FW", "count": 48 },
+                  { "name": "JKR FW - ASIC Mgmt", "count": 23 },
+                  { "name": "CYR FW", "count": 13 },
+                  { "name": "JKR FW - Platform Mgmt", "count": 13 },
+                  { "name": "L8sim", "count": 7 },
+                  { "name": "8051 FW", "count": 4 },
+                  { "name": "ASIC-SW-Workaround", "count": 4 },
+                  { "name": "CN5000 FM", "count": 2 },
+                  { "name": "Chassis Mgmt", "count": 2 }
+                ]
+              },
+              "github_repos": [],
+              "children": []
+            },
+            {
+              "name": "David Welch",
+              "functional_group": "ASIC Firmware",
+              "role_signal": "FW engineer — MYR/JKR + ASIC workarounds",
+              "jira": {
+                "issue_count": 100,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "MYR FW", "count": 38 },
+                  { "name": "JKR FW - ASIC Mgmt", "count": 22 },
+                  { "name": "JKR FW - Platform Mgmt", "count": 18 },
+                  { "name": "CYR FW", "count": 12 },
+                  { "name": "L8sim", "count": 8 },
+                  { "name": "ASIC-SW-Workaround", "count": 6 },
+                  { "name": "8051 FW", "count": 2 },
+                  { "name": "FW Tools", "count": 1 }
+                ]
+              },
+              "github_repos": [
+                "SOS",
+                "sos-internal",
+                "hfisvc_client",
+                "libfabric-devel"
+              ],
+              "children": []
+            },
+            {
+              "name": "Gary Barnett",
+              "functional_group": "ASIC Firmware",
+              "role_signal": "JKR FW Platform specialist",
+              "jira": {
+                "issue_count": 98,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "JKR FW - Platform Mgmt", "count": 67 },
+                  { "name": "JKR FW - ASIC Mgmt", "count": 21 },
+                  { "name": "Chassis Mgmt", "count": 8 },
+                  { "name": "FW Tools", "count": 3 },
+                  { "name": "MYR FW", "count": 2 }
+                ]
+              },
+              "github_repos": [
+                "opa400-FirmwareTools",
+                "opa400-port-manager",
+                "openbmc-rpi4-build"
+              ],
+              "children": []
+            },
+            {
+              "name": "Anthony Clemente",
+              "functional_group": "ASIC Firmware",
+              "role_signal": "8051 microcontroller FW lead + Brandy",
+              "jira": {
+                "issue_count": 100,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "8051 FW", "count": 69 },
+                  { "name": "Brandy - Core", "count": 18 },
+                  { "name": "MYR FW", "count": 8 },
+                  { "name": "Chassis Mgmt", "count": 3 },
+                  { "name": "FW Tools", "count": 3 },
+                  { "name": "JKR FW - ASIC Mgmt", "count": 2 },
+                  { "name": "CYR FW", "count": 1 }
+                ]
+              },
+              "github_repos": [],
+              "children": []
+            },
+            {
+              "name": "Jim Johanson",
+              "functional_group": "ASIC Firmware",
+              "role_signal": "8051 FW + MYR FW",
+              "jira": {
+                "issue_count": 87,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "8051 FW", "count": 52 },
+                  { "name": "MYR FW", "count": 24 },
+                  { "name": "JKR FW - ASIC Mgmt", "count": 8 },
+                  { "name": "L8sim", "count": 4 },
+                  { "name": "CYR FW", "count": 3 },
+                  { "name": "Brandy - Core", "count": 2 }
+                ]
+              },
+              "github_repos": [
+                "brandy",
+                "opa400-port-manager"
+              ],
+              "children": []
+            },
+            {
+              "name": "Jim Wright",
+              "functional_group": "ASIC Firmware",
+              "role_signal": "MYR FW developer",
+              "jira": {
+                "issue_count": 16,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "MYR FW", "count": 14 },
+                  { "name": "L8sim", "count": 2 },
+                  { "name": "CN5000 FM", "count": 1 }
+                ]
+              },
+              "github_repos": [],
+              "children": []
+            },
+            {
+              "name": "Jitendra Adusumilli",
+              "functional_group": "ASIC Firmware",
+              "role_signal": "FW engineer — JKR/MYR",
+              "jira": {
+                "issue_count": 31,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "JKR FW - Platform Mgmt", "count": 11 },
+                  { "name": "JKR FW - ASIC Mgmt", "count": 10 },
+                  { "name": "MYR FW", "count": 8 },
+                  { "name": "FW Tools", "count": 2 },
+                  { "name": "CYR FW", "count": 1 },
+                  { "name": "L8sim", "count": 1 }
+                ]
+              },
+              "github_repos": [
+                "opa400-FirmwareTools",
+                "opa400-port-manager"
+              ],
+              "children": []
+            },
+            {
+              "name": "Dandy Vo",
+              "functional_group": "ASIC Firmware",
+              "role_signal": "FW engineer — lower activity",
+              "jira": {
+                "issue_count": 7,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "JKR FW - Platform Mgmt", "count": 4 },
+                  { "name": "JKR FW - ASIC Mgmt", "count": 2 },
+                  { "name": "MYR FW", "count": 1 },
+                  { "name": "L8sim", "count": 1 }
+                ]
+              },
+              "github_repos": [
+                "opa400-FirmwareTools"
+              ],
+              "children": []
+            },
+            {
+              "name": "Andy Hibbard",
+              "functional_group": "Validation",
+              "role_signal": "Validation lead — CN5000 test automation",
+              "jira": {
+                "issue_count": 100,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "Validation-CN5000", "count": 74 },
+                  { "name": "DevOps", "count": 4 },
+                  { "name": "Validation - Tests", "count": 4 },
+                  { "name": "Brandy - Core", "count": 4 },
+                  { "name": "JKR FW - ASIC Mgmt", "count": 3 },
+                  { "name": "Validation - Tracking", "count": 3 },
+                  { "name": "Validation-Automation", "count": 2 },
+                  { "name": "JKR Host Driver", "count": 2 }
+                ]
+              },
+              "github_repos": [
+                "brandy",
+                "brokkr",
+                "cnbmt",
+                "libfabric-tests",
+                "palladium_cn6000",
+                "palladium_opa400",
+                "scm-ansible",
+                "swvl",
+                "swvl-ansible"
+              ],
+              "children": []
+            },
+            {
+              "name": "Ian Simonson",
+              "functional_group": "Validation",
+              "role_signal": "Cross-cutting — driver + validation + performance",
+              "jira": {
+                "issue_count": 78,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "JKR Host Driver", "count": 27 },
+                  { "name": "CYR Ethernet Driver", "count": 14 },
+                  { "name": "ASIC-SW-Workaround", "count": 8 },
+                  { "name": "CN5000 Fabric Performance", "count": 8 },
+                  { "name": "OFI OPX", "count": 7 },
+                  { "name": "Bare Metal Validation", "count": 4 },
+                  { "name": "Validation-CN5000", "count": 3 },
+                  { "name": "BTS/verbs", "count": 2 },
+                  { "name": "JKR UEFI Driver", "count": 2 },
+                  { "name": "MYR Host Driver", "count": 2 }
+                ]
+              },
+              "github_repos": [],
+              "children": []
+            },
+            {
+              "name": "Greg Kresge",
+              "functional_group": "DevOps / SCM",
+              "role_signal": "DevOps/SCM lead — CI/CD, build, release",
+              "jira": {
+                "issue_count": 100,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "DevOps", "count": 77 },
+                  { "name": "SCM-Build", "count": 41 },
+                  { "name": "SCM-DST", "count": 8 },
+                  { "name": "SCM-Scan-BlackDuck", "count": 5 },
+                  { "name": "JKR Host Driver", "count": 5 },
+                  { "name": "SCM-Release", "count": 3 },
+                  { "name": "SCM-Scan-CodeQL", "count": 3 },
+                  { "name": "OFI OPX", "count": 3 },
+                  { "name": "SCM-Tools-Devtools", "count": 2 },
+                  { "name": "GitHub", "count": 2 },
+                  { "name": "SCM-Tools-GIT", "count": 2 },
+                  { "name": "SCM-Infrastructure", "count": 2 }
+                ]
+              },
+              "github_repos": [
+                "scm-tools",
+                "scm-ansible",
+                "scm-jenkins-shared-library",
+                "scm-slurm",
+                "opa-psm2",
+                "opa-psm2-internal",
+                "opa-fm",
+                "opa-ff",
+                "opa-distro-drivers",
+                "opa400-FirmwareTools",
+                "opa400-MFG",
+                "opa400-meta-cornelis",
+                "MPICH-internal",
+                "benchmark-cluster",
+                "bmc-all",
+                "cn_emu_common",
+                "cncc",
+                "cornelis-sdlc",
+                "dev-cluster",
+                "emb-dev-tools",
+                "ifs-all",
+                "iv-testlist",
+                "lab-ansible",
+                "lab-cobbler",
+                "lab-general",
+                "libfabric-tests",
+                "palladium_cn6000",
+                "palladium_opa400",
+                "palladium_opa4000",
+                "pef_mbist_fpga_opa400",
+                "swvl"
+              ],
+              "children": []
+            },
+            {
+              "name": "Peter Littlefield",
+              "functional_group": "DevOps / SCM",
+              "role_signal": "DevOps engineer — tooling + Docker",
+              "jira": {
+                "issue_count": 48,
+                "primary_project": "STL",
+                "components": [
+                  { "name": "DevOps", "count": 37 },
+                  { "name": "SCM-Tools-Devtools", "count": 22 },
+                  { "name": "SCM-Build", "count": 5 },
+                  { "name": "JKR UEFI Driver", "count": 3 },
+                  { "name": "JKR FW - ASIC Mgmt", "count": 3 },
+                  { "name": "SCM-Release", "count": 1 },
+                  { "name": "JKR FW - Platform Mgmt", "count": 1 },
+                  { "name": "MYR FW", "count": 1 },
+                  { "name": "OFI OPX", "count": 1 }
+                ]
+              },
+              "github_repos": [
+                "opa400-FirmwareTools",
+                "scm-docker",
+                "scm-tools"
+              ],
+              "children": []
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
