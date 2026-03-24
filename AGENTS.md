@@ -1,108 +1,45 @@
 # AGENTS.md
 
-## Purpose
+This file provides guidance to agents when working with code in this repository.
 
-This repository is a hybrid of:
+## Build & Test
 
-- deterministic Jira/Confluence/file utilities
-- agentic planning and analysis workflows
-- review-gated execution paths for Jira-backed work
+- **Venv**: `.venv/bin/python` / `.venv/bin/pytest` — always use the venv, no global installs.
+- **Install**: `pip install -e ".[agents,test]"` — core deps are minimal; agent pipeline and test deps are optional extras.
+- **Run all tests**: `.venv/bin/pytest -q`
+- **Run single test**: `.venv/bin/pytest tests/test_drucker_agent_char.py::test_drucker_agent_builds_hygiene_report_and_actions -q`
+- **Syntax check**: `python -m py_compile <module.py>` on touched files before committing.
+- No linter/formatter config exists (no ruff, flake8, black, mypy). Rely on existing code style.
 
-The primary product is not "chat." It is a set of reusable planning and delivery workflows that turn messy inputs into structured artifacts and, when approved, into controlled system changes.
+## Code Style (Discovered)
 
-## Primary Entry Points
+- **Module header**: Every `.py` file starts with a `##########` banner containing `Module:`, `Description:`, `Author:`.
+- **Logging**: `log = logging.getLogger(os.path.basename(sys.argv[0]))` everywhere except [`core/reporting.py`](core/reporting.py:33) which uses `logging.getLogger(__name__)` and [`mcp_server.py`](mcp_server.py:49) which uses a hardcoded name.
+- **Strings**: Single quotes for all Python strings (not double quotes).
+- **Docstrings**: Single-quoted triple-quote `'''` style, not `"""`.
+- **Types**: Uses `typing` module (`Dict`, `List`, `Optional`, `Any`) — not Python 3.10+ built-in generics, except in newer `core/` modules which use `list[str]` style.
+- **Data models**: `@dataclass` from stdlib, not Pydantic. See [`agents/base.py`](agents/base.py:31), [`tools/base.py`](tools/base.py:34).
+- **Env loading**: `from dotenv import load_dotenv; load_dotenv()` at module top in any module that reads env vars.
 
-- `pm_agent.py`
-  Main CLI for agent workflows such as `feature-plan`, release-planning flows, and `gantt-snapshot`.
-- `jira_utils.py`
-  Standalone Jira CLI and shared Jira integration substrate.
-- `confluence_utils.py`
-  Standalone Confluence CLI and shared Confluence integration substrate.
-- `tools/`
-  Agent-callable wrappers around the underlying utilities.
-- `mcp_server.py`
-  MCP surface for external tool consumers.
-- `shannon/`
-  FastAPI service that bridges Microsoft Teams to backend agents. Receives commands via Teams Outgoing Webhook, routes them to the appropriate agent (Shannon built-in, Drucker, etc.) via the agent registry, and posts responses as Adaptive Cards. Also provides a proactive notification API.
+## Architecture (Non-Obvious)
 
-## Current Agent Focus
+- **Two-layer tool pattern**: Standalone CLIs (`jira_utils.py`, `confluence_utils.py`) contain all business logic. `tools/*.py` are thin wrappers that return [`ToolResult`](tools/base.py:34) objects for agent consumption. [`mcp_server.py`](mcp_server.py) wraps the same utilities for MCP. All three surfaces must stay aligned.
+- **Prompt files**: Agent prompts live in `config/prompts/<agent_name>.md`. Loaded via `_load_prompt_file()` using `os.path.join('config', 'prompts', ...)` — path is relative to CWD, not module location.
+- **Workforce agents**: `agents/workforce/<name>/` each have `config.yaml`, `prompts/system.md`, `agent.py`, `api.py`, `models.py`. The `config.yaml` declares event contracts (`consumes`/`produces`) and inter-agent `dependencies`.
+- **Shannon dual location**: `shannon/` is the legacy FastAPI Teams service; `agents/workforce/shannon/` is the newer agent-framework version with Graph API client.
+- **State stores**: `state/*.py` — each agent domain has its own store class (e.g., `drucker_report_store.py`, `gantt_snapshot_store.py`). Persistence backends in [`state/persistence.py`](state/persistence.py) support JSON files and SQLite.
+- **`core/` is pure logic**: No print statements, no CLI concerns. Returns structured dicts for any consumer. See [`core/reporting.py`](core/reporting.py:7) header.
+- **Framework API factory**: [`framework/api/app.py`](framework/api/app.py:20) `create_agent_app()` gives every agent a FastAPI instance with standard middleware (correlation ID, request logging, metrics) and health/status routes.
 
-Treat this repo as strongest in the Planning & Delivery slice of the broader `agent_workforce` vision.
+## Safety
 
-- `Gantt`
-  Planning snapshots, milestone proposals, dependency views, and Jira-grounded planning outputs.
-- `Drucker`
-  Jira analysis, safe operational tooling, and review-gated write paths.
-- `Hypatia`
-  Confluence and documentation tooling foundation.
-- `Shannon`
-  Microsoft Teams communications service. Single bot deployment that routes commands to all registered agents, manages Adaptive Card rendering, and provides the human interface layer for the agent workforce. Supports zero-cost deployment via Teams Outgoing Webhook + Power Automate Workflows.
+- Default to dry-run/analysis-only. Jira and Confluence writes require explicit user request.
+- Validate identifiers, scope, and destination before any mutation.
+- Never commit `.env`, `*.log`, or scratch files listed in `.gitignore`.
 
-When extending agent behavior, prefer strengthening these areas before inventing unrelated new agent surfaces.
+## Testing Patterns
 
-## Where New Work Should Go
-
-- `agents/`
-  New agent classes, deterministic planning logic, and orchestrators.
-- `config/prompts/`
-  Agent prompts. Keep prompts specific to the agent and aligned with the code's actual tool surface.
-- `tools/`
-  Agent-facing wrappers. If a utility exists underneath but agents cannot call it, expose it here.
-- `tests/`
-  Add targeted tests for new agent behavior, tool wrappers, and CLI workflows.
-- `docs/`
-  Architecture notes, workflow explanations, and `agent_workforce` mapping updates.
-
-## Working Style
-
-- Prefer deterministic logic first; use LLM reasoning where synthesis is genuinely needed.
-- Keep human review boundaries explicit for mutating workflows.
-- Make the agent/tool/MCP surfaces consistent with each other when adding capability.
-- Favor small, composable helpers over large opaque agent methods.
-- Preserve existing repo patterns before introducing new abstractions.
-
-## Safety Rules
-
-- Default to dry-run or analysis-only behavior unless the user clearly asks for execution.
-- Be especially careful with Jira and Confluence writes. Validate identifiers, scope, and destination before mutating anything.
-- Do not remove or overwrite user-created local scratch files unless explicitly asked.
-- Never commit incidental artifacts such as logs, temporary exports, or one-off scratch inputs unless the user asks for them to be versioned.
-
-## Scratch And Local Artifacts
-
-These files are commonly local-only and should usually stay uncommitted:
-
-- `confluence_test_page.md`
-- `generate_release_reports.py`
-- `sw_1211_p0p1_bugs.json`
-- `*.log`
-- ad hoc exported JSON or Markdown generated during manual testing
-
-Always check `git status` before committing.
-
-## Testing Expectations
-
-- Run focused tests for the area you changed while iterating.
-- Run `.venv/bin/pytest -q` before finishing when the change touches shared behavior.
-- For syntax-sensitive edits, `python -m py_compile` on touched modules is a good fast check.
-- If you add a CLI feature, add or update a workflow/CLI test when practical.
-
-## Implementation Notes
-
-- Keep CLI behavior and agent-callable tool behavior aligned.
-- If functionality exists in a utility but not in `tools/` or `mcp_server.py`, that is usually a gap worth closing.
-- Prefer structured outputs that can be reviewed, persisted, and reused by later workflow steps.
-- For `Gantt`-oriented work, preserve explicit evidence gaps when the repo lacks real build, test, release, or meeting inputs.
-
-## Documentation Expectations
-
-- Update `README.md` when user-facing workflows or commands materially change.
-- Update the docs in `docs/` when the architectural story changes, especially:
-  - `docs/agent-usefulness-and-applications.md`
-  - `docs/agent-workforce-mapping.md`
-
-## Branch And PR Hygiene
-
-- Keep changes scoped to the branch purpose.
-- Do not include unrelated scratch files in commits.
-- Mention verification clearly in commit or PR summaries when tests were run.
+- Tests use `_char` suffix convention (e.g., `test_drucker_agent_char.py`) for characterization tests.
+- [`tests/conftest.py`](tests/conftest.py) provides shared fixtures: `issue_factory`, `mock_jira`, `fake_response_factory`, `fake_issue_resource_factory`. Jira custom fields are mapped (e.g., `customfield_17504` = customer IDs, `customfield_28434` = product family).
+- Tests heavily use `monkeypatch` to stub tool functions and agent internals — no live API calls.
+- `pytest-asyncio` is installed for async test support.

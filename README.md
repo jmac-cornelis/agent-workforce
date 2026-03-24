@@ -71,15 +71,23 @@ The fastest way to get set up is with [OpenCode](https://github.com/opencode-ai/
 ```
 I just cloned the agent-workforce repo and need to set it up. Please:
 
-1. Create a Python virtual environment in .venv and install requirements.txt
-2. Copy .env.example to .env
-3. Ask me for the credentials I need to fill in:
-   - Jira email and API token (required for all functionality)
-   - Jira URL (default: https://cornelisnetworks.atlassian.net)
-   - LLM provider preference: Cornelis internal, OpenAI, or Anthropic (only needed for agentic workflows)
-   - The corresponding API key(s) for whichever LLM provider I choose
-4. Write my answers into .env
-5. Verify the installation by running: python3 jira_utils.py --list
+1. Create a Python virtual environment in .venv, activate it, and install
+   requirements.txt
+2. Copy .env.example to .env (preserving all comments and structure)
+3. Ask me for credentials to fill in. Group your questions into one message:
+   - Jira email address (required)
+   - Jira API token (required — generate at
+     https://id.atlassian.com/manage-profile/security/api-tokens)
+   - Jira URL (default: https://cornelisnetworks.atlassian.net — keep default
+     unless I say otherwise)
+   - Whether I want to use agentic workflows (if yes, ask which LLM provider:
+     Cornelis internal, OpenAI, or Anthropic, and the corresponding API key)
+4. Update only the corresponding values in .env — do not rewrite or reformat
+   the file
+5. Verify the installation:
+   - Run: python3 jira_utils.py --help (confirms install works)
+   - Run: python3 jira_utils.py --list (confirms Jira connectivity)
+   - Report whether both succeeded
 ```
 
 **Prerequisites:** Python 3.9+, access to Cornelis Networks Jira, and a Jira API token ([generate one here](https://id.atlassian.com/manage-profile/security/api-tokens)). An LLM API key is only required for agentic workflows.
