@@ -7,6 +7,7 @@ AI-powered engineering agents, reusable tools, and standalone CLI utilities for 
 - [Overview](#overview)
   - [When to Use What](#when-to-use-what)
 - [Architecture](#architecture)
+- [Quick Start](#quick-start)
 - [Agents](#agents)
   - [Implemented Agents](#implemented-agents)
   - [Agent Communication](#agent-communication)
@@ -14,10 +15,6 @@ AI-powered engineering agents, reusable tools, and standalone CLI utilities for 
 - [Agentic Workflows](#agentic-workflows)
 - [Standalone Utilities](#standalone-utilities)
 - [Tools (MCP / Agent API)](#tools-mcp--agent-api)
-- [Installation](#installation)
-  - [Quick Start](#quick-start)
-  - [Global CLI Install (pipx)](#global-cli-install-pipx)
-- [Configuration](#configuration)
 - [Development](#development)
 - [License](#license)
 
@@ -64,6 +61,30 @@ See [docs/workflows.md](docs/workflows.md) for the full workflow reference.
 ![System Overview](docs/diagrams/system-overview.png)
 
 > Source: [`docs/diagrams/system-overview.mmd`](docs/diagrams/system-overview.mmd) — regenerate with `mmdc -i docs/diagrams/system-overview.mmd -o docs/diagrams/system-overview.png -b transparent -w 1200`
+
+---
+
+## Quick Start
+
+The fastest way to get set up is with [OpenCode](https://github.com/opencode-ai/opencode). Clone the repo and paste this prompt into an OpenCode session:
+
+```
+I just cloned the agent-workforce repo and need to set it up. Please:
+
+1. Create a Python virtual environment in .venv and install requirements.txt
+2. Copy .env.example to .env
+3. Ask me for the credentials I need to fill in:
+   - Jira email and API token (required for all functionality)
+   - Jira URL (default: https://cornelisnetworks.atlassian.net)
+   - LLM provider preference: Cornelis internal, OpenAI, or Anthropic (only needed for agentic workflows)
+   - The corresponding API key(s) for whichever LLM provider I choose
+4. Write my answers into .env
+5. Verify the installation by running: python3 jira_utils.py --list
+```
+
+**Prerequisites:** Python 3.9+, access to Cornelis Networks Jira, and a Jira API token ([generate one here](https://id.atlassian.com/manage-profile/security/api-tokens)). An LLM API key is only required for agentic workflows.
+
+For manual installation, global CLI install via pipx, and full configuration reference, see **[docs/installation.md](docs/installation.md)**.
 
 ---
 
@@ -277,100 +298,6 @@ The `tools/` directory and [`mcp_server.py`](mcp_server.py) expose agent-callabl
 | **Draw.io** | `parse_org_chart`, `get_responsibilities`, `create_ticket_diagram`, `create_diagram_from_tickets` |
 | **Vision** | `analyze_image`, `extract_roadmap_from_ppt`, `extract_roadmap_from_excel` |
 | **Confluence** | `confluence_tools` |
-
----
-
-## Installation
-
-### Quick Start
-
-```bash
-# 1. Clone the repository
-git clone <repository-url>
-cd agent-workforce
-
-# 2. Create virtual environment
-python3 -m venv venv
-source venv/bin/activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Configure environment
-cp .env.example .env
-# Edit .env with your credentials
-```
-
-### Prerequisites
-
-- Python 3.9 or higher
-- Access to Cornelis Networks Jira instance
-- Jira API token
-- Access to Cornelis internal LLM (or external LLM API key) — *only for agentic workflows*
-
-### Global CLI Install (pipx)
-
-To make `jira-utils`, `drawio-utils`, and `excel-utils` available as commands in **any** directory (without activating a venv), use [pipx](https://pipx.pypa.io/):
-
-```bash
-# Install pipx (macOS)
-brew install pipx
-pipx ensurepath
-
-# Editable install from the repo
-pipx install /path/to/this/repo --editable
-
-# Verify
-jira-utils -h
-drawio-utils -h
-excel-utils -h
-```
-
-To include agent pipeline extras:
-
-```bash
-pipx install /path/to/this/repo --editable --pip-args='.[agents]'
-```
-
----
-
-## Configuration
-
-### Environment Variables
-
-Copy `.env.example` to `.env` and configure:
-
-```bash
-# Jira credentials
-JIRA_EMAIL=your.email@cornelisnetworks.com
-JIRA_API_TOKEN=your_api_token
-JIRA_URL=https://cornelisnetworks.atlassian.net
-
-# Cornelis internal LLM
-CORNELIS_LLM_BASE_URL=http://internal-llm.cornelis.com/v1
-CORNELIS_LLM_API_KEY=your_internal_key
-CORNELIS_LLM_MODEL=cornelis-default
-
-# External LLM (fallback/vision)
-OPENAI_API_KEY=your_openai_key
-ANTHROPIC_API_KEY=your_anthropic_key
-```
-
-### Multiple Environment Files
-
-```bash
-python3 jira_utils.py --list --env .env_prod
-python3 jira_utils.py --list --env .env_sandbox
-pm_agent --env .env_sandbox --workflow feature-plan --project STLSB --feature "Redfish RDE"
-```
-
-### LLM Provider Options
-
-| Provider | Use Case | Configuration |
-|----------|----------|---------------|
-| `cornelis` | Default, internal LLM | `CORNELIS_LLM_*` variables |
-| `openai` | GPT-4, GPT-4o | `OPENAI_API_KEY` |
-| `anthropic` | Claude models | `ANTHROPIC_API_KEY` |
 
 ---
 
