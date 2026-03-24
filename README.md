@@ -2,25 +2,20 @@
 
 AI-powered engineering agents, reusable tools, and standalone CLI utilities for project management, Jira, Confluence, Excel, and Draw.io at Cornelis Networks.
 
-> **Primary use case:** An engineering team writes a scope document describing a feature.
-> The PM agent reads that document and produces a complete Jira project plan —
-> Initiative → Epics → Stories — ready for review and one-command execution.
-
 ## Table of Contents
 
 - [Overview](#overview)
-  - [How It Works — Scope Document to Jira Plan](#how-it-works--scope-document-to-jira-plan)
 - [Architecture](#architecture)
 - [Agents](#agents)
   - [Implemented Agents](#implemented-agents)
   - [Agent Communication](#agent-communication)
+  - [Agent Workforce Vision](#agent-workforce-vision)
 - [Installation](#installation)
   - [Quick Start](#quick-start)
   - [Global CLI Install (pipx)](#global-cli-install-pipx)
 - [Configuration](#configuration)
 - [Agentic Workflows](#agentic-workflows)
-  - [Feature Plan Workflow](#feature-plan-workflow)
-  - [Gantt Snapshot Workflow](#gantt-snapshot-workflow)
+  - [Gantt Planning Workflows](#gantt-planning-workflows)
   - [Drucker Hygiene Workflow](#drucker-hygiene-workflow)
   - [Hypatia Documentation Workflow](#hypatia-documentation-workflow)
   - [Bug Report Workflow](#bug-report-workflow)
@@ -45,62 +40,19 @@ This repository contains three categories of tooling:
 
 | Category | What it does | LLM required? |
 |----------|-------------|----------------|
-| **Agents** | Specialized AI agents for project planning, Jira coordination, documentation, and Teams communication | Varies |
+| **Agents** | Specialized AI agents for Jira coordination, Teams communication, project planning, and documentation — each with its own API and Teams channel | Varies |
 | **Tools** | Agent-callable wrappers around underlying utilities, exposed via MCP and direct API | No |
 | **Standalone Utilities** | CLI tools for Jira queries, Excel formatting, Draw.io diagrams, Confluence, and bulk operations | No |
 
-### How It Works — Scope Document to Jira Plan
-
-The flagship workflow takes a **scope document** authored by the engineering team and transforms it into a fully structured Jira project plan:
-
-```
-┌─────────────────┐      ┌──────────────┐      ┌──────────────┐      ┌──────────────┐
-│  Scope Document  │ ──▶  │  PM Agent     │ ──▶  │  plan.json   │ ──▶  │  Jira        │
-│  (MD/JSON/PDF)   │      │  (LLM-driven) │      │  plan.md     │      │  Tickets     │
-└─────────────────┘      └──────────────┘      └──────────────┘      └──────────────┘
-     Engineering              AI Agents            Review Output         --execute
-     authors this             parse, scope,        Human reviews         creates
-                              and plan             before executing      Initiative →
-                                                                        Epics → Stories
-```
-
-**Three commands cover the entire lifecycle:**
-
-```bash
-# 1. Generate the plan from a scope document (dry-run — no tickets created)
-pm_agent --workflow feature-plan --project STL --feature "SPDM Attestation" \
-         --scope-doc scope.json
-
-# 2. Review the generated plan
-cat plans/STL-spdm-attestation/plan.md
-
-# 3. Execute — create tickets in Jira (Initiative auto-created, Epics linked)
-pm_agent --workflow feature-plan --project STL \
-         --plan-file plans/STL-spdm-attestation/plan.json --execute
-
-# Or attach to an existing Initiative instead of auto-creating one
-pm_agent --workflow feature-plan --project STL \
-         --plan-file plans/STL-spdm-attestation/plan.json \
-         --initiative STL-74071 --execute
-```
-
-The scope document can be **JSON** (structured items with complexity/confidence), **Markdown**, **PDF**, or **DOCX**. The agent parses it, groups items into vertical-slice Epics, generates Stories with acceptance criteria, and outputs both `plan.json` (machine-readable) and `plan.md` (human-readable).
-
-> **Initiative handling:** On `--execute`, Epics are always attached to an Initiative.
-> If `--initiative KEY` is supplied, that ticket is validated and used.
-> If omitted, a new Initiative is auto-created from the plan's feature name.
-
 ### Key Features
 
-- **Scope-to-Jira pipeline** — Engineering writes a scope doc; the agent produces Initiative → Epics → Stories
-- **Multiple entry points** — Start from a feature description, scope document, or previously generated plan
-- **Multi-agent architecture** — Specialized agents for research, hardware analysis, scoping, plan building, and review
+- **AI agents with Teams integration** — Shannon routes commands from Microsoft Teams to backend agents (Drucker, Gantt, Hypatia) with Adaptive Card responses
+- **Jira hygiene automation** — Drucker scans tickets for staleness, missing fields, and open-bug trends, reporting via Teams
+- **Project planning snapshots** — Gantt builds Jira-grounded milestone proposals, dependency views, and risk summaries
+- **Scope-to-Jira pipeline** — Engineering writes a scope doc; the planning workflow produces Initiative → Epics → Stories
 - **Human-in-the-loop** — Dry-run by default; `--execute` only after review
-- **Automatic Initiative** — Epics are always parented to an Initiative; supply `--initiative KEY` or one is auto-created
 - **Custom LLM support** — Works with Cornelis internal LLM or external providers (OpenAI, Anthropic)
-- **Session persistence** — Resume interrupted workflows
-- **Vision capabilities** — Extract data from images, slides, and PDFs
-- **Standalone CLI tools** — Jira, Excel, and Draw.io utilities work without any LLM
+- **Standalone CLI tools** — Jira, Excel, Draw.io, and Confluence utilities work without any LLM
 
 ---
 
@@ -265,109 +217,23 @@ All agents are accessed through Shannon, the Teams communications layer. Enginee
 
 Agent routing is configured in [`config/shannon/agent_registry.yaml`](config/shannon/agent_registry.yaml). For setup details, see [docs/shannon-teams-setup.md](docs/shannon-teams-setup.md).
 
+### Agent Workforce Vision
+
+This repo implements the first agents of a planned 17-agent workforce for Cornelis Networks engineering. The full architectural vision, agent specifications, and implementation phasing are documented in [docs/workforce/](docs/workforce/).
+
 ---
 
 ## Agentic Workflows
 
 Agentic workflows are multi-phase AI pipelines orchestrated by [`pm_agent.py`](pm_agent.py). They require an LLM and use specialized agents to research, analyze, scope, and plan.
 
-### Feature Plan Workflow
+### Gantt Planning Workflows
 
-Generate a complete Jira project plan (Initiative → Epics → Stories) from a feature description, scope document, or previously generated plan. The **recommended path** is for the engineering team to author a scope document (JSON, Markdown, PDF, or DOCX) and feed it directly to the agent via `--scope-doc`, which skips the research and hardware-analysis phases and jumps straight to plan generation.
+Gantt provides two planning capabilities: **snapshots** of a project backlog and **feature plans** that produce Jira ticket hierarchies from scope documents.
 
-#### Entry Points
+#### Gantt Snapshots
 
-| Entry Point | Phases Executed | Use When |
-|-------------|----------------|----------|
-| `--scope-doc FILE` | Phases 4–6 (plan → review → execute) | **Recommended** — engineering team provides a scope document |
-| `--feature "text"` or `--feature-prompt FILE` | All 6 phases | Starting from scratch — agent does its own research |
-| `--plan-file FILE` | Phase 6 only (execute) | You already have a reviewed `plan.json` |
-
-#### Examples
-
-```bash
-# ── Recommended: scope document → Jira plan ──────────────────────────
-
-# 1. Generate plan from engineering scope document (dry-run)
-pm_agent --workflow feature-plan --project STL --feature "SPDM Attestation" \
-         --scope-doc scope.json
-
-# 2. Review the generated plan
-cat plans/STL-spdm-attestation/plan.md
-
-# 3. Execute: create tickets in Jira under an Initiative
-pm_agent --workflow feature-plan --project STL \
-         --plan-file plans/STL-spdm-attestation/plan.json \
-         --initiative STL-74071 --execute
-
-# ── Alternative: full agentic workflow (no scope doc) ────────────────
-
-# From a one-line feature description (all 6 phases)
-pm_agent --workflow feature-plan --project STLSB --feature "Add PQC SPDM attestation"
-
-# From a rich feature prompt file with supporting specs
-pm_agent --workflow feature-plan --project STLSB --feature-prompt SPDM_1.2_Attestation.md \
-         --docs spec.pdf datasheet.pdf
-
-# ── Re-execute a previously generated plan ───────────────────────────
-
-# Dry-run (shows summary only)
-pm_agent --workflow feature-plan --project STLSB --plan-file plans/STLSB-spdm/plan.json
-
-# Execute without an Initiative (Epics created unattached)
-pm_agent --workflow feature-plan --project STLSB --plan-file plans/STLSB-spdm/plan.json --execute
-
-# ── Cleanup: delete all tickets created by a previous --execute ──────
-
-# Dry-run (preview what would be deleted)
-pm_agent --workflow feature-plan --cleanup plans/STLSB-spdm/created_tickets.csv
-
-# Execute the cleanup (deletes tickets in child-first order)
-pm_agent --workflow feature-plan --cleanup plans/STLSB-spdm/created_tickets.csv --execute
-
-# Skip the DELETE confirmation prompt
-pm_agent --workflow feature-plan --cleanup plans/STLSB-spdm/created_tickets.csv --execute --force
-
-# ── Sandbox testing ──────────────────────────────────────────────────
-
-pm_agent --env .env_sandbox --workflow feature-plan --project STLSB \
-         --feature "Redfish RDE" --scope-doc scope.md
-```
-
-#### Feature Plan Flags
-
-| Flag | Description |
-|------|-------------|
-| `--feature TEXT` | Feature description string |
-| `--feature-prompt FILE` | Rich feature prompt file (Markdown) — takes precedence over `--feature` |
-| `--scope-doc FILE` | Pre-existing scope document (JSON/MD/PDF/DOCX) — skips research/HW/scoping phases |
-| `--plan-file FILE` | Previously generated `plan.json` — skips all agentic phases |
-| `--initiative KEY` | Optional existing Initiative ticket key (e.g. `STL-74071`). If supplied, validated and used as parent for all Epics. If omitted, a new Initiative is auto-created from the plan's feature name. |
-| `--execute` | Actually create Jira tickets (default: dry-run) |
-| `--force` | Skip duplicate-ticket confirmation prompts. Without `--force`, the agent pauses and asks before creating a ticket whose summary already exists in the project. Also skips the `DELETE` confirmation when used with `--cleanup`. |
-| `--cleanup CSV` | Delete all tickets listed in a `created_tickets.csv` (produced by `--execute`). Dry-run by default; add `--execute` to actually delete. Children are deleted before parents. |
-| `--docs FILE [FILE ...]` | Spec documents / datasheets for the research phase |
-| `--output-dir DIR` | Root directory for output (default: `plans/<PROJECT>-<slug>/`) |
-
-#### Output Files
-
-All output lands in `plans/<PROJECT>-<slug>/`:
-
-| File | Description |
-|------|-------------|
-| `plan.json` | Machine-readable Jira plan (Epics + Stories) |
-| `plan.md` | Human-readable Markdown plan |
-| `scope.json` | Scoping agent output |
-| `research.json` | Research agent output |
-| `hw_profile.json` | Hardware analyst output |
-| `debug/*.md` | Raw LLM responses (for debugging) |
-| `created_tickets.csv` | Ticket keys created by `--execute` (feed to `--cleanup` to undo) |
-
----
-
-### Gantt Snapshot Workflow
-
-Build, persist, and review Jira-grounded planning snapshots for a project backlog.
+Build, persist, and review Jira-grounded planning snapshots with milestone proposals, dependency views, and risk summaries.
 
 ```bash
 # Create and persist a new planning snapshot
@@ -383,8 +249,64 @@ pm_agent --workflow gantt-snapshot-list --project STL
 pm_agent --workflow gantt-snapshot-get --snapshot-id a1b2c3d4 --output stl_snapshot.json
 ```
 
-Each `gantt-snapshot` run now stores a durable copy under `data/gantt_snapshots/<PROJECT>/<SNAPSHOT_ID>/`
-in addition to any ad hoc output path you provide with `--output`.
+Snapshots are stored under `data/gantt_snapshots/<PROJECT>/<SNAPSHOT_ID>/`.
+
+#### Feature Plan (Scope Document → Jira)
+
+Generate a Jira project plan (Initiative → Epics → Stories) from a scope document, feature description, or previously generated plan. The recommended path is for the engineering team to author a scope document (JSON, Markdown, PDF, or DOCX) and feed it via `--scope-doc`.
+
+```bash
+# 1. Generate plan from scope document (dry-run — no tickets created)
+pm_agent --workflow feature-plan --project STL --feature "SPDM Attestation" \
+         --scope-doc scope.json
+
+# 2. Review the generated plan
+cat plans/STL-spdm-attestation/plan.md
+
+# 3. Execute: create tickets in Jira under an existing Initiative
+pm_agent --workflow feature-plan --project STL \
+         --plan-file plans/STL-spdm-attestation/plan.json \
+         --initiative STL-74071 --execute
+```
+
+<details>
+<summary>Feature Plan entry points, flags, and output files</summary>
+
+**Entry Points:**
+
+| Entry Point | Phases Executed | Use When |
+|-------------|----------------|----------|
+| `--scope-doc FILE` | Phases 4–6 (plan → review → execute) | **Recommended** — engineering team provides a scope document |
+| `--feature "text"` or `--feature-prompt FILE` | All 6 phases | Starting from scratch — agent does its own research |
+| `--plan-file FILE` | Phase 6 only (execute) | You already have a reviewed `plan.json` |
+
+**Flags:**
+
+| Flag | Description |
+|------|-------------|
+| `--feature TEXT` | Feature description string |
+| `--feature-prompt FILE` | Rich feature prompt file (Markdown) — takes precedence over `--feature` |
+| `--scope-doc FILE` | Pre-existing scope document (JSON/MD/PDF/DOCX) — skips research/HW/scoping phases |
+| `--plan-file FILE` | Previously generated `plan.json` — skips all agentic phases |
+| `--initiative KEY` | Existing Initiative ticket key (e.g. `STL-74071`). If omitted, auto-created. |
+| `--execute` | Actually create Jira tickets (default: dry-run) |
+| `--force` | Skip duplicate-ticket and DELETE confirmation prompts |
+| `--cleanup CSV` | Delete tickets listed in `created_tickets.csv`. Dry-run by default; add `--execute` to delete. |
+| `--docs FILE [FILE ...]` | Spec documents / datasheets for the research phase |
+| `--output-dir DIR` | Root directory for output (default: `plans/<PROJECT>-<slug>/`) |
+
+**Output Files** (in `plans/<PROJECT>-<slug>/`):
+
+| File | Description |
+|------|-------------|
+| `plan.json` | Machine-readable Jira plan (Epics + Stories) |
+| `plan.md` | Human-readable Markdown plan |
+| `scope.json` | Scoping agent output |
+| `research.json` | Research agent output |
+| `hw_profile.json` | Hardware analyst output |
+| `created_tickets.csv` | Ticket keys created by `--execute` (feed to `--cleanup` to undo) |
+
+</details>
 
 ---
 
