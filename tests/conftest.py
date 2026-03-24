@@ -11,6 +11,8 @@ import pytest
 from openpyxl import Workbook
 from unittest.mock import MagicMock
 
+from llm.base import BaseLLM
+
 
 @dataclass
 class FakeResponse:
@@ -269,6 +271,27 @@ def capture_stdout():
             yield stream
 
     return _capture
+
+
+class FakeLLM(BaseLLM):
+
+    def chat(self, messages, temperature=0.7, max_tokens=None, **kwargs):
+        from llm.base import LLMResponse
+        return LLMResponse(content='fake-response', model='fake-model')
+
+    def chat_with_vision(self, messages, images, temperature=0.7,
+                         max_tokens=None, **kwargs):
+        from llm.base import LLMResponse
+        return LLMResponse(content='fake-vision-response', model='fake-model')
+
+    def supports_vision(self):
+        return False
+
+
+@pytest.fixture(autouse=True)
+def _mock_llm_client(monkeypatch):
+    fake = FakeLLM(model='fake-model')
+    monkeypatch.setattr('llm.config.get_llm_client', lambda *a, **kw: fake)
 
 
 @pytest.fixture(autouse=True)
