@@ -91,7 +91,13 @@ Agent routing is configured in [`config/shannon/agent_registry.yaml`](config/sha
 
 ### Agent Workforce Vision
 
-This repo implements the first agents of a planned 17-agent workforce for Cornelis Networks engineering. The full architectural vision, agent specifications, and implementation phasing are documented in [docs/workforce/](docs/workforce/).
+This repo implements the first agents of a planned 17-agent workforce for Cornelis Networks engineering, organized across six zones:
+
+![Agent Workforce Zone Map](docs/diagrams/workforce/AGENT_ZONE_MAP.png)
+
+> Source: [`docs/diagrams/workforce/AGENT_ZONE_MAP.drawio`](docs/diagrams/workforce/AGENT_ZONE_MAP.drawio) — regenerate with `drawio --export --format png --width 1200 --border 10 docs/diagrams/workforce/AGENT_ZONE_MAP.drawio`
+
+The full architectural vision, agent specifications, and implementation phasing are documented in [docs/workforce/](docs/workforce/).
 
 ---
 
