@@ -1,6 +1,6 @@
 # Teams Bot Framework Specification
 
-[Back to AI Agent Workforce](../AGENT_WORKFORCE_OVERVIEW.md)
+[Back to AI Agent Workforce](README.md)
 
 > **This is the technical specification for [Shannon](../../agents/SHANNON_COMMUNICATIONS_AGENT_PLAN.md), the communications service agent.** Shannon is the single Teams bot that serves as the unified human interface for all 16 AI agents in the Cornelis Networks Agent Workforce. Named after Claude Shannon, father of information theory.
 

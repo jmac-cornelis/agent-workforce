@@ -1,6 +1,6 @@
 # Test Framework Evaluation
 
-[Back to AI Agent Workforce](../AGENT_WORKFORCE_OVERVIEW.md)
+[Back to AI Agent Workforce](README.md)
 
 > **Warning:** **Decision Required:** This document evaluates whether Fuze Test / ATF is the right test framework for the agent platform, or whether we should adopt or migrate to an alternative. This decision affects Ada (test planning), Curie (test generation), Faraday (test execution), and Tesla (environment management).
 

@@ -4,7 +4,7 @@ Convert AGENT_ORCHESTRATION_ZONES.drawio to a Mermaid block-beta diagram.
 
 Source of truth: docs/diagrams/workforce/AGENT_ORCHESTRATION_ZONES.drawio
 Outputs:
-  - Mermaid block inserted into README.md and docs/AGENT_WORKFORCE_OVERVIEW.md
+  - Mermaid block inserted into README.md and docs/workforce/README.md
   - PNG rendered and uploaded to Confluence (separate step)
 
 Usage:
@@ -179,7 +179,7 @@ def main():
     # Update MD files
     repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     readme = os.path.join(repo_root, 'README.md')
-    overview = os.path.join(repo_root, 'docs', 'AGENT_WORKFORCE_OVERVIEW.md')
+    overview = os.path.join(repo_root, 'docs', 'workforce', 'README.md')
     
     print(f'\nUpdating MD files:')
     update_md_file(readme, mermaid)
