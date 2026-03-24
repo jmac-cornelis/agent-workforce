@@ -1,6 +1,6 @@
-# Cornelis Project Management Agent and Utilities
+# Cornelis Agent Workforce
 
-AI-powered project management agents and standalone CLI utilities for Jira, Excel, and Draw.io at Cornelis Networks.
+AI-powered engineering agents, reusable tools, and standalone CLI utilities for project management, Jira, Confluence, Excel, and Draw.io at Cornelis Networks.
 
 > **Primary use case:** An engineering team writes a scope document describing a feature.
 > The PM agent reads that document and produces a complete Jira project plan —
@@ -11,18 +11,25 @@ AI-powered project management agents and standalone CLI utilities for Jira, Exce
 - [Overview](#overview)
   - [How It Works — Scope Document to Jira Plan](#how-it-works--scope-document-to-jira-plan)
 - [Architecture](#architecture)
+- [Agents](#agents)
+  - [Implemented Agents](#implemented-agents)
+  - [Agent Communication](#agent-communication)
 - [Installation](#installation)
   - [Quick Start](#quick-start)
   - [Global CLI Install (pipx)](#global-cli-install-pipx)
 - [Configuration](#configuration)
 - [Agentic Workflows](#agentic-workflows)
   - [Feature Plan Workflow](#feature-plan-workflow)
+  - [Gantt Snapshot Workflow](#gantt-snapshot-workflow)
+  - [Drucker Hygiene Workflow](#drucker-hygiene-workflow)
+  - [Hypatia Documentation Workflow](#hypatia-documentation-workflow)
   - [Bug Report Workflow](#bug-report-workflow)
   - [Release Planning Workflow](#release-planning-workflow)
 - [Standalone Utilities](#standalone-utilities)
   - [Jira CLI (`jira_utils.py`)](#jira-cli-jira_utilspy)
   - [Excel CLI (`excel_utils.py`)](#excel-cli-excel_utilspy)
   - [Draw.io CLI (`drawio_utilities.py`)](#drawio-cli-drawio_utilitiespy)
+  - [Confluence CLI (`confluence_utils.py`)](#confluence-cli-confluence_utilspy)
   - [Excel Map Builder (`--build-excel-map`)](#excel-map-builder---build-excel-map)
 - [Ticket Creation](#ticket-creation)
 - [Agent Architecture](#agent-architecture)
@@ -34,12 +41,13 @@ AI-powered project management agents and standalone CLI utilities for Jira, Exce
 
 ## Overview
 
-This repository contains two categories of tooling:
+This repository contains three categories of tooling:
 
 | Category | What it does | LLM required? |
 |----------|-------------|----------------|
-| **Agentic Workflows** | Multi-phase AI pipelines that research, scope, plan, and execute Jira project plans | Yes |
-| **Standalone Utilities** | CLI tools for Jira queries, Excel formatting, Draw.io diagrams, and bulk operations | No |
+| **Agents** | Specialized AI agents for project planning, Jira coordination, documentation, and Teams communication | Varies |
+| **Tools** | Agent-callable wrappers around underlying utilities, exposed via MCP and direct API | No |
+| **Standalone Utilities** | CLI tools for Jira queries, Excel formatting, Draw.io diagrams, Confluence, and bulk operations | No |
 
 ### How It Works — Scope Document to Jira Plan
 
@@ -233,37 +241,29 @@ python3 pm_agent.py --env .env_sandbox --workflow feature-plan --project STLSB -
 
 ---
 
-## Shannon Teams Bot
+## Agents
 
-This repo now includes the first Shannon service slice for Microsoft Teams. It
-supports two transport models:
+The repo implements specialized agents that automate engineering workflows. Each agent operates as an independent service with its own API, commands, and Teams channel.
 
-- Teams Outgoing Webhook for the zero-subscription path
-- Bot-style `/api/messages` plumbing for future fuller integrations
+For the full agent workforce vision (17 agents across 6 zones), see [docs/workforce/](docs/workforce/).
 
-What the first slice provides:
+### Implemented Agents
 
-- Teams Outgoing Webhook endpoint: `POST /v1/teams/outgoing-webhook`
-- Teams webhook endpoint: `POST /api/messages`
-- Internal notification API: `POST /v1/bot/notify`
-- Shannon self-service commands in `#agent-shannon`:
-  ` /stats`, ` /busy`, ` /work-today`, ` /token-status`, ` /decision-tree`,
-  and ` /why <record-id>`
-- Durable conversation-reference and audit-log storage under `data/shannon/`
+| Agent | Directory | Description | Port |
+|-------|-----------|-------------|------|
+| **Shannon** | `shannon/` | Microsoft Teams communications service. Routes commands from Teams to backend agents, renders Adaptive Card responses, and posts proactive notifications. Zero-cost deployment via Outgoing Webhook + Power Automate Workflows. | 8200 |
+| **Drucker** | `agents/drucker_api.py` | Jira hygiene coordinator. Runs ticket hygiene scans, tracks bug activity, and produces remediation reports. Operates as a standalone FastAPI service called by Shannon. | 8201 |
+| **Gantt** | `agents/gantt_agent.py` | Project planning snapshots. Builds Jira-grounded milestone proposals, dependency views, and risk summaries from project backlogs. | — |
+| **Hypatia** | `agents/hypatia_agent.py` | Documentation agent. Produces source-grounded documentation candidates for repo Markdown and optional Confluence publication. | — |
 
-Run it locally:
+### Agent Communication
 
-```bash
-.venv/bin/python -m uvicorn shannon.app:app --host 0.0.0.0 --port 8200
-```
+All agents are accessed through Shannon, the Teams communications layer. Engineers interact with agents by mentioning Shannon in the appropriate Teams channel:
 
-Setup guide:
-[docs/shannon-teams-setup.md](docs/shannon-teams-setup.md)
+- `#agent-shannon` — Shannon self-service commands (`/stats`, `/busy`, `/work-today`, etc.)
+- `#agent-drucker` — Drucker hygiene commands (`/hygiene-run`, `/bug-activity`, etc.)
 
-Registry and manifest templates:
-
-- [config/shannon/agent_registry.yaml](config/shannon/agent_registry.yaml)
-- [config/shannon/teams-app-manifest.template.json](config/shannon/teams-app-manifest.template.json)
+Agent routing is configured in [`config/shannon/agent_registry.yaml`](config/shannon/agent_registry.yaml). For setup details, see [docs/shannon-teams-setup.md](docs/shannon-teams-setup.md).
 
 ---
 
@@ -530,6 +530,7 @@ These CLI tools work **without any LLM** and can be installed globally via `pipx
 | `jira-utils` | [`jira_utils.py`](jira_utils.py) | Full-featured Jira CLI (project queries, ticket creation, bulk ops, dashboards) |
 | `excel-utils` | [`excel_utils.py`](excel_utils.py) | Excel workbook concatenation, CSV conversion, and diff reporting |
 | `drawio-utils` | [`drawio_utilities.py`](drawio_utilities.py) | Draw.io diagram generator from Jira hierarchy CSV exports |
+| `confluence-utils` | [`confluence_utils.py`](confluence_utils.py) | Confluence CLI for managing pages, spaces, and content |
 
 Run any of them with `-h` for full help:
 
@@ -537,6 +538,7 @@ Run any of them with `-h` for full help:
 jira-utils -h
 excel-utils -h
 drawio-utils -h
+confluence-utils -h
 ```
 
 ---
@@ -926,6 +928,8 @@ if response.success:
 
 ## Tools Reference
 
+The `tools/` directory and `mcp_server.py` expose agent-callable wrappers around the underlying standalone utilities. These tools provide safe, structured access to Jira, Excel, and other capabilities for AI agents and external consumers via MCP (Model Context Protocol).
+
 ### Jira Tools
 
 | Tool | Description |
@@ -979,13 +983,22 @@ if response.success:
 ### Project Structure
 
 ```
-jira-utilities/
+agent-workforce/
 ├── pm_agent.py                  # Agentic workflow entry point
 ├── jira_utils.py                # Standalone Jira CLI (→ jira-utils)
 ├── excel_utils.py               # Standalone Excel CLI (→ excel-utils)
 ├── drawio_utilities.py          # Standalone Draw.io CLI (→ drawio-utils)
+├── confluence_utils.py          # Standalone Confluence CLI (→ confluence-utils)
+├── mcp_server.py                # MCP server for exposing tools
+├── shannon/                     # Teams communication service
+│   ├── app.py                   # FastAPI server
+│   ├── dependencies.py
+│   └── routers/                 # API routes (bot, notifications)
 ├── agents/                      # Agent definitions
 │   ├── base.py                  # BaseAgent abstract class
+│   ├── drucker_api.py           # Drucker hygiene agent service
+│   ├── gantt_agent.py           # Gantt planning agent
+│   ├── hypatia_agent.py         # Documentation agent
 │   ├── feature_planning_orchestrator.py
 │   ├── feature_plan_builder.py
 │   ├── feature_planning_models.py
@@ -1002,6 +1015,7 @@ jira-utilities/
 │   ├── jira_tools.py
 │   ├── excel_tools.py
 │   ├── drawio_tools.py
+│   ├── confluence_tools.py
 │   ├── vision_tools.py
 │   ├── file_tools.py
 │   ├── plan_export_tools.py
@@ -1018,6 +1032,7 @@ jira-utilities/
 │   └── persistence.py           # Storage backends
 ├── config/                      # Configuration
 │   ├── settings.py              # App settings
+│   ├── shannon/                 # Shannon bot config
 │   └── prompts/                 # Agent system prompts
 │       ├── feature_planning_orchestrator.md
 │       ├── feature_plan_builder.md

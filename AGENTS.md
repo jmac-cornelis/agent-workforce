@@ -22,6 +22,8 @@ The primary product is not "chat." It is a set of reusable planning and delivery
   Agent-callable wrappers around the underlying utilities.
 - `mcp_server.py`
   MCP surface for external tool consumers.
+- `shannon/`
+  FastAPI service that bridges Microsoft Teams to backend agents. Receives commands via Teams Outgoing Webhook, routes them to the appropriate agent (Shannon built-in, Drucker, etc.) via the agent registry, and posts responses as Adaptive Cards. Also provides a proactive notification API.
 
 ## Current Agent Focus
 
@@ -33,6 +35,8 @@ Treat this repo as strongest in the Planning & Delivery slice of the broader `ag
   Jira analysis, safe operational tooling, and review-gated write paths.
 - `Hypatia`
   Confluence and documentation tooling foundation.
+- `Shannon`
+  Microsoft Teams communications service. Single bot deployment that routes commands to all registered agents, manages Adaptive Card rendering, and provides the human interface layer for the agent workforce. Supports zero-cost deployment via Teams Outgoing Webhook + Power Automate Workflows.
 
 When extending agent behavior, prefer strengthening these areas before inventing unrelated new agent surfaces.
 
