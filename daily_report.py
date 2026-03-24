@@ -30,7 +30,7 @@ load_dotenv()
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from jira_utils import connect_to_jira
-from core.reporting import daily_report, export_daily_report
+from core.reporting import bug_activity_today, daily_report, export_bug_activity, export_daily_report
 
 
 # ---------------------------------------------------------------------------
@@ -101,12 +101,52 @@ def _print_status_changes(changes: dict) -> None:
 # Main
 # ---------------------------------------------------------------------------
 
+def _print_bug_activity(data: dict) -> None:
+    opened = data.get('opened', [])
+    status_changed = data.get('status_changed', [])
+    commented = data.get('commented', [])
+    summary = data.get('summary', {})
+
+    if opened:
+        print(f'\n  Bugs Opened ({len(opened)})')
+        print(f'   {"Key":<14} {"Priority":<10} {"Assignee":<18} Summary')
+        print(f'   {"─"*13}  {"─"*9}  {"─"*17}  {"─"*45}')
+        for b in opened:
+            print(f'   {b["key"]:<14} {b.get("priority",""):<10} {b.get("assignee","Unassigned"):<18} {b.get("summary","")[:45]}')
+    else:
+        print(f'\n  Bugs Opened: 0')
+
+    if status_changed:
+        print(f'\n  Status Changes ({len(status_changed)})')
+        print(f'   {"Key":<14} {"From":<14} {"To":<14} {"Changed By":<18} Time')
+        print(f'   {"─"*13}  {"─"*13}  {"─"*13}  {"─"*17}  {"─"*8}')
+        for sc in status_changed:
+            time_short = sc['time'][11:16] if len(sc['time']) > 16 else sc['time']
+            print(f'   {sc["key"]:<14} {sc["from_status"]:<14} {sc["to_status"]:<14} {sc["changed_by"]:<18} {time_short}')
+    else:
+        print(f'\n  Status Changes: 0')
+
+    if commented:
+        print(f'\n  Bugs With Comments ({len(commented)})')
+        print(f'   {"Key":<14} {"Comments":<10} {"Latest By":<18} Summary')
+        print(f'   {"─"*13}  {"─"*9}  {"─"*17}  {"─"*45}')
+        for c in commented:
+            print(f'   {c["key"]:<14} {c["comment_count"]:<10} {c["latest_author"]:<18} {c.get("summary","")[:45]}')
+    else:
+        print(f'\n  Bugs With Comments: 0')
+
+    print(f'\n  Total Active Bugs Today: {summary.get("total_active_bugs", 0)}')
+
+
 def main():
     parser = argparse.ArgumentParser(description='Daily Jira report')
     parser.add_argument('--project', default='STL',
                         help='Jira project key (default: STL)')
     parser.add_argument('--date', default=None,
                         help='Target date YYYY-MM-DD (default: today)')
+    parser.add_argument('--workflow', default='daily',
+                        choices=['daily', 'bug-activity'],
+                        help='Report type (default: daily)')
     parser.add_argument('--field', default='affectedVersion',
                         help='Field to check for bugs (default: affectedVersion)')
     parser.add_argument('--output', '-o', default=None,
@@ -125,38 +165,46 @@ def main():
 
     target_date = args.date or date.today().isoformat()
     project = args.project
+    jira = connect_to_jira()
+
+    if args.workflow == 'bug-activity':
+        print(f'═══════════════════════════════════════════════════════════')
+        print(f'  Bug Activity Report — {project} — {target_date}')
+        print(f'═══════════════════════════════════════════════════════════')
+        data = bug_activity_today(jira, project, target_date)
+        _print_bug_activity(data)
+        print(f'═══════════════════════════════════════════════════════════')
+        if args.output:
+            path = export_bug_activity(data, args.output)
+            print(f'\n  Exported to: {path}')
+        return
 
     print(f'═══════════════════════════════════════════════════════════')
     print(f'  Daily Jira Report — {project} — {target_date}')
     print(f'═══════════════════════════════════════════════════════════')
 
-    # Connect to Jira and run the composite report
-    jira = connect_to_jira()
     report = daily_report(
         jira, project, target_date,
         missing_field=args.field,
     )
 
-    # Pretty-print to stdout
     _print_created_tickets(report['created_tickets'])
     _print_bugs_missing_field(report['bugs_missing_field'])
     _print_status_changes(report['status_changes'])
 
-    # Summary
     bugs = report['bugs_missing_field']
     changes = report['status_changes']
     print(f'\n═══════════════════════════════════════════════════════════')
     print(f'  Summary')
     print(f'═══════════════════════════════════════════════════════════')
-    print(f'  📋 Tickets created today:          {len(report["created_tickets"])}')
-    print(f'  🐛 Bugs missing {args.field}:   {len(bugs["flagged"])}')
-    print(f'  🤖 Automation status changes:       {len(changes["automation"])}')
+    print(f'  Tickets created today:          {len(report["created_tickets"])}')
+    print(f'  Bugs missing {args.field}:   {len(bugs["flagged"])}')
+    print(f'  Automation status changes:       {len(changes["automation"])}')
     print(f'═══════════════════════════════════════════════════════════')
 
-    # Optional export
     if args.output:
         path = export_daily_report(report, args.output, fmt=args.format)
-        print(f'\n  📁 Exported to: {path}')
+        print(f'\n  Exported to: {path}')
 
 
 if __name__ == '__main__':

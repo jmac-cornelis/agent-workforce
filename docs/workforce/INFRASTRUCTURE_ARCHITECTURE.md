@@ -1,6 +1,6 @@
 # Infrastructure Architecture
 
-[Back to AI Agent Workforce](../AGENT_WORKFORCE_OVERVIEW.md)
+[Back to AI Agent Workforce](README.md)
 
 > **Info:** This page defines the infrastructure platform on which all 15 agents execute. Decisions here are grounded in what Cornelis Networks already operates.
 

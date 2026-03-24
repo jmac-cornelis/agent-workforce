@@ -1,12 +1,12 @@
 # AWS Hybrid Deployment Proposal
 
-[Back to AI Agent Workforce](../AGENT_WORKFORCE_OVERVIEW.md) | [On-Prem Architecture](INFRASTRUCTURE_ARCHITECTURE.md)
+[Back to AI Agent Workforce](README.md) | [On-Prem Architecture](INFRASTRUCTURE_ARCHITECTURE.md)
 
 > **Note:** **Proposal:** This is an alternative deployment model. The baseline plan uses on-prem infrastructure (see [Infrastructure Architecture](INFRASTRUCTURE_ARCHITECTURE.md)). This page proposes a hybrid AWS approach where compute runs in the cloud while HIL labs and AI inference stay on-prem.
 
 ## Architecture Overview
 
-![AWS Hybrid Architecture](diagrams/AWS_HYBRID_ARCHITECTURE.drawio)
+![AWS Hybrid Architecture](../diagrams/workforce/AWS_HYBRID_ARCHITECTURE.drawio)
 
 ## Why Consider AWS
 

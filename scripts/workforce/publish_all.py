@@ -1,11 +1,38 @@
 #!/usr/bin/env python3
+"""Publish all agent workforce pages to Confluence.
+
+Reads agent plan markdown from ``docs/workforce/`` and draw.io diagrams from
+``docs/diagrams/workforce/``, converts them to Confluence storage format, and
+publishes each agent as a child page under the AI Agent Workforce parent page.
+
+Pre-rendered diagram screenshots are read from ``docs/confluence/images/``
+(produced by ``render_all_diagrams.py``).
+"""
 import sys, os, re, json
-sys.path.insert(0, '/Users/johnmacdonald/code/other/jira')
+
+# ---------------------------------------------------------------------------
+# Repo-relative paths — resolve from this script's location so the script
+# works regardless of the caller's working directory.
+# ---------------------------------------------------------------------------
+REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..'))
+
+# Ensure repo root is on sys.path so ``confluence_utils`` can be imported
+# without requiring a separate checkout.
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
 from confluence_utils import connect_to_confluence
 from PIL import Image, ImageChops
 
-BASE = '/Users/johnmacdonald/code/other/agent_workforce'
-IMG_DIR = os.path.join(BASE, 'docs/confluence/images')
+# Diagrams live under docs/diagrams/workforce/ after the repo consolidation.
+DIAGRAM_DIR = os.path.join(REPO_ROOT, 'docs', 'diagrams', 'workforce')
+
+# Agent plan markdown files live under docs/workforce/.
+PLAN_DIR = os.path.join(REPO_ROOT, 'docs', 'workforce')
+
+# Pre-rendered screenshot PNGs are stored here by render_all_diagrams.py.
+IMG_DIR = os.path.join(REPO_ROOT, 'docs', 'confluence', 'images')
+
 PARENT_PAGE_ID = '656572464'
 SPACE_ID = '238190621'
 
@@ -115,7 +142,8 @@ def md_to_storage(plan_path, agent):
         return '\n'.join(html_parts)
 
     name_lower = agent['name'].lower()
-    tab_names = get_diagram_tab_names(os.path.join(BASE, 'diagrams', agent['diagram']))
+    # Diagrams are now under docs/diagrams/workforce/ in this repo.
+    tab_names = get_diagram_tab_names(os.path.join(DIAGRAM_DIR, agent['diagram']))
 
     html = f'''<h1>{agent['title']}</h1>
 
@@ -176,7 +204,8 @@ def crop_image(path):
 
 def publish_agent(c, agent, screenshot_func=None):
     name_lower = agent['name'].lower()
-    plan_path = os.path.join(BASE, agent['plan'])
+    # Agent plan markdown is under docs/workforce/.
+    plan_path = os.path.join(PLAN_DIR, agent['plan'])
 
     if not os.path.exists(plan_path):
         print(f"  SKIP: {plan_path} not found")
@@ -222,6 +251,7 @@ def publish_agent(c, agent, screenshot_func=None):
         print(f"  ERROR creating page: {resp.status_code} {resp.text[:300]}")
         return None
 
+    # Upload pre-rendered diagram screenshots from docs/confluence/images/.
     img_files = sorted([f for f in os.listdir(IMG_DIR) if f.startswith(f'{name_lower}-tab') and f.endswith('.png')])
     for fname in img_files:
         fpath = os.path.join(IMG_DIR, fname)

@@ -1,0 +1,244 @@
+<mxfile host="app.diagrams.net" modified="2026-03-18T16:00:00.000Z" agent="Codex" version="24.7.17" type="device">
+  <diagram id="seq1" name="Build-Triggered Compliance Scan">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title1" value="Brandeis — Build-Triggered Compliance Scan Sequence" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="600" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- Lifelines -->
+        <mxCell id="ll_josephine" value="Josephine" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="80" width="100" height="800" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll_brandeis" value="Brandeis" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="80" width="100" height="800" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll_blackduck" value="BlackDuck" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="80" width="100" height="800" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll_drucker" value="Drucker" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="680" y="80" width="100" height="800" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll_hedy" value="Hedy" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="880" y="80" width="100" height="800" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll_linnaeus" value="Linnaeus" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="80" width="100" height="800" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll_shannon" value="Shannon" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="80" width="100" height="800" as="geometry"/>
+        </mxCell>
+
+        <!-- Messages -->
+        <!-- 1. Josephine → Brandeis: build artifact manifest -->
+        <mxCell id="m1" value="1. buildComplete(artifactManifest)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="130" y="170" as="sourcePoint"/>
+            <mxPoint x="330" y="170" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 2. Brandeis → BlackDuck: trigger scan -->
+        <mxCell id="m2" value="2. triggerScan(components, version)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="230" as="sourcePoint"/>
+            <mxPoint x="530" y="230" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 3. BlackDuck → Brandeis: scan results -->
+        <mxCell id="m3" value="3. scanResults(licenses, vulns, components)" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="530" y="300" as="sourcePoint"/>
+            <mxPoint x="330" y="300" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 4. Brandeis internal: evaluate license compatibility -->
+        <mxCell id="m4" value="4. evaluateLicenseCompatibility()" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=11;strokeColor=#999999;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="360" as="sourcePoint"/>
+            <mxPoint x="370" y="390" as="targetPoint"/>
+            <Array as="points">
+              <mxPoint x="370" y="360"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 5. Brandeis internal: generate SBOM -->
+        <mxCell id="m5" value="5. generateSBOM()" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=11;strokeColor=#999999;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="420" as="sourcePoint"/>
+            <mxPoint x="370" y="450" as="targetPoint"/>
+            <Array as="points">
+              <mxPoint x="370" y="420"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 6. Brandeis → Drucker: create findings (if violations) -->
+        <mxCell id="m6" value="6. [violations found] createFindings(issues)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="500" as="sourcePoint"/>
+            <mxPoint x="730" y="500" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 7. Drucker → Brandeis: Jira ticket IDs -->
+        <mxCell id="m7" value="7. ticketIds(JIRA-xxx, ...)" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="730" y="550" as="sourcePoint"/>
+            <mxPoint x="330" y="550" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 8. Brandeis → Hedy: compliance report -->
+        <mxCell id="m8" value="8. complianceReport(status, sbom, findings)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="610" as="sourcePoint"/>
+            <mxPoint x="930" y="610" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 9. Brandeis → Linnaeus: traceability record -->
+        <mxCell id="m9" value="9. recordComplianceTrace(sbom, scan)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="670" as="sourcePoint"/>
+            <mxPoint x="1130" y="670" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 10. Brandeis → Shannon: compliance alert -->
+        <mxCell id="m10" value="10. [violations found] complianceAlert(summary)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="730" as="sourcePoint"/>
+            <mxPoint x="1330" y="730" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="seq2" name="PR Dependency Change Review">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title2" value="Brandeis — PR Dependency Change Review Sequence" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=18;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="600" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- Lifelines -->
+        <mxCell id="ll2_linus" value="Linus" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="80" width="100" height="750" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll2_brandeis" value="Brandeis" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="280" y="80" width="100" height="750" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll2_github" value="GitHub" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="480" y="80" width="100" height="750" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll2_reviewer" value="Compliance&#xa;Reviewer" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="680" y="80" width="100" height="750" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll2_drucker" value="Drucker" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="880" y="80" width="100" height="750" as="geometry"/>
+        </mxCell>
+        <mxCell id="ll2_shannon" value="Shannon" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1080" y="80" width="100" height="750" as="geometry"/>
+        </mxCell>
+
+        <!-- Messages -->
+        <!-- 1. Linus → Brandeis: dependency change detected -->
+        <mxCell id="s1" value="1. dependencyChangeDetected(PR, diffFiles)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="130" y="170" as="sourcePoint"/>
+            <mxPoint x="330" y="170" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 2. Brandeis → GitHub: fetch manifest diff -->
+        <mxCell id="s2" value="2. fetchManifestDiff(PR, files)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="230" as="sourcePoint"/>
+            <mxPoint x="530" y="230" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 3. GitHub → Brandeis: manifest diff -->
+        <mxCell id="s3" value="3. manifestDiff(added, removed, changed)" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="530" y="290" as="sourcePoint"/>
+            <mxPoint x="330" y="290" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 4. Brandeis internal: classify licenses -->
+        <mxCell id="s4" value="4. classifyNewLicenses()" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=11;strokeColor=#999999;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="340" as="sourcePoint"/>
+            <mxPoint x="370" y="370" as="targetPoint"/>
+            <Array as="points">
+              <mxPoint x="370" y="340"/>
+            </Array>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 5. Brandeis → Compliance Reviewer: flag for review (if unknown license) -->
+        <mxCell id="s5" value="5. [unknown license] requestReview(component, license)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="420" as="sourcePoint"/>
+            <mxPoint x="730" y="420" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 6. Compliance Reviewer → Brandeis: review decision -->
+        <mxCell id="s6" value="6. reviewDecision(approved | rejected, notes)" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="730" y="490" as="sourcePoint"/>
+            <mxPoint x="330" y="490" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 7. Brandeis → Drucker: create review ticket -->
+        <mxCell id="s7" value="7. createReviewTicket(PR, findings)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="550" as="sourcePoint"/>
+            <mxPoint x="930" y="550" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 8. Brandeis → GitHub: post PR comment -->
+        <mxCell id="s8" value="8. postPRComment(summary, status)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="620" as="sourcePoint"/>
+            <mxPoint x="530" y="620" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 9. Brandeis → Shannon: notify Teams -->
+        <mxCell id="s9" value="9. [violations] notifyTeams(PR, summary)" style="html=1;verticalAlign=bottom;endArrow=block;endFill=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="690" as="sourcePoint"/>
+            <mxPoint x="1130" y="690" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+        <!-- 10. Brandeis → Linus: compliance status -->
+        <mxCell id="s10" value="10. complianceStatus(PR, pass | fail)" style="html=1;verticalAlign=bottom;endArrow=open;endFill=0;dashed=1;fontSize=11;" edge="1" parent="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="330" y="750" as="sourcePoint"/>
+            <mxPoint x="130" y="750" as="targetPoint"/>
+          </mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

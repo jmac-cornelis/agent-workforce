@@ -252,7 +252,179 @@ def status_changes_by_actor(
 
 
 # ---------------------------------------------------------------------------
-# 4. Composite daily report
+# 4. Bug activity report
+# ---------------------------------------------------------------------------
+
+def bug_activity_today(
+    jira: Any,
+    project: str,
+    target_date: Optional[str] = None,
+    *,
+    jira_url: Optional[str] = None,
+    email: Optional[str] = None,
+    api_token: Optional[str] = None,
+) -> dict[str, Any]:
+    """Bugs opened, status-changed, and commented/updated today.
+
+    Returns a dict with four sections:
+      - ``opened``: bug tickets created on *target_date*
+      - ``status_changed``: bugs that transitioned status (from changelog)
+      - ``commented``: bugs that received comments on *target_date*
+      - ``summary``: aggregate counts
+    """
+    if target_date is None:
+        target_date = date.today().isoformat()
+    nd = _next_day(target_date)
+
+    if email is None:
+        email = os.getenv('JIRA_EMAIL', '')
+    if api_token is None:
+        api_token = os.getenv('JIRA_API_TOKEN', '')
+    if jira_url is None:
+        jira_url = os.getenv('JIRA_URL', '').rstrip('/')
+
+    # --- Bugs opened today ---
+    opened_jql = (
+        f'project = "{project}" AND issuetype = Bug '
+        f'AND created >= "{target_date}" AND created < "{nd}"'
+    )
+    log.info('bug_activity_today opened JQL: %s', opened_jql)
+    opened_issues = paginated_jql_search(jira, opened_jql)
+    opened = [issue_to_dict(i) for i in opened_issues]
+
+    # --- Bugs with status changes today (via changelog) ---
+    status_jql = (
+        f'project = "{project}" AND issuetype = Bug '
+        f'AND updated >= "{target_date}" AND updated < "{nd}"'
+    )
+    log.info('bug_activity_today status JQL: %s', status_jql)
+
+    url = f'{jira_url}/rest/api/3/search/jql'
+    status_changed: list[dict[str, Any]] = []
+    next_page_token: Optional[str] = None
+
+    while True:
+        params: dict[str, Any] = {
+            'jql': status_jql,
+            'maxResults': 50,
+            'fields': 'summary,assignee,priority',
+            'expand': 'changelog',
+        }
+        if next_page_token:
+            params['nextPageToken'] = next_page_token
+
+        resp = requests.get(url, params=params, auth=(email, api_token))
+        resp.raise_for_status()
+        data = resp.json()
+
+        for issue in data.get('issues', []):
+            key = issue.get('key', '')
+            fields = issue.get('fields') or {}
+            summary = fields.get('summary', '')
+            assignee_obj = fields.get('assignee') or {}
+            assignee = assignee_obj.get('displayName', 'Unassigned')
+            priority_obj = fields.get('priority') or {}
+            priority = priority_obj.get('name', '')
+
+            changelog = issue.get('changelog', {})
+            for history in changelog.get('histories', []):
+                created = history.get('created', '')
+                if not created.startswith(target_date):
+                    continue
+                for item in history.get('items', []):
+                    if item.get('field') == 'status':
+                        author = history.get('author', {})
+                        status_changed.append({
+                            'key': key,
+                            'summary': summary,
+                            'assignee': assignee,
+                            'priority': priority,
+                            'from_status': item.get('fromString', ''),
+                            'to_status': item.get('toString', ''),
+                            'changed_by': author.get('displayName', 'unknown'),
+                            'time': created,
+                        })
+
+        next_page_token = data.get('nextPageToken')
+        if not next_page_token:
+            break
+
+    # --- Bugs with comments today (via REST comment endpoint) ---
+    comment_jql = (
+        f'project = "{project}" AND issuetype = Bug '
+        f'AND updated >= "{target_date}" AND updated < "{nd}"'
+    )
+    log.info('bug_activity_today comment JQL: %s', comment_jql)
+
+    commented: list[dict[str, Any]] = []
+    seen_keys_for_status = {sc['key'] for sc in status_changed}
+    next_page_token = None
+
+    while True:
+        params = {
+            'jql': comment_jql,
+            'maxResults': 50,
+            'fields': 'summary,assignee,priority,comment',
+        }
+        if next_page_token:
+            params['nextPageToken'] = next_page_token
+
+        resp = requests.get(url, params=params, auth=(email, api_token))
+        resp.raise_for_status()
+        data = resp.json()
+
+        for issue in data.get('issues', []):
+            key = issue['key']
+            summary = issue['fields'].get('summary', '')
+            assignee_obj = issue['fields'].get('assignee') or {}
+            assignee = assignee_obj.get('displayName', 'Unassigned')
+
+            comment_field = issue['fields'].get('comment', {})
+            comments_list = comment_field.get('comments', [])
+            day_comments = [
+                c for c in comments_list
+                if c.get('created', '').startswith(target_date)
+                or c.get('updated', '').startswith(target_date)
+            ]
+            if day_comments:
+                commented.append({
+                    'key': key,
+                    'summary': summary,
+                    'assignee': assignee,
+                    'comment_count': len(day_comments),
+                    'latest_author': (
+                        day_comments[-1].get('author', {}).get('displayName', 'unknown')
+                    ),
+                    'latest_time': day_comments[-1].get('created', ''),
+                })
+
+        next_page_token = data.get('nextPageToken')
+        if not next_page_token:
+            break
+
+    all_active_keys = (
+        {t['key'] for t in opened}
+        | seen_keys_for_status
+        | {c['key'] for c in commented}
+    )
+
+    return {
+        'date': target_date,
+        'project': project,
+        'opened': opened,
+        'status_changed': status_changed,
+        'commented': commented,
+        'summary': {
+            'bugs_opened': len(opened),
+            'status_transitions': len(status_changed),
+            'bugs_with_comments': len(commented),
+            'total_active_bugs': len(all_active_keys),
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
+# 5. Composite daily report
 # ---------------------------------------------------------------------------
 
 def daily_report(
@@ -457,6 +629,128 @@ def _export_excel(report: dict[str, Any], output_path: str) -> str:
 
     wb.save(output_path)
     log.info('Wrote daily report (excel) to: %s', output_path)
+    return output_path
+
+
+def export_bug_activity(
+    data: dict[str, Any],
+    output_path: str,
+) -> str:
+    try:
+        from openpyxl import Workbook
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    except ImportError:
+        raise ImportError(
+            'openpyxl is required for Excel export. '
+            'Install with: pip install openpyxl'
+        )
+
+    if not output_path.endswith('.xlsx'):
+        output_path += '.xlsx'
+
+    jira_url = os.getenv('JIRA_URL', 'https://cornelisnetworks.atlassian.net').rstrip('/')
+
+    wb = Workbook()
+    header_font = Font(bold=True, color='FFFFFF')
+    header_fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
+    header_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    thin_border = Border(
+        left=Side(style='thin'), right=Side(style='thin'),
+        top=Side(style='thin'), bottom=Side(style='thin'),
+    )
+    link_font = Font(color='0563C1', underline='single')
+
+    def _style_header(ws):
+        for cell in ws[1]:
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = header_alignment
+            cell.border = thin_border
+
+    def _auto_width(ws):
+        for col in ws.columns:
+            max_len = 0
+            col_letter = col[0].column_letter
+            for cell in col:
+                val = str(cell.value) if cell.value else ''
+                max_len = max(max_len, len(val))
+            ws.column_dimensions[col_letter].width = min(max(max_len + 2, 10), 50)
+
+    def _write_key_link(ws, row_idx, col_idx, key):
+        cell = ws.cell(row=row_idx, column=col_idx, value=key)
+        cell.hyperlink = f'{jira_url}/browse/{key}'
+        cell.font = link_font
+
+    summary = data.get('summary', {})
+
+    ws_sum = wb.active
+    ws_sum.title = 'Summary'
+    ws_sum.append([f'Bug Activity Report — {data.get("project", "")}'])
+    ws_sum.append(['Date', data.get('date', '')])
+    ws_sum.append([])
+    ws_sum.append(['Metric', 'Count'])
+    ws_sum.append(['Bugs Opened', summary.get('bugs_opened', 0)])
+    ws_sum.append(['Status Transitions', summary.get('status_transitions', 0)])
+    ws_sum.append(['Bugs With Comments', summary.get('bugs_with_comments', 0)])
+    ws_sum.append(['Total Active Bugs', summary.get('total_active_bugs', 0)])
+    ws_sum['A1'].font = Font(bold=True, size=14)
+    ws_sum.column_dimensions['A'].width = 25
+    ws_sum.column_dimensions['B'].width = 12
+
+    ws_opened = wb.create_sheet('Opened')
+    ws_opened.append(['Key', 'Priority', 'Status', 'Assignee', 'Summary', 'Created'])
+    for bug in data.get('opened', []):
+        ws_opened.append([
+            bug.get('key', ''), bug.get('priority', ''), bug.get('status', ''),
+            bug.get('assignee', ''), bug.get('summary', ''), bug.get('created', ''),
+        ])
+    for row_idx in range(2, ws_opened.max_row + 1):
+        key_val = ws_opened.cell(row=row_idx, column=1).value
+        if key_val:
+            _write_key_link(ws_opened, row_idx, 1, key_val)
+    _style_header(ws_opened)
+    _auto_width(ws_opened)
+    ws_opened.freeze_panes = 'A2'
+    if ws_opened.max_row > 1:
+        ws_opened.auto_filter.ref = ws_opened.dimensions
+
+    ws_status = wb.create_sheet('Status Changes')
+    ws_status.append(['Key', 'From', 'To', 'Changed By', 'Assignee', 'Priority', 'Time', 'Summary'])
+    for sc in data.get('status_changed', []):
+        ws_status.append([
+            sc.get('key', ''), sc.get('from_status', ''), sc.get('to_status', ''),
+            sc.get('changed_by', ''), sc.get('assignee', ''), sc.get('priority', ''),
+            sc.get('time', ''), sc.get('summary', ''),
+        ])
+    for row_idx in range(2, ws_status.max_row + 1):
+        key_val = ws_status.cell(row=row_idx, column=1).value
+        if key_val:
+            _write_key_link(ws_status, row_idx, 1, key_val)
+    _style_header(ws_status)
+    _auto_width(ws_status)
+    ws_status.freeze_panes = 'A2'
+    if ws_status.max_row > 1:
+        ws_status.auto_filter.ref = ws_status.dimensions
+
+    ws_comments = wb.create_sheet('Comments')
+    ws_comments.append(['Key', 'Comment Count', 'Latest Author', 'Latest Time', 'Assignee', 'Summary'])
+    for c in data.get('commented', []):
+        ws_comments.append([
+            c.get('key', ''), c.get('comment_count', 0), c.get('latest_author', ''),
+            c.get('latest_time', ''), c.get('assignee', ''), c.get('summary', ''),
+        ])
+    for row_idx in range(2, ws_comments.max_row + 1):
+        key_val = ws_comments.cell(row=row_idx, column=1).value
+        if key_val:
+            _write_key_link(ws_comments, row_idx, 1, key_val)
+    _style_header(ws_comments)
+    _auto_width(ws_comments)
+    ws_comments.freeze_panes = 'A2'
+    if ws_comments.max_row > 1:
+        ws_comments.auto_filter.ref = ws_comments.dimensions
+
+    wb.save(output_path)
+    log.info('Wrote bug activity report to: %s', output_path)
     return output_path
 
 

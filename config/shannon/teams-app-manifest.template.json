@@ -1,0 +1,41 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.19/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.19",
+  "version": "0.1.0",
+  "id": "${SHANNON_TEAMS_APP_ID}",
+  "packageName": "com.cornelis.agentworkforce.shannon",
+  "developer": {
+    "name": "Cornelis Networks Engineering Tools",
+    "websiteUrl": "https://cornelisnetworks.com",
+    "privacyUrl": "https://cornelisnetworks.com/privacy",
+    "termsOfUseUrl": "https://cornelisnetworks.com/terms"
+  },
+  "name": {
+    "short": "Shannon",
+    "full": "Shannon Teams Communications Bot"
+  },
+  "description": {
+    "short": "Teams bot for the Cornelis agent workforce.",
+    "full": "Shannon is the single Teams bot that routes commands, posts notifications, and manages approvals for the Cornelis agent workforce."
+  },
+  "accentColor": "#004b87",
+  "bots": [
+    {
+      "botId": "${SHANNON_TEAMS_APP_ID}",
+      "scopes": ["team"],
+      "supportsFiles": false,
+      "isNotificationOnly": false
+    }
+  ],
+  "permissions": [
+    "identity",
+    "messageTeamMembers"
+  ],
+  "validDomains": [
+    "${SHANNON_PUBLIC_DOMAIN}"
+  ],
+  "defaultInstallScope": "team",
+  "defaultGroupCapability": {
+    "team": "bot"
+  }
+}

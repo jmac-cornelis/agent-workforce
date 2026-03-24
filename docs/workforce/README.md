@@ -1,8 +1,17 @@
 # AI Agent Workforce
 
+## Introduction 
+
+This document provides a working proposal for a new paradigm for the design of an embedded systems software organization. It creates a hybrid Human-Agent organization where the people add the most value that people can, and the agents add value where they can, including in helping the people do their work better.
+
+This document focus's on the what can loosely be described as the "DevOps" parts of the organization -- project planning and status, bug tracking and triaging, build automation and management, release automation and managmement, code quality and scanning, and test generationa, execution, and tracking.
+
+> [!NOTE]
+> This document does not address the details of human responsibilities, other than calling out the roles that they will continue to perform.
+
 **Coordinated software engineering, testing, release, bug investigation, knowledge capture, and planning agents for the Cornelis Networks development organization.**
 
-The AI Agent Workforce is a system of 16 specialized agents that automate and coordinate the full software development lifecycle at Cornelis Networks. Each agent owns a distinct responsibility — from build orchestration and test generation to release management and project planning — and communicates through well-defined interfaces to deliver reliable, traceable, and auditable engineering outcomes.
+The AI Agent Workforce is a system of 17 specialized agents that automate and coordinate the full software development lifecycle at Cornelis Networks. Each agent owns a distinct responsibility — from build orchestration and test generation to release management and project planning — and communicates through well-defined interfaces to deliver reliable, traceable, and auditable engineering outcomes.
 
 Agents are organized into three operational zones: the **Execution Spine** handles build, test, and release workflows; **Intelligence & Knowledge** manages versioning, traceability, documentation, and bug investigation; and **Planning & Delivery** coordinates project schedules and delivery milestones.
 
@@ -12,80 +21,14 @@ Agents are organized into three operational zones: the **Execution Spine** handl
 
 | Metric | Value |
 |--------|-------|
-| Agents | 16 |
-| Zones | 5 |
+| Agents | 17 |
+| Zones | 6 |
 
 ---
 
 ## Agent Zone Map
 
-Where each agent and system lives — no interaction lines.
-
-<table>
-<tr>
-<th style="background:#dae8fc;text-align:center;padding:8px;">External Systems</th>
-<th style="background:#d5e8d4;text-align:center;padding:8px;">Execution Spine</th>
-<th style="background:#e1d5e7;text-align:center;padding:8px;">Intelligence &amp; Knowledge</th>
-<th style="background:#f8cecc;text-align:center;padding:8px;">Planning &amp; Delivery</th>
-<th style="background:#ffe6cc;text-align:center;padding:8px;">Service Infrastructure</th>
-<th style="background:#fff2cc;text-align:center;padding:8px;">Humans</th>
-</tr>
-<tr>
-<td valign="top">
-
-GitHub<br>
-Jira<br>
-Microsoft Teams<br>
-Fuze Config / Build Maps<br>
-Fuze Test / ATF<br>
-HW / Mock Environments<br>
-Docs Publish Target<br>
-Knowledge Store<br>
-Artifact Store<br>
-Event Bus
-
-</td>
-<td valign="top">
-
-**Josephine** — Build & Package<br>
-**Linus** — Code Review<br>
-**Hedy** — Release Manager<br>
-**Ada** — Test Planner<br>
-**Curie** — Test Generator<br>
-**Faraday** — Test Executor<br>
-**Tesla** — Environment Manager
-
-</td>
-<td valign="top">
-
-**Nightingale** — Bug Investigation<br>
-**Drucker** — Jira Coordinator<br>
-**Linnaeus** — Traceability<br>
-**Babbage** — Version Manager<br>
-**Herodotus** — Knowledge Capture<br>
-**Hypatia** — Documentation
-
-</td>
-<td valign="top">
-
-**Gantt** — Project Planner<br>
-**Brooks** — Delivery Manager
-
-</td>
-<td valign="top">
-
-**Shannon** — Communications
-
-</td>
-<td valign="top">
-
-Engineers / Reviewers<br>
-Release Approvers<br>
-Project / Delivery Leads
-
-</td>
-</tr>
-</table>
+![Agent Zone Map](../diagrams/workforce/AGENT_ZONE_MAP.drawio)
 
 ## Agents by Zone
 
@@ -95,13 +38,14 @@ These agents form the core build-test-release pipeline.
 
 | Agent | Role | Description |
 |-------|------|-------------|
-| **[Josephine](../agents/JOSEPHINE_BUILD_AGENT_PLAN.md)** | Build & Package | Build orchestration, compilation management, and artifact production across all Cornelis repositories. Wraps Fuze build/package into an API-driven service. |
-| **[Ada](../agents/ADA_TEST_PLANNER_PLAN.md)** | Test Planning | Determines what to test based on trigger class (PR, merge, nightly, release), coverage targets, and environment constraints. |
-| **[Curie](../agents/CURIE_TEST_GENERATOR_PLAN.md)** | Test Generation | Materializes Ada's test plans into concrete Fuze Test runtime inputs with reproducible version hashes. |
-| **[Faraday](../agents/FARADAY_TEST_EXECUTOR_PLAN.md)** | Test Execution | Runs ATF/Fuze Test cycles, captures logs/artifacts/results, classifies failures, and produces structured TestExecutionRecords. |
-| **[Tesla](../agents/TESLA_TEST_ENVIRONMENT_MANAGER_PLAN.md)** | Environment Mgmt | Shared reservation service for HIL and mock environments with capability matching and health monitoring. |
-| **[Hedy](../agents/HEDY_RELEASE_MANAGER_PLAN.md)** | Release Mgmt | Orchestrates release decisions using the Fuze release model with stage promotion (sit, qa, release) and human approval gates. |
-| **[Linus](../agents/LINUS_CODE_REVIEW_AGENT_PLAN.md)** | Code Review | Evaluates PRs against policy profiles (kernel, embedded C++, Python) and emits cross-agent impact signals. |
+| **[Josephine](JOSEPHINE_BUILD_AGENT_PLAN.md)** | Build & Package | Build orchestration, compilation management, and artifact production across all Cornelis repositories. Wraps Fuze build/package into an API-driven service. |
+| **[Ada](ADA_TEST_PLANNER_PLAN.md)** | Test Planning | Determines what to test based on trigger class (PR, merge, nightly, release), coverage targets, and environment constraints. |
+| **[Curie](CURIE_TEST_GENERATOR_PLAN.md)** | Test Generation | Materializes Ada's test plans into concrete Fuze Test runtime inputs with reproducible version hashes. |
+| **[Faraday](FARADAY_TEST_EXECUTOR_PLAN.md)** | Test Execution | Runs ATF/Fuze Test cycles, captures logs/artifacts/results, classifies failures, and produces structured TestExecutionRecords. |
+| **[Tesla](TESLA_TEST_ENVIRONMENT_MANAGER_PLAN.md)** | Environment Mgmt | Shared reservation service for HIL and mock environments with capability matching and health monitoring. |
+| **[Hedy](HEDY_RELEASE_MANAGER_PLAN.md)** | Release Mgmt | Orchestrates release decisions using the Fuze release model with stage promotion (sit, qa, release) and human approval gates. |
+| **[Linus](LINUS_CODE_REVIEW_AGENT_PLAN.md)** | Code Review | Evaluates PRs against policy profiles (kernel, embedded C++, Python) and emits cross-agent impact signals. |
+| **[Brandeis](BRANDEIS_COMPLIANCE_AGENT_PLAN.md)** | Legal Compliance & Code Scanning | Scans dependencies for license compliance, flags policy violations on PRs, and manages license exception workflows. Named after Louis Brandeis, champion of transparency and the right to privacy. |
 
 ### Intelligence & Knowledge
 
@@ -109,12 +53,12 @@ These agents provide context, traceability, and institutional knowledge.
 
 | Agent | Role | Description |
 |-------|------|-------------|
-| **[Babbage](../agents/BABBAGE_VERSION_MANAGER_PLAN.md)** | Version Mapping | Maps Fuze internal build IDs to external customer-facing release versions with conflict detection and lineage tracking. |
-| **[Linnaeus](../agents/LINNAEUS_TRACEABILITY_AGENT_PLAN.md)** | Traceability | Maintains queryable relationships between requirements, Jira issues, commits, builds, tests, releases, and versions. |
-| **[Herodotus](../agents/HERODOTUS_KNOWLEDGE_CAPTURE_AGENT_PLAN.md)** | Knowledge Capture | Ingests Teams meeting transcripts and produces structured summaries, decisions, and action items. |
-| **[Hypatia](../agents/HYPATIA_DOCUMENTATION_AGENT_PLAN.md)** | Documentation | Produces as-built, user, and engineering docs from authoritative system records via Sphinx/ReadTheDocs. |
-| **[Nightingale](../agents/NIGHTINGALE_BUG_TRIAGE_REPRODUCTION_PLAN.md)** | Bug Investigation | Reacts to Jira bugs, assembles build/test/release context, drives targeted reproduction, and produces investigation summaries. |
-| **[Drucker](../agents/DRUCKER_JIRA_COORDINATOR_PLAN.md)** | Jira Coordination | Keeps Jira operationally coherent with triage, hygiene, routing, and evidence-backed workflow nudges. |
+| **[Babbage](BABBAGE_VERSION_MANAGER_PLAN.md)** | Version Mapping | Maps Fuze internal build IDs to external customer-facing release versions with conflict detection and lineage tracking. |
+| **[Linnaeus](LINNAEUS_TRACEABILITY_AGENT_PLAN.md)** | Traceability | Maintains queryable relationships between requirements, Jira issues, commits, builds, tests, releases, and versions. |
+| **[Herodotus](HERODOTUS_KNOWLEDGE_CAPTURE_AGENT_PLAN.md)** | Knowledge Capture | Ingests Teams meeting transcripts and produces structured summaries, decisions, and action items. |
+| **[Hypatia](HYPATIA_DOCUMENTATION_AGENT_PLAN.md)** | Documentation | Produces as-built, user, and engineering docs from authoritative system records via Sphinx/ReadTheDocs. |
+| **[Nightingale](NIGHTINGALE_BUG_TRIAGE_REPRODUCTION_PLAN.md)** | Bug Investigation | Reacts to Jira bugs, assembles build/test/release context, drives targeted reproduction, and produces investigation summaries. |
+| **[Drucker](DRUCKER_JIRA_COORDINATOR_PLAN.md)** | Jira Coordination | Keeps Jira operationally coherent with triage, hygiene, routing, and evidence-backed workflow nudges. |
 
 ### Planning & Delivery
 
@@ -122,8 +66,8 @@ These agents support project management and delivery tracking.
 
 | Agent | Role | Description |
 |-------|------|-------------|
-| **[Gantt](../agents/GANTT_PROJECT_PLANNER_PLAN.md)** | Project Planning | Converts Jira work state, technical evidence, and meeting decisions into milestone proposals, dependency graphs, and risk summaries. |
-| **[Brooks](../agents/BROOKS_DELIVERY_MANAGER_PLAN.md)** | Delivery Mgmt | Monitors execution against plan, detects schedule risk and coordination failures, produces forecasts and escalation prompts. |
+| **[Gantt](GANTT_PROJECT_PLANNER_PLAN.md)** | Project Planning | Converts Jira work state, technical evidence, and meeting decisions into milestone proposals, dependency graphs, and risk summaries. |
+| **[Brooks](BROOKS_DELIVERY_MANAGER_PLAN.md)** | Delivery Mgmt | Monitors execution against plan, detects schedule risk and coordination failures, produces forecasts and escalation prompts. |
 
 ### Service Infrastructure
 
@@ -131,7 +75,7 @@ This agent provides the shared communications layer for all other agents.
 
 | Agent | Role | Description |
 |-------|------|-------------|
-| **[Shannon](../agents/SHANNON_COMMUNICATIONS_AGENT_PLAN.md)** | Communications | Single Teams bot serving all agent channels. Routes commands, manages approvals, posts notifications, and logs all human-agent interactions. Named after Claude Shannon, father of information theory. |
+| **[Shannon](SHANNON_COMMUNICATIONS_AGENT_PLAN.md)** | Communications | Single Teams bot serving all agent channels. Routes commands, manages approvals, posts notifications, and logs all human-agent interactions. Named after Claude Shannon, father of information theory. |
 
 ---
 
@@ -259,11 +203,13 @@ Full details: [Infrastructure Architecture](reference/INFRASTRUCTURE_ARCHITECTUR
 
 ## Human Roles
 
-| Role | Interaction |
-|------|-------------|
-| **Engineers / Reviewers** | Submit builds, review PRs, inspect test results, provide missing bug info |
-| **Release Approvers** | Approve/block release promotions at stage gates |
-| **Project / Delivery Leads** | Review planning snapshots, acknowledge escalations, set priorities |
+| Role | Responsibilities |
+|------|-----------------|
+| **Developers** | Generate designs, develop production code, responsible for functionality, schedule, documentation, and quality of that code. Review and approval of code merges. |
+| **Management** | Manage team responsibilities, priorities, and projects. Overall responsibilities for the delivery of the product and team components. Review and approval of code merges and release decisions. |
+| **DevOps** | Build configuration and output, release configuration and output, build and release quality (CI), compliance, test execution and results visibility, infrastructure to support this agent workforce. Review and quality of all related code, infrastructure, and documentation. |
+| **Project Management** | Release planning, release decision-making, project status, bug prioritization, continuous improvement. (Note: could also be team management.) |
+| **Test Engineering** | Test development, requirements verification, test execution and automation. |
 
 ---
 
