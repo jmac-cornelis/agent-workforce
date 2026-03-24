@@ -125,7 +125,7 @@ The scope document can be **JSON** (structured items with complexity/confidence)
 ```bash
 # 1. Clone the repository
 git clone <repository-url>
-cd jira-utilities
+cd agent-workforce
 
 # 2. Create virtual environment
 python3 -m venv venv

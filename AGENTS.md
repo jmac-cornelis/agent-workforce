@@ -95,7 +95,7 @@ Always check `git status` before committing.
 - Update `README.md` when user-facing workflows or commands materially change.
 - Update the docs in `docs/` when the architectural story changes, especially:
   - `docs/agent-usefulness-and-applications.md`
-  - `docs/jira-utilities-agent-workforce-mapping.md`
+  - `docs/agent-workforce-mapping.md`
 
 ## Branch And PR Hygiene
 

@@ -77,12 +77,12 @@ You also do not need to ask for later bot rollout:
 ## Teams-side app settings for the no-Azure path
 
 You do not need a Teams app manifest for the outgoing-webhook rollout.
-The manifest template in [config/shannon/teams-app-manifest.template.json](/Users/johnmacdonald/tmp/jira-utilities/config/shannon/teams-app-manifest.template.json)
+The manifest template in [config/shannon/teams-app-manifest.template.json](config/shannon/teams-app-manifest.template.json)
 is still useful if you later move to a fuller bot deployment.
 
 ## Channel and registry mapping
 
-Shannon uses [config/shannon/agent_registry.yaml](/Users/johnmacdonald/tmp/jira-utilities/config/shannon/agent_registry.yaml) to map Teams channels to agents.
+Shannon uses [config/shannon/agent_registry.yaml](config/shannon/agent_registry.yaml) to map Teams channels to agents.
 
 For the first rollout:
 

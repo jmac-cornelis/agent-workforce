@@ -25,7 +25,7 @@ Cards into channels via the Workflows webhook.
 - A Linux server (physical or VM) with Python 3.9+ and network access
 - A public HTTPS endpoint (via reverse proxy, Cloudflare Tunnel, or cloud load balancer)
 - Microsoft Teams admin access to the target team
-- Git clone of the `jira-utilities` repository
+- Git clone of the `agent-workforce` repository
 
 ---
 
@@ -52,8 +52,8 @@ with nginx, use that instead.
 
 ```bash
 # Clone the repo
-git clone git@github.com:jmac-cornelis/jira-utilities.git
-cd jira-utilities
+git clone git@github.com:jmac-cornelis/agent-workforce.git
+cd agent-workforce
 
 # Create venv and install dependencies
 python3 -m venv .venv
@@ -138,9 +138,9 @@ After=network.target
 [Service]
 Type=simple
 User=shannon
-WorkingDirectory=/opt/jira-utilities
-EnvironmentFile=/opt/jira-utilities/.env_prod
-ExecStart=/opt/jira-utilities/.venv/bin/uvicorn shannon.app:app --host 0.0.0.0 --port 8200
+WorkingDirectory=/opt/agent-workforce
+EnvironmentFile=/opt/agent-workforce/.env_prod
+ExecStart=/opt/agent-workforce/.venv/bin/uvicorn shannon.app:app --host 0.0.0.0 --port 8200
 Restart=always
 RestartSec=5
 
@@ -320,7 +320,7 @@ docker logs -f shannon
 ### 4.3 Updates
 
 ```bash
-cd /opt/jira-utilities
+cd /opt/agent-workforce
 git pull origin shannon-agent-dev
 sudo systemctl restart shannon
 ```
