@@ -28,7 +28,6 @@ dependencies = [
 [project.optional-dependencies]
 agents = [
     "openai>=1.0.0",
-    "litellm>=1.0.0",
     "google-adk>=0.1.0",
     "fastapi>=0.115.0",
     "uvicorn>=0.30.0",
@@ -37,6 +36,8 @@ agents = [
     "Pillow>=10.0.0",
     "pyyaml>=6.0",
 ]
+# litellm is optional — install manually if needed.
+# The LiteLLM client (llm/litellm_client.py) gracefully degrades when absent.
 test = [
     "pytest>=9.0.0",
     "pytest-asyncio>=1.3.0",
