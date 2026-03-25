@@ -15,7 +15,6 @@ from pydantic import BaseModel
 
 from agents.drucker_agent import DruckerCoordinatorAgent
 from agents.drucker_models import DruckerRequest
-from core.reporting import bug_activity_today
 from state.drucker_report_store import DruckerReportStore
 
 log = logging.getLogger(os.path.basename(sys.argv[0]))
@@ -37,7 +36,7 @@ class HygieneRunRequest(BaseModel):
 
 
 class DruckerPollerTickRequest(BaseModel):
-    project_key: str
+    project_key: Optional[str] = None
     limit: int = 200
     stale_days: int = 30
     include_done: bool = False
@@ -48,6 +47,8 @@ class DruckerPollerTickRequest(BaseModel):
     persist: bool = True
     notify_shannon: bool = False
     shannon_base_url: Optional[str] = None
+    config_path: Optional[str] = None
+    job_name: Optional[str] = None
 
 
 class IssueCheckRequest(BaseModel):
@@ -55,6 +56,21 @@ class IssueCheckRequest(BaseModel):
     ticket_key: str
     stale_days: int = 30
     label_prefix: str = 'drucker'
+    persist: bool = True
+
+
+class IntakeRunRequest(BaseModel):
+    project_key: str
+    limit: int = 200
+    stale_days: int = 30
+    since: Optional[str] = None
+    label_prefix: str = 'drucker'
+    persist: bool = True
+
+
+class BugActivityRequest(BaseModel):
+    project_key: str = 'STL'
+    target_date: Optional[str] = None
 
 
 def create_app() -> FastAPI:
@@ -208,7 +224,46 @@ def create_app() -> FastAPI:
             log.error(f'Drucker issue check failed: {e}')
             return {'ok': False, 'error': str(e)}
 
-        save_result = store.save_report(report)
+        save_result = None
+        if body.persist:
+            save_result = store.save_report(report)
+        _run_count += 1
+        _total_findings += len(report.findings)
+        _last_run_at = datetime.now(timezone.utc).isoformat()
+
+        return {
+            'ok': True,
+            'data': {
+                'report': report.to_dict(),
+                'review_session': review_session.to_dict(),
+                'stored': save_result,
+            },
+        }
+
+    @app.post('/v1/hygiene/intake')
+    def hygiene_intake(body: IntakeRunRequest) -> Dict[str, Any]:
+        global _run_count, _total_findings, _last_run_at
+
+        agent = DruckerCoordinatorAgent(project_key=body.project_key)
+        request = DruckerRequest(
+            project_key=body.project_key,
+            limit=body.limit,
+            stale_days=body.stale_days,
+            since=body.since,
+            recent_only=True,
+            label_prefix=body.label_prefix,
+        )
+
+        try:
+            report = agent.analyze_recent_ticket_intake(request)
+            review_session = agent.create_review_session(report)
+        except Exception as e:
+            log.error(f'Drucker intake report failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+        save_result = None
+        if body.persist:
+            save_result = store.save_report(report)
         _run_count += 1
         _total_findings += len(report.findings)
         _last_run_at = datetime.now(timezone.utc).isoformat()
@@ -239,6 +294,8 @@ def create_app() -> FastAPI:
             'persist': body.persist,
             'notify_shannon': body.notify_shannon,
             'shannon_base_url': body.shannon_base_url,
+            'config_path': body.config_path,
+            'job_name': body.job_name,
         })
 
         for task in result.get('tasks', []):
@@ -268,22 +325,20 @@ def create_app() -> FastAPI:
         reports = store.list_reports(project_key=project_key, limit=limit)
         return {'ok': True, 'data': reports}
 
-    class BugActivityRequest(BaseModel):
-        project_key: str = 'STL'
-        target_date: Optional[str] = None
-
     @app.post('/v1/activity/bugs')
     def activity_bugs(
         body: Optional[BugActivityRequest] = None,
         project_key: Optional[str] = Query(default=None),
         target_date: Optional[str] = Query(default=None),
     ) -> Dict[str, Any]:
-        from jira_utils import connect_to_jira
         pk = (body.project_key if body and body.project_key else None) or project_key or 'STL'
         td = (body.target_date if body and body.target_date else None) or target_date
         try:
-            jira = connect_to_jira()
-            result = bug_activity_today(jira, pk, td)
+            agent = DruckerCoordinatorAgent(project_key=pk)
+            result = agent.analyze_bug_activity(
+                project_key=pk,
+                target_date=td,
+            )
             return {'ok': True, 'data': result}
         except Exception as e:
             log.error(f'Bug activity report failed: {e}')

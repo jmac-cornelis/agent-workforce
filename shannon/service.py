@@ -398,6 +398,7 @@ class ShannonService:
     AGENT_CARD_BUILDERS = {
         'drucker': {
             '/issue-check': build_drucker_hygiene_card,
+            '/intake-report': build_drucker_hygiene_card,
             '/hygiene-run': build_drucker_hygiene_card,
             '/hygiene-report': build_drucker_hygiene_card,
             '/bug-activity': build_bug_activity_card,
@@ -429,6 +430,19 @@ class ShannonService:
             if agent_id == 'drucker':
                 report = data.get('report', data)
                 card = card_builder(report)
+                if command == '/bug-activity':
+                    summary = report.get('summary', {})
+                    return ShannonResponse(
+                        text=(
+                            f'{report.get("project", "")}: '
+                            f'{summary.get("bugs_opened", 0)} opened, '
+                            f'{summary.get("status_transitions", 0)} status changes, '
+                            f'{summary.get("bugs_with_comments", 0)} commented'
+                        ),
+                        card=card,
+                        command=command,
+                        decision='agent_call_success',
+                    )
                 summary = report.get('summary', {})
                 total = summary.get(
                     'finding_count',

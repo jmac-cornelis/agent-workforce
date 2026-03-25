@@ -96,6 +96,76 @@ async def test_create_drucker_issue_check_tool(import_mcp_server, monkeypatch: p
 
 
 @pytest.mark.asyncio
+async def test_create_drucker_intake_report_tool(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
+    from agents.drucker_models import DruckerHygieneReport
+    from agents.review_agent import ReviewItem, ReviewSession
+
+    class _FakeDruckerAgent:
+        def __init__(self, project_key=None, **_kwargs):
+            self.project_key = project_key
+
+        def analyze_recent_ticket_intake(self, request):
+            assert request.recent_only is True
+            assert request.since == '2026-03-24 00:00'
+            return DruckerHygieneReport(
+                project_key=request.project_key,
+                report_id='rep-403',
+                summary={'finding_count': 2},
+                summary_markdown='# Report',
+            )
+
+        def create_review_session(self, report):
+            return ReviewSession(
+                session_id=report.report_id,
+                items=[ReviewItem(id='D001', item_type='ticket', action='comment', data={})],
+            )
+
+    class _FakeStore:
+        def save_report(self, report, summary_markdown=None):
+            return {'report_id': report.report_id, 'storage_dir': '/tmp/drucker/rep-403'}
+
+    monkeypatch.setattr(import_mcp_server, 'DruckerCoordinatorAgent', _FakeDruckerAgent)
+    monkeypatch.setattr(import_mcp_server, 'DruckerReportStore', _FakeStore)
+
+    result = await import_mcp_server.create_drucker_intake_report(
+        project_key='STL',
+        since='2026-03-24 00:00',
+        persist=True,
+    )
+    data = _payload(result)
+
+    assert data['report']['report_id'] == 'rep-403'
+    assert data['stored']['report_id'] == 'rep-403'
+
+
+@pytest.mark.asyncio
+async def test_create_drucker_bug_activity_report_tool(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
+    class _FakeDruckerAgent:
+        def __init__(self, project_key=None, **_kwargs):
+            self.project_key = project_key
+
+        def analyze_bug_activity(self, project_key=None, target_date=None):
+            assert project_key == 'STL'
+            assert target_date == '2026-03-25'
+            return {
+                'project': 'STL',
+                'date': '2026-03-25',
+                'summary': {'bugs_opened': 1},
+            }
+
+    monkeypatch.setattr(import_mcp_server, 'DruckerCoordinatorAgent', _FakeDruckerAgent)
+
+    result = await import_mcp_server.create_drucker_bug_activity_report(
+        project_key='STL',
+        target_date='2026-03-25',
+    )
+    data = _payload(result)
+
+    assert data['project'] == 'STL'
+    assert data['summary']['bugs_opened'] == 1
+
+
+@pytest.mark.asyncio
 async def test_get_and_list_drucker_reports_tools(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
     class _FakeStore:
         def get_report(self, report_id, project_key=None):

@@ -216,6 +216,109 @@ def test_process_drucker_issue_check_posts_reply(tmp_path, monkeypatch):
     assert 'STL: 2 findings, 2 proposed actions' in poster.sent[-1]['activity']['text']
 
 
+def test_process_drucker_intake_report_posts_reply(tmp_path, monkeypatch):
+    service, poster = _service(tmp_path)
+    drucker_registration = service.registry.get_agent('drucker')
+    assert drucker_registration is not None
+
+    def _fake_call(registration, method, path, params=None, json_body=None):
+        assert registration.agent_id == 'drucker'
+        assert method == 'POST'
+        assert path == '/v1/hygiene/intake'
+        assert params is None
+        assert json_body == {'project_key': 'STL', 'since': '2026-03-24'}
+        return {
+            'ok': True,
+            'data': {
+                'report': {
+                    'project_key': 'STL',
+                    'report_id': 'rep-intake-1',
+                    'created_at': '2026-03-25T12:00:00+00:00',
+                    'summary': {
+                        'finding_count': 2,
+                        'action_count': 1,
+                        'monitor_scope': 'recent_ticket_intake',
+                    },
+                    'findings': [
+                        {
+                            'ticket_key': 'STL-301',
+                            'severity': 'medium',
+                            'description': 'Missing recommended fields.',
+                        }
+                    ],
+                    'proposed_actions': [
+                        {'action_type': 'comment'},
+                    ],
+                }
+            },
+        }
+
+    monkeypatch.setattr(service, '_call_agent_api', _fake_call)
+
+    activity = _agent_message_activity(
+        'agent-drucker',
+        '<at>Shannon</at> /intake-report project_key STL since 2026-03-24',
+    )
+    activity['channelData']['team']['id'] = drucker_registration.team_id
+
+    result = service.process_teams_activity(activity)
+
+    assert result['ok'] is True
+    assert result['agent_id'] == 'drucker'
+    assert result['command'] == '/intake-report'
+    assert poster.sent[-1]['kind'] == 'reply'
+    assert 'STL: 2 findings, 1 proposed actions' in poster.sent[-1]['activity']['text']
+    card = poster.sent[-1]['activity']['attachments'][0]['content']
+    assert card['body'][0]['text'] == 'Drucker Ticket Intake — STL'
+
+
+def test_process_drucker_bug_activity_posts_reply(tmp_path, monkeypatch):
+    service, poster = _service(tmp_path)
+    drucker_registration = service.registry.get_agent('drucker')
+    assert drucker_registration is not None
+
+    def _fake_call(registration, method, path, params=None, json_body=None):
+        assert registration.agent_id == 'drucker'
+        assert method == 'POST'
+        assert path == '/v1/activity/bugs'
+        assert params is None
+        assert json_body == {'project_key': 'STL', 'target_date': '2026-03-25'}
+        return {
+            'ok': True,
+            'data': {
+                'project': 'STL',
+                'date': '2026-03-25',
+                'summary': {
+                    'bugs_opened': 1,
+                    'status_transitions': 2,
+                    'bugs_with_comments': 1,
+                    'total_active_bugs': 3,
+                },
+                'opened': [{'key': 'STL-201', 'summary': 'Fabric issue', 'priority': 'High'}],
+                'status_changed': [],
+                'commented': [],
+            },
+        }
+
+    monkeypatch.setattr(service, '_call_agent_api', _fake_call)
+
+    activity = _agent_message_activity(
+        'agent-drucker',
+        '<at>Shannon</at> /bug-activity project_key STL target_date 2026-03-25',
+    )
+    activity['channelData']['team']['id'] = drucker_registration.team_id
+
+    result = service.process_teams_activity(activity)
+
+    assert result['ok'] is True
+    assert result['agent_id'] == 'drucker'
+    assert result['command'] == '/bug-activity'
+    assert poster.sent[-1]['kind'] == 'reply'
+    assert 'STL: 1 opened, 2 status changes, 1 commented' in poster.sent[-1]['activity']['text']
+    card = poster.sent[-1]['activity']['attachments'][0]['content']
+    assert card['body'][0]['text'] == 'Bug Activity — STL'
+
+
 def test_app_endpoints_expose_health_and_messages(tmp_path):
     service, _poster = _service(tmp_path)
     client = TestClient(create_app(service))

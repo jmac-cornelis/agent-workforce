@@ -82,9 +82,15 @@ def build_drucker_hygiene_card(report_data: Dict[str, Any]) -> Dict[str, Any]:
     summary = report_data.get('summary', {})
     findings = report_data.get('findings', [])
     proposed_actions = report_data.get('proposed_actions', [])
+    monitor_scope = summary.get('monitor_scope', '')
 
     # Build title and subtitle
-    title = f'Drucker Hygiene Report — {project_key}'
+    if monitor_scope == 'ticket':
+        title = f'Drucker Issue Check — {project_key}'
+    elif monitor_scope == 'recent_ticket_intake':
+        title = f'Drucker Ticket Intake — {project_key}'
+    else:
+        title = f'Drucker Hygiene Report — {project_key}'
     subtitle = f'{created_at} | Report ID: {report_id}'
 
     # Build fact set from summary

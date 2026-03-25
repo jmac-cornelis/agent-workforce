@@ -17,8 +17,10 @@ import os
 import sys
 import time
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
+
+import yaml
 
 from agents.base import BaseAgent, AgentConfig, AgentResponse
 from agents.drucker_models import (
@@ -36,6 +38,8 @@ from core.monitoring import (
     load_monitor_config,
     validate_ticket,
 )
+from core.reporting import bug_activity_today
+from jira_utils import connect_to_jira
 from notifications.jira_comments import JiraCommentNotifier
 from state.drucker_learning_store import DruckerLearningStore
 from state.drucker_monitor_state import DruckerMonitorState
@@ -49,6 +53,7 @@ log = logging.getLogger(os.path.basename(sys.argv[0]))
 _DEFAULT_MONITOR_CONFIG_PATH = os.path.join('config', 'drucker_monitor.yaml')
 _DEFAULT_MONITOR_DB_PATH = 'data/drucker_monitor_state.db'
 _DEFAULT_LEARNING_DB_PATH = 'data/drucker_learning.db'
+_DEFAULT_POLLER_CONFIG_PATH = os.path.join('config', 'drucker_polling.yaml')
 
 _DEFAULT_VALIDATION_RULES = {
     'Story': {
@@ -302,55 +307,219 @@ class DruckerCoordinatorAgent(BaseAgent):
             'body_lines': body_lines,
         }
 
+    @staticmethod
+    def _load_poller_config(config_path: str) -> Dict[str, Any]:
+        if not config_path:
+            raise ValueError('Drucker polling config path is required')
+        if not os.path.exists(config_path):
+            raise FileNotFoundError(f'Drucker polling config not found: {config_path}')
+
+        with open(config_path, 'r', encoding='utf-8') as f:
+            payload = yaml.safe_load(f.read()) or {}
+
+        if not isinstance(payload, dict):
+            raise ValueError('Drucker polling config must deserialize to a mapping')
+
+        return payload
+
+    def _resolve_poller_jobs(
+        self,
+        poller_spec: Dict[str, Any],
+    ) -> List[Dict[str, Any]]:
+        config_path = str(poller_spec.get('config_path') or '').strip()
+        job_name = str(poller_spec.get('job_name') or '').strip()
+
+        if not config_path:
+            return [dict(poller_spec)]
+
+        payload = self._load_poller_config(config_path)
+        defaults = payload.get('defaults') or {}
+        raw_jobs = payload.get('jobs') or []
+
+        if not isinstance(defaults, dict):
+            raise ValueError('Drucker polling config defaults must be a mapping')
+        if not isinstance(raw_jobs, list):
+            raise ValueError('Drucker polling config jobs must be a list')
+
+        jobs: List[Dict[str, Any]] = []
+        for raw_job in raw_jobs:
+            if not isinstance(raw_job, dict):
+                continue
+            if raw_job.get('enabled', True) is False:
+                continue
+
+            current_job_name = str(raw_job.get('job_id') or '').strip()
+            if job_name and current_job_name != job_name:
+                continue
+
+            merged_job = dict(defaults)
+            merged_job.update(raw_job)
+
+            project_key = str(poller_spec.get('project_key') or '').strip()
+            if project_key:
+                merged_job['project_key'] = project_key
+
+            if poller_spec.get('since'):
+                merged_job['since'] = poller_spec.get('since')
+            if poller_spec.get('jql'):
+                merged_job['jql'] = poller_spec.get('jql')
+            if poller_spec.get('shannon_base_url'):
+                merged_job['shannon_base_url'] = poller_spec.get('shannon_base_url')
+            if poller_spec.get('notify_shannon') is True:
+                merged_job['notify_shannon'] = True
+
+            jobs.append(merged_job)
+
+        if not jobs:
+            detail = job_name or 'enabled jobs'
+            raise ValueError(
+                f'No Drucker polling jobs matched {detail} in {config_path}'
+            )
+
+        return jobs
+
+    def analyze_bug_activity(
+        self,
+        project_key: Optional[str] = None,
+        target_date: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        resolved_project = str(project_key or self.project_key or '').strip()
+        if not resolved_project:
+            raise ValueError('Drucker bug activity requires project_key')
+
+        jira = connect_to_jira()
+        result = bug_activity_today(
+            jira,
+            resolved_project,
+            target_date or date.today().isoformat(),
+        )
+        result['task_type'] = 'bug_activity'
+        result['generated_at'] = datetime.now(timezone.utc).isoformat()
+        return result
+
+    @staticmethod
+    def format_bug_activity_report(activity: Dict[str, Any]) -> str:
+        lines = [
+            f'# DRUCKER BUG ACTIVITY: {activity.get("project", "")}',
+            '',
+            f'**Date**: {activity.get("date", "")}',
+            f'**Generated At**: {activity.get("generated_at", "")}',
+            '',
+            '## Summary',
+            '',
+        ]
+
+        summary = activity.get('summary', {}) or {}
+        lines.extend([
+            f'- Bugs Opened: {summary.get("bugs_opened", 0)}',
+            f'- Status Transitions: {summary.get("status_transitions", 0)}',
+            f'- Bugs With Comments: {summary.get("bugs_with_comments", 0)}',
+            f'- Total Active Bugs: {summary.get("total_active_bugs", 0)}',
+            '',
+        ])
+
+        def add_section(title: str, rows: List[str]) -> None:
+            lines.append(f'## {title}')
+            lines.append('')
+            if rows:
+                lines.extend(rows)
+            else:
+                lines.append('- None')
+            lines.append('')
+
+        add_section(
+            'Opened Today',
+            [
+                f'- {bug.get("key", "")} [{bug.get("priority", "")}] {bug.get("summary", "")}'.rstrip()
+                for bug in (activity.get('opened') or [])
+            ],
+        )
+        add_section(
+            'Status Changes',
+            [
+                (
+                    f'- {change.get("key", "")}: '
+                    f'{change.get("from_status", "")} -> {change.get("to_status", "")} '
+                    f'({change.get("changed_by", "")})'
+                )
+                for change in (activity.get('status_changed') or [])
+            ],
+        )
+        add_section(
+            'Comments',
+            [
+                (
+                    f'- {comment.get("key", "")}: '
+                    f'{comment.get("comment_count", 0)} comment(s), '
+                    f'latest by {comment.get("latest_author", "")}'
+                )
+                for comment in (activity.get('commented') or [])
+            ],
+        )
+
+        return '\n'.join(lines).rstrip()
+
     def tick(self, poller_spec: Dict[str, Any]) -> Dict[str, Any]:
         '''
         Execute one scheduled Drucker hygiene cycle.
         '''
-        project_key = str(
-            poller_spec.get('project_key') or self.project_key or ''
-        ).strip()
-        if not project_key:
-            raise ValueError('Drucker tick requires project_key')
-
-        self.project_key = project_key
-        persist = bool(poller_spec.get('persist', True))
-        notify_enabled = bool(poller_spec.get('notify_shannon', False))
-        shannon_base_url = poller_spec.get('shannon_base_url')
         tasks: List[Dict[str, Any]] = []
         notifications: List[Dict[str, Any]] = []
         errors: List[str] = []
 
-        try:
-            request = DruckerRequest(
-                project_key=project_key,
-                ticket_key=poller_spec.get('ticket_key'),
-                limit=int(poller_spec.get('limit', 200)),
-                include_done=bool(poller_spec.get('include_done', False)),
-                stale_days=int(poller_spec.get('stale_days', 30)),
-                jql=poller_spec.get('jql'),
-                since=poller_spec.get('since'),
-                recent_only=bool(poller_spec.get('recent_only', False)),
-                label_prefix=str(
-                    poller_spec.get('label_prefix', 'drucker') or 'drucker'
-                ),
-            )
-            result = self.run_once(request, persist=persist)
-            tasks.append(result)
-            if notify_enabled:
-                notifications.append(
-                    notify_shannon(
-                        agent_id='drucker',
-                        shannon_base_url=shannon_base_url,
-                        **self._build_hygiene_notification_payload(result),
-                    )
+        job_specs = self._resolve_poller_jobs(poller_spec)
+        resolved_project_key = ''
+
+        for index, job_spec in enumerate(job_specs, 1):
+            job_id = str(
+                job_spec.get('job_id') or f'drucker-job-{index}'
+            ).strip()
+            project_key = str(
+                job_spec.get('project_key') or self.project_key or ''
+            ).strip()
+            if not project_key:
+                errors.append(f'{job_id}: Drucker tick requires project_key')
+                continue
+
+            resolved_project_key = resolved_project_key or project_key
+            self.project_key = project_key
+
+            persist = bool(job_spec.get('persist', True))
+            notify_enabled = bool(job_spec.get('notify_shannon', False))
+            shannon_base_url = job_spec.get('shannon_base_url')
+
+            try:
+                request = DruckerRequest(
+                    project_key=project_key,
+                    ticket_key=job_spec.get('ticket_key'),
+                    limit=int(job_spec.get('limit', 200)),
+                    include_done=bool(job_spec.get('include_done', False)),
+                    stale_days=int(job_spec.get('stale_days', 30)),
+                    jql=job_spec.get('jql'),
+                    since=job_spec.get('since'),
+                    recent_only=bool(job_spec.get('recent_only', False)),
+                    label_prefix=str(
+                        job_spec.get('label_prefix', 'drucker') or 'drucker'
+                    ),
                 )
-        except Exception as e:
-            errors.append(f'hygiene_report: {e}')
+                result = self.run_once(request, persist=persist)
+                result['job_id'] = job_id
+                tasks.append(result)
+                if notify_enabled:
+                    notifications.append(
+                        notify_shannon(
+                            agent_id='drucker',
+                            shannon_base_url=shannon_base_url,
+                            **self._build_hygiene_notification_payload(result),
+                        )
+                    )
+            except Exception as e:
+                errors.append(f'{job_id}: {e}')
 
         return {
             'ok': not errors,
             'agent_id': 'drucker',
-            'project_key': project_key,
+            'project_key': resolved_project_key,
             'tasks': tasks,
             'notifications': notifications,
             'errors': errors,

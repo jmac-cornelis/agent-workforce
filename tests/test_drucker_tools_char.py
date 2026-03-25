@@ -2,8 +2,10 @@ import pytest
 
 from tools.drucker_tools import (
     DruckerTools,
+    create_drucker_bug_activity_report,
     create_drucker_issue_check,
     create_drucker_hygiene_report,
+    create_drucker_intake_report,
     get_drucker_report,
     list_drucker_reports,
 )
@@ -91,6 +93,85 @@ def test_create_drucker_issue_check_tool_persists_report(
     assert (tmp_path / 'store' / 'STL' / 'rep-202' / 'report.json').exists()
 
 
+def test_create_drucker_intake_report_tool_persists_report(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    from agents import drucker_agent as drucker_agent_module
+    from agents.drucker_models import DruckerHygieneReport
+    from agents.review_agent import ReviewItem, ReviewSession
+
+    class _FakeDruckerAgent:
+        def __init__(self, project_key=None, **_kwargs):
+            self.project_key = project_key
+
+        def analyze_recent_ticket_intake(self, request):
+            assert request.recent_only is True
+            assert request.since == '2026-03-24 00:00'
+            return DruckerHygieneReport(
+                project_key=request.project_key,
+                report_id='rep-203',
+                summary={
+                    'finding_count': 2,
+                    'action_count': 2,
+                    'monitor_scope': 'recent_ticket_intake',
+                },
+                summary_markdown='# Drucker Intake Report\n\nSummary',
+            )
+
+        def create_review_session(self, report):
+            return ReviewSession(
+                session_id=report.report_id,
+                created_at='2026-03-16T12:00:00+00:00',
+                items=[ReviewItem(id='D001', item_type='ticket', action='comment', data={})],
+            )
+
+    monkeypatch.setattr(drucker_agent_module, 'DruckerCoordinatorAgent', _FakeDruckerAgent)
+    monkeypatch.setenv('DRUCKER_REPORT_DIR', str(tmp_path / 'store'))
+
+    result = create_drucker_intake_report(
+        'STL',
+        stale_days=21,
+        since='2026-03-24 00:00',
+        persist=True,
+    )
+
+    assert result.is_success
+    assert result.data['report']['report_id'] == 'rep-203'
+    assert result.data['stored']['report_id'] == 'rep-203'
+    assert (tmp_path / 'store' / 'STL' / 'rep-203' / 'report.json').exists()
+
+
+def test_create_drucker_bug_activity_report_tool_returns_activity(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from agents import drucker_agent as drucker_agent_module
+
+    class _FakeDruckerAgent:
+        def __init__(self, project_key=None, **_kwargs):
+            self.project_key = project_key
+
+        def analyze_bug_activity(self, project_key=None, target_date=None):
+            assert project_key == 'STL'
+            assert target_date == '2026-03-25'
+            return {
+                'project': 'STL',
+                'date': '2026-03-25',
+                'summary': {'bugs_opened': 1},
+            }
+
+    monkeypatch.setattr(drucker_agent_module, 'DruckerCoordinatorAgent', _FakeDruckerAgent)
+
+    result = create_drucker_bug_activity_report(
+        'STL',
+        target_date='2026-03-25',
+    )
+
+    assert result.is_success
+    assert result.data['project'] == 'STL'
+    assert result.data['summary']['bugs_opened'] == 1
+
+
 def test_get_and_list_drucker_reports_tools(monkeypatch: pytest.MonkeyPatch, tmp_path):
     from state.drucker_report_store import DruckerReportStore
 
@@ -117,7 +198,9 @@ def test_get_and_list_drucker_reports_tools(monkeypatch: pytest.MonkeyPatch, tmp
 def test_drucker_tools_collection_registers_methods():
     tools = DruckerTools()
 
+    assert tools.get_tool('create_drucker_bug_activity_report') is not None
     assert tools.get_tool('create_drucker_issue_check') is not None
     assert tools.get_tool('create_drucker_hygiene_report') is not None
+    assert tools.get_tool('create_drucker_intake_report') is not None
     assert tools.get_tool('get_drucker_report') is not None
     assert tools.get_tool('list_drucker_reports') is not None

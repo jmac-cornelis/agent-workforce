@@ -1088,6 +1088,61 @@ async def create_drucker_issue_check(
 
 
 @_tool_decorator()
+async def create_drucker_intake_report(
+    project_key: str,
+    limit: int = 200,
+    stale_days: int = 30,
+    since: Optional[str] = None,
+    label_prefix: str = 'drucker',
+    persist: bool = True,
+) -> list[Any]:
+    """Run a Drucker recent-ticket intake report."""
+    try:
+        agent = DruckerCoordinatorAgent(project_key=project_key)
+        request = DruckerRequest(
+            project_key=project_key,
+            limit=limit,
+            stale_days=stale_days,
+            since=since,
+            recent_only=True,
+            label_prefix=label_prefix,
+        )
+        report = agent.analyze_recent_ticket_intake(request)
+        review_session = agent.create_review_session(report)
+        result = {
+            'report': report.to_dict(),
+            'review_session': review_session.to_dict(),
+        }
+        if persist:
+            result['stored'] = DruckerReportStore().save_report(
+                report,
+                summary_markdown=report.summary_markdown,
+            )
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'create_drucker_intake_report failed: {e}')
+        return _error_result(str(e))
+
+
+@_tool_decorator()
+async def create_drucker_bug_activity_report(
+    project_key: str,
+    target_date: Optional[str] = None,
+) -> list[Any]:
+    """Run a Drucker bug activity report."""
+    try:
+        agent = DruckerCoordinatorAgent(project_key=project_key)
+        result = agent.analyze_bug_activity(
+            project_key=project_key,
+            target_date=target_date,
+        )
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'create_drucker_bug_activity_report failed: {e}')
+        return _error_result(str(e))
+
+
+@_tool_decorator()
 async def get_drucker_report(
     report_id: str,
     project_key: Optional[str] = None,

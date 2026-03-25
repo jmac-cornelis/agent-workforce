@@ -1,0 +1,17 @@
+defaults:
+  project_key: ''
+  limit: 200
+  include_done: false
+  stale_days: 30
+  label_prefix: drucker
+  persist: true
+  notify_shannon: false
+
+jobs:
+  - job_id: hygiene-scan
+    description: Full-project hygiene scan for active work.
+    recent_only: false
+
+  - job_id: recent-ticket-intake
+    description: Recent-ticket intake scan using Drucker checkpoint state.
+    recent_only: true

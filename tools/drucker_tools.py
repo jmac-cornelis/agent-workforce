@@ -139,6 +139,103 @@ def create_drucker_issue_check(
 
 
 @tool(
+    description='Create a Drucker recent-ticket intake report and optional durable record'
+)
+def create_drucker_intake_report(
+    project_key: str,
+    limit: int = 200,
+    stale_days: int = 30,
+    since: Optional[str] = None,
+    label_prefix: str = 'drucker',
+    persist: bool = True,
+) -> ToolResult:
+    '''
+    Run a Drucker recent-ticket intake report and optional durable record.
+    '''
+    log.debug(
+        f'create_drucker_intake_report(project_key={project_key}, limit={limit}, '
+        f'stale_days={stale_days}, since={since}, label_prefix={label_prefix}, '
+        f'persist={persist})'
+    )
+
+    try:
+        from agents.drucker_agent import DruckerCoordinatorAgent
+        from agents.drucker_models import DruckerRequest
+        from state.drucker_report_store import DruckerReportStore
+
+        agent = DruckerCoordinatorAgent(project_key=project_key)
+        request = DruckerRequest(
+            project_key=project_key,
+            limit=limit,
+            stale_days=stale_days,
+            since=since,
+            recent_only=True,
+            label_prefix=label_prefix,
+        )
+        report = agent.analyze_recent_ticket_intake(request)
+        review_session = agent.create_review_session(report)
+
+        result = {
+            'report': report.to_dict(),
+            'review_session': review_session.to_dict(),
+        }
+
+        if persist:
+            stored = DruckerReportStore().save_report(
+                report,
+                summary_markdown=report.summary_markdown,
+            )
+            result['stored'] = stored
+
+        return ToolResult.success(
+            result,
+            report_id=report.report_id,
+            project_key=project_key,
+            persisted=persist,
+            monitor_scope='recent_ticket_intake',
+        )
+    except Exception as e:
+        log.error(f'Failed to create Drucker intake report: {e}')
+        return ToolResult.failure(f'Failed to create Drucker intake report: {e}')
+
+
+@tool(
+    description='Create a Drucker bug activity report for a specific date'
+)
+def create_drucker_bug_activity_report(
+    project_key: str,
+    target_date: Optional[str] = None,
+) -> ToolResult:
+    '''
+    Run a Drucker bug activity report for a specific date.
+    '''
+    log.debug(
+        f'create_drucker_bug_activity_report(project_key={project_key}, '
+        f'target_date={target_date})'
+    )
+
+    try:
+        from agents.drucker_agent import DruckerCoordinatorAgent
+
+        agent = DruckerCoordinatorAgent(project_key=project_key)
+        activity = agent.analyze_bug_activity(
+            project_key=project_key,
+            target_date=target_date,
+        )
+
+        return ToolResult.success(
+            activity,
+            project_key=project_key,
+            target_date=activity.get('date'),
+        )
+    except Exception as e:
+        log.error(f'Failed to create Drucker bug activity report: {e}')
+        return ToolResult.failure(
+            f'Failed to create Drucker bug activity report: {e}'
+        )
+
+
+@tool(
     description='Get a persisted Drucker hygiene report by report ID'
 )
 def get_drucker_report(
@@ -226,6 +323,36 @@ class DruckerTools(BaseTool):
             jql=jql,
             label_prefix=label_prefix,
             persist=persist,
+        )
+
+    @tool(description='Create a Drucker recent-ticket intake report')
+    def create_drucker_intake_report(
+        self,
+        project_key: str,
+        limit: int = 200,
+        stale_days: int = 30,
+        since: Optional[str] = None,
+        label_prefix: str = 'drucker',
+        persist: bool = True,
+    ) -> ToolResult:
+        return create_drucker_intake_report(
+            project_key=project_key,
+            limit=limit,
+            stale_days=stale_days,
+            since=since,
+            label_prefix=label_prefix,
+            persist=persist,
+        )
+
+    @tool(description='Create a Drucker bug activity report')
+    def create_drucker_bug_activity_report(
+        self,
+        project_key: str,
+        target_date: Optional[str] = None,
+    ) -> ToolResult:
+        return create_drucker_bug_activity_report(
+            project_key=project_key,
+            target_date=target_date,
         )
 
     @tool(description='Get a persisted Drucker hygiene report by report ID')

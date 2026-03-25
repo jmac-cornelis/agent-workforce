@@ -807,7 +807,9 @@ def cmd_workflow(args):
     # Registry of available workflows
     WORKFLOWS = {
         'bug-report': _workflow_bug_report,
+        'drucker-bug-activity': _workflow_drucker_bug_activity,
         'drucker-hygiene': _workflow_drucker_hygiene,
+        'drucker-intake-report': _workflow_drucker_intake_report,
         'drucker-issue-check': _workflow_drucker_issue_check,
         'drucker-poll': _workflow_drucker_poll,
         'feature-plan': _workflow_feature_plan,
@@ -2006,6 +2008,150 @@ def _workflow_drucker_issue_check(args):
     return 0
 
 
+def _workflow_drucker_intake_report(args):
+    '''
+    Drucker workflow: recent-ticket intake validation -> durable report + review session.
+    '''
+    log.debug(
+        f'Entering _workflow_drucker_intake_report(project={args.project}, '
+        f'limit={args.limit}, stale_days={args.stale_days}, since={args.since})'
+    )
+
+    from agents.drucker_agent import DruckerCoordinatorAgent
+    from state.drucker_report_store import DruckerReportStore
+
+    output('')
+    output('=' * 60)
+    output('WORKFLOW: drucker-intake-report')
+    output('=' * 60)
+    output('')
+    output(f'Project: {args.project}')
+    output(f'Stale threshold: {args.stale_days} days')
+    if args.since:
+        output(f'Since: {args.since}')
+    output('')
+    output('Step 1/4: Building Drucker intake report...')
+
+    agent = DruckerCoordinatorAgent(project_key=args.project)
+    result = agent.run({
+        'project_key': args.project,
+        'limit': args.limit or 200,
+        'stale_days': args.stale_days,
+        'since': args.since,
+        'recent_only': True,
+    })
+
+    if not result.success:
+        output(f'ERROR: {result.error}')
+        return 1
+
+    report = result.metadata.get('hygiene_report')
+    review_session = result.metadata.get('review_session')
+
+    if not report:
+        output('ERROR: Drucker intake report missing from agent response')
+        return 1
+
+    output('Step 2/4: Persisting intake report...')
+
+    store = DruckerReportStore()
+    stored_summary = store.save_report(report, summary_markdown=result.content or '')
+
+    output(f'  Stored report ID: {stored_summary["report_id"]}')
+    output(f'  Stored in: {stored_summary["storage_dir"]}')
+
+    output('Step 3/4: Writing report files...')
+
+    output_base = args.output or f'{args.project.lower()}_drucker_intake_report.json'
+    json_path, md_path, review_path = _write_drucker_report_files(
+        report,
+        result.content or '',
+        review_session or {},
+        output_base,
+    )
+
+    output(f'  Saved: {json_path}')
+    output(f'  Saved: {md_path}')
+    output(f'  Saved: {review_path}')
+
+    output('Step 4/4: Reporting summary...')
+    output(f'  Findings: {report.get("summary", {}).get("finding_count", 0)}')
+    output(f'  Proposed actions: {report.get("summary", {}).get("action_count", 0)}')
+    output(
+        '  Source tickets scanned: '
+        f'{report.get("summary", {}).get("source_ticket_count", 0)}'
+    )
+
+    _print_workflow_summary('drucker-intake-report', [
+        (stored_summary['json_path'], 'stored intake report JSON'),
+        (stored_summary['markdown_path'], 'stored intake report Markdown'),
+        (json_path, 'exported intake report JSON'),
+        (md_path, 'exported intake report Markdown'),
+        (review_path, 'review session JSON'),
+    ])
+    return 0
+
+
+def _workflow_drucker_bug_activity(args):
+    '''
+    Drucker workflow: daily bug activity summary.
+    '''
+    log.debug(
+        f'Entering _workflow_drucker_bug_activity(project={args.project}, '
+        f'target_date={args.target_date})'
+    )
+
+    from agents.drucker_agent import DruckerCoordinatorAgent
+
+    output('')
+    output('=' * 60)
+    output('WORKFLOW: drucker-bug-activity')
+    output('=' * 60)
+    output('')
+    output(f'Project: {args.project}')
+    output(f'Target date: {args.target_date or "today"}')
+    output('')
+    output('Step 1/2: Building Drucker bug activity report...')
+
+    agent = DruckerCoordinatorAgent(project_key=args.project)
+    activity = agent.analyze_bug_activity(
+        project_key=args.project,
+        target_date=args.target_date,
+    )
+    summary_markdown = agent.format_bug_activity_report(activity)
+
+    output('Step 2/2: Writing report files...')
+
+    target_suffix = str(activity.get('date') or 'today').replace('-', '')
+    output_base = (
+        args.output
+        or f'{args.project.lower()}_drucker_bug_activity_{target_suffix}.json'
+    )
+    json_path, md_path = _write_drucker_activity_files(
+        activity,
+        summary_markdown,
+        output_base,
+    )
+
+    output(f'  Saved: {json_path}')
+    output(f'  Saved: {md_path}')
+    output(f'  Bugs opened: {activity.get("summary", {}).get("bugs_opened", 0)}')
+    output(
+        '  Status transitions: '
+        f'{activity.get("summary", {}).get("status_transitions", 0)}'
+    )
+    output(
+        '  Bugs with comments: '
+        f'{activity.get("summary", {}).get("bugs_with_comments", 0)}'
+    )
+
+    _print_workflow_summary('drucker-bug-activity', [
+        (json_path, 'exported bug activity JSON'),
+        (md_path, 'exported bug activity Markdown'),
+    ])
+    return 0
+
+
 def _workflow_gantt_poll(args):
     '''
     Gantt workflow: run one or more scheduled planning/release-monitor cycles.
@@ -2109,11 +2255,16 @@ def _workflow_drucker_poll(args):
     output('WORKFLOW: drucker-poll')
     output('=' * 60)
     output('')
-    output(f'Project: {args.project}')
-    output(f'Stale threshold: {args.stale_days} days')
-    output(f'Recent only: {"yes" if args.recent_only else "no"}')
-    if args.since:
-        output(f'Since: {args.since}')
+    output(f'Project: {args.project or "from polling config"}')
+    if args.poll_config:
+        output(f'Polling config: {args.poll_config}')
+        if args.poll_job:
+            output(f'Polling job: {args.poll_job}')
+    else:
+        output(f'Stale threshold: {args.stale_days} days')
+        output(f'Recent only: {"yes" if args.recent_only else "no"}')
+        if args.since:
+            output(f'Since: {args.since}')
     output(f'Poll interval: {args.poll_interval} seconds')
     output(
         'Cycles: '
@@ -2124,19 +2275,31 @@ def _workflow_drucker_poll(args):
     output('Running scheduled Drucker poller...')
 
     agent = DruckerCoordinatorAgent(project_key=args.project)
-    result = agent.run_poller({
-        'project_key': args.project,
-        'limit': args.limit or 200,
-        'include_done': args.include_done,
-        'stale_days': args.stale_days,
-        'since': args.since,
-        'recent_only': args.recent_only,
+    poller_spec = {
         'persist': True,
         'notify_shannon': args.notify_shannon,
         'shannon_base_url': args.shannon_url,
         'interval_seconds': args.poll_interval,
         'max_cycles': args.max_cycles,
-    })
+    }
+    if args.project:
+        poller_spec['project_key'] = args.project
+    if args.poll_config:
+        poller_spec['config_path'] = args.poll_config
+        if args.poll_job:
+            poller_spec['job_name'] = args.poll_job
+        if args.since:
+            poller_spec['since'] = args.since
+    else:
+        poller_spec.update({
+            'limit': args.limit or 200,
+            'include_done': args.include_done,
+            'stale_days': args.stale_days,
+            'since': args.since,
+            'recent_only': args.recent_only,
+        })
+
+    result = agent.run_poller(poller_spec)
 
     output('')
     output('Cycle summary:')
@@ -2152,10 +2315,18 @@ def _workflow_drucker_poll(args):
 
     last_tick = result.get('last_tick') or {}
     for task in last_tick.get('tasks', []):
+        if task.get('job_id'):
+            output(f'  Job {task.get("job_id")}:')
         if task.get('task_type') == 'hygiene_report':
             stored = task.get('stored', {})
             output(
-                '  Latest hygiene report: '
+                '    Latest hygiene report: '
+                f'{stored.get("report_id") or task.get("report", {}).get("report_id", "")}'
+            )
+        if task.get('task_type') == 'ticket_intake_report':
+            stored = task.get('stored', {})
+            output(
+                '    Latest intake report: '
                 f'{stored.get("report_id") or task.get("report", {}).get("report_id", "")}'
             )
 
@@ -2370,6 +2541,36 @@ def _write_drucker_report_files(
     return json_path, md_path, review_path
 
 
+def _write_drucker_activity_files(
+    activity: dict[str, Any],
+    summary_markdown: str,
+    output_base: str,
+):
+    '''
+    Write Drucker bug-activity JSON + Markdown files.
+    '''
+    output_root, output_ext = os.path.splitext(output_base)
+    if output_ext.lower() == '.md':
+        output_root = output_root or str(
+            activity.get('project') or 'drucker_bug_activity'
+        ).lower()
+    elif output_ext.lower() != '.json':
+        output_root = output_base
+
+    json_path = output_root + '.json'
+    md_path = output_root + '.md'
+
+    os.makedirs(os.path.dirname(json_path) or '.', exist_ok=True)
+
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(activity, f, indent=2, default=str)
+
+    with open(md_path, 'w', encoding='utf-8') as f:
+        f.write(summary_markdown or '')
+
+    return json_path, md_path
+
+
 def _write_hypatia_record_files(
     record: dict[str, Any],
     review_session: dict[str, Any],
@@ -2533,9 +2734,12 @@ Examples:
   %(prog)s --workflow gantt-release-monitor-list --project STL
   %(prog)s --workflow gantt-release-monitor-get --report-id 12345678-1234-1234-1234-123456789abc
   %(prog)s --workflow gantt-poll --project STL --run-release-monitor --releases 12.1.1.x --max-cycles 2 --poll-interval 60
+  %(prog)s --workflow drucker-bug-activity --project STL --target-date 2026-03-25
   %(prog)s --workflow drucker-hygiene --project STL
   %(prog)s --workflow drucker-hygiene --project STL --stale-days 21 --output stl_hygiene.json
+  %(prog)s --workflow drucker-intake-report --project STL --since "2026-03-24 00:00"
   %(prog)s --workflow drucker-issue-check --project STL --ticket-key STL-12345
+  %(prog)s --workflow drucker-poll --poll-config config/drucker_polling.yaml --project STL --max-cycles 2
   %(prog)s --workflow drucker-poll --project STL --max-cycles 2 --poll-interval 300 --notify-shannon
   %(prog)s --workflow drucker-poll --project STL --recent-only --max-cycles 2 --poll-interval 300
   %(prog)s --workflow hypatia-generate --doc-title "STL Build Notes" --docs README.md AGENTS.md
@@ -2723,15 +2927,26 @@ Examples:
     parser.add_argument('--ticket-key', default=None, metavar='KEY',
                        dest='ticket_key',
                        help='Specific Jira ticket key for --workflow drucker-issue-check.')
+    parser.add_argument('--target-date', default=None, metavar='YYYY-MM-DD',
+                       dest='target_date',
+                       help='Target date for --workflow drucker-bug-activity '
+                            '(defaults to today).')
     parser.add_argument('--since', default=None, metavar='WHEN',
                        dest='since',
                        help='Optional checkpoint override for --workflow drucker-poll '
-                            'when using --recent-only. Accepts ISO timestamps or '
-                            '"YYYY-MM-DD HH:MM".')
+                            'when using --recent-only or --workflow drucker-intake-report. '
+                            'Accepts ISO timestamps or "YYYY-MM-DD HH:MM".')
     parser.add_argument('--recent-only', action='store_true',
                        dest='recent_only',
                        help='Use recent-ticket intake scanning during --workflow drucker-poll '
                             'instead of full-project hygiene scans.')
+    parser.add_argument('--poll-config', default=None, metavar='FILE',
+                       dest='poll_config',
+                       help='YAML config for --workflow drucker-poll. '
+                            'Defines named Drucker polling jobs.')
+    parser.add_argument('--poll-job', default=None, metavar='NAME',
+                       dest='poll_job',
+                       help='Optional job ID from --poll-config for --workflow drucker-poll.')
     parser.add_argument('--poll-interval', type=int, default=300, metavar='SECS',
                        dest='poll_interval',
                        help='Polling interval in seconds for --workflow gantt-poll '
@@ -2969,14 +3184,25 @@ Examples:
         elif args.workflow_name == 'drucker-hygiene':
             if not args.project:
                 parser.error('--workflow drucker-hygiene requires --project PROJECT_KEY')
+        elif args.workflow_name == 'drucker-bug-activity':
+            if not args.project:
+                parser.error('--workflow drucker-bug-activity requires --project PROJECT_KEY')
+        elif args.workflow_name == 'drucker-intake-report':
+            if not args.project:
+                parser.error('--workflow drucker-intake-report requires --project PROJECT_KEY')
         elif args.workflow_name == 'drucker-issue-check':
             if not args.project:
                 parser.error('--workflow drucker-issue-check requires --project PROJECT_KEY')
             if not args.ticket_key:
                 parser.error('--workflow drucker-issue-check requires --ticket-key KEY')
         elif args.workflow_name == 'drucker-poll':
-            if not args.project:
-                parser.error('--workflow drucker-poll requires --project PROJECT_KEY')
+            if not args.project and not args.poll_config:
+                parser.error(
+                    '--workflow drucker-poll requires --project PROJECT_KEY '
+                    'or --poll-config FILE'
+                )
+            if args.poll_config and not os.path.isfile(args.poll_config):
+                parser.error(f'--poll-config file not found: {args.poll_config}')
         elif args.workflow_name == 'hypatia-generate':
             if args.docs:
                 for source_path in args.docs:
@@ -3138,6 +3364,18 @@ Examples:
             log.info(f'+  Include done: {"yes" if args.include_done else "no"}')
             if args.output:
                 log.info(f'+  Output: {args.output}')
+        elif args.workflow_name == 'drucker-bug-activity':
+            log.info(f'+  Project: {args.project}')
+            log.info(f'+  Target date: {args.target_date or "today"}')
+            if args.output:
+                log.info(f'+  Output: {args.output}')
+        elif args.workflow_name == 'drucker-intake-report':
+            log.info(f'+  Project: {args.project}')
+            log.info(f'+  Stale days: {args.stale_days}')
+            if args.since:
+                log.info(f'+  Since: {args.since}')
+            if args.output:
+                log.info(f'+  Output: {args.output}')
         elif args.workflow_name == 'drucker-issue-check':
             log.info(f'+  Project: {args.project}')
             log.info(f'+  Ticket: {args.ticket_key}')
@@ -3145,7 +3383,12 @@ Examples:
             if args.output:
                 log.info(f'+  Output: {args.output}')
         elif args.workflow_name == 'drucker-poll':
-            log.info(f'+  Project: {args.project}')
+            if args.project:
+                log.info(f'+  Project: {args.project}')
+            if args.poll_config:
+                log.info(f'+  Poll config: {args.poll_config}')
+            if args.poll_job:
+                log.info(f'+  Poll job: {args.poll_job}')
             log.info(f'+  Poll interval: {args.poll_interval}s')
             log.info(f'+  Recent only: {"yes" if args.recent_only else "no"}')
             if args.since:

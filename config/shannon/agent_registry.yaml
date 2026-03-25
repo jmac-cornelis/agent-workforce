@@ -51,6 +51,10 @@ agents:
         description: Run intake validation for one Jira ticket
         api_method: POST
         api_path: /v1/hygiene/issue
+      - command: /intake-report
+        description: Run a recent-ticket intake report
+        api_method: POST
+        api_path: /v1/hygiene/intake
       - command: /hygiene-run
         description: Run hygiene analysis
         api_method: POST
