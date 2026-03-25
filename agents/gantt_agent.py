@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import time
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 
@@ -46,6 +47,7 @@ from agents.gantt_models import (
     RoadmapSection,
     RoadmapSnapshot,
 )
+from agents.pm_runtime import normalize_csv_list, notify_shannon
 from collections import Counter
 from core.evidence import EvidenceBundle, load_evidence_bundle
 from core.release_tracking import (
@@ -58,6 +60,8 @@ from core.release_tracking import (
     TrackerConfig,
 )
 from state.gantt_dependency_review_store import GanttDependencyReviewStore
+from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+from state.gantt_snapshot_store import GanttSnapshotStore
 from excel_utils import (
     STATUS_FILL_COLORS,
     PRIORITY_FILL_COLORS,
@@ -201,6 +205,267 @@ class GanttProjectPlannerAgent(BaseAgent):
             content=snapshot.summary_markdown,
             metadata={'planning_snapshot': snapshot.to_dict()},
         )
+
+    def run_once(
+        self,
+        task_type: str,
+        request: PlanningRequest | ReleaseMonitorRequest,
+        *,
+        persist: bool = True,
+    ) -> Dict[str, Any]:
+        '''
+        Execute one deterministic Gantt task and optionally persist the result.
+        '''
+        if task_type == 'planning_snapshot':
+            if not isinstance(request, PlanningRequest):
+                raise TypeError('planning_snapshot requires a PlanningRequest')
+
+            self.project_key = request.project_key or self.project_key
+            snapshot = self.create_snapshot(request)
+            result: Dict[str, Any] = {
+                'ok': True,
+                'task_type': task_type,
+                'project_key': snapshot.project_key,
+                'snapshot': snapshot.to_dict(),
+                'summary_markdown': snapshot.summary_markdown,
+            }
+            if persist:
+                result['stored'] = GanttSnapshotStore().save_snapshot(
+                    snapshot,
+                    summary_markdown=snapshot.summary_markdown,
+                )
+            return result
+
+        if task_type == 'release_monitor':
+            if not isinstance(request, ReleaseMonitorRequest):
+                raise TypeError('release_monitor requires a ReleaseMonitorRequest')
+
+            self.project_key = request.project_key or self.project_key
+            report = self.create_release_monitor(request)
+            result = {
+                'ok': True,
+                'task_type': task_type,
+                'project_key': report.project_key,
+                'report': report.to_dict(),
+                'summary_markdown': report.summary_markdown,
+            }
+            if persist:
+                result['stored'] = GanttReleaseMonitorStore().save_report(
+                    report,
+                    summary_markdown=report.summary_markdown,
+                )
+            return result
+
+        raise ValueError(f'Unsupported Gantt task_type: {task_type}')
+
+    @staticmethod
+    def _build_snapshot_notification_payload(result: Dict[str, Any]) -> Dict[str, Any]:
+        snapshot = result.get('snapshot', {})
+        overview = snapshot.get('backlog_overview', {})
+        stored = result.get('stored', {})
+        text = (
+            f'{snapshot.get("project_key", "")}: '
+            f'{overview.get("total_issues", 0)} issues, '
+            f'{overview.get("blocked_issues", 0)} blocked, '
+            f'{len(snapshot.get("milestones", []))} milestones'
+        )
+        body_lines = [
+            f'Snapshot ID: {stored.get("snapshot_id") or snapshot.get("snapshot_id", "")}',
+            f'Planning horizon: {snapshot.get("planning_horizon_days", 0)} days',
+            f'Risks: {len(snapshot.get("risks", []))}',
+            f'Dependencies: {snapshot.get("dependency_graph", {}).get("edge_count", 0)}',
+        ]
+        return {
+            'title': f'Gantt Planning Snapshot — {snapshot.get("project_key", "")}',
+            'text': text,
+            'body_lines': body_lines,
+        }
+
+    @staticmethod
+    def _build_release_monitor_notification_payload(result: Dict[str, Any]) -> Dict[str, Any]:
+        report = result.get('report', {})
+        stored = result.get('stored', {})
+        text = (
+            f'{report.get("project_key", "")}: '
+            f'{report.get("total_bugs", 0)} bugs, '
+            f'P0={report.get("total_p0", 0)}, '
+            f'P1={report.get("total_p1", 0)}'
+        )
+        body_lines = [
+            f'Report ID: {stored.get("report_id") or report.get("report_id", "")}',
+            f'Releases: {", ".join(report.get("releases_monitored", [])) or "none"}',
+        ]
+        readiness = report.get('readiness') or {}
+        if readiness:
+            body_lines.append(
+                f'Readiness: {readiness.get("total_open", 0)} open, '
+                f'{readiness.get("p0_open", 0)} P0, '
+                f'{readiness.get("p1_open", 0)} P1'
+            )
+        return {
+            'title': f'Gantt Release Monitor — {report.get("project_key", "")}',
+            'text': text,
+            'body_lines': body_lines,
+        }
+
+    def tick(self, poller_spec: Dict[str, Any]) -> Dict[str, Any]:
+        '''
+        Execute one scheduled Gantt cycle.
+        '''
+        project_key = str(
+            poller_spec.get('project_key') or self.project_key or ''
+        ).strip()
+        if not project_key:
+            raise ValueError('Gantt tick requires project_key')
+
+        self.project_key = project_key
+        persist = bool(poller_spec.get('persist', True))
+        notify_enabled = bool(poller_spec.get('notify_shannon', False))
+        shannon_base_url = poller_spec.get('shannon_base_url')
+        tasks: List[Dict[str, Any]] = []
+        notifications: List[Dict[str, Any]] = []
+        errors: List[str] = []
+
+        if bool(poller_spec.get('run_planning', True)):
+            try:
+                planning_request = PlanningRequest(
+                    project_key=project_key,
+                    planning_horizon_days=int(
+                        poller_spec.get('planning_horizon_days', 90)
+                    ),
+                    limit=int(poller_spec.get('limit', 200)),
+                    include_done=bool(poller_spec.get('include_done', False)),
+                    backlog_jql=poller_spec.get('backlog_jql'),
+                    policy_profile=str(
+                        poller_spec.get('policy_profile', 'default') or 'default'
+                    ),
+                    evidence_paths=normalize_csv_list(
+                        poller_spec.get('evidence_paths')
+                    ),
+                )
+                planning_result = self.run_once(
+                    'planning_snapshot',
+                    planning_request,
+                    persist=persist,
+                )
+                tasks.append(planning_result)
+                if notify_enabled:
+                    notifications.append(
+                        notify_shannon(
+                            agent_id='gantt',
+                            shannon_base_url=shannon_base_url,
+                            **self._build_snapshot_notification_payload(planning_result),
+                        )
+                    )
+            except Exception as e:
+                errors.append(f'planning_snapshot: {e}')
+
+        release_names = normalize_csv_list(poller_spec.get('releases'))
+        run_release_monitor = bool(poller_spec.get('run_release_monitor', False))
+        if release_names:
+            run_release_monitor = True
+
+        if run_release_monitor:
+            try:
+                release_request = ReleaseMonitorRequest(
+                    project_key=project_key,
+                    releases=release_names or None,
+                    scope_label=poller_spec.get('scope_label'),
+                    include_gap_analysis=bool(
+                        poller_spec.get('include_gap_analysis', True)
+                    ),
+                    include_bug_report=bool(
+                        poller_spec.get('include_bug_report', True)
+                    ),
+                    include_velocity=bool(
+                        poller_spec.get('include_velocity', True)
+                    ),
+                    include_readiness=bool(
+                        poller_spec.get('include_readiness', True)
+                    ),
+                    compare_to_previous=bool(
+                        poller_spec.get('compare_to_previous', True)
+                    ),
+                    output_file=poller_spec.get('output_file'),
+                )
+                release_result = self.run_once(
+                    'release_monitor',
+                    release_request,
+                    persist=persist,
+                )
+                tasks.append(release_result)
+                if notify_enabled:
+                    notifications.append(
+                        notify_shannon(
+                            agent_id='gantt',
+                            shannon_base_url=shannon_base_url,
+                            **self._build_release_monitor_notification_payload(
+                                release_result
+                            ),
+                        )
+                    )
+            except Exception as e:
+                errors.append(f'release_monitor: {e}')
+
+        return {
+            'ok': not errors,
+            'agent_id': 'gantt',
+            'project_key': project_key,
+            'tasks': tasks,
+            'notifications': notifications,
+            'errors': errors,
+            'completed_at': datetime.now(timezone.utc).isoformat(),
+        }
+
+    def run_poller(
+        self,
+        poller_spec: Dict[str, Any],
+        *,
+        sleep_fn: Any = time.sleep,
+    ) -> Dict[str, Any]:
+        '''
+        Run the Gantt polling loop for a bounded number of cycles.
+        '''
+        interval_seconds = max(int(poller_spec.get('interval_seconds', 300) or 0), 0)
+        max_cycles = int(poller_spec.get('max_cycles', 1) or 0)
+        if max_cycles < 0:
+            raise ValueError('max_cycles must be >= 0')
+        if max_cycles == 0 and interval_seconds <= 0:
+            raise ValueError(
+                'Continuous polling requires interval_seconds > 0'
+            )
+
+        cycle_summaries: List[Dict[str, Any]] = []
+        cycles_run = 0
+        last_tick: Optional[Dict[str, Any]] = None
+
+        while True:
+            cycles_run += 1
+            last_tick = self.tick(poller_spec)
+            cycle_summaries.append({
+                'cycle_number': cycles_run,
+                'ok': last_tick.get('ok', False),
+                'task_count': len(last_tick.get('tasks', [])),
+                'notification_count': len(last_tick.get('notifications', [])),
+                'errors': list(last_tick.get('errors', [])),
+                'completed_at': last_tick.get('completed_at', ''),
+            })
+
+            if max_cycles > 0 and cycles_run >= max_cycles:
+                break
+            if interval_seconds > 0:
+                sleep_fn(interval_seconds)
+
+        return {
+            'ok': all(item.get('ok', False) for item in cycle_summaries),
+            'agent_id': 'gantt',
+            'project_key': str(
+                poller_spec.get('project_key') or self.project_key or ''
+            ).strip(),
+            'cycles_run': cycles_run,
+            'cycle_summaries': cycle_summaries,
+            'last_tick': last_tick or {},
+        }
 
     def create_snapshot(self, request: PlanningRequest) -> PlanningSnapshot:
         '''
@@ -1448,6 +1713,7 @@ class GanttProjectPlannerAgent(BaseAgent):
                 'components': t.get('components') or t.get('component', ''),
                 'created': t.get('created', ''),
                 'updated': t.get('updated', ''),
+                'resolutiondate': t.get('resolutiondate', ''),
             })
         return normalized
 

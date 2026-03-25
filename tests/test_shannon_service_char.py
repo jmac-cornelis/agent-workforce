@@ -41,6 +41,13 @@ def _conversation_update_activity() -> dict:
     return payload
 
 
+def _agent_message_activity(channel_name: str, text: str) -> dict:
+    payload = _message_activity(text=text)
+    payload['channelData']['channel']['name'] = channel_name
+    payload['channelData']['channel']['id'] = f'19:{channel_name}@thread.tacv2'
+    return payload
+
+
 def _service(tmp_path) -> tuple[ShannonService, MemoryPoster]:
     poster = MemoryPoster()
     registry = ShannonAgentRegistry()
@@ -99,6 +106,60 @@ def test_post_notification_uses_stored_conversation_reference(tmp_path):
     assert result['agent_id'] == 'shannon'
     assert poster.sent[-1]['kind'] == 'conversation'
     assert poster.sent[-1]['activity']['text'] == 'This is a direct Shannon notification.'
+
+
+def test_process_gantt_message_posts_snapshot_reply(tmp_path, monkeypatch):
+    service, poster = _service(tmp_path)
+    gantt_registration = service.registry.get_agent('gantt')
+    assert gantt_registration is not None
+
+    def _fake_call(registration, method, path, params=None, json_body=None):
+        assert registration.agent_id == 'gantt'
+        assert method == 'POST'
+        assert path == '/v1/planning/snapshot'
+        assert params is None
+        assert json_body == {'project_key': 'STL'}
+        return {
+            'ok': True,
+            'data': {
+                'snapshot': {
+                    'project_key': 'STL',
+                    'created_at': '2026-03-25T12:00:00+00:00',
+                    'backlog_overview': {
+                        'total_issues': 4,
+                        'blocked_issues': 1,
+                        'stale_issues': 0,
+                    },
+                    'milestones': [
+                        {
+                            'name': '12.1.1.x',
+                            'open_issues': 2,
+                            'blocked_issues': 1,
+                        }
+                    ],
+                    'dependency_graph': {'edge_count': 2},
+                    'risks': [],
+                }
+            },
+        }
+
+    monkeypatch.setattr(service, '_call_agent_api', _fake_call)
+
+    activity = _agent_message_activity(
+        'agent-gantt',
+        '<at>Shannon</at> /planning-snapshot project_key STL',
+    )
+    activity['channelData']['team']['id'] = gantt_registration.team_id
+
+    result = service.process_teams_activity(activity)
+
+    assert result['ok'] is True
+    assert result['agent_id'] == 'gantt'
+    assert result['command'] == '/planning-snapshot'
+    assert poster.sent[-1]['kind'] == 'reply'
+    assert 'STL: 4 issues' in poster.sent[-1]['activity']['text']
+    card = poster.sent[-1]['activity']['attachments'][0]['content']
+    assert card['body'][0]['text'] == 'Gantt Planning Snapshot — STL'
 
 
 def test_app_endpoints_expose_health_and_messages(tmp_path):

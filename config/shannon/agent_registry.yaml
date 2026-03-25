@@ -64,3 +64,36 @@ agents:
         api_method: POST
         api_path: /v1/activity/bugs
     timeout_seconds: 30
+
+  - agent_id: gantt
+    display_name: Gantt
+    role: Project Planning
+    description: Planning snapshots and release-health monitoring for Jira-backed delivery work.
+    zone: planning_delivery
+    channel_name: agent-gantt
+    channel_id: ""
+    team_id: "19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2"
+    api_base_url: http://localhost:8202
+    approval_types: []
+    custom_commands:
+      - command: /planning-snapshot
+        description: Create a planning snapshot
+        api_method: POST
+        api_path: /v1/planning/snapshot
+      - command: /planning-snapshots
+        description: List stored planning snapshots
+        api_method: GET
+        api_path: /v1/planning/snapshots
+      - command: /release-monitor
+        description: Create a release monitor report
+        api_method: POST
+        api_path: /v1/release-monitor/run
+      - command: /release-report
+        description: Get a stored release monitor report
+        api_method: GET
+        api_path: /v1/release-monitor/report
+      - command: /release-reports
+        description: List stored release monitor reports
+        api_method: GET
+        api_path: /v1/release-monitor/reports
+    timeout_seconds: 30

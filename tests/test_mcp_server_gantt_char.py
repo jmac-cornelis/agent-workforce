@@ -2,6 +2,8 @@ import json
 
 import pytest
 
+from agents.gantt_models import BugSummary, ReleaseMonitorReport
+
 
 def _payload(result):
     assert isinstance(result, list)
@@ -177,3 +179,108 @@ async def test_list_gantt_dependency_reviews_tool(
 
     assert data[0]['edge_key'] == 'STL-801|blocks|STL-802'
     assert data[0]['status'] == 'accepted'
+
+
+@pytest.mark.asyncio
+async def test_create_release_monitor_tool(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
+    class _FakeGanttAgent:
+        def __init__(self, project_key=None, **_kwargs):
+            self.project_key = project_key
+
+        def create_release_monitor(self, request):
+            assert request.releases == ['12.1.1.x', '12.2.0.x']
+            report = ReleaseMonitorReport(
+                project_key=request.project_key,
+                created_at='2026-03-25T12:00:00+00:00',
+                releases_monitored=request.releases or [],
+                bug_summaries=[
+                    BugSummary(
+                        release='12.1.1.x',
+                        total_bugs=6,
+                        by_priority={'P0': 1, 'P1': 2},
+                    )
+                ],
+                summary_markdown='# Release Monitor',
+            )
+            report.report_id = 'report-401'
+            return report
+
+    class _FakeStore:
+        def save_report(self, report, summary_markdown=None):
+            assert report.report_id == 'report-401'
+            assert summary_markdown == '# Release Monitor'
+            return {
+                'report_id': report.report_id,
+                'project_key': report.project_key,
+                'storage_dir': '/tmp/store/STL/report-401',
+            }
+
+    monkeypatch.setattr(import_mcp_server, 'GanttProjectPlannerAgent', _FakeGanttAgent)
+    monkeypatch.setattr(import_mcp_server, 'GanttReleaseMonitorStore', _FakeStore)
+
+    result = await import_mcp_server.create_release_monitor(
+        project_key='STL',
+        releases='12.1.1.x,12.2.0.x',
+        persist=True,
+    )
+    data = _payload(result)
+
+    assert data['report']['project_key'] == 'STL'
+    assert data['stored']['report_id'] == 'report-401'
+
+
+@pytest.mark.asyncio
+async def test_get_gantt_release_monitor_report_tool(
+    import_mcp_server,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _FakeStore:
+        def get_report(self, report_id, project_key=None):
+            assert report_id == 'report-501'
+            assert project_key == 'STL'
+            return {
+                'report': {'report_id': report_id, 'project_key': project_key},
+                'summary': {'report_id': report_id, 'project_key': project_key},
+                'summary_markdown': '# Stored Release Monitor',
+            }
+
+    monkeypatch.setattr(import_mcp_server, 'GanttReleaseMonitorStore', _FakeStore)
+
+    result = await import_mcp_server.get_gantt_release_monitor_report(
+        'report-501',
+        project_key='STL',
+    )
+    data = _payload(result)
+
+    assert data['report']['report_id'] == 'report-501'
+    assert data['summary_markdown'] == '# Stored Release Monitor'
+
+
+@pytest.mark.asyncio
+async def test_list_gantt_release_monitor_reports_tool(
+    import_mcp_server,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _FakeStore:
+        def list_reports(self, project_key=None, limit=20):
+            assert project_key == 'STL'
+            assert limit == 10
+            return [
+                {
+                    'report_id': 'report-601',
+                    'project_key': 'STL',
+                    'created_at': '2026-03-25T12:00:00+00:00',
+                    'total_bugs': 9,
+                }
+            ]
+
+    monkeypatch.setattr(import_mcp_server, 'GanttReleaseMonitorStore', _FakeStore)
+
+    result = await import_mcp_server.list_gantt_release_monitor_reports(
+        project_key='STL',
+        limit=10,
+    )
+    data = _payload(result)
+
+    assert data[0]['report_id'] == 'report-601'
+    assert data[0]['project_key'] == 'STL'

@@ -54,8 +54,11 @@ from tools.confluence_tools import (
 )
 from tools.gantt_tools import (
     create_gantt_snapshot,
+    create_release_monitor,
     get_gantt_snapshot,
+    get_gantt_release_monitor_report,
     list_gantt_snapshots,
+    list_gantt_release_monitor_reports,
     review_gantt_dependency,
     list_gantt_dependency_reviews,
     GanttTools,
@@ -174,8 +177,11 @@ __all__ = [
     'ConfluenceTools',
     # Gantt
     'create_gantt_snapshot',
+    'create_release_monitor',
     'get_gantt_snapshot',
+    'get_gantt_release_monitor_report',
     'list_gantt_snapshots',
+    'list_gantt_release_monitor_reports',
     'review_gantt_dependency',
     'list_gantt_dependency_reviews',
     'GanttTools',

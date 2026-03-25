@@ -6,7 +6,13 @@ from unittest.mock import MagicMock
 import pytest
 
 from agents.base import AgentResponse
-from agents.gantt_models import PlanningRequest, PlanningSnapshot
+from agents.gantt_models import (
+    BugSummary,
+    DependencyGraph,
+    PlanningRequest,
+    PlanningSnapshot,
+    ReleaseMonitorReport,
+)
 from tools.base import ToolResult
 
 
@@ -150,6 +156,161 @@ def test_gantt_agent_run_returns_snapshot_metadata(monkeypatch: pytest.MonkeyPat
     assert response.success is True
     assert response.content == '# Snapshot\n\nBody'
     assert response.metadata['planning_snapshot']['project_key'] == 'STL'
+
+
+def test_gantt_agent_tick_persists_results_and_posts_notifications(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    from agents import pm_runtime
+    from agents.gantt_agent import GanttProjectPlannerAgent
+
+    class _FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {'ok': True}
+
+    notification_calls = []
+
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'gantt prompt'),
+    )
+    monkeypatch.setenv('GANTT_SNAPSHOT_DIR', str(tmp_path / 'snapshots'))
+    monkeypatch.setenv('GANTT_RELEASE_MONITOR_DIR', str(tmp_path / 'reports'))
+    monkeypatch.setattr(
+        pm_runtime.requests,
+        'post',
+        lambda url, json=None, timeout=15: (
+            notification_calls.append({'url': url, 'json': json, 'timeout': timeout})
+            or _FakeResponse()
+        ),
+    )
+
+    snapshot = PlanningSnapshot(
+        project_key='STL',
+        backlog_overview={'total_issues': 4, 'blocked_issues': 1},
+        dependency_graph=DependencyGraph(),
+        summary_markdown='# Snapshot',
+    )
+    snapshot.snapshot_id = 'snap-poll'
+
+    report = ReleaseMonitorReport(
+        project_key='STL',
+        releases_monitored=['12.1.1.x'],
+        bug_summaries=[
+            BugSummary(
+                release='12.1.1.x',
+                total_bugs=5,
+                by_priority={'P0': 1, 'P1': 2},
+            )
+        ],
+        summary_markdown='# Release Monitor',
+    )
+    report.report_id = 'rep-poll'
+
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        'create_snapshot',
+        lambda self, request: snapshot,
+    )
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        'create_release_monitor',
+        lambda self, request: report,
+    )
+
+    agent = GanttProjectPlannerAgent(project_key='STL')
+    result = agent.tick({
+        'project_key': 'STL',
+        'run_planning': True,
+        'run_release_monitor': True,
+        'releases': ['12.1.1.x'],
+        'notify_shannon': True,
+        'shannon_base_url': 'http://shannon.test',
+    })
+
+    assert result['ok'] is True
+    assert len(result['tasks']) == 2
+    assert len(result['notifications']) == 2
+    assert (tmp_path / 'snapshots' / 'STL' / 'snap-poll' / 'snapshot.json').exists()
+    assert (tmp_path / 'reports' / 'STL' / 'rep-poll' / 'report.json').exists()
+    assert notification_calls[0]['url'] == 'http://shannon.test/v1/bot/notify'
+
+
+def test_workflow_gantt_poll_runs_poller(monkeypatch: pytest.MonkeyPatch):
+    import pm_agent
+    from agents import gantt_agent as gantt_agent_module
+
+    class _FakeGanttAgent:
+        def __init__(self, project_key=None, **_kwargs):
+            self.project_key = project_key
+
+        def run_poller(self, spec):
+            assert spec['project_key'] == 'STL'
+            assert spec['run_release_monitor'] is True
+            assert spec['notify_shannon'] is True
+            assert spec['max_cycles'] == 2
+            return {
+                'ok': True,
+                'cycles_run': 2,
+                'cycle_summaries': [
+                    {
+                        'cycle_number': 1,
+                        'ok': True,
+                        'task_count': 2,
+                        'notification_count': 2,
+                        'errors': [],
+                    },
+                    {
+                        'cycle_number': 2,
+                        'ok': True,
+                        'task_count': 2,
+                        'notification_count': 2,
+                        'errors': [],
+                    },
+                ],
+                'last_tick': {
+                    'tasks': [
+                        {
+                            'task_type': 'planning_snapshot',
+                            'stored': {'snapshot_id': 'snap-701'},
+                        },
+                        {
+                            'task_type': 'release_monitor',
+                            'stored': {'report_id': 'rep-701'},
+                        },
+                    ]
+                },
+            }
+
+    monkeypatch.setattr(gantt_agent_module, 'GanttProjectPlannerAgent', _FakeGanttAgent)
+    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
+
+    args = SimpleNamespace(
+        project='STL',
+        planning_horizon=90,
+        limit=50,
+        include_done=False,
+        evidence=['build.json'],
+        releases='12.1.1.x',
+        scope_label=None,
+        include_gap_analysis=True,
+        include_bug_report=True,
+        include_velocity=True,
+        include_readiness=True,
+        compare_to_previous=True,
+        run_release_monitor=True,
+        notify_shannon=True,
+        shannon_url='http://shannon.test',
+        poll_interval=60,
+        max_cycles=2,
+    )
+
+    assert pm_agent._workflow_gantt_poll(args) == 0
 
 
 def test_gantt_agent_loads_evidence_bundle(monkeypatch: pytest.MonkeyPatch, tmp_path):

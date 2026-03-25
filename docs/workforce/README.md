@@ -69,6 +69,9 @@ These agents support project management and delivery tracking.
 | **[Gantt](GANTT_PROJECT_PLANNER_PLAN.md)** | Project Planning | Converts Jira work state, technical evidence, and meeting decisions into milestone proposals, dependency graphs, and risk summaries. |
 | **[Brooks](BROOKS_DELIVERY_MANAGER_PLAN.md)** | Delivery Mgmt | Monitors execution against plan, detects schedule risk and coordination failures, produces forecasts and escalation prompts. |
 
+Planning backlog for the current Gantt + Drucker convergence work:
+[`GANTT_DRUCKER_PM_IMPLEMENTATION_BACKLOG.md`](GANTT_DRUCKER_PM_IMPLEMENTATION_BACKLOG.md)
+
 ### Service Infrastructure
 
 This agent provides the shared communications layer for all other agents.
@@ -131,7 +134,7 @@ graph TB
 
 **Key design principles:**
 
-- **Event-driven** — agents react to events, not polling
+- **Event-driven where possible, with polling support for reliability and scheduled PM workflows**
 - **Human-in-the-loop** — irreversible actions (release promotion, policy override, external doc publish) require human approval
 - **Progressive testing** — PR (unit+fast), merge (expanded+HIL), nightly (extended), release (certification)
 - **Full traceability** — every artifact has an ID; every relationship is queryable

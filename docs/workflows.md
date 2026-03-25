@@ -1,6 +1,6 @@
 # Agentic Workflows
 
-Agentic workflows are multi-phase AI pipelines orchestrated by [`pm_agent.py`](../pm_agent.py). They require an LLM and use specialized agents to research, analyze, scope, and plan.
+Agentic workflows are operator-oriented flows orchestrated by [`pm_agent.py`](../pm_agent.py). Some PM workflows are deterministic, while others use an LLM to research, analyze, scope, and plan.
 
 All workflows are invoked via `pm_agent --workflow <name>`. By default, workflows operate in **dry-run mode** — no Jira tickets are created or modified until `--execute` is explicitly passed.
 
@@ -8,8 +8,11 @@ All workflows are invoked via `pm_agent --workflow <name>`. By default, workflow
 
 - [Gantt Planning Workflows](#gantt-planning-workflows)
   - [Gantt Snapshots](#gantt-snapshots)
+  - [Gantt Release Monitor](#gantt-release-monitor)
+  - [Gantt Polling Mode](#gantt-polling-mode)
   - [Feature Plan (Scope Document → Jira)](#feature-plan-scope-document--jira)
 - [Drucker Hygiene Workflow](#drucker-hygiene-workflow)
+  - [Drucker Polling Mode](#drucker-polling-mode)
 - [Hypatia Documentation Workflow](#hypatia-documentation-workflow)
 - [Bug Report Workflow](#bug-report-workflow)
 - [Release Planning Workflow](#release-planning-workflow)
@@ -20,7 +23,7 @@ All workflows are invoked via `pm_agent --workflow <name>`. By default, workflow
 
 ## Gantt Planning Workflows
 
-Gantt provides two planning capabilities: **snapshots** of a project backlog and **feature plans** that produce Jira ticket hierarchies from scope documents.
+Gantt provides three planning-and-delivery capabilities: **snapshots** of a project backlog, **release monitoring** for Jira fix versions, and **feature plans** that produce Jira ticket hierarchies from scope documents.
 
 ### Gantt Snapshots
 
@@ -41,6 +44,39 @@ pm_agent --workflow gantt-snapshot-get --snapshot-id a1b2c3d4 --output stl_snaps
 ```
 
 Snapshots are stored under `data/gantt_snapshots/<PROJECT>/<SNAPSHOT_ID>/`.
+
+### Gantt Release Monitor
+
+Build, persist, and review release-health reports for one or more Jira fix versions.
+
+```bash
+# Create and persist a release monitor report
+pm_agent --workflow gantt-release-monitor --project STL --releases 12.1.1.x,12.2.0.x
+
+# Scope the report and re-export ad hoc files
+pm_agent --workflow gantt-release-monitor --project STL --scope-label CN6000 --output stl_release_monitor.json
+
+# List and retrieve stored reports
+pm_agent --workflow gantt-release-monitor-list --project STL
+pm_agent --workflow gantt-release-monitor-get --report-id 12345678-1234-1234-1234-123456789abc
+```
+
+Release-monitor reports are stored under `data/gantt_release_monitors/<PROJECT>/<REPORT_ID>/`.
+
+### Gantt Polling Mode
+
+Run Gantt as an always-on CLI poller that performs one-shot work on a schedule.
+
+```bash
+# Run one Gantt polling cycle (planning snapshot only)
+pm_agent --workflow gantt-poll --project STL
+
+# Run two cycles with planning + release monitoring and proactive Teams notifications
+pm_agent --workflow gantt-poll --project STL --run-release-monitor \
+  --releases 12.1.1.x --max-cycles 2 --poll-interval 60 --notify-shannon
+```
+
+> **Teams integration:** Gantt one-shot tasks can also be triggered from Microsoft Teams via Shannon in `#agent-gantt`, for example `@Shannon /planning-snapshot project_key STL` or `@Shannon /release-monitor project_key STL releases 12.1.1.x`.
 
 ### Feature Plan (Scope Document → Jira)
 
@@ -115,6 +151,18 @@ and also writes a review-session JSON file alongside the exported report files s
 proposed Jira actions can be reviewed before execution.
 
 > **Teams integration:** Drucker hygiene can also be triggered from Microsoft Teams via `@Shannon /hygiene-run project_key STL` in the `#agent-drucker` channel. See the [Agents section in README](../README.md#agents) for details.
+
+### Drucker Polling Mode
+
+Run Drucker as an always-on CLI poller that executes scheduled hygiene scans and can proactively notify Teams through Shannon.
+
+```bash
+# Run one hygiene polling cycle
+pm_agent --workflow drucker-poll --project STL
+
+# Run two cycles and post the summaries to Shannon
+pm_agent --workflow drucker-poll --project STL --max-cycles 2 --poll-interval 300 --notify-shannon
+```
 
 ---
 
@@ -216,9 +264,12 @@ These flags apply to all agentic workflows:
 
 | Flag | Description |
 |------|-------------|
-| `--workflow NAME` | Workflow to run (`bug-report`, `drucker-hygiene`, `feature-plan`, `gantt-snapshot`, `gantt-snapshot-get`, `gantt-snapshot-list`, `hypatia-generate`) |
+| `--workflow NAME` | Workflow to run (`bug-report`, `drucker-hygiene`, `drucker-poll`, `feature-plan`, `gantt-poll`, `gantt-release-monitor`, `gantt-release-monitor-get`, `gantt-release-monitor-list`, `gantt-snapshot`, `gantt-snapshot-get`, `gantt-snapshot-list`, `hypatia-generate`) |
 | `--project KEY` | Jira project key |
 | `--stale-days DAYS` | Stale threshold for `drucker-hygiene` |
+| `--poll-interval SECS` | Poll interval for `gantt-poll` and `drucker-poll` |
+| `--max-cycles N` | Number of polling cycles (`0` means continuous mode) |
+| `--notify-shannon` | Post proactive poller summaries through Shannon |
 | `--evidence FILE ...` | Evidence files for workflows that accept build/test/release/meeting context |
 | `--doc-title TEXT` | Document title for `hypatia-generate` |
 | `--doc-type TYPE` | Documentation class for `hypatia-generate` |

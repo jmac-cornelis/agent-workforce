@@ -808,7 +808,12 @@ def cmd_workflow(args):
     WORKFLOWS = {
         'bug-report': _workflow_bug_report,
         'drucker-hygiene': _workflow_drucker_hygiene,
+        'drucker-poll': _workflow_drucker_poll,
         'feature-plan': _workflow_feature_plan,
+        'gantt-poll': _workflow_gantt_poll,
+        'gantt-release-monitor': _workflow_gantt_release_monitor,
+        'gantt-release-monitor-get': _workflow_gantt_release_monitor_get,
+        'gantt-release-monitor-list': _workflow_gantt_release_monitor_list,
         'gantt-snapshot': _workflow_gantt_snapshot,
         'gantt-snapshot-get': _workflow_gantt_snapshot_get,
         'gantt-snapshot-list': _workflow_gantt_snapshot_list,
@@ -1622,6 +1627,221 @@ def _workflow_gantt_snapshot_list(args):
     return 0
 
 
+def _workflow_gantt_release_monitor(args):
+    '''
+    Gantt workflow: release health monitoring -> durable report + exports.
+    '''
+    log.debug(
+        f'Entering _workflow_gantt_release_monitor(project={args.project}, '
+        f'releases={args.releases}, scope_label={args.scope_label})'
+    )
+
+    from agents.gantt_agent import GanttProjectPlannerAgent
+    from agents.gantt_models import ReleaseMonitorRequest
+    from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+
+    output('')
+    output('=' * 60)
+    output('WORKFLOW: gantt-release-monitor')
+    output('=' * 60)
+    output('')
+    output(f'Project: {args.project}')
+    if args.releases:
+        output(f'Releases: {args.releases}')
+    if args.scope_label:
+        output(f'Scope label: {args.scope_label}')
+    output(f'Gap analysis: {"yes" if args.include_gap_analysis else "no"}')
+    output(f'Velocity: {"yes" if args.include_velocity else "no"}')
+    output(f'Readiness: {"yes" if args.include_readiness else "no"}')
+    output('')
+    output('Step 1/4: Building release monitor report...')
+
+    output_base = args.output or f'{args.project.lower()}_release_monitor.json'
+    json_path_hint, md_path_hint, xlsx_path_hint = _resolve_gantt_release_monitor_paths(
+        output_base,
+    )
+
+    agent = GanttProjectPlannerAgent(project_key=args.project)
+    request = ReleaseMonitorRequest(
+        project_key=args.project,
+        releases=[
+            item.strip() for item in str(args.releases or '').split(',')
+            if item.strip()
+        ] or None,
+        scope_label=args.scope_label or '',
+        include_gap_analysis=args.include_gap_analysis,
+        include_bug_report=args.include_bug_report,
+        include_velocity=args.include_velocity,
+        include_readiness=args.include_readiness,
+        compare_to_previous=args.compare_to_previous,
+        output_file=xlsx_path_hint,
+    )
+    report = agent.create_release_monitor(request)
+
+    output('Step 2/4: Persisting release monitor report...')
+
+    store = GanttReleaseMonitorStore()
+    stored_summary = store.save_report(
+        report,
+        summary_markdown=report.summary_markdown,
+    )
+
+    output(f'  Stored report ID: {stored_summary["report_id"]}')
+    output(f'  Stored in: {stored_summary["storage_dir"]}')
+
+    output('Step 3/4: Writing report files...')
+    json_path, md_path = _write_gantt_release_monitor_files(
+        report.to_dict(),
+        report.summary_markdown or '',
+        output_base,
+    )
+
+    output(f'  Saved: {json_path}')
+    output(f'  Saved: {md_path}')
+    if report.output_file:
+        output(f'  Saved: {report.output_file}')
+
+    output('Step 4/4: Reporting summary...')
+    output(f'  Releases monitored: {len(report.releases_monitored)}')
+    output(f'  Total bugs: {report.total_bugs}')
+    output(f'  Total P0: {report.total_p0}')
+    output(f'  Total P1: {report.total_p1}')
+
+    created_files = [
+        (stored_summary['json_path'], 'stored release monitor JSON'),
+        (stored_summary['markdown_path'], 'stored release monitor Markdown'),
+        (json_path, 'exported release monitor JSON'),
+        (md_path, 'exported release monitor Markdown'),
+    ]
+    if report.output_file:
+        created_files.append((report.output_file, 'release monitor workbook'))
+
+    _print_workflow_summary('gantt-release-monitor', created_files)
+    return 0
+
+
+def _workflow_gantt_release_monitor_get(args):
+    '''
+    Gantt workflow: load a persisted release-monitor report and display/export it.
+    '''
+    log.debug(
+        f'Entering _workflow_gantt_release_monitor_get(report_id={args.report_id}, '
+        f'project={args.project})'
+    )
+
+    from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+
+    output('')
+    output('=' * 60)
+    output('WORKFLOW: gantt-release-monitor-get')
+    output('=' * 60)
+    output('')
+    output(f'Report ID: {args.report_id}')
+    if args.project:
+        output(f'Project: {args.project}')
+    output('')
+    output('Step 1/2: Loading stored release monitor report...')
+
+    store = GanttReleaseMonitorStore()
+    record = store.get_report(args.report_id, project_key=args.project)
+    if not record:
+        output(f'ERROR: Stored Gantt release monitor report not found: {args.report_id}')
+        return 1
+
+    report = record['report']
+    summary = record['summary']
+    summary_markdown = record['summary_markdown'] or str(
+        report.get('summary_markdown') or ''
+    )
+
+    output(f'  Project: {summary["project_key"]}')
+    output(f'  Created at: {summary["created_at"]}')
+    output(f'  Releases: {summary["release_count"]}')
+    output(f'  Total bugs: {summary["total_bugs"]}')
+    output(f'  Total P0: {summary["total_p0"]}')
+    output(f'  Total P1: {summary["total_p1"]}')
+    output(f'  Stored in: {summary["storage_dir"]}')
+
+    created_files = []
+    if args.output:
+        output('Step 2/2: Writing exported report files...')
+        json_path, md_path = _write_gantt_release_monitor_files(
+            report,
+            summary_markdown,
+            args.output,
+        )
+        output(f'  Saved: {json_path}')
+        output(f'  Saved: {md_path}')
+        created_files.extend([
+            (json_path, 'exported release monitor JSON'),
+            (md_path, 'exported release monitor Markdown'),
+        ])
+    else:
+        output('Step 2/2: Rendering stored report summary...')
+        output('')
+        output(summary_markdown or '(No summary markdown stored for this report.)')
+
+    if created_files:
+        _print_workflow_summary('gantt-release-monitor-get', created_files)
+
+    return 0
+
+
+def _workflow_gantt_release_monitor_list(args):
+    '''
+    Gantt workflow: list persisted release-monitor reports.
+    '''
+    log.debug(
+        f'Entering _workflow_gantt_release_monitor_list(project={args.project}, '
+        f'limit={args.limit})'
+    )
+
+    from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+
+    output('')
+    output('=' * 60)
+    output('WORKFLOW: gantt-release-monitor-list')
+    output('=' * 60)
+    output('')
+    if args.project:
+        output(f'Project filter: {args.project}')
+    if args.limit:
+        output(f'Limit: {args.limit}')
+    output('')
+    output('Loading stored release monitor reports...')
+
+    store = GanttReleaseMonitorStore()
+    reports = store.list_reports(project_key=args.project, limit=args.limit)
+    if not reports:
+        if args.project:
+            output(f'No stored release monitor reports found for project {args.project}.')
+        else:
+            output('No stored release monitor reports found.')
+        return 0
+
+    output('')
+    output(
+        'REPORT ID                            PROJECT  CREATED AT                  RELS  BUGS  P0  P1'
+    )
+    output(
+        '-----------------------------------  -------  --------------------------  ----  ----  --  --'
+    )
+    for item in reports:
+        output(
+            f'{item["report_id"]:<35}  '
+            f'{item["project_key"]:<7}  '
+            f'{item["created_at"]:<26}  '
+            f'{item["release_count"]:>4}  '
+            f'{item["total_bugs"]:>4}  '
+            f'{item["total_p0"]:>2}  '
+            f'{item["total_p1"]:>2}'
+        )
+
+    output('')
+    output(f'Total stored reports: {len(reports)}')
+    return 0
+
+
 def _workflow_drucker_hygiene(args):
     '''
     Drucker workflow: Jira project hygiene analysis -> durable report + review session.
@@ -1699,6 +1919,157 @@ def _workflow_drucker_hygiene(args):
         (review_path, 'review session JSON'),
     ])
     return 0
+
+
+def _workflow_gantt_poll(args):
+    '''
+    Gantt workflow: run one or more scheduled planning/release-monitor cycles.
+    '''
+    log.debug(
+        f'Entering _workflow_gantt_poll(project={args.project}, '
+        f'max_cycles={args.max_cycles}, poll_interval={args.poll_interval})'
+    )
+
+    from agents.gantt_agent import GanttProjectPlannerAgent
+
+    output('')
+    output('=' * 60)
+    output('WORKFLOW: gantt-poll')
+    output('=' * 60)
+    output('')
+    output(f'Project: {args.project}')
+    output(f'Planning snapshots: yes')
+    output(
+        'Release monitor: '
+        f'{"yes" if (args.run_release_monitor or args.releases or args.scope_label) else "no"}'
+    )
+    output(f'Poll interval: {args.poll_interval} seconds')
+    output(
+        'Cycles: '
+        f'{"continuous" if args.max_cycles == 0 else args.max_cycles}'
+    )
+    output(f'Notify Shannon: {"yes" if args.notify_shannon else "no"}')
+    output('')
+    output('Running scheduled Gantt poller...')
+
+    agent = GanttProjectPlannerAgent(project_key=args.project)
+    result = agent.run_poller({
+        'project_key': args.project,
+        'run_planning': True,
+        'run_release_monitor': bool(
+            args.run_release_monitor or args.releases or args.scope_label
+        ),
+        'planning_horizon_days': args.planning_horizon,
+        'limit': args.limit or 200,
+        'include_done': args.include_done,
+        'policy_profile': 'default',
+        'evidence_paths': list(args.evidence or []),
+        'releases': args.releases,
+        'scope_label': args.scope_label,
+        'include_gap_analysis': args.include_gap_analysis,
+        'include_bug_report': args.include_bug_report,
+        'include_velocity': args.include_velocity,
+        'include_readiness': args.include_readiness,
+        'compare_to_previous': args.compare_to_previous,
+        'persist': True,
+        'notify_shannon': args.notify_shannon,
+        'shannon_base_url': args.shannon_url,
+        'interval_seconds': args.poll_interval,
+        'max_cycles': args.max_cycles,
+    })
+
+    output('')
+    output('Cycle summary:')
+    for cycle in result.get('cycle_summaries', []):
+        output(
+            f'  Cycle {cycle.get("cycle_number")}: '
+            f'{cycle.get("task_count", 0)} task(s), '
+            f'{cycle.get("notification_count", 0)} notification(s), '
+            f'{"ok" if cycle.get("ok") else "error"}'
+        )
+        for error in cycle.get('errors', []):
+            output(f'    ERROR: {error}')
+
+    last_tick = result.get('last_tick') or {}
+    for task in last_tick.get('tasks', []):
+        if task.get('task_type') == 'planning_snapshot':
+            stored = task.get('stored', {})
+            output(
+                '  Latest planning snapshot: '
+                f'{stored.get("snapshot_id") or task.get("snapshot", {}).get("snapshot_id", "")}'
+            )
+        if task.get('task_type') == 'release_monitor':
+            stored = task.get('stored', {})
+            output(
+                '  Latest release report: '
+                f'{stored.get("report_id") or task.get("report", {}).get("report_id", "")}'
+            )
+
+    return 0 if result.get('ok', False) else 1
+
+
+def _workflow_drucker_poll(args):
+    '''
+    Drucker workflow: run one or more scheduled hygiene cycles.
+    '''
+    log.debug(
+        f'Entering _workflow_drucker_poll(project={args.project}, '
+        f'max_cycles={args.max_cycles}, poll_interval={args.poll_interval})'
+    )
+
+    from agents.drucker_agent import DruckerCoordinatorAgent
+
+    output('')
+    output('=' * 60)
+    output('WORKFLOW: drucker-poll')
+    output('=' * 60)
+    output('')
+    output(f'Project: {args.project}')
+    output(f'Stale threshold: {args.stale_days} days')
+    output(f'Poll interval: {args.poll_interval} seconds')
+    output(
+        'Cycles: '
+        f'{"continuous" if args.max_cycles == 0 else args.max_cycles}'
+    )
+    output(f'Notify Shannon: {"yes" if args.notify_shannon else "no"}')
+    output('')
+    output('Running scheduled Drucker poller...')
+
+    agent = DruckerCoordinatorAgent(project_key=args.project)
+    result = agent.run_poller({
+        'project_key': args.project,
+        'limit': args.limit or 200,
+        'include_done': args.include_done,
+        'stale_days': args.stale_days,
+        'persist': True,
+        'notify_shannon': args.notify_shannon,
+        'shannon_base_url': args.shannon_url,
+        'interval_seconds': args.poll_interval,
+        'max_cycles': args.max_cycles,
+    })
+
+    output('')
+    output('Cycle summary:')
+    for cycle in result.get('cycle_summaries', []):
+        output(
+            f'  Cycle {cycle.get("cycle_number")}: '
+            f'{cycle.get("task_count", 0)} task(s), '
+            f'{cycle.get("notification_count", 0)} notification(s), '
+            f'{"ok" if cycle.get("ok") else "error"}'
+        )
+        for error in cycle.get('errors', []):
+            output(f'    ERROR: {error}')
+
+    last_tick = result.get('last_tick') or {}
+    for task in last_tick.get('tasks', []):
+        if task.get('task_type') == 'hygiene_report':
+            stored = task.get('stored', {})
+            output(
+                '  Latest hygiene report: '
+                f'{stored.get("report_id") or task.get("report", {}).get("report_id", "")}'
+            )
+
+    return 0 if result.get('ok', False) else 1
 
 
 def _workflow_hypatia_generate(args):
@@ -1833,6 +2204,40 @@ def _write_gantt_snapshot_files(
 
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(snapshot, f, indent=2, default=str)
+
+    with open(md_path, 'w', encoding='utf-8') as f:
+        f.write(summary_markdown or '')
+
+    return json_path, md_path
+
+
+def _resolve_gantt_release_monitor_paths(output_base: str) -> tuple[str, str, str]:
+    '''
+    Resolve JSON, Markdown, and xlsx paths for release-monitor workflow output.
+    '''
+    output_root, output_ext = os.path.splitext(output_base)
+    if output_ext.lower() == '.md':
+        output_root = output_root or 'gantt_release_monitor'
+    elif output_ext.lower() != '.json':
+        output_root = output_base
+
+    return output_root + '.json', output_root + '.md', output_root + '.xlsx'
+
+
+def _write_gantt_release_monitor_files(
+    report: dict[str, Any],
+    summary_markdown: str,
+    output_base: str,
+):
+    '''
+    Write release-monitor report JSON + Markdown files and return their paths.
+    '''
+    json_path, md_path, _xlsx_path = _resolve_gantt_release_monitor_paths(output_base)
+
+    os.makedirs(os.path.dirname(json_path) or '.', exist_ok=True)
+
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(report, f, indent=2, default=str)
 
     with open(md_path, 'w', encoding='utf-8') as f:
         f.write(summary_markdown or '')
@@ -2033,8 +2438,14 @@ Examples:
   %(prog)s --workflow gantt-snapshot --project STL --evidence build.json test.yaml
   %(prog)s --workflow gantt-snapshot-list --project STL
   %(prog)s --workflow gantt-snapshot-get --snapshot-id a1b2c3d4
+  %(prog)s --workflow gantt-release-monitor --project STL --releases 12.1.1.x,12.2.0.x
+  %(prog)s --workflow gantt-release-monitor --project STL --scope-label CN6000 --output stl_release_monitor.json
+  %(prog)s --workflow gantt-release-monitor-list --project STL
+  %(prog)s --workflow gantt-release-monitor-get --report-id 12345678-1234-1234-1234-123456789abc
+  %(prog)s --workflow gantt-poll --project STL --run-release-monitor --releases 12.1.1.x --max-cycles 2 --poll-interval 60
   %(prog)s --workflow drucker-hygiene --project STL
   %(prog)s --workflow drucker-hygiene --project STL --stale-days 21 --output stl_hygiene.json
+  %(prog)s --workflow drucker-poll --project STL --max-cycles 2 --poll-interval 300 --notify-shannon
   %(prog)s --workflow hypatia-generate --doc-title "STL Build Notes" --docs README.md AGENTS.md
   %(prog)s --workflow hypatia-generate --doc-title "Fabric Bring-Up Guide" --doc-type how_to --docs docs/source.md --target-file docs/fabric-bring-up.md
   %(prog)s --workflow hypatia-generate --doc-title "Release Notes Support" --docs notes.md --evidence release.json --doc-validation strict
@@ -2176,16 +2587,64 @@ Examples:
                        dest='planning_horizon',
                        help='Planning horizon in days for --workflow gantt-snapshot '
                             '(default: 90).')
+    parser.add_argument('--releases', default=None, metavar='CSV',
+                       dest='releases',
+                       help='Comma-separated release names for --workflow gantt-release-monitor '
+                            'and --workflow gantt-poll.')
+    parser.add_argument('--scope-label', default=None, metavar='LABEL',
+                       dest='scope_label',
+                       help='Optional scope label for --workflow gantt-release-monitor '
+                            'and --workflow gantt-poll.')
+    parser.add_argument('--run-release-monitor', action='store_true',
+                       dest='run_release_monitor',
+                       help='Include release-monitor work during --workflow gantt-poll '
+                            'even when --releases is omitted.')
     parser.add_argument('--include-done', action='store_true',
                        dest='include_done',
-                       help='Include done/closed issues in --workflow gantt-snapshot.')
+                       help='Include done/closed issues in --workflow gantt-snapshot, '
+                            '--workflow gantt-poll, and Drucker workflows.')
     parser.add_argument('--snapshot-id', default=None, metavar='ID',
                        dest='snapshot_id',
                        help='Stored snapshot ID for --workflow gantt-snapshot-get.')
+    parser.add_argument('--report-id', default=None, metavar='ID',
+                       dest='report_id',
+                       help='Stored report ID for --workflow gantt-release-monitor-get.')
+    parser.add_argument('--no-gap-analysis', action='store_false',
+                       dest='include_gap_analysis',
+                       help='Disable roadmap gap analysis for --workflow gantt-release-monitor.')
+    parser.add_argument('--no-bug-report', action='store_false',
+                       dest='include_bug_report',
+                       help='Disable bug status/priority summary for --workflow gantt-release-monitor.')
+    parser.add_argument('--no-velocity', action='store_false',
+                       dest='include_velocity',
+                       help='Disable velocity metrics for --workflow gantt-release-monitor.')
+    parser.add_argument('--no-readiness', action='store_false',
+                       dest='include_readiness',
+                       help='Disable readiness assessment for --workflow gantt-release-monitor.')
+    parser.add_argument('--no-compare-previous', action='store_false',
+                       dest='compare_to_previous',
+                       help='Disable previous-report delta comparison for --workflow gantt-release-monitor.')
     parser.add_argument('--stale-days', type=int, default=30, metavar='DAYS',
                        dest='stale_days',
                        help='Stale-ticket threshold in days for --workflow drucker-hygiene '
-                            '(default: 30).')
+                            'and --workflow drucker-poll (default: 30).')
+    parser.add_argument('--poll-interval', type=int, default=300, metavar='SECS',
+                       dest='poll_interval',
+                       help='Polling interval in seconds for --workflow gantt-poll '
+                            'and --workflow drucker-poll (default: 300).')
+    parser.add_argument('--max-cycles', type=int, default=1, metavar='N',
+                       dest='max_cycles',
+                       help='Number of polling cycles for --workflow gantt-poll '
+                            'and --workflow drucker-poll. Use 0 for continuous mode '
+                            '(default: 1).')
+    parser.add_argument('--notify-shannon', action='store_true',
+                       dest='notify_shannon',
+                       help='Post proactive poller summaries through Shannon.')
+    parser.add_argument('--shannon-url', default=None, metavar='URL',
+                       dest='shannon_url',
+                       help='Base URL for the Shannon service when using '
+                            '--notify-shannon (default: SHANNON_API_BASE_URL or '
+                            'http://localhost:8200).')
     parser.add_argument('--evidence', nargs='*', default=None, metavar='FILE',
                        help='Evidence files (JSON, YAML, Markdown, text) for workflows '
                             'that can consume build/test/release/meeting context such as '
@@ -2262,7 +2721,7 @@ Examples:
                        help='Max tickets per step (used by --build-excel-map) or '
                             'max snapshots to show (used by --workflow gantt-snapshot-list).')
     parser.add_argument('--output', '-o', default=None,
-                       help='Output filename (used by --build-excel-map and selected workflows such as gantt-snapshot, drucker-hygiene, and hypatia-generate)')
+                       help='Output filename (used by --build-excel-map and selected workflows such as gantt-snapshot, gantt-release-monitor, drucker-hygiene, and hypatia-generate)')
     parser.add_argument('--keep-intermediates', action='store_true',
                        help='Keep temp files instead of cleaning up (used by --build-excel-map)')
     
@@ -2387,6 +2846,17 @@ Examples:
         elif args.workflow_name == 'gantt-snapshot':
             if not args.project:
                 parser.error('--workflow gantt-snapshot requires --project PROJECT_KEY')
+        elif args.workflow_name == 'gantt-release-monitor':
+            if not args.project:
+                parser.error('--workflow gantt-release-monitor requires --project PROJECT_KEY')
+        elif args.workflow_name == 'gantt-release-monitor-get':
+            if not args.report_id:
+                parser.error('--workflow gantt-release-monitor-get requires --report-id ID')
+        elif args.workflow_name == 'gantt-release-monitor-list':
+            pass
+        elif args.workflow_name == 'gantt-poll':
+            if not args.project:
+                parser.error('--workflow gantt-poll requires --project PROJECT_KEY')
         elif args.workflow_name == 'gantt-snapshot-get':
             if not args.snapshot_id:
                 parser.error('--workflow gantt-snapshot-get requires --snapshot-id ID')
@@ -2395,6 +2865,9 @@ Examples:
         elif args.workflow_name == 'drucker-hygiene':
             if not args.project:
                 parser.error('--workflow drucker-hygiene requires --project PROJECT_KEY')
+        elif args.workflow_name == 'drucker-poll':
+            if not args.project:
+                parser.error('--workflow drucker-poll requires --project PROJECT_KEY')
         elif args.workflow_name == 'hypatia-generate':
             if args.docs:
                 for source_path in args.docs:
@@ -2412,6 +2885,10 @@ Examples:
                     '--workflow hypatia-generate requires --confluence-space '
                     'when creating a Confluence page with --confluence-title'
                 )
+        if args.max_cycles < 0:
+            parser.error('--max-cycles must be >= 0')
+        if args.max_cycles == 0 and args.poll_interval <= 0:
+            parser.error('Continuous polling requires --poll-interval > 0')
     
     # ---- Map ticket_keys for build-excel-map compatibility ---------------------
     # cmd_build_excel_map expects args.ticket_keys
@@ -2510,6 +2987,33 @@ Examples:
                     log.info(f'+    - {evidence_path}')
             if args.output:
                 log.info(f'+  Output: {args.output}')
+        elif args.workflow_name == 'gantt-release-monitor':
+            log.info(f'+  Project: {args.project}')
+            if args.releases:
+                log.info(f'+  Releases: {args.releases}')
+            if args.scope_label:
+                log.info(f'+  Scope label: {args.scope_label}')
+            log.info(f'+  Gap analysis: {"yes" if args.include_gap_analysis else "no"}')
+            log.info(f'+  Velocity: {"yes" if args.include_velocity else "no"}')
+            log.info(f'+  Readiness: {"yes" if args.include_readiness else "no"}')
+            if args.output:
+                log.info(f'+  Output: {args.output}')
+        elif args.workflow_name == 'gantt-release-monitor-get':
+            log.info(f'+  Report ID: {args.report_id}')
+            if args.project:
+                log.info(f'+  Project: {args.project}')
+            if args.output:
+                log.info(f'+  Output: {args.output}')
+        elif args.workflow_name == 'gantt-release-monitor-list':
+            if args.project:
+                log.info(f'+  Project: {args.project}')
+        elif args.workflow_name == 'gantt-poll':
+            log.info(f'+  Project: {args.project}')
+            log.info(f'+  Poll interval: {args.poll_interval}s')
+            log.info(
+                '+  Max cycles: '
+                f'{"continuous" if args.max_cycles == 0 else args.max_cycles}'
+            )
         elif args.workflow_name == 'gantt-snapshot-get':
             log.info(f'+  Snapshot ID: {args.snapshot_id}')
             if args.project:
@@ -2525,6 +3029,13 @@ Examples:
             log.info(f'+  Include done: {"yes" if args.include_done else "no"}')
             if args.output:
                 log.info(f'+  Output: {args.output}')
+        elif args.workflow_name == 'drucker-poll':
+            log.info(f'+  Project: {args.project}')
+            log.info(f'+  Poll interval: {args.poll_interval}s')
+            log.info(
+                '+  Max cycles: '
+                f'{"continuous" if args.max_cycles == 0 else args.max_cycles}'
+            )
         elif args.workflow_name == 'hypatia-generate':
             log.info(f'+  Document title: {args.doc_title or args.confluence_title or "auto"}')
             log.info(f'+  Document class: {args.doc_type}')

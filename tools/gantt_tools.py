@@ -515,7 +515,7 @@ def create_release_monitor(
     try:
         from agents.gantt_agent import GanttProjectPlannerAgent
         from agents.gantt_models import ReleaseMonitorRequest
-        from state.roadmap_snapshot_store import RoadmapSnapshotStore
+        from state.gantt_release_monitor_store import GanttReleaseMonitorStore
 
         # Parse comma-separated releases string into list
         parsed_releases = (
@@ -548,15 +548,15 @@ def create_release_monitor(
         }
 
         if persist:
-            stored = RoadmapSnapshotStore().save_snapshot(
-                report.to_dict(),
+            stored = GanttReleaseMonitorStore().save_report(
+                report,
                 summary_markdown=report.summary_markdown,
             )
             result['stored'] = stored
 
         return ToolResult.success(
             result,
-            snapshot_id=report.snapshot_id,
+            report_id=report.report_id,
             project_key=project_key,
             releases=parsed_releases,
             persisted=persist,
@@ -565,6 +565,75 @@ def create_release_monitor(
         log.error(f'Failed to create release monitor report: {e}')
         return ToolResult.failure(
             f'Failed to create release monitor report: {e}'
+        )
+
+
+@tool(
+    description='Get a persisted Gantt release-monitor report by report ID'
+)
+def get_gantt_release_monitor_report(
+    report_id: str,
+    project_key: Optional[str] = None,
+) -> ToolResult:
+    '''
+    Get a persisted Gantt release-monitor report by report ID.
+    '''
+    log.debug(
+        f'get_gantt_release_monitor_report(report_id={report_id}, '
+        f'project_key={project_key})'
+    )
+
+    try:
+        from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+
+        record = GanttReleaseMonitorStore().get_report(
+            report_id,
+            project_key=project_key,
+        )
+        if not record:
+            return ToolResult.failure(
+                f'Gantt release monitor report {report_id} not found'
+            )
+
+        return ToolResult.success(
+            record,
+            report_id=report_id,
+            project_key=project_key,
+        )
+    except Exception as e:
+        log.error(f'Failed to get Gantt release monitor report: {e}')
+        return ToolResult.failure(
+            f'Failed to get Gantt release monitor report: {e}'
+        )
+
+
+@tool(
+    description='List persisted Gantt release-monitor reports'
+)
+def list_gantt_release_monitor_reports(
+    project_key: Optional[str] = None,
+    limit: int = 20,
+) -> ToolResult:
+    '''
+    List persisted Gantt release-monitor reports.
+    '''
+    log.debug(
+        f'list_gantt_release_monitor_reports(project_key={project_key}, '
+        f'limit={limit})'
+    )
+
+    try:
+        from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+
+        rows = GanttReleaseMonitorStore().list_reports(
+            project_key=project_key,
+            limit=limit,
+        )
+        return ToolResult.success(rows, count=len(rows), project_key=project_key)
+    except Exception as e:
+        log.error(f'Failed to list Gantt release monitor reports: {e}')
+        return ToolResult.failure(
+            f'Failed to list Gantt release monitor reports: {e}'
         )
 
 
@@ -715,3 +784,19 @@ class GanttTools(BaseTool):
             output_file,
             persist,
         )
+
+    @tool(description='Get a persisted Gantt release-monitor report by report ID')
+    def get_gantt_release_monitor_report(
+        self,
+        report_id: str,
+        project_key: Optional[str] = None,
+    ) -> ToolResult:
+        return get_gantt_release_monitor_report(report_id, project_key)
+
+    @tool(description='List persisted Gantt release-monitor reports')
+    def list_gantt_release_monitor_reports(
+        self,
+        project_key: Optional[str] = None,
+        limit: int = 20,
+    ) -> ToolResult:
+        return list_gantt_release_monitor_reports(project_key, limit)

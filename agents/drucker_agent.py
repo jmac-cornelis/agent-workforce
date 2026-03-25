@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import time
 from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
@@ -26,7 +27,9 @@ from agents.drucker_models import (
     DruckerHygieneReport,
     DruckerRequest,
 )
+from agents.pm_runtime import notify_shannon
 from agents.review_agent import ReviewAgent, ReviewItem, ReviewSession
+from state.drucker_report_store import DruckerReportStore
 from tools.jira_tools import JiraTools, get_project_info, search_tickets
 from tools.knowledge_tools import search_knowledge, list_knowledge_files, read_knowledge_file
 
@@ -147,6 +150,157 @@ class DruckerCoordinatorAgent(BaseAgent):
                 'review_session': review_session.to_dict(),
             },
         )
+
+    def run_once(
+        self,
+        request: DruckerRequest,
+        *,
+        persist: bool = True,
+    ) -> Dict[str, Any]:
+        '''
+        Execute one deterministic Drucker hygiene task and optionally persist it.
+        '''
+        self.project_key = request.project_key or self.project_key
+        report = self.analyze_project_hygiene(request)
+        review_session = self.create_review_session(report)
+
+        result: Dict[str, Any] = {
+            'ok': True,
+            'task_type': 'hygiene_report',
+            'project_key': report.project_key,
+            'report': report.to_dict(),
+            'review_session': review_session.to_dict(),
+            'summary_markdown': report.summary_markdown,
+        }
+        if persist:
+            result['stored'] = DruckerReportStore().save_report(
+                report,
+                summary_markdown=report.summary_markdown,
+            )
+        return result
+
+    @staticmethod
+    def _build_hygiene_notification_payload(result: Dict[str, Any]) -> Dict[str, Any]:
+        report = result.get('report', {})
+        summary = report.get('summary', {})
+        stored = result.get('stored', {})
+        text = (
+            f'{report.get("project_key", "")}: '
+            f'{summary.get("finding_count", 0)} findings, '
+            f'{summary.get("action_count", 0)} proposed actions'
+        )
+        body_lines = [
+            f'Report ID: {stored.get("report_id") or report.get("report_id", "")}',
+            f'Tickets with findings: {summary.get("tickets_with_findings", 0)}',
+            f'Total tickets scanned: {summary.get("total_tickets", 0)}',
+        ]
+        return {
+            'title': f'Drucker Hygiene Report — {report.get("project_key", "")}',
+            'text': text,
+            'body_lines': body_lines,
+        }
+
+    def tick(self, poller_spec: Dict[str, Any]) -> Dict[str, Any]:
+        '''
+        Execute one scheduled Drucker hygiene cycle.
+        '''
+        project_key = str(
+            poller_spec.get('project_key') or self.project_key or ''
+        ).strip()
+        if not project_key:
+            raise ValueError('Drucker tick requires project_key')
+
+        self.project_key = project_key
+        persist = bool(poller_spec.get('persist', True))
+        notify_enabled = bool(poller_spec.get('notify_shannon', False))
+        shannon_base_url = poller_spec.get('shannon_base_url')
+        tasks: List[Dict[str, Any]] = []
+        notifications: List[Dict[str, Any]] = []
+        errors: List[str] = []
+
+        try:
+            request = DruckerRequest(
+                project_key=project_key,
+                limit=int(poller_spec.get('limit', 200)),
+                include_done=bool(poller_spec.get('include_done', False)),
+                stale_days=int(poller_spec.get('stale_days', 30)),
+                jql=poller_spec.get('jql'),
+                label_prefix=str(
+                    poller_spec.get('label_prefix', 'drucker') or 'drucker'
+                ),
+            )
+            result = self.run_once(request, persist=persist)
+            tasks.append(result)
+            if notify_enabled:
+                notifications.append(
+                    notify_shannon(
+                        agent_id='drucker',
+                        shannon_base_url=shannon_base_url,
+                        **self._build_hygiene_notification_payload(result),
+                    )
+                )
+        except Exception as e:
+            errors.append(f'hygiene_report: {e}')
+
+        return {
+            'ok': not errors,
+            'agent_id': 'drucker',
+            'project_key': project_key,
+            'tasks': tasks,
+            'notifications': notifications,
+            'errors': errors,
+            'completed_at': datetime.now(timezone.utc).isoformat(),
+        }
+
+    def run_poller(
+        self,
+        poller_spec: Dict[str, Any],
+        *,
+        sleep_fn: Any = time.sleep,
+    ) -> Dict[str, Any]:
+        '''
+        Run the Drucker polling loop for a bounded number of cycles.
+        '''
+        interval_seconds = max(int(poller_spec.get('interval_seconds', 300) or 0), 0)
+        max_cycles = int(poller_spec.get('max_cycles', 1) or 0)
+        if max_cycles < 0:
+            raise ValueError('max_cycles must be >= 0')
+        if max_cycles == 0 and interval_seconds <= 0:
+            raise ValueError(
+                'Continuous polling requires interval_seconds > 0'
+            )
+
+        cycle_summaries: List[Dict[str, Any]] = []
+        cycles_run = 0
+        last_tick: Optional[Dict[str, Any]] = None
+
+        while True:
+            cycles_run += 1
+            last_tick = self.tick(poller_spec)
+            cycle_summaries.append({
+                'cycle_number': cycles_run,
+                'ok': last_tick.get('ok', False),
+                'task_count': len(last_tick.get('tasks', [])),
+                'notification_count': len(last_tick.get('notifications', [])),
+                'errors': list(last_tick.get('errors', [])),
+                'completed_at': last_tick.get('completed_at', ''),
+            })
+
+            if max_cycles > 0 and cycles_run >= max_cycles:
+                break
+            if interval_seconds > 0:
+                sleep_fn(interval_seconds)
+
+        return {
+            'ok': all(item.get('ok', False) for item in cycle_summaries),
+            'agent_id': 'drucker',
+            'project_key': str(
+                poller_spec.get('project_key') or self.project_key or ''
+            ).strip(),
+            'cycles_run': cycles_run,
+            'cycle_summaries': cycle_summaries,
+            'last_tick': last_tick or {},
+        }
 
     def analyze_project_hygiene(
         self,

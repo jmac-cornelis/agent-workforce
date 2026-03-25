@@ -120,6 +120,91 @@ def build_drucker_hygiene_card(report_data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
+def build_gantt_snapshot_card(payload: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a Gantt planning snapshot response.
+    '''
+    snapshot = payload.get('snapshot', payload)
+    overview = snapshot.get('backlog_overview', {})
+    milestones = snapshot.get('milestones', [])
+    dependency_graph = snapshot.get('dependency_graph', {})
+    risks = snapshot.get('risks', [])
+
+    facts = {
+        'Project': snapshot.get('project_key', ''),
+        'Issues': overview.get('total_issues', 0),
+        'Blocked': overview.get('blocked_issues', 0),
+        'Stale': overview.get('stale_issues', 0),
+        'Milestones': len(milestones),
+        'Dependencies': dependency_graph.get('edge_count', 0),
+        'Risks': len(risks),
+    }
+
+    body_lines: list[str] = []
+    for milestone in milestones[:5]:
+        body_lines.append(
+            f'• {milestone.get("name", "")}: '
+            f'{milestone.get("open_issues", 0)} open / '
+            f'{milestone.get("blocked_issues", 0)} blocked'
+        )
+
+    if len(milestones) > 5:
+        body_lines.append(f'...and {len(milestones) - 5} more milestones')
+
+    if not body_lines:
+        body_lines.append('No milestone proposals were generated.')
+
+    return build_fact_card(
+        title=f'Gantt Planning Snapshot — {snapshot.get("project_key", "")}',
+        subtitle=str(snapshot.get('created_at', '') or '').strip() or None,
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_gantt_release_monitor_card(payload: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a Gantt release-monitor response.
+    '''
+    report = payload.get('report', payload)
+    releases = report.get('releases_monitored', [])
+    facts = {
+        'Project': report.get('project_key', ''),
+        'Releases': len(releases),
+        'Total Bugs': report.get('total_bugs', 0),
+        'P0': report.get('total_p0', 0),
+        'P1': report.get('total_p1', 0),
+    }
+
+    body_lines: list[str] = []
+    for summary in (report.get('bug_summaries') or [])[:5]:
+        body_lines.append(
+            f'• {summary.get("release", "")}: '
+            f'{summary.get("total_bugs", 0)} bugs, '
+            f'P0={summary.get("by_priority", {}).get("P0", 0)}, '
+            f'P1={summary.get("by_priority", {}).get("P1", 0)}'
+        )
+
+    readiness = report.get('readiness') or {}
+    if readiness:
+        body_lines.append(
+            'Readiness: '
+            f'{readiness.get("total_open", 0)} open, '
+            f'{readiness.get("p0_open", 0)} P0, '
+            f'{readiness.get("p1_open", 0)} P1'
+        )
+
+    if not body_lines:
+        body_lines.append('No release-monitor details were returned.')
+
+    return build_fact_card(
+        title=f'Gantt Release Monitor — {report.get("project_key", "")}',
+        subtitle=str(report.get('created_at', '') or '').strip() or None,
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
 def build_bug_activity_card(data: Dict[str, Any]) -> Dict[str, Any]:
     project = data.get('project', '')
     target_date = data.get('date', '')

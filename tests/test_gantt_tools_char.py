@@ -1,10 +1,18 @@
 import pytest
 
-from agents.gantt_models import DependencyGraph, PlanningSnapshot
+from agents.gantt_models import (
+    BugSummary,
+    DependencyGraph,
+    PlanningSnapshot,
+    ReleaseMonitorReport,
+)
 from tools.gantt_tools import (
     GanttTools,
     create_gantt_snapshot,
+    create_release_monitor,
+    get_gantt_release_monitor_report,
     list_gantt_dependency_reviews,
+    list_gantt_release_monitor_reports,
     review_gantt_dependency,
 )
 
@@ -85,12 +93,95 @@ def test_get_and_list_gantt_snapshots_tools(monkeypatch: pytest.MonkeyPatch, tmp
     assert list_result.metadata['count'] == 1
 
 
+def test_create_release_monitor_tool_persists_report(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    from agents import gantt_agent as gantt_agent_module
+
+    class _FakeGanttAgent:
+        def __init__(self, project_key=None, **_kwargs):
+            self.project_key = project_key
+
+        def create_release_monitor(self, request):
+            assert request.releases == ['12.1.1.x', '12.2.0.x']
+            report = ReleaseMonitorReport(
+                project_key=request.project_key,
+                created_at='2026-03-25T12:00:00+00:00',
+                releases_monitored=request.releases or [],
+                bug_summaries=[
+                    BugSummary(
+                        release='12.1.1.x',
+                        total_bugs=5,
+                        by_priority={'P0': 1, 'P1': 2},
+                    )
+                ],
+                summary_markdown='# Release Monitor',
+            )
+            report.report_id = 'report-201'
+            return report
+
+    monkeypatch.setattr(gantt_agent_module, 'GanttProjectPlannerAgent', _FakeGanttAgent)
+    monkeypatch.setenv('GANTT_RELEASE_MONITOR_DIR', str(tmp_path / 'reports'))
+
+    result = create_release_monitor(
+        project_key='STL',
+        releases='12.1.1.x,12.2.0.x',
+        persist=True,
+    )
+
+    assert result.is_success
+    assert result.data['report']['project_key'] == 'STL'
+    assert result.data['stored']['report_id'] == 'report-201'
+    assert (tmp_path / 'reports' / 'STL' / 'report-201' / 'report.json').exists()
+    assert result.metadata['report_id'] == 'report-201'
+
+
+def test_get_and_list_gantt_release_monitor_reports_tools(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+
+    store = GanttReleaseMonitorStore(storage_dir=str(tmp_path / 'reports'))
+    store.save_report(
+        {
+            'report_id': 'report-301',
+            'project_key': 'STL',
+            'created_at': '2026-03-25T12:00:00+00:00',
+            'releases_monitored': ['12.1.1.x'],
+            'bug_summaries': [],
+            'summary_markdown': '# Stored Release Monitor',
+            'total_bugs': 7,
+            'total_p0': 1,
+            'total_p1': 2,
+        },
+        summary_markdown='# Stored Release Monitor',
+    )
+
+    monkeypatch.setenv('GANTT_RELEASE_MONITOR_DIR', str(tmp_path / 'reports'))
+
+    get_result = get_gantt_release_monitor_report('report-301', project_key='STL')
+    list_result = list_gantt_release_monitor_reports(project_key='STL', limit=5)
+
+    assert get_result.is_success
+    assert get_result.data['report']['report_id'] == 'report-301'
+    assert get_result.data['summary_markdown'] == '# Stored Release Monitor'
+
+    assert list_result.is_success
+    assert list_result.data[0]['report_id'] == 'report-301'
+    assert list_result.metadata['count'] == 1
+
+
 def test_gantt_tools_collection_registers_methods():
     tools = GanttTools()
 
     assert tools.get_tool('create_gantt_snapshot') is not None
     assert tools.get_tool('get_gantt_snapshot') is not None
     assert tools.get_tool('list_gantt_snapshots') is not None
+    assert tools.get_tool('create_release_monitor') is not None
+    assert tools.get_tool('get_gantt_release_monitor_report') is not None
+    assert tools.get_tool('list_gantt_release_monitor_reports') is not None
     assert tools.get_tool('review_gantt_dependency') is not None
     assert tools.get_tool('list_gantt_dependency_reviews') is not None
 

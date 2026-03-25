@@ -73,11 +73,12 @@ import confluence_utils
 from agents.drucker_agent import DruckerCoordinatorAgent
 from agents.drucker_models import DruckerRequest
 from agents.gantt_agent import GanttProjectPlannerAgent
-from agents.gantt_models import PlanningRequest
+from agents.gantt_models import PlanningRequest, ReleaseMonitorRequest
 from agents.hypatia_agent import HypatiaDocumentationAgent
 from agents.hypatia_models import DocumentationRequest
 from state.drucker_report_store import DruckerReportStore
 from state.gantt_dependency_review_store import GanttDependencyReviewStore
+from state.gantt_release_monitor_store import GanttReleaseMonitorStore
 from state.gantt_snapshot_store import GanttSnapshotStore
 from state.hypatia_record_store import HypatiaRecordStore
 
@@ -348,6 +349,15 @@ def _snapshot_record_to_dict(record: dict[str, Any]) -> dict[str, Any]:
     """Normalize a stored Gantt snapshot record for MCP responses."""
     return {
         'snapshot': record.get('snapshot'),
+        'summary': record.get('summary'),
+        'summary_markdown': record.get('summary_markdown', ''),
+    }
+
+
+def _release_monitor_record_to_dict(record: dict[str, Any]) -> dict[str, Any]:
+    """Normalize a stored Gantt release-monitor record for MCP responses."""
+    return {
+        'report': record.get('report'),
         'summary': record.get('summary'),
         'summary_markdown': record.get('summary_markdown', ''),
     }
@@ -914,6 +924,90 @@ async def list_gantt_dependency_reviews(
         return _json_result(rows)
     except Exception as e:
         log.error(f'list_gantt_dependency_reviews failed: {e}')
+        return _error_result(str(e))
+
+
+@_tool_decorator()
+async def create_release_monitor(
+    project_key: str = 'STL',
+    releases: Optional[str] = None,
+    scope_label: Optional[str] = None,
+    include_gap_analysis: bool = True,
+    include_bug_report: bool = True,
+    include_velocity: bool = True,
+    include_readiness: bool = True,
+    compare_to_previous: bool = True,
+    output_file: Optional[str] = None,
+    persist: bool = True,
+) -> list[Any]:
+    """Generate a Gantt release-monitor report."""
+    try:
+        parsed_releases = (
+            [item.strip() for item in releases.split(',') if item.strip()]
+            if releases else None
+        )
+        request = ReleaseMonitorRequest(
+            project_key=project_key,
+            releases=parsed_releases,
+            scope_label=scope_label or '',
+            include_gap_analysis=include_gap_analysis,
+            include_bug_report=include_bug_report,
+            include_velocity=include_velocity,
+            include_readiness=include_readiness,
+            compare_to_previous=compare_to_previous,
+            output_file=output_file or f'{project_key}_release_monitor.xlsx',
+        )
+        agent = GanttProjectPlannerAgent(project_key=project_key)
+        report = agent.create_release_monitor(request)
+        result = {
+            'report': report.to_dict(),
+        }
+        if persist:
+            result['stored'] = GanttReleaseMonitorStore().save_report(
+                report,
+                summary_markdown=report.summary_markdown,
+            )
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'create_release_monitor failed: {e}')
+        return _error_result(str(e))
+
+
+@_tool_decorator()
+async def get_gantt_release_monitor_report(
+    report_id: str,
+    project_key: Optional[str] = None,
+) -> list[Any]:
+    """Get a persisted Gantt release-monitor report by report ID."""
+    try:
+        record = GanttReleaseMonitorStore().get_report(
+            report_id,
+            project_key=project_key,
+        )
+        if not record:
+            return _error_result(
+                f'Gantt release monitor report {report_id} not found'
+            )
+        return _json_result(_release_monitor_record_to_dict(record))
+    except Exception as e:
+        log.error(f'get_gantt_release_monitor_report failed: {e}')
+        return _error_result(str(e))
+
+
+@_tool_decorator()
+async def list_gantt_release_monitor_reports(
+    project_key: Optional[str] = None,
+    limit: int = 20,
+) -> list[Any]:
+    """List persisted Gantt release-monitor reports."""
+    try:
+        rows = GanttReleaseMonitorStore().list_reports(
+            project_key=project_key,
+            limit=limit,
+        )
+        return _json_result(rows)
+    except Exception as e:
+        log.error(f'list_gantt_release_monitor_reports failed: {e}')
         return _error_result(str(e))
 
 

@@ -36,6 +36,18 @@ class HygieneRunRequest(BaseModel):
     label_prefix: str = 'drucker'
 
 
+class DruckerPollerTickRequest(BaseModel):
+    project_key: str
+    limit: int = 200
+    stale_days: int = 30
+    include_done: bool = False
+    jql: Optional[str] = None
+    label_prefix: str = 'drucker'
+    persist: bool = True
+    notify_shannon: bool = False
+    shannon_base_url: Optional[str] = None
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title='Drucker Agent API', version='1.0.0')
 
@@ -167,6 +179,32 @@ def create_app() -> FastAPI:
                 'storage': save_result,
             },
         }
+
+    @app.post('/v1/poller/tick')
+    def poller_tick(body: DruckerPollerTickRequest) -> Dict[str, Any]:
+        global _run_count, _total_findings, _last_run_at
+
+        agent = DruckerCoordinatorAgent(project_key=body.project_key)
+        result = agent.tick({
+            'project_key': body.project_key,
+            'limit': body.limit,
+            'stale_days': body.stale_days,
+            'include_done': body.include_done,
+            'jql': body.jql,
+            'label_prefix': body.label_prefix,
+            'persist': body.persist,
+            'notify_shannon': body.notify_shannon,
+            'shannon_base_url': body.shannon_base_url,
+        })
+
+        for task in result.get('tasks', []):
+            report = task.get('report', {})
+            summary = report.get('summary', {})
+            _run_count += 1
+            _total_findings += int(summary.get('finding_count', 0))
+
+        _last_run_at = datetime.now(timezone.utc).isoformat()
+        return {'ok': result.get('ok', False), 'data': result}
 
     @app.get('/v1/hygiene/report/{report_id}')
     def hygiene_report(

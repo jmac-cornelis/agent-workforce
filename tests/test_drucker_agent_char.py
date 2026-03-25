@@ -233,6 +233,77 @@ def test_drucker_agent_creates_review_session_and_executes_approved_actions(
     assert session.items[1].status.value == 'executed'
 
 
+def test_drucker_agent_tick_persists_results_and_posts_notifications(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    from agents import pm_runtime
+    from agents.drucker_agent import DruckerCoordinatorAgent
+
+    class _FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {'ok': True}
+
+    notification_calls = []
+
+    monkeypatch.setattr(
+        DruckerCoordinatorAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'drucker prompt'),
+    )
+    monkeypatch.setenv('DRUCKER_REPORT_DIR', str(tmp_path / 'reports'))
+    monkeypatch.setattr(
+        pm_runtime.requests,
+        'post',
+        lambda url, json=None, timeout=15: (
+            notification_calls.append({'url': url, 'json': json, 'timeout': timeout})
+            or _FakeResponse()
+        ),
+    )
+
+    report = DruckerHygieneReport(
+        project_key='STL',
+        report_id='rep-poll',
+        summary={
+            'total_tickets': 5,
+            'finding_count': 3,
+            'action_count': 2,
+            'tickets_with_findings': 2,
+        },
+        summary_markdown='# Report',
+    )
+
+    monkeypatch.setattr(
+        DruckerCoordinatorAgent,
+        'analyze_project_hygiene',
+        lambda self, request: report,
+    )
+    monkeypatch.setattr(
+        DruckerCoordinatorAgent,
+        'create_review_session',
+        lambda self, report: SimpleNamespace(
+            to_dict=lambda: {'session_id': report.report_id, 'items': []}
+        ),
+    )
+
+    agent = DruckerCoordinatorAgent(project_key='STL')
+    result = agent.tick({
+        'project_key': 'STL',
+        'stale_days': 21,
+        'notify_shannon': True,
+        'shannon_base_url': 'http://shannon.test',
+    })
+
+    assert result['ok'] is True
+    assert len(result['tasks']) == 1
+    assert len(result['notifications']) == 1
+    assert (tmp_path / 'reports' / 'STL' / 'rep-poll' / 'report.json').exists()
+    assert notification_calls[0]['url'] == 'http://shannon.test/v1/bot/notify'
+
+
 def test_workflow_drucker_hygiene_writes_report_files(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
@@ -297,3 +368,66 @@ def test_workflow_drucker_hygiene_writes_report_files(
 
     assert exported['project_key'] == 'STL'
     assert review_payload['session_id'] == 'rep-101'
+
+
+def test_workflow_drucker_poll_runs_poller(monkeypatch: pytest.MonkeyPatch):
+    import pm_agent
+    from agents import drucker_agent as drucker_agent_module
+
+    class _FakeDruckerAgent:
+        def __init__(self, project_key=None, **_kwargs):
+            self.project_key = project_key
+
+        def run_poller(self, spec):
+            assert spec['project_key'] == 'STL'
+            assert spec['notify_shannon'] is True
+            assert spec['stale_days'] == 21
+            assert spec['max_cycles'] == 2
+            return {
+                'ok': True,
+                'cycles_run': 2,
+                'cycle_summaries': [
+                    {
+                        'cycle_number': 1,
+                        'ok': True,
+                        'task_count': 1,
+                        'notification_count': 1,
+                        'errors': [],
+                    },
+                    {
+                        'cycle_number': 2,
+                        'ok': True,
+                        'task_count': 1,
+                        'notification_count': 1,
+                        'errors': [],
+                    },
+                ],
+                'last_tick': {
+                    'tasks': [
+                        {
+                            'task_type': 'hygiene_report',
+                            'stored': {'report_id': 'rep-702'},
+                        }
+                    ]
+                },
+            }
+
+    monkeypatch.setattr(
+        drucker_agent_module,
+        'DruckerCoordinatorAgent',
+        _FakeDruckerAgent,
+    )
+    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
+
+    args = SimpleNamespace(
+        project='STL',
+        limit=50,
+        include_done=False,
+        stale_days=21,
+        notify_shannon=True,
+        shannon_url='http://shannon.test',
+        poll_interval=300,
+        max_cycles=2,
+    )
+
+    assert pm_agent._workflow_drucker_poll(args) == 0

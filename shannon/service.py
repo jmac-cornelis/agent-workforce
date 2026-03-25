@@ -18,7 +18,14 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
-from shannon.cards import build_bug_activity_card, build_drucker_hygiene_card, build_drucker_summary_card, build_fact_card
+from shannon.cards import (
+    build_bug_activity_card,
+    build_drucker_hygiene_card,
+    build_drucker_summary_card,
+    build_fact_card,
+    build_gantt_release_monitor_card,
+    build_gantt_snapshot_card,
+)
 from shannon.models import AuditRecord, ConversationReference, ShannonResponse, normalize_command_text
 from shannon.poster import BasePoster, build_poster_from_env
 from shannon.registry import ShannonAgentRegistry
@@ -388,10 +395,17 @@ class ShannonService:
         except Exception as e:
             return {'ok': False, 'error': f'{registration.agent_id} error: {e}'}
 
-    DRUCKER_CARD_BUILDERS = {
-        '/hygiene-run': build_drucker_hygiene_card,
-        '/hygiene-report': build_drucker_hygiene_card,
-        '/bug-activity': build_bug_activity_card,
+    AGENT_CARD_BUILDERS = {
+        'drucker': {
+            '/hygiene-run': build_drucker_hygiene_card,
+            '/hygiene-report': build_drucker_hygiene_card,
+            '/bug-activity': build_bug_activity_card,
+        },
+        'gantt': {
+            '/planning-snapshot': build_gantt_snapshot_card,
+            '/release-monitor': build_gantt_release_monitor_card,
+            '/release-report': build_gantt_release_monitor_card,
+        },
     }
 
     def _agent_response_to_shannon(
@@ -409,18 +423,48 @@ class ShannonService:
 
         data = result.get('data', result)
 
-        card_builder = self.DRUCKER_CARD_BUILDERS.get(command) if agent_id == 'drucker' else None
+        card_builder = self.AGENT_CARD_BUILDERS.get(agent_id, {}).get(command)
         if card_builder and isinstance(data, dict):
-            summary = data.get('summary', {})
-            total = summary.get('total_findings', len(data.get('findings', [])))
-            actions = len(data.get('proposed_actions', []))
             card = card_builder(data)
-            return ShannonResponse(
-                text=f'{data.get("project_key", "")}: {total} findings, {actions} proposed actions',
-                card=card,
-                command=command,
-                decision='agent_call_success',
-            )
+            if agent_id == 'drucker':
+                summary = data.get('summary', {})
+                total = summary.get('total_findings', len(data.get('findings', [])))
+                actions = len(data.get('proposed_actions', []))
+                return ShannonResponse(
+                    text=f'{data.get("project_key", "")}: {total} findings, {actions} proposed actions',
+                    card=card,
+                    command=command,
+                    decision='agent_call_success',
+                )
+
+            if agent_id == 'gantt' and command == '/planning-snapshot':
+                snapshot = data.get('snapshot', {})
+                overview = snapshot.get('backlog_overview', {})
+                return ShannonResponse(
+                    text=(
+                        f'{snapshot.get("project_key", "")}: '
+                        f'{overview.get("total_issues", 0)} issues, '
+                        f'{overview.get("blocked_issues", 0)} blocked, '
+                        f'{len(snapshot.get("milestones", []))} milestones'
+                    ),
+                    card=card,
+                    command=command,
+                    decision='agent_call_success',
+                )
+
+            if agent_id == 'gantt' and command in ('/release-monitor', '/release-report'):
+                report = data.get('report', {})
+                return ShannonResponse(
+                    text=(
+                        f'{report.get("project_key", "")}: '
+                        f'{report.get("total_bugs", 0)} bugs, '
+                        f'P0={report.get("total_p0", 0)}, '
+                        f'P1={report.get("total_p1", 0)}'
+                    ),
+                    card=card,
+                    command=command,
+                    decision='agent_call_success',
+                )
 
         if agent_id == 'drucker' and command == '/stats' and isinstance(data, dict):
             card = build_drucker_summary_card(data)

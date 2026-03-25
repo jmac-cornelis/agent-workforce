@@ -36,6 +36,8 @@ This repository contains three categories of tooling:
 
 - Ask Drucker to scan your project's Jira hygiene: `@Shannon /hygiene-run project_key STL`
 - Check bug activity trends: `@Shannon /bug-activity project_key STL`
+- Ask Gantt for a planning snapshot: `@Shannon /planning-snapshot project_key STL`
+- Run Gantt release monitoring from Teams: `@Shannon /release-monitor project_key STL releases 12.1.1.x,12.2.0.x`
 - Get Shannon's own status: `@Shannon /stats`
 
 **Use Agentic Workflows** when you need to run a multi-step AI pipeline from the command line — typically one-off planning, analysis, or reporting tasks that produce structured output files.
@@ -106,7 +108,7 @@ The repo implements specialized agents that automate engineering workflows. Each
 |-------|-----------|-------------|------|
 | **Shannon** | `shannon/` | Microsoft Teams communications service. Routes commands from Teams to backend agents, renders Adaptive Card responses, and posts proactive notifications. Zero-cost deployment via Outgoing Webhook + Power Automate Workflows. | 8200 |
 | **Drucker** | `agents/drucker_api.py` | Jira hygiene coordinator. Runs ticket hygiene scans, tracks bug activity, and produces remediation reports. Operates as a standalone FastAPI service called by Shannon. | 8201 |
-| **Gantt** | `agents/gantt_agent.py` | Project planning snapshots. Builds Jira-grounded milestone proposals, dependency views, and risk summaries from project backlogs. | — |
+| **Gantt** | `agents/gantt_api.py` | Project planning service. Builds Jira-grounded planning snapshots, release-health reports, and scheduled PM polling outputs. | 8202 |
 | **Hypatia** | `agents/hypatia_agent.py` | Documentation agent. Produces source-grounded documentation candidates for repo Markdown and optional Confluence publication. | — |
 
 ### Agent Communication
@@ -115,6 +117,7 @@ Engineers interact with agents by mentioning `@Shannon` in the appropriate Micro
 
 - `#agent-shannon` — Shannon self-service commands (`/stats`, `/busy`, `/work-today`, etc.)
 - `#agent-drucker` — Drucker hygiene commands (`/hygiene-run`, `/hygiene-report`, `/bug-activity`, etc.)
+- `#agent-gantt` — Gantt planning and release-monitor commands (`/planning-snapshot`, `/planning-snapshots`, `/release-monitor`, etc.)
 
 Agent routing is configured in [`config/shannon/agent_registry.yaml`](config/shannon/agent_registry.yaml). For setup details, see [docs/shannon-teams-setup.md](docs/shannon-teams-setup.md).
 
@@ -132,13 +135,16 @@ The full architectural vision, agent specifications, and implementation phasing 
 
 ## Agentic Workflows
 
-Agentic workflows are multi-phase AI pipelines orchestrated by [`pm_agent.py`](pm_agent.py). They require an LLM and use specialized agents to research, analyze, scope, and plan.
+Agentic workflows are multi-step operator flows orchestrated by [`pm_agent.py`](pm_agent.py). Some PM workflows are deterministic, while others use an LLM to research, analyze, scope, and plan.
 
 | Workflow | Command | Description |
 |----------|---------|-------------|
 | **Gantt Snapshot** | `pm_agent --workflow gantt-snapshot` | Jira-grounded planning snapshots with milestone proposals and risk summaries |
+| **Gantt Release Monitor** | `pm_agent --workflow gantt-release-monitor` | Release-health reports with bug summaries, readiness, and stored exports |
+| **Gantt Poller** | `pm_agent --workflow gantt-poll` | Scheduled Gantt cycles for always-on planning and release monitoring |
 | **Feature Plan** | `pm_agent --workflow feature-plan` | Scope document → Initiative → Epics → Stories in Jira |
 | **Drucker Hygiene** | `pm_agent --workflow drucker-hygiene` | Ticket hygiene reports with remediation suggestions |
+| **Drucker Poller** | `pm_agent --workflow drucker-poll` | Scheduled Drucker hygiene scans with optional Shannon notifications |
 | **Hypatia Docs** | `pm_agent --workflow hypatia-generate` | Source-grounded documentation drafts for repo Markdown or Confluence |
 | **Bug Report** | `pm_agent --workflow bug-report` | Enriched bug reports from Jira filters, exported to styled Excel |
 | **Release Planning** | `pm_agent --plan` | Full release planning from roadmap documents |
