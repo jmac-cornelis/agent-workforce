@@ -103,9 +103,17 @@ __all__ = [
     'parse_date_filter', 'match_pattern_with_exclusions',
     # Display helpers
     'output', 'show_jql', 'display_jql',
+    # Automations
+    'get_cloud_id',
+    'list_automations',
+    'get_automation',
+    'create_automation',
+    'enable_automation',
+    'disable_automation',
+    'delete_automation',
     # Exceptions
     'Error', 'JiraConnectionError', 'JiraCredentialsError',
-    'JiraProjectError', 'JiraDashboardError',
+    'JiraProjectError', 'JiraDashboardError', 'JiraAutomationError',
 ]
 
 def output(message=''):
@@ -309,6 +317,29 @@ def print_gadget_table_footer(count):
     output('')
 
 
+def print_automation_table_header():
+    '''Print the header row for automation rule tables.'''
+    output('-' * 104)
+    output(f'{"ID":<40} {"Name":<40} {"State":<12} {"Enabled":<8}')
+    output('-' * 104)
+
+
+def print_automation_row(rule):
+    '''Print a single automation rule row in the standard table format.'''
+    rule_id = str(rule.get('id', ''))[:40]
+    name = str(rule.get('name', ''))[:40]
+    state = str(rule.get('state', ''))[:12]
+    enabled = str(rule.get('enabled', ''))[:8]
+    output(f'{rule_id:<40} {name:<40} {state:<12} {enabled:<8}')
+
+
+def print_automation_table_footer(count):
+    '''Print the footer row for automation rule tables.'''
+    output('=' * 104)
+    output(f'Total: {count} automation rules')
+    output('')
+
+
 # Store the last JQL query for display at end of operation
 _last_jql = None
 
@@ -411,6 +442,13 @@ class JiraDashboardError(Error):
         super().__init__(self.message)
 
 
+class JiraAutomationError(Error):
+    '''Exception raised for Jira automation errors.'''
+    def __init__(self, message):
+        self.message = f'Jira automation error: {message}'
+        super().__init__(self.message)
+
+
 # ****************************************************************************************
 # Functions
 # ****************************************************************************************
@@ -507,6 +545,53 @@ def reset_connection():
     '''
     global _cached_connection
     _cached_connection = None
+
+
+# ---------------------------------------------------------------------------
+# Cloud ID + Automation API base URL
+# ---------------------------------------------------------------------------
+
+_cached_cloud_id = None
+
+
+def get_cloud_id():
+    '''Get the Jira Cloud ID from JIRA_CLOUD_ID env var or auto-discovery.
+
+    The Cloud ID is required by the Automation REST API which lives on
+    api.atlassian.com rather than the per-site Jira URL.  The value is
+    cached after the first successful lookup.
+
+    Output:
+        str — the Cloud ID.
+
+    Raises:
+        JiraAutomationError: If the Cloud ID cannot be determined.
+    '''
+    global _cached_cloud_id
+    if _cached_cloud_id is not None:
+        return _cached_cloud_id
+    cloud_id = os.getenv('JIRA_CLOUD_ID')
+    if cloud_id:
+        _cached_cloud_id = cloud_id
+        log.debug('Using JIRA_CLOUD_ID from environment: %s', cloud_id)
+        return cloud_id
+    # Auto-discover from tenant info endpoint
+    log.debug('JIRA_CLOUD_ID not set, discovering from %s', JIRA_URL)
+    try:
+        response = requests.get(f'{JIRA_URL}/_edge/tenant_info')
+        response.raise_for_status()
+        data = response.json()
+        _cached_cloud_id = data['cloudId']
+        log.debug('Discovered Cloud ID: %s', _cached_cloud_id)
+        return _cached_cloud_id
+    except Exception as e:
+        raise JiraAutomationError(f'Could not determine Cloud ID: {e}')
+
+
+def _get_automation_base_url():
+    '''Return the base URL for the Jira Automation REST API.'''
+    cloud_id = get_cloud_id()
+    return f'https://api.atlassian.com/automation/public/jira/{cloud_id}/rest/v1'
 
 
 # ---------------------------------------------------------------------------
@@ -5687,6 +5772,481 @@ def update_gadget(jira, dashboard_id, gadget_id, position=None, color=None):
 
 
 # ****************************************************************************************
+# Automation Management Functions
+# ****************************************************************************************
+
+def list_automations(jira, project_key=None, state=None):
+    '''
+    List automation rules.
+
+    Input:
+        jira: JIRA object (unused — automation API uses raw requests).
+        project_key: Optional project key to filter display.
+        state: Optional filter: 'ENABLED' or 'DISABLED'.
+
+    Output:
+        None; prints automation rule list to stdout.
+
+    Raises:
+        JiraAutomationError: If the API request fails.
+    '''
+    log.debug(f'Entering list_automations(project_key={project_key}, state={state})')
+
+    try:
+        email, api_token = get_jira_credentials()
+        base_url = _get_automation_base_url()
+        auth = (email, api_token)
+        headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+
+        all_rules = []
+        max_retries = 5
+        limit = 100
+        offset = 0
+
+        while True:
+            params = {'limit': limit, 'offset': offset}
+            if state:
+                params['ruleState'] = state
+
+            for retry in range(max_retries):
+                response = requests.get(
+                    f'{base_url}/rule/summary',
+                    auth=auth,
+                    headers=headers,
+                    params=params
+                )
+
+                if response.status_code == 429:
+                    retry_after = int(response.headers.get('Retry-After', 5))
+                    log.warning(f'Rate limited. Waiting {retry_after} seconds (retry {retry + 1}/{max_retries})...')
+                    time.sleep(retry_after)
+                    continue
+                break
+
+            if response.status_code != 200:
+                log.error(f'Automation API request failed: {response.status_code} - {response.text}')
+                raise JiraAutomationError(f'API error: {response.status_code} - {response.text}')
+
+            data = response.json()
+            rules = data.get('results', [])
+            all_rules.extend(rules)
+
+            total = data.get('total', len(all_rules))
+            if offset + len(rules) >= total or len(rules) == 0:
+                break
+            offset += len(rules)
+
+        log.debug(f'Retrieved {len(all_rules)} automation rules')
+
+        output('')
+        output('=' * 104)
+        output('Automation Rules')
+        if project_key:
+            output(f'Project filter: {project_key}')
+        if state:
+            output(f'State filter: {state}')
+        output('=' * 104)
+
+        print_automation_table_header()
+
+        displayed = 0
+        for rule in all_rules:
+            if project_key:
+                projects = rule.get('projects', [])
+                project_keys = [p.get('projectKey', '') for p in projects]
+                if project_key not in project_keys:
+                    continue
+            print_automation_row(rule)
+            displayed += 1
+
+        print_automation_table_footer(displayed)
+
+    except JiraAutomationError:
+        raise
+    except Exception as e:
+        log.error(f'Failed to list automations: {e}')
+        raise JiraAutomationError(str(e))
+
+
+def get_automation(jira, rule_uuid):
+    '''
+    Get full automation rule configuration.
+
+    Input:
+        jira: JIRA object (unused — automation API uses raw requests).
+        rule_uuid: The automation rule UUID.
+
+    Output:
+        None; prints detailed rule JSON to stdout.
+
+    Raises:
+        JiraAutomationError: If the API request fails.
+    '''
+    log.debug(f'Entering get_automation(rule_uuid={rule_uuid})')
+
+    try:
+        email, api_token = get_jira_credentials()
+        base_url = _get_automation_base_url()
+        auth = (email, api_token)
+        headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+
+        max_retries = 5
+        for retry in range(max_retries):
+            response = requests.get(
+                f'{base_url}/rule/{rule_uuid}',
+                auth=auth,
+                headers=headers
+            )
+
+            if response.status_code == 429:
+                retry_after = int(response.headers.get('Retry-After', 5))
+                log.warning(f'Rate limited. Waiting {retry_after} seconds (retry {retry + 1}/{max_retries})...')
+                time.sleep(retry_after)
+                continue
+            break
+
+        if response.status_code == 404:
+            raise JiraAutomationError(f'Automation rule {rule_uuid} not found')
+
+        if response.status_code != 200:
+            log.error(f'Automation API request failed: {response.status_code} - {response.text}')
+            raise JiraAutomationError(f'API error: {response.status_code} - {response.text}')
+
+        rule = response.json()
+        log.info(f'Retrieved automation rule: {rule.get("name", "N/A")}')
+
+        output('')
+        output('=' * 80)
+        output('Automation Rule Details')
+        output('=' * 80)
+        output(f'ID:      {rule.get("id", "N/A")}')
+        output(f'Name:    {rule.get("name", "N/A")}')
+        output(f'State:   {rule.get("state", "N/A")}')
+        output(f'Enabled: {rule.get("enabled", "N/A")}')
+        output('')
+        output('Full Configuration:')
+        output(json.dumps(rule, indent=2))
+        output('=' * 80)
+        output('')
+
+    except JiraAutomationError:
+        raise
+    except Exception as e:
+        log.error(f'Failed to get automation: {e}')
+        raise JiraAutomationError(str(e))
+
+
+def create_automation(jira, rule_file, project_key=None, dry_run=True):
+    '''
+    Create an automation rule from a JSON file.
+
+    Input:
+        jira: JIRA object (unused — automation API uses raw requests).
+        rule_file: Path to JSON file containing the rule definition.
+        project_key: Optional project key to scope the rule.
+        dry_run: If True, only show what would be created without making changes.
+
+    Output:
+        None; prints creation result to stdout.
+
+    Raises:
+        JiraAutomationError: If the rule creation fails.
+    '''
+    log.debug(f'Entering create_automation(rule_file={rule_file}, project_key={project_key}, dry_run={dry_run})')
+
+    try:
+        if not os.path.exists(rule_file):
+            raise JiraAutomationError(f'Rule file not found: {rule_file}')
+
+        with open(rule_file, 'r', encoding='utf-8') as f:
+            payload = json.load(f)
+
+        rule_name = payload.get('name', 'Unnamed Rule')
+
+        if dry_run:
+            output('')
+            output('=' * 80)
+            output('DRY RUN — Automation Rule Creation')
+            output('=' * 80)
+            output(f'File:    {rule_file}')
+            output(f'Name:    {rule_name}')
+            if project_key:
+                output(f'Project: {project_key}')
+            output('')
+            output('Rule payload:')
+            output(json.dumps(payload, indent=2))
+            output('')
+            output('Use --execute to create this rule.')
+            output('=' * 80)
+            output('')
+            return
+
+        email, api_token = get_jira_credentials()
+        base_url = _get_automation_base_url()
+        auth = (email, api_token)
+        headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+
+        max_retries = 5
+        for retry in range(max_retries):
+            response = requests.post(
+                f'{base_url}/rule',
+                auth=auth,
+                headers=headers,
+                json=payload
+            )
+
+            if response.status_code == 429:
+                retry_after = int(response.headers.get('Retry-After', 5))
+                log.warning(f'Rate limited. Waiting {retry_after} seconds (retry {retry + 1}/{max_retries})...')
+                time.sleep(retry_after)
+                continue
+            break
+
+        if response.status_code not in [200, 201]:
+            log.error(f'Automation create failed: {response.status_code} - {response.text}')
+            raise JiraAutomationError(f'Failed to create automation: {response.status_code} - {response.text}')
+
+        result = response.json()
+        log.info(f'Created automation rule: {result.get("id")} - {result.get("name")}')
+
+        output('')
+        output('=' * 80)
+        output('Automation Rule Created Successfully')
+        output('=' * 80)
+        output(f'ID:      {result.get("id", "N/A")}')
+        output(f'Name:    {result.get("name", "N/A")}')
+        output(f'State:   {result.get("state", "N/A")}')
+        output(f'Enabled: {result.get("enabled", "N/A")}')
+        output('=' * 80)
+        output('')
+
+    except JiraAutomationError:
+        raise
+    except json.JSONDecodeError as e:
+        raise JiraAutomationError(f'Invalid JSON in rule file {rule_file}: {e}')
+    except Exception as e:
+        log.error(f'Failed to create automation: {e}')
+        raise JiraAutomationError(str(e))
+
+
+def enable_automation(jira, rule_uuid):
+    '''
+    Enable an automation rule.
+
+    Input:
+        jira: JIRA object (unused — automation API uses raw requests).
+        rule_uuid: The automation rule UUID to enable.
+
+    Output:
+        None; prints confirmation to stdout.
+
+    Raises:
+        JiraAutomationError: If the enable operation fails.
+    '''
+    log.debug(f'Entering enable_automation(rule_uuid={rule_uuid})')
+
+    try:
+        email, api_token = get_jira_credentials()
+        base_url = _get_automation_base_url()
+        auth = (email, api_token)
+        headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+
+        max_retries = 5
+        for retry in range(max_retries):
+            response = requests.put(
+                f'{base_url}/rule/{rule_uuid}/state',
+                auth=auth,
+                headers=headers,
+                json={'ruleState': 'ENABLED'}
+            )
+
+            if response.status_code == 429:
+                retry_after = int(response.headers.get('Retry-After', 5))
+                log.warning(f'Rate limited. Waiting {retry_after} seconds (retry {retry + 1}/{max_retries})...')
+                time.sleep(retry_after)
+                continue
+            break
+
+        if response.status_code == 404:
+            raise JiraAutomationError(f'Automation rule {rule_uuid} not found')
+
+        if response.status_code not in [200, 204]:
+            log.error(f'Enable automation failed: {response.status_code} - {response.text}')
+            raise JiraAutomationError(f'Failed to enable automation: {response.status_code} - {response.text}')
+
+        log.info(f'Enabled automation rule: {rule_uuid}')
+
+        output('')
+        output('=' * 80)
+        output('Automation Rule Enabled Successfully')
+        output('=' * 80)
+        output(f'Rule UUID: {rule_uuid}')
+        output('=' * 80)
+        output('')
+
+    except JiraAutomationError:
+        raise
+    except Exception as e:
+        log.error(f'Failed to enable automation: {e}')
+        raise JiraAutomationError(str(e))
+
+
+def disable_automation(jira, rule_uuid):
+    '''
+    Disable an automation rule.
+
+    Input:
+        jira: JIRA object (unused — automation API uses raw requests).
+        rule_uuid: The automation rule UUID to disable.
+
+    Output:
+        None; prints confirmation to stdout.
+
+    Raises:
+        JiraAutomationError: If the disable operation fails.
+    '''
+    log.debug(f'Entering disable_automation(rule_uuid={rule_uuid})')
+
+    try:
+        email, api_token = get_jira_credentials()
+        base_url = _get_automation_base_url()
+        auth = (email, api_token)
+        headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+
+        max_retries = 5
+        for retry in range(max_retries):
+            response = requests.put(
+                f'{base_url}/rule/{rule_uuid}/state',
+                auth=auth,
+                headers=headers,
+                json={'ruleState': 'DISABLED'}
+            )
+
+            if response.status_code == 429:
+                retry_after = int(response.headers.get('Retry-After', 5))
+                log.warning(f'Rate limited. Waiting {retry_after} seconds (retry {retry + 1}/{max_retries})...')
+                time.sleep(retry_after)
+                continue
+            break
+
+        if response.status_code == 404:
+            raise JiraAutomationError(f'Automation rule {rule_uuid} not found')
+
+        if response.status_code not in [200, 204]:
+            log.error(f'Disable automation failed: {response.status_code} - {response.text}')
+            raise JiraAutomationError(f'Failed to disable automation: {response.status_code} - {response.text}')
+
+        log.info(f'Disabled automation rule: {rule_uuid}')
+
+        output('')
+        output('=' * 80)
+        output('Automation Rule Disabled Successfully')
+        output('=' * 80)
+        output(f'Rule UUID: {rule_uuid}')
+        output('=' * 80)
+        output('')
+
+    except JiraAutomationError:
+        raise
+    except Exception as e:
+        log.error(f'Failed to disable automation: {e}')
+        raise JiraAutomationError(str(e))
+
+
+def delete_automation(jira, rule_uuid, force=False):
+    '''
+    Delete a disabled automation rule.
+
+    Input:
+        jira: JIRA object (unused — automation API uses raw requests).
+        rule_uuid: The automation rule UUID to delete.
+        force: If True, skip confirmation prompt.
+
+    Output:
+        None; prints deletion confirmation to stdout.
+
+    Raises:
+        JiraAutomationError: If the deletion fails.
+    '''
+    log.debug(f'Entering delete_automation(rule_uuid={rule_uuid}, force={force})')
+
+    try:
+        email, api_token = get_jira_credentials()
+        base_url = _get_automation_base_url()
+        auth = (email, api_token)
+        headers = {'Content-Type': 'application/json', 'Accept': 'application/json'}
+
+        # Fetch the rule first to show what will be deleted
+        max_retries = 5
+        for retry in range(max_retries):
+            response = requests.get(
+                f'{base_url}/rule/{rule_uuid}',
+                auth=auth,
+                headers=headers
+            )
+
+            if response.status_code == 429:
+                retry_after = int(response.headers.get('Retry-After', 5))
+                log.warning(f'Rate limited. Waiting {retry_after} seconds (retry {retry + 1}/{max_retries})...')
+                time.sleep(retry_after)
+                continue
+            break
+
+        if response.status_code == 404:
+            raise JiraAutomationError(f'Automation rule {rule_uuid} not found')
+
+        if response.status_code != 200:
+            raise JiraAutomationError(f'Failed to get automation rule: {response.status_code} - {response.text}')
+
+        rule = response.json()
+        rule_name = rule.get('name', 'Unknown')
+
+        if not force:
+            output('')
+            output(f'WARNING: About to delete automation rule "{rule_name}" (UUID: {rule_uuid})')
+            output('This action cannot be undone.')
+            output('')
+            output('Use --force to skip this confirmation.')
+            output('')
+            return
+
+        for retry in range(max_retries):
+            response = requests.delete(
+                f'{base_url}/rule/{rule_uuid}',
+                auth=auth,
+                headers=headers
+            )
+
+            if response.status_code == 429:
+                retry_after = int(response.headers.get('Retry-After', 5))
+                log.warning(f'Rate limited. Waiting {retry_after} seconds (retry {retry + 1}/{max_retries})...')
+                time.sleep(retry_after)
+                continue
+            break
+
+        if response.status_code not in [200, 204]:
+            log.error(f'Automation delete failed: {response.status_code} - {response.text}')
+            raise JiraAutomationError(f'Failed to delete automation: {response.status_code} - {response.text}')
+
+        log.info(f'Deleted automation rule: {rule_uuid} - {rule_name}')
+
+        output('')
+        output('=' * 80)
+        output('Automation Rule Deleted Successfully')
+        output('=' * 80)
+        output(f'UUID: {rule_uuid}')
+        output(f'Name: {rule_name}')
+        output('=' * 80)
+        output('')
+
+    except JiraAutomationError:
+        raise
+    except Exception as e:
+        log.error(f'Failed to delete automation: {e}')
+        raise JiraAutomationError(str(e))
+
+
+# ****************************************************************************************
 # Handle the arguments
 # ****************************************************************************************
 def handle_args():
@@ -6198,6 +6758,49 @@ Date Filters:
         dest='gadget_properties',
         help='Gadget properties as JSON object.')
 
+    # ── Automation management arguments ──────────────────────────────────
+    automation_group = parser.add_argument_group('Automation Operations')
+    automation_group.add_argument(
+        '--list-automations',
+        action='store_true',
+        dest='list_automations',
+        help='List automation rules.')
+    automation_group.add_argument(
+        '--get-automation',
+        type=str,
+        metavar='UUID',
+        dest='get_automation',
+        help='Get full automation rule config by UUID.')
+    automation_group.add_argument(
+        '--create-automation',
+        type=str,
+        metavar='FILE',
+        dest='create_automation',
+        help='Create automation rule from JSON file.')
+    automation_group.add_argument(
+        '--enable-automation',
+        type=str,
+        metavar='UUID',
+        dest='enable_automation',
+        help='Enable an automation rule.')
+    automation_group.add_argument(
+        '--disable-automation',
+        type=str,
+        metavar='UUID',
+        dest='disable_automation',
+        help='Disable an automation rule.')
+    automation_group.add_argument(
+        '--delete-automation',
+        type=str,
+        metavar='UUID',
+        dest='delete_automation',
+        help='Delete a disabled automation rule.')
+    automation_group.add_argument(
+        '--automation-state',
+        choices=['ENABLED', 'DISABLED'],
+        dest='automation_state',
+        help='Filter automations by state (use with --list-automations).')
+
     # ── Filter management arguments ──────────────────────────────────────
     parser.add_argument(
         '--list-filters',
@@ -6449,8 +7052,8 @@ Date Filters:
     if args.input_file and not (args.bulk_update or args.bulk_delete):
         parser.error('--input-file requires --bulk-update or --bulk-delete')
 
-    if args.execute and not (args.bulk_update or args.bulk_delete or (args.create_ticket is not None)):
-        parser.error('--execute requires --bulk-update, --bulk-delete, or --create-ticket')
+    if args.execute and not (args.bulk_update or args.bulk_delete or (args.create_ticket is not None) or args.create_automation):
+        parser.error('--execute requires --bulk-update, --bulk-delete, --create-ticket, or --create-automation')
 
     if args.max_updates and not args.bulk_update:
         parser.error('--max-updates requires --bulk-update')
@@ -6483,9 +7086,9 @@ Date Filters:
     if args.share_permissions and not (args.create_dashboard or args.update_dashboard or args.copy_dashboard):
         parser.error('--share-permissions requires --create-dashboard, --update-dashboard, or --copy-dashboard')
     
-    # --force only valid with --delete-dashboard or --bulk-delete
-    if args.force and not (args.delete_dashboard or args.bulk_delete):
-        parser.error('--force requires --delete-dashboard or --bulk-delete')
+    # --force only valid with --delete-dashboard, --bulk-delete, or --delete-automation
+    if args.force and not (args.delete_dashboard or args.bulk_delete or args.delete_automation):
+        parser.error('--force requires --delete-dashboard, --bulk-delete, or --delete-automation')
     
     # --copy-dashboard requires --name
     if args.copy_dashboard and not args.name:
@@ -6503,6 +7106,10 @@ Date Filters:
     if args.gadget_properties and not args.add_gadget:
         parser.error('--gadget-properties requires --add-gadget')
     
+    # Validate automation arguments
+    if args.automation_state and not args.list_automations:
+        parser.error('--automation-state requires --list-automations')
+
     # Validate --get-comments: requires a ticket-fetching action
     ticket_fetching = (args.get_tickets or jql_specified or release_tickets_specified or
                        args.no_release or children_specified or related_specified or args.run_filter)
@@ -6710,7 +7317,24 @@ def main():
         
         if args.run_filter:
             run_filter(jira, args.run_filter, args.limit, args.dump_file, args.dump_format)
-            
+        
+        # Automation operations
+        if args.list_automations:
+            list_automations(jira, project_key=args.project, state=args.automation_state)
+        elif args.get_automation:
+            get_automation(jira, args.get_automation)
+        elif args.create_automation:
+            create_automation(jira, args.create_automation,
+                             project_key=args.project,
+                             dry_run=not args.execute)
+        elif args.enable_automation:
+            enable_automation(jira, args.enable_automation)
+        elif args.disable_automation:
+            disable_automation(jira, args.disable_automation)
+        elif args.delete_automation:
+            delete_automation(jira, args.delete_automation,
+                             force=args.force)
+
     except JiraCredentialsError as e:
         log.error(e.message)
         output('')
@@ -6734,6 +7358,12 @@ def main():
         output('')
         sys.exit(1)
     except JiraDashboardError as e:
+        log.error(e.message)
+        output('')
+        output('ERROR: ' + e.message)
+        output('')
+        sys.exit(1)
+    except JiraAutomationError as e:
         log.error(e.message)
         output('')
         output('ERROR: ' + e.message)
