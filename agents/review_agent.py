@@ -484,6 +484,7 @@ Then execute the approved items.'''
                     summary=data.get('summary'),
                     description=data.get('description'),
                     assignee=data.get('assignee'),
+                    priority=data.get('priority'),
                     status=data.get('status'),
                     fix_versions=data.get('fix_versions'),
                     components=data.get('components'),

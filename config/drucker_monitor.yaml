@@ -31,7 +31,7 @@ validation_rules:
       - description
 
 learning:
-  enabled: false
+  enabled: true
   min_observations: 20
   confidence_thresholds:
     auto_fill: 0.90

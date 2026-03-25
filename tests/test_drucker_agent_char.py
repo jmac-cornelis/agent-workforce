@@ -78,17 +78,19 @@ def test_drucker_agent_builds_hygiene_report_and_actions(monkeypatch: pytest.Mon
 
     assert report.project_key == 'STL'
     assert report.summary['total_tickets'] == 2
-    assert report.summary['tickets_with_findings'] == 1
+    assert report.summary['tickets_with_findings'] == 2
     assert 'stale_ticket' in categories
     assert 'blocked_stale_ticket' in categories
     assert 'unassigned_ticket' in categories
     assert 'missing_fix_version' in categories
     assert 'missing_component' in categories
     assert 'missing_labels' in categories
-    assert action_types == ['update', 'comment']
+    assert 'missing_recommended_fields' in categories
+    assert action_types == ['update', 'comment', 'update', 'comment']
     assert report.proposed_actions[0].update_fields['labels'] == [
         'drucker-blocked',
         'drucker-needs-component',
+        'drucker-needs-metadata-review',
         'drucker-needs-owner',
         'drucker-needs-release-target',
         'drucker-needs-triage',
@@ -163,6 +165,107 @@ def test_drucker_agent_issue_check_builds_policy_findings_and_actions(
         'drucker-needs-required-fields',
         'triage',
     ]
+
+
+def test_drucker_agent_issue_check_promotes_learning_based_suggestions_to_review_actions(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    from agents import drucker_agent as drucker_agent_module
+    from agents.drucker_agent import DruckerCoordinatorAgent
+
+    monkeypatch.setattr(
+        DruckerCoordinatorAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'drucker prompt'),
+    )
+    monkeypatch.setattr(drucker_agent_module, 'datetime', _FixedDateTime)
+    monkeypatch.setenv('DRUCKER_LEARNING_DB', str(tmp_path / 'drucker_learning.db'))
+    monkeypatch.setattr(
+        drucker_agent_module,
+        'get_project_info',
+        lambda project_key: ToolResult.success({
+            'key': project_key,
+            'name': 'Storage Team',
+        }),
+    )
+    monkeypatch.setattr(
+        drucker_agent_module,
+        'search_tickets',
+        lambda jql, limit=100, fields=None: ToolResult.success([
+            {
+                'key': 'STL-220',
+                'summary': 'Fabric issue missing metadata',
+                'description': '',
+                'status': 'Open',
+                'priority': '',
+                'assignee': 'Jane Dev',
+                'assignee_display': 'Jane Dev',
+                'reporter': 'alice',
+                'updated': '2026-03-15T10:00:00.000+0000',
+                'updated_date': '2026-03-15',
+                'fix_versions': [],
+                'components': [],
+                'labels': [],
+                'issue_type': 'Bug',
+            },
+        ]),
+    )
+
+    agent = DruckerCoordinatorAgent(project_key='STL')
+    agent.monitor_config.min_observations = 2
+    agent.monitor_config.confidence_thresholds['suggest'] = 0.40
+    agent.monitor_config.confidence_thresholds['auto_fill'] = 0.80
+
+    historical_tickets = [
+        {
+            'key': 'STL-210',
+            'summary': 'Fabric issue regression',
+            'reporter': 'alice',
+            'components': ['Fabric'],
+            'fix_versions': ['12.1.0'],
+            'priority': 'P1-Critical',
+        },
+        {
+            'key': 'STL-211',
+            'summary': 'Fabric issue bring-up',
+            'reporter': 'alice',
+            'components': ['Fabric'],
+            'fix_versions': ['12.1.0'],
+            'priority': 'P1-Critical',
+        },
+    ]
+    for ticket in historical_tickets:
+        agent.learning_store.record_ticket(ticket)
+
+    report = agent.analyze_ticket_hygiene(
+        DruckerRequest(
+            project_key='STL',
+            ticket_key='STL-220',
+            stale_days=21,
+        )
+    )
+
+    suggestion_action = next(
+        action for action in report.proposed_actions
+        if action.title == 'Apply Drucker suggested metadata updates'
+    )
+    comment_action = next(
+        action for action in report.proposed_actions
+        if action.action_type == 'comment'
+    )
+
+    assert suggestion_action.update_fields == {
+        'components': ['Fabric'],
+        'fix_versions': ['12.1.0'],
+        'priority': 'P1-Critical',
+    }
+    assert any(
+        finding.category == 'suggested_field_update'
+        for finding in report.findings
+    )
+    assert 'Suggested metadata updates for review:' in comment_action.comment
+    assert 'priority: P1-Critical' in comment_action.comment
 
 
 def test_drucker_report_store_save_load_and_list(tmp_path):
@@ -269,7 +372,7 @@ def test_drucker_agent_creates_review_session_and_executes_approved_actions(
                 ticket_key='STL-201',
                 action_type='update',
                 title='Apply Drucker hygiene labels',
-                update_fields={'labels': ['drucker-stale']},
+                update_fields={'labels': ['drucker-stale'], 'priority': 'P1-Critical'},
                 finding_ids=['F001'],
             ),
             DruckerAction(
@@ -295,6 +398,7 @@ def test_drucker_agent_creates_review_session_and_executes_approved_actions(
     assert [result['item_id'] for result in results] == ['D001', 'D002']
     assert update_calls[0]['ticket_key'] == 'STL-201'
     assert update_calls[0]['labels'] == ['drucker-stale']
+    assert update_calls[0]['priority'] == 'P1-Critical'
     assert comment_calls[0]['ticket_key'] == 'STL-201'
     assert session.items[0].status.value == 'executed'
     assert session.items[1].status.value == 'executed'

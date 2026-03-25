@@ -845,6 +845,7 @@ def update_ticket(
     summary: Optional[str] = None,
     description: Optional[str] = None,
     assignee: Optional[str] = None,
+    priority: Optional[str] = None,
     status: Optional[str] = None,
     fix_versions: Optional[List[str]] = None,
     components: Optional[List[str]] = None,
@@ -859,6 +860,7 @@ def update_ticket(
         summary: New summary (optional).
         description: New description (optional).
         assignee: New assignee account ID (optional).
+        priority: New priority name (optional).
         status: New status - will trigger transition (optional).
         fix_versions: New fix versions (optional).
         components: New components (optional).
@@ -896,7 +898,10 @@ def update_ticket(
         
         if assignee:
             fields['assignee'] = {'id': assignee}
-        
+
+        if priority:
+            fields['priority'] = {'name': priority}
+
         if fix_versions is not None:
             fields['fixVersions'] = [{'name': v} for v in fix_versions]
         
@@ -2009,6 +2014,7 @@ class JiraTools(BaseTool):
         summary: Optional[str] = None,
         description: Optional[str] = None,
         assignee: Optional[str] = None,
+        priority: Optional[str] = None,
         status: Optional[str] = None,
         fix_versions: Optional[List[str]] = None,
         components: Optional[List[str]] = None,
@@ -2016,15 +2022,16 @@ class JiraTools(BaseTool):
         custom_fields: Optional[Dict[str, Any]] = None,
     ) -> ToolResult:
         return update_ticket(
-            ticket_key,
-            summary,
-            description,
-            assignee,
-            status,
-            fix_versions,
-            components,
-            labels,
-            custom_fields,
+            ticket_key=ticket_key,
+            summary=summary,
+            description=description,
+            assignee=assignee,
+            priority=priority,
+            status=status,
+            fix_versions=fix_versions,
+            components=components,
+            labels=labels,
+            custom_fields=custom_fields,
         )
     
     @tool(description='Create a new release')

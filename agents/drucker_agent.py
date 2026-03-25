@@ -36,6 +36,8 @@ from core.monitoring import (
     load_monitor_config,
     validate_ticket,
 )
+from notifications.jira_comments import JiraCommentNotifier
+from state.drucker_learning_store import DruckerLearningStore
 from state.drucker_monitor_state import DruckerMonitorState
 from state.drucker_report_store import DruckerReportStore
 from tools.jira_tools import JiraTools, get_project_info, search_tickets
@@ -46,6 +48,7 @@ log = logging.getLogger(os.path.basename(sys.argv[0]))
 
 _DEFAULT_MONITOR_CONFIG_PATH = os.path.join('config', 'drucker_monitor.yaml')
 _DEFAULT_MONITOR_DB_PATH = 'data/drucker_monitor_state.db'
+_DEFAULT_LEARNING_DB_PATH = 'data/drucker_learning.db'
 
 _DEFAULT_VALIDATION_RULES = {
     'Story': {
@@ -126,6 +129,7 @@ class DruckerCoordinatorAgent(BaseAgent):
         self.project_key = project_key
         self._review_agent: Optional[ReviewAgent] = None
         self._monitor_state: Optional[DruckerMonitorState] = None
+        self._learning_store: Optional[DruckerLearningStore] = None
         self.monitor_config = self._load_monitor_config(project_key=project_key)
 
     @staticmethod
@@ -152,6 +156,19 @@ class DruckerCoordinatorAgent(BaseAgent):
                 db_path=os.getenv('DRUCKER_MONITOR_STATE_DB', _DEFAULT_MONITOR_DB_PATH)
             )
         return self._monitor_state
+
+    @property
+    def learning_store(self) -> DruckerLearningStore:
+        if self._learning_store is None:
+            self._learning_store = DruckerLearningStore(
+                db_path=os.getenv('DRUCKER_LEARNING_DB', _DEFAULT_LEARNING_DB_PATH),
+                min_observations=self.monitor_config.min_observations,
+            )
+        else:
+            self._learning_store.set_min_observations(
+                self.monitor_config.min_observations
+            )
+        return self._learning_store
 
     @staticmethod
     def _load_monitor_config(project_key: Optional[str] = None) -> MonitorConfig:
@@ -401,7 +418,9 @@ class DruckerCoordinatorAgent(BaseAgent):
 
         project_info = self._load_project_info(request.project_key)
         tickets = self._load_tickets(request)
+        self._attach_policy_analysis(tickets)
         findings = self._build_findings(tickets, stale_days=request.stale_days)
+        findings.extend(self._build_policy_findings_for_tickets(tickets))
         actions = self._build_actions(
             tickets,
             findings,
@@ -540,20 +559,11 @@ class DruckerCoordinatorAgent(BaseAgent):
         self,
         ticket: Dict[str, Any],
     ) -> List[DruckerFinding]:
-        validation = determine_actions(
-            validate_ticket(ticket, self.monitor_config),
-            None,
-            self.monitor_config,
-        )
-        covered_fields = self._covered_hygiene_fields(ticket)
-        required_fields = [
-            field for field in validation.missing_required
-            if field not in covered_fields
-        ]
-        warned_fields = [
-            field for field in validation.missing_warned
-            if field not in covered_fields
-        ]
+        policy = self._policy_analysis(ticket)
+        validation = policy['validation']
+        required_fields = policy['required_fields']
+        warned_fields = policy['warned_fields']
+        suggestion_findings = policy['suggestion_findings']
 
         findings: List[DruckerFinding] = []
         if required_fields:
@@ -596,6 +606,23 @@ class DruckerCoordinatorAgent(BaseAgent):
                 )
             )
 
+        findings.extend(suggestion_findings)
+
+        return findings
+
+    def _build_policy_findings_for_tickets(
+        self,
+        tickets: List[Dict[str, Any]],
+    ) -> List[DruckerFinding]:
+        findings: List[DruckerFinding] = []
+        for ticket in tickets:
+            if ticket.get('is_done'):
+                continue
+            findings.extend(self._build_policy_findings(ticket))
+
+        for index, finding in enumerate(findings, 1):
+            finding.finding_id = f'P{index:03d}'
+
         return findings
 
     @staticmethod
@@ -636,6 +663,120 @@ class DruckerCoordinatorAgent(BaseAgent):
             evidence.append(f'policy_actions={", ".join(action_lines)}')
         return evidence
 
+    def _policy_analysis(self, ticket: Dict[str, Any]) -> Dict[str, Any]:
+        existing = ticket.get('_drucker_policy')
+        if isinstance(existing, dict):
+            return existing
+
+        validation = determine_actions(
+            validate_ticket(ticket, self.monitor_config),
+            self.learning_store if self.monitor_config.learning_enabled else None,
+            self.monitor_config,
+        )
+        covered_fields = self._covered_hygiene_fields(ticket)
+        required_fields = [
+            field for field in validation.missing_required
+            if field not in covered_fields
+        ]
+        warned_fields = [
+            field for field in validation.missing_warned
+            if field not in covered_fields
+        ]
+        suggested_updates, suggestion_findings = self._build_suggested_policy_updates(
+            ticket,
+            validation,
+        )
+
+        policy = {
+            'validation': validation,
+            'required_fields': required_fields,
+            'warned_fields': warned_fields,
+            'suggested_updates': suggested_updates,
+            'suggestion_findings': suggestion_findings,
+        }
+        ticket['_drucker_policy'] = policy
+        return policy
+
+    def _build_suggested_policy_updates(
+        self,
+        ticket: Dict[str, Any],
+        validation: ValidationResult,
+    ) -> tuple[Dict[str, Any], List[DruckerFinding]]:
+        suggested_updates: Dict[str, Any] = {}
+        findings: List[DruckerFinding] = []
+        ticket_key = str(ticket.get('key') or '')
+
+        for action in validation.actions:
+            action_name = str(action.get('action') or '')
+            if action_name not in {'auto_fill', 'suggest'}:
+                continue
+
+            field_name = str(action.get('field') or '')
+            value = action.get('value')
+            confidence = float(action.get('confidence') or 0.0)
+            update_payload = self._field_update_payload(field_name, value)
+            if not update_payload:
+                continue
+
+            suggested_updates.update(update_payload)
+            confidence_label = 'high' if action_name == 'auto_fill' else 'medium'
+            value_display = self._format_suggested_value(update_payload)
+            findings.append(
+                DruckerFinding(
+                    finding_id='',
+                    ticket_key=ticket_key,
+                    category='suggested_field_update',
+                    severity=confidence_label,
+                    title=f'Drucker suggests a {field_name} update',
+                    description=(
+                        f'Historical intake patterns suggest {field_name} should be '
+                        f'{value_display} for {ticket_key} ({confidence:.0%} confidence).'
+                    ),
+                    evidence=[
+                        f'field={field_name}',
+                        f'suggested_value={value_display}',
+                        f'confidence={confidence:.2f}',
+                        f'issue_type={validation.issue_type}',
+                    ],
+                    recommendation=(
+                        'Review the suggested metadata update and approve it only if '
+                        'it matches the intended routing and release plan.'
+                    ),
+                )
+            )
+
+        return suggested_updates, findings
+
+    @staticmethod
+    def _field_update_payload(field_name: str, value: Any) -> Dict[str, Any]:
+        if value in (None, ''):
+            return {}
+
+        normalized_field = str(field_name or '').strip().lower()
+        if normalized_field in {'components', 'component'}:
+            values = value if isinstance(value, list) else [str(value)]
+            cleaned = [str(item).strip() for item in values if str(item).strip()]
+            return {'components': cleaned} if cleaned else {}
+        if normalized_field in {'fix_versions', 'fix_version'}:
+            values = value if isinstance(value, list) else [str(value)]
+            cleaned = [str(item).strip() for item in values if str(item).strip()]
+            return {'fix_versions': cleaned} if cleaned else {}
+        if normalized_field == 'priority':
+            priority_value = str(value).strip()
+            return {'priority': priority_value} if priority_value else {}
+
+        return {}
+
+    @staticmethod
+    def _format_suggested_value(update_payload: Dict[str, Any]) -> str:
+        if not update_payload:
+            return ''
+        key = next(iter(update_payload.keys()))
+        value = update_payload[key]
+        if isinstance(value, list):
+            return ', '.join(str(item) for item in value)
+        return str(value)
+
     def _load_ticket(self, request: DruckerRequest) -> Dict[str, Any]:
         if not request.ticket_key:
             raise ValueError('Drucker ticket hygiene requires ticket_key')
@@ -658,7 +799,9 @@ class DruckerCoordinatorAgent(BaseAgent):
         if not tickets:
             raise RuntimeError(f'Ticket {ticket_key} was not found')
 
-        return self._normalize_ticket(tickets[0], stale_days=request.stale_days)
+        normalized = self._normalize_ticket(tickets[0], stale_days=request.stale_days)
+        self._record_learning_ticket(normalized)
+        return normalized
 
     def _load_recent_tickets(
         self,
@@ -679,6 +822,8 @@ class DruckerCoordinatorAgent(BaseAgent):
             self._normalize_ticket(ticket, stale_days=request.stale_days)
             for ticket in result.data
         ]
+        for ticket in tickets:
+            self._record_learning_ticket(ticket)
         tickets = [
             ticket for ticket in tickets
             if not self.monitor_state.is_processed(str(ticket.get('key') or ''))
@@ -738,6 +883,18 @@ class DruckerCoordinatorAgent(BaseAgent):
     @staticmethod
     def _format_jql_datetime(value: datetime) -> str:
         return value.astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M')
+
+    def _attach_policy_analysis(
+        self,
+        tickets: List[Dict[str, Any]],
+    ) -> None:
+        for ticket in tickets:
+            self._policy_analysis(ticket)
+
+    def _record_learning_ticket(self, ticket: Dict[str, Any]) -> None:
+        if not self.monitor_config.learning_enabled:
+            return
+        self.learning_store.record_ticket(ticket)
 
     def create_review_session(self, report: DruckerHygieneReport) -> ReviewSession:
         '''
@@ -803,10 +960,13 @@ class DruckerCoordinatorAgent(BaseAgent):
                 result.error or f'Failed to search tickets for {request.project_key}'
             )
 
-        return [
+        tickets = [
             self._normalize_ticket(ticket, stale_days=request.stale_days)
             for ticket in result.data
         ]
+        for ticket in tickets:
+            self._record_learning_ticket(ticket)
+        return tickets
 
     @staticmethod
     def _build_jql(request: DruckerRequest) -> str:
@@ -1004,6 +1164,8 @@ class DruckerCoordinatorAgent(BaseAgent):
                 if finding.category in self.CATEGORY_LABELS
             }
             merged_labels = sorted(existing_labels | derived_labels)
+            policy = self._policy_analysis(ticket)
+            suggested_updates = dict(policy.get('suggested_updates') or {})
 
             if merged_labels != sorted(existing_labels):
                 update_action = DruckerAction(
@@ -1021,6 +1183,30 @@ class DruckerCoordinatorAgent(BaseAgent):
                     finding.action_ids.append(update_action.action_id)
                 action_index += 1
 
+            if suggested_updates:
+                suggested_field_names = ', '.join(sorted(suggested_updates.keys()))
+                suggestion_action = DruckerAction(
+                    action_id=f'D{action_index:03d}',
+                    ticket_key=ticket_key,
+                    action_type='update',
+                    title='Apply Drucker suggested metadata updates',
+                    description=(
+                        'Apply review-gated metadata suggestions derived from '
+                        'historical intake patterns.'
+                    ),
+                    finding_ids=[
+                        finding.finding_id for finding in ticket_findings
+                        if finding.category == 'suggested_field_update'
+                    ],
+                    confidence='medium',
+                    update_fields=suggested_updates,
+                )
+                actions.append(suggestion_action)
+                for finding in ticket_findings:
+                    if finding.category == 'suggested_field_update':
+                        finding.action_ids.append(suggestion_action.action_id)
+                action_index += 1
+
             comment_action = DruckerAction(
                 action_id=f'D{action_index:03d}',
                 ticket_key=ticket_key,
@@ -1029,7 +1215,11 @@ class DruckerCoordinatorAgent(BaseAgent):
                 description='Add a Jira comment summarizing the hygiene issues and recommended follow-up.',
                 finding_ids=[finding.finding_id for finding in ticket_findings],
                 confidence='medium',
-                comment=self._build_comment(ticket, ticket_findings),
+                comment=self._build_comment(
+                    ticket,
+                    ticket_findings,
+                    suggested_updates=suggested_updates,
+                ),
             )
             actions.append(comment_action)
             for finding in ticket_findings:
@@ -1064,32 +1254,17 @@ class DruckerCoordinatorAgent(BaseAgent):
         self,
         ticket: Dict[str, Any],
         findings: List[DruckerFinding],
+        suggested_updates: Optional[Dict[str, Any]] = None,
     ) -> str:
-        titles = [finding.title for finding in findings]
-        recommendations = [finding.recommendation for finding in findings]
-        unique_recommendations = list(dict.fromkeys(recommendations))
-        summary = str(ticket.get('summary') or '').strip()
-
-        lines = [
-            'Drucker hygiene review',
-            '',
-            f"Ticket: {ticket.get('key', '')} - {summary}",
-            'Findings:',
-        ]
-        for finding in findings:
-            lines.append(f"- {finding.title}: {finding.description}")
-
-        if unique_recommendations:
-            lines.append('')
-            lines.append('Recommended follow-up:')
-            for recommendation in unique_recommendations:
-                lines.append(f'- {recommendation}')
-
-        lines.append('')
-        lines.append(
-            f'Summary: {len(titles)} hygiene issue(s) identified for review.'
+        comment_text = JiraCommentNotifier.build_hygiene_comment(
+            ticket=ticket,
+            findings=findings,
+            suggested_updates=suggested_updates,
         )
-        return '\n'.join(lines)
+        return (
+            f'{comment_text}\n\n'
+            f'Summary: {len(findings)} hygiene issue(s) identified for review.'
+        )
 
     def _format_report(self, report: DruckerHygieneReport) -> str:
         summary = report.summary
@@ -1166,6 +1341,21 @@ class DruckerCoordinatorAgent(BaseAgent):
                     lines.append(
                         f"  Labels: {', '.join(action.update_fields['labels'])}"
                     )
+                if action.action_type == 'update':
+                    if action.update_fields.get('components'):
+                        lines.append(
+                            '  Components: '
+                            f"{', '.join(action.update_fields['components'])}"
+                        )
+                    if action.update_fields.get('fix_versions'):
+                        lines.append(
+                            '  Fix Versions: '
+                            f"{', '.join(action.update_fields['fix_versions'])}"
+                        )
+                    if action.update_fields.get('priority'):
+                        lines.append(
+                            f"  Priority: {action.update_fields['priority']}"
+                        )
         else:
             lines.append('- No Jira write-back actions proposed.')
 
