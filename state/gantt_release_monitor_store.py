@@ -172,6 +172,48 @@ class GanttReleaseMonitorStore:
 
         return summaries
 
+    def get_latest_compatible_report(
+        self,
+        project_key: str,
+        releases: List[str],
+        scope_label: Optional[str] = None,
+        *,
+        exclude_report_id: Optional[str] = None,
+        limit: int = 50,
+    ) -> Optional[Dict[str, Any]]:
+        '''
+        Return the most recent stored report for the same project/release scope.
+        '''
+        target_releases = sorted(str(item).strip() for item in releases if str(item).strip())
+        target_scope = str(scope_label or '').strip()
+        excluded = str(exclude_report_id or '').strip()
+
+        for summary in self.list_reports(project_key=project_key, limit=limit):
+            report_id = str(summary.get('report_id') or '').strip()
+            if excluded and report_id == excluded:
+                continue
+
+            record = self.get_report(report_id, project_key=project_key)
+            if not record:
+                continue
+
+            report = record.get('report') or {}
+            report_releases = sorted(
+                str(item).strip()
+                for item in (report.get('releases_monitored') or [])
+                if str(item).strip()
+            )
+            report_scope = str(report.get('scope_label') or '').strip()
+
+            if report_releases != target_releases:
+                continue
+            if report_scope != target_scope:
+                continue
+
+            return record
+
+        return None
+
     def _iter_report_json_paths(self, project_key: Optional[str] = None) -> List[Path]:
         if project_key:
             project_dir = self.storage_dir / str(project_key).upper()
@@ -218,6 +260,7 @@ class GanttReleaseMonitorStore:
             'report_id': str(report_data.get('report_id') or ''),
             'project_key': str(report_data.get('project_key') or '').upper(),
             'created_at': str(report_data.get('created_at') or ''),
+            'scope_label': str(report_data.get('scope_label') or ''),
             'release_count': len(report_data.get('releases_monitored') or []),
             'total_bugs': int(report_data.get('total_bugs') or 0),
             'total_p0': int(report_data.get('total_p0') or 0),

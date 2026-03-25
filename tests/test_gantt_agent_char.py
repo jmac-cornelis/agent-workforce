@@ -241,6 +241,239 @@ def test_gantt_agent_tick_persists_results_and_posts_notifications(
     assert notification_calls[0]['url'] == 'http://shannon.test/v1/bot/notify'
 
 
+def test_gantt_agent_create_release_monitor_uses_previous_report_history(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    from agents import gantt_agent as gantt_agent_module
+    from agents.gantt_agent import GanttProjectPlannerAgent
+    from agents.gantt_models import ReleaseMonitorRequest
+    from core import release_tracking as release_tracking_module
+    from core.release_tracking import ReleaseSnapshot
+    from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+
+    class _FixedReadinessDateTime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 3, 25, 12, 0, tzinfo=tz or timezone.utc)
+
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'gantt prompt'),
+    )
+    monkeypatch.setattr(release_tracking_module, 'datetime', _FixedReadinessDateTime)
+    monkeypatch.setenv('GANTT_RELEASE_MONITOR_DIR', str(tmp_path / 'reports'))
+
+    previous_tickets = [
+        {
+            'key': 'STL-100',
+            'summary': 'Carry-over bug',
+            'status': 'Open',
+            'priority': 'P1-Critical',
+            'issuetype': 'Bug',
+            'assignee': 'Jane Dev',
+            'fix_versions': ['12.1.1.x'],
+            'components': ['Fabric'],
+            'created': '2026-03-10T08:00:00+00:00',
+            'updated': '2026-03-20T08:00:00+00:00',
+            'resolutiondate': '',
+        },
+        {
+            'key': 'STL-101',
+            'summary': 'Will close out',
+            'status': 'In Progress',
+            'priority': 'P2-High',
+            'issuetype': 'Bug',
+            'assignee': 'Jane Dev',
+            'fix_versions': ['12.1.1.x'],
+            'components': ['Fabric'],
+            'created': '2026-03-12T08:00:00+00:00',
+            'updated': '2026-03-20T08:00:00+00:00',
+            'resolutiondate': '',
+        },
+        {
+            'key': 'STL-200',
+            'summary': 'Previously closed bug',
+            'status': 'Closed',
+            'priority': 'P0-Stopper',
+            'issuetype': 'Bug',
+            'assignee': 'Jane Dev',
+            'fix_versions': ['12.1.1.x'],
+            'components': ['Fabric'],
+            'created': '2026-03-05T08:00:00+00:00',
+            'updated': '2026-03-06T08:00:00+00:00',
+            'resolutiondate': '2026-03-06T08:00:00+00:00',
+        },
+    ]
+
+    store = GanttReleaseMonitorStore(storage_dir=str(tmp_path / 'reports'))
+    store.save_report(
+        {
+            'report_id': 'rep-prev',
+            'project_key': 'STL',
+            'created_at': '2026-03-20T12:00:00+00:00',
+            'scope_label': 'cn6000',
+            'releases_monitored': ['12.1.1.x'],
+            'bug_summaries': [],
+            'release_snapshots': {
+                '12.1.1.x': {
+                    'release': '12.1.1.x',
+                    'timestamp': '2026-03-20T12:00:00+00:00',
+                    'total_tickets': len(previous_tickets),
+                    'tickets': previous_tickets,
+                }
+            },
+            'cycle_time_samples': [
+                {
+                    'release': '12.1.1.x',
+                    'ticket_key': 'STL-200',
+                    'component': 'Fabric',
+                    'priority': 'P0-Stopper',
+                    'duration_hours': 24.0,
+                }
+            ],
+            'summary_markdown': '# Previous Report',
+        },
+        summary_markdown='# Previous Report',
+    )
+
+    current_tickets = [
+        {
+            'key': 'STL-100',
+            'summary': 'Carry-over bug',
+            'status': 'Open',
+            'priority': 'P0-Stopper',
+            'issuetype': 'Bug',
+            'assignee': 'Jane Dev',
+            'fix_versions': ['12.1.1.x'],
+            'components': ['Fabric'],
+            'created': '2026-03-10T08:00:00+00:00',
+            'updated': '2026-03-20T08:00:00+00:00',
+            'resolutiondate': '',
+        },
+        {
+            'key': 'STL-102',
+            'summary': 'New active bug',
+            'status': 'Open',
+            'priority': 'P1-Critical',
+            'issuetype': 'Bug',
+            'assignee': 'Jane Dev',
+            'fix_versions': ['12.1.1.x'],
+            'components': ['Fabric'],
+            'created': '2026-03-24T08:00:00+00:00',
+            'updated': '2026-03-25T08:00:00+00:00',
+            'resolutiondate': '',
+        },
+        {
+            'key': 'STL-200',
+            'summary': 'Previously closed bug',
+            'status': 'Closed',
+            'priority': 'P0-Stopper',
+            'issuetype': 'Bug',
+            'assignee': 'Jane Dev',
+            'fix_versions': ['12.1.1.x'],
+            'components': ['Fabric'],
+            'created': '2026-03-05T08:00:00+00:00',
+            'updated': '2026-03-06T08:00:00+00:00',
+            'resolutiondate': '2026-03-06T08:00:00+00:00',
+        },
+        {
+            'key': 'STL-201',
+            'summary': 'Newly closed bug',
+            'status': 'Closed',
+            'priority': 'P1-Critical',
+            'issuetype': 'Bug',
+            'assignee': 'Jane Dev',
+            'fix_versions': ['12.1.1.x'],
+            'components': ['Fabric'],
+            'created': '2026-03-19T08:00:00+00:00',
+            'updated': '2026-03-20T08:00:00+00:00',
+            'resolutiondate': '2026-03-20T08:00:00+00:00',
+        },
+        {
+            'key': 'STL-300',
+            'summary': 'Story should not appear in bug deltas',
+            'status': 'Open',
+            'priority': 'High',
+            'issuetype': 'Story',
+            'assignee': 'Jane Dev',
+            'fix_versions': ['12.1.1.x'],
+            'components': ['Fabric'],
+            'created': '2026-03-24T08:00:00+00:00',
+            'updated': '2026-03-25T08:00:00+00:00',
+            'resolutiondate': '',
+        },
+    ]
+
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_query_release_tickets',
+        lambda self, release, scope_label=None: list(current_tickets),
+    )
+    monkeypatch.setattr(
+        gantt_agent_module,
+        'build_release_snapshot',
+        lambda tickets, release: ReleaseSnapshot(
+            release=release,
+            timestamp='2026-03-25T12:00:00+00:00',
+            total_tickets=len(tickets),
+            tickets=[dict(ticket) for ticket in tickets],
+        ),
+    )
+
+    report = GanttProjectPlannerAgent(project_key='STL').create_release_monitor(
+        ReleaseMonitorRequest(
+            project_key='STL',
+            releases=['12.1.1.x'],
+            scope_label='cn6000',
+            include_gap_analysis=False,
+        )
+    )
+
+    bug_summary = report.bug_summaries[0]
+    assert bug_summary.new_since_last == ['STL-102', 'STL-201']
+    assert bug_summary.closed_since_last == ['STL-101']
+    assert bug_summary.priority_changes == [
+        {'key': 'STL-100', 'from': 'P1-Critical', 'to': 'P0-Stopper'}
+    ]
+
+    assert report.delta['comparison_basis'] == 'previous_report'
+    assert report.delta['previous_report_id'] == 'rep-prev'
+    assert report.delta['new_tickets'] == [
+        {'release': '12.1.1.x', 'key': 'STL-102'},
+        {'release': '12.1.1.x', 'key': 'STL-201'},
+    ]
+    assert report.delta['closed_tickets'] == [
+        {'release': '12.1.1.x', 'key': 'STL-101'}
+    ]
+    assert report.delta['priority_changes'] == [
+        {
+            'release': '12.1.1.x',
+            'key': 'STL-100',
+            'from': 'P1-Critical',
+            'to': 'P0-Stopper',
+        }
+    ]
+
+    assert report.release_snapshots['12.1.1.x']['total_tickets'] == 5
+    assert {item['ticket_key'] for item in report.cycle_time_samples} == {
+        'STL-200',
+        'STL-201',
+    }
+    assert len(report.cycle_time_samples) == 2
+
+    stats_by_priority = {
+        item['priority']: item for item in report.cycle_time_stats
+    }
+    assert stats_by_priority['P0-Stopper']['sample_size'] == 1
+    assert stats_by_priority['P1-Critical']['sample_size'] == 1
+    assert report.readiness['release'] == '12.1.1.x'
+    assert report.readiness['daily_close_rate'] > 0
+    assert 'STL-100' in report.readiness['stale_tickets']
+    assert 'New since last' in report.summary_markdown
+
+
 def test_workflow_gantt_poll_runs_poller(monkeypatch: pytest.MonkeyPatch):
     import pm_agent
     from agents import gantt_agent as gantt_agent_module
@@ -593,6 +826,58 @@ def test_gantt_snapshot_store_save_load_and_list(tmp_path):
     assert [item['snapshot_id'] for item in listed] == ['snap-002', 'snap-001']
     assert listed[0]['milestone_count'] == 2
     assert listed[1]['risk_count'] == 1
+
+
+def test_gantt_release_monitor_store_get_latest_compatible_report(tmp_path):
+    from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+
+    store = GanttReleaseMonitorStore(storage_dir=str(tmp_path / 'reports'))
+
+    store.save_report(
+        {
+            'report_id': 'rep-101',
+            'project_key': 'STL',
+            'created_at': '2026-03-20T12:00:00+00:00',
+            'scope_label': 'cn6000',
+            'releases_monitored': ['12.1.1.x'],
+            'bug_summaries': [],
+            'summary_markdown': '# Compatible',
+        },
+        summary_markdown='# Compatible',
+    )
+    store.save_report(
+        {
+            'report_id': 'rep-102',
+            'project_key': 'STL',
+            'created_at': '2026-03-21T12:00:00+00:00',
+            'scope_label': 'other-scope',
+            'releases_monitored': ['12.1.1.x'],
+            'bug_summaries': [],
+            'summary_markdown': '# Wrong Scope',
+        },
+        summary_markdown='# Wrong Scope',
+    )
+    store.save_report(
+        {
+            'report_id': 'rep-103',
+            'project_key': 'STL',
+            'created_at': '2026-03-22T12:00:00+00:00',
+            'scope_label': 'cn6000',
+            'releases_monitored': ['12.2.0.x'],
+            'bug_summaries': [],
+            'summary_markdown': '# Wrong Release',
+        },
+        summary_markdown='# Wrong Release',
+    )
+
+    record = store.get_latest_compatible_report(
+        project_key='STL',
+        releases=['12.1.1.x'],
+        scope_label='cn6000',
+    )
+
+    assert record is not None
+    assert record['report']['report_id'] == 'rep-101'
 
 
 def test_workflow_gantt_snapshot_get_and_list(

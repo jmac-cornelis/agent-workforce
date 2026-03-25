@@ -162,6 +162,60 @@ def test_process_gantt_message_posts_snapshot_reply(tmp_path, monkeypatch):
     assert card['body'][0]['text'] == 'Gantt Planning Snapshot — STL'
 
 
+def test_process_drucker_issue_check_posts_reply(tmp_path, monkeypatch):
+    service, poster = _service(tmp_path)
+    drucker_registration = service.registry.get_agent('drucker')
+    assert drucker_registration is not None
+
+    def _fake_call(registration, method, path, params=None, json_body=None):
+        assert registration.agent_id == 'drucker'
+        assert method == 'POST'
+        assert path == '/v1/hygiene/issue'
+        assert params is None
+        assert json_body == {'project_key': 'STL', 'ticket_key': 'STL-201'}
+        return {
+            'ok': True,
+            'data': {
+                'report': {
+                    'project_key': 'STL',
+                    'report_id': 'rep-issue-1',
+                    'created_at': '2026-03-25T12:00:00+00:00',
+                    'summary': {
+                        'finding_count': 2,
+                        'action_count': 2,
+                    },
+                    'findings': [
+                        {
+                            'ticket_key': 'STL-201',
+                            'severity': 'high',
+                            'description': 'Missing required fields.',
+                        }
+                    ],
+                    'proposed_actions': [
+                        {'action_type': 'update'},
+                        {'action_type': 'comment'},
+                    ],
+                }
+            },
+        }
+
+    monkeypatch.setattr(service, '_call_agent_api', _fake_call)
+
+    activity = _agent_message_activity(
+        'agent-drucker',
+        '<at>Shannon</at> /issue-check project_key STL ticket_key STL-201',
+    )
+    activity['channelData']['team']['id'] = drucker_registration.team_id
+
+    result = service.process_teams_activity(activity)
+
+    assert result['ok'] is True
+    assert result['agent_id'] == 'drucker'
+    assert result['command'] == '/issue-check'
+    assert poster.sent[-1]['kind'] == 'reply'
+    assert 'STL: 2 findings, 2 proposed actions' in poster.sent[-1]['activity']['text']
+
+
 def test_app_endpoints_expose_health_and_messages(tmp_path):
     service, _poster = _service(tmp_path)
     client = TestClient(create_app(service))

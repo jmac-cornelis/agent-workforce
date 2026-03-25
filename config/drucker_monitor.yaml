@@ -1,0 +1,39 @@
+project: ''
+poll_interval_minutes: 5
+
+validation_rules:
+  Story:
+    required:
+      - assignee
+      - fix_versions
+      - components
+    warn:
+      - description
+  Bug:
+    required:
+      - assignee
+      - fix_versions
+      - components
+      - priority
+    warn:
+      - description
+  Task:
+    required:
+      - assignee
+      - fix_versions
+      - components
+    warn:
+      - description
+  Epic:
+    required:
+      - assignee
+    warn:
+      - description
+
+learning:
+  enabled: false
+  min_observations: 20
+  confidence_thresholds:
+    auto_fill: 0.90
+    suggest: 0.50
+    flag_only: 0.0

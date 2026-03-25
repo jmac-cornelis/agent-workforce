@@ -397,6 +397,7 @@ class ShannonService:
 
     AGENT_CARD_BUILDERS = {
         'drucker': {
+            '/issue-check': build_drucker_hygiene_card,
             '/hygiene-run': build_drucker_hygiene_card,
             '/hygiene-report': build_drucker_hygiene_card,
             '/bug-activity': build_bug_activity_card,
@@ -425,18 +426,26 @@ class ShannonService:
 
         card_builder = self.AGENT_CARD_BUILDERS.get(agent_id, {}).get(command)
         if card_builder and isinstance(data, dict):
-            card = card_builder(data)
             if agent_id == 'drucker':
-                summary = data.get('summary', {})
-                total = summary.get('total_findings', len(data.get('findings', [])))
-                actions = len(data.get('proposed_actions', []))
+                report = data.get('report', data)
+                card = card_builder(report)
+                summary = report.get('summary', {})
+                total = summary.get(
+                    'finding_count',
+                    summary.get('total_findings', len(report.get('findings', []))),
+                )
+                actions = summary.get(
+                    'action_count',
+                    len(report.get('proposed_actions', [])),
+                )
                 return ShannonResponse(
-                    text=f'{data.get("project_key", "")}: {total} findings, {actions} proposed actions',
+                    text=f'{report.get("project_key", "")}: {total} findings, {actions} proposed actions',
                     card=card,
                     command=command,
                     decision='agent_call_success',
                 )
 
+            card = card_builder(data)
             if agent_id == 'gantt' and command == '/planning-snapshot':
                 snapshot = data.get('snapshot', {})
                 overview = snapshot.get('backlog_overview', {})

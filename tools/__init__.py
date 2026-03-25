@@ -64,6 +64,7 @@ from tools.gantt_tools import (
     GanttTools,
 )
 from tools.drucker_tools import (
+    create_drucker_issue_check,
     create_drucker_hygiene_report,
     get_drucker_report,
     list_drucker_reports,
@@ -186,6 +187,7 @@ __all__ = [
     'list_gantt_dependency_reviews',
     'GanttTools',
     # Drucker
+    'create_drucker_issue_check',
     'create_drucker_hygiene_report',
     'get_drucker_report',
     'list_drucker_reports',

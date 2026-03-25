@@ -42,10 +42,19 @@ class DruckerPollerTickRequest(BaseModel):
     stale_days: int = 30
     include_done: bool = False
     jql: Optional[str] = None
+    since: Optional[str] = None
+    recent_only: bool = False
     label_prefix: str = 'drucker'
     persist: bool = True
     notify_shannon: bool = False
     shannon_base_url: Optional[str] = None
+
+
+class IssueCheckRequest(BaseModel):
+    project_key: str
+    ticket_key: str
+    stale_days: int = 30
+    label_prefix: str = 'drucker'
 
 
 def create_app() -> FastAPI:
@@ -180,6 +189,39 @@ def create_app() -> FastAPI:
             },
         }
 
+    @app.post('/v1/hygiene/issue')
+    def hygiene_issue(body: IssueCheckRequest) -> Dict[str, Any]:
+        global _run_count, _total_findings, _last_run_at
+
+        agent = DruckerCoordinatorAgent(project_key=body.project_key)
+        request = DruckerRequest(
+            project_key=body.project_key,
+            ticket_key=body.ticket_key,
+            stale_days=body.stale_days,
+            label_prefix=body.label_prefix,
+        )
+
+        try:
+            report = agent.analyze_ticket_hygiene(request)
+            review_session = agent.create_review_session(report)
+        except Exception as e:
+            log.error(f'Drucker issue check failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+        save_result = store.save_report(report)
+        _run_count += 1
+        _total_findings += len(report.findings)
+        _last_run_at = datetime.now(timezone.utc).isoformat()
+
+        return {
+            'ok': True,
+            'data': {
+                'report': report.to_dict(),
+                'review_session': review_session.to_dict(),
+                'stored': save_result,
+            },
+        }
+
     @app.post('/v1/poller/tick')
     def poller_tick(body: DruckerPollerTickRequest) -> Dict[str, Any]:
         global _run_count, _total_findings, _last_run_at
@@ -191,6 +233,8 @@ def create_app() -> FastAPI:
             'stale_days': body.stale_days,
             'include_done': body.include_done,
             'jql': body.jql,
+            'since': body.since,
+            'recent_only': body.recent_only,
             'label_prefix': body.label_prefix,
             'persist': body.persist,
             'notify_shannon': body.notify_shannon,

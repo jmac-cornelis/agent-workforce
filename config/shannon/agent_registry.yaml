@@ -47,6 +47,10 @@ agents:
     api_base_url: http://localhost:8201
     approval_types: []
     custom_commands:
+      - command: /issue-check
+        description: Run intake validation for one Jira ticket
+        api_method: POST
+        api_path: /v1/hygiene/issue
       - command: /hygiene-run
         description: Run hygiene analysis
         api_method: POST

@@ -17,7 +17,7 @@ import os
 import sys
 import time
 from collections import Counter, defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
 from agents.base import BaseAgent, AgentConfig, AgentResponse
@@ -29,12 +29,42 @@ from agents.drucker_models import (
 )
 from agents.pm_runtime import notify_shannon
 from agents.review_agent import ReviewAgent, ReviewItem, ReviewSession
+from core.monitoring import (
+    MonitorConfig,
+    ValidationResult,
+    determine_actions,
+    load_monitor_config,
+    validate_ticket,
+)
+from state.drucker_monitor_state import DruckerMonitorState
 from state.drucker_report_store import DruckerReportStore
 from tools.jira_tools import JiraTools, get_project_info, search_tickets
 from tools.knowledge_tools import search_knowledge, list_knowledge_files, read_knowledge_file
 
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
+
+_DEFAULT_MONITOR_CONFIG_PATH = os.path.join('config', 'drucker_monitor.yaml')
+_DEFAULT_MONITOR_DB_PATH = 'data/drucker_monitor_state.db'
+
+_DEFAULT_VALIDATION_RULES = {
+    'Story': {
+        'required': ['assignee', 'fix_versions', 'components'],
+        'warn': ['description'],
+    },
+    'Bug': {
+        'required': ['assignee', 'fix_versions', 'components', 'priority'],
+        'warn': ['description'],
+    },
+    'Task': {
+        'required': ['assignee', 'fix_versions', 'components'],
+        'warn': ['description'],
+    },
+    'Epic': {
+        'required': ['assignee'],
+        'warn': ['description'],
+    },
+}
 
 
 class DruckerCoordinatorAgent(BaseAgent):
@@ -70,6 +100,8 @@ class DruckerCoordinatorAgent(BaseAgent):
         'missing_fix_version': 'needs-release-target',
         'missing_component': 'needs-component',
         'missing_labels': 'needs-triage',
+        'missing_required_fields': 'needs-required-fields',
+        'missing_recommended_fields': 'needs-metadata-review',
     }
 
     def __init__(self, project_key: Optional[str] = None, **kwargs):
@@ -93,6 +125,8 @@ class DruckerCoordinatorAgent(BaseAgent):
         self.register_tool(read_knowledge_file)
         self.project_key = project_key
         self._review_agent: Optional[ReviewAgent] = None
+        self._monitor_state: Optional[DruckerMonitorState] = None
+        self.monitor_config = self._load_monitor_config(project_key=project_key)
 
     @staticmethod
     def _load_prompt_file() -> Optional[str]:
@@ -111,33 +145,77 @@ class DruckerCoordinatorAgent(BaseAgent):
             self._review_agent = ReviewAgent()
         return self._review_agent
 
+    @property
+    def monitor_state(self) -> DruckerMonitorState:
+        if self._monitor_state is None:
+            self._monitor_state = DruckerMonitorState(
+                db_path=os.getenv('DRUCKER_MONITOR_STATE_DB', _DEFAULT_MONITOR_DB_PATH)
+            )
+        return self._monitor_state
+
+    @staticmethod
+    def _load_monitor_config(project_key: Optional[str] = None) -> MonitorConfig:
+        if os.path.exists(_DEFAULT_MONITOR_CONFIG_PATH):
+            try:
+                config = load_monitor_config(_DEFAULT_MONITOR_CONFIG_PATH)
+            except Exception as e:
+                log.warning(f'Failed to load Drucker monitor config: {e}')
+                config = MonitorConfig(validation_rules=dict(_DEFAULT_VALIDATION_RULES))
+        else:
+            config = MonitorConfig(validation_rules=dict(_DEFAULT_VALIDATION_RULES))
+
+        if not config.validation_rules:
+            config.validation_rules = dict(_DEFAULT_VALIDATION_RULES)
+        if not config.project and project_key:
+            config.project = project_key
+        return config
+
+    def _build_request(self, input_data: Any) -> DruckerRequest:
+        if isinstance(input_data, str):
+            return DruckerRequest(project_key=input_data)
+
+        if isinstance(input_data, dict):
+            return DruckerRequest(
+                project_key=input_data.get('project_key', self.project_key or ''),
+                ticket_key=input_data.get('ticket_key'),
+                limit=int(input_data.get('limit', 200)),
+                include_done=bool(input_data.get('include_done', False)),
+                stale_days=int(input_data.get('stale_days', 30)),
+                jql=input_data.get('jql'),
+                since=input_data.get('since'),
+                recent_only=bool(input_data.get('recent_only', False)),
+                label_prefix=str(
+                    input_data.get('label_prefix', 'drucker') or 'drucker'
+                ),
+            )
+
+        raise ValueError('Invalid input: expected project key string or request dict')
+
+    def _analyze_request(self, request: DruckerRequest) -> tuple[DruckerHygieneReport, str]:
+        if request.ticket_key:
+            return self.analyze_ticket_hygiene(request), 'issue_check'
+        if request.recent_only:
+            return self.analyze_recent_ticket_intake(request), 'ticket_intake_report'
+        return self.analyze_project_hygiene(request), 'hygiene_report'
+
     def run(self, input_data: Any) -> AgentResponse:
         '''
         Build a Jira hygiene report and corresponding review session.
         '''
         log.debug(f'DruckerCoordinatorAgent.run(input_data={input_data})')
 
-        if isinstance(input_data, str):
-            request = DruckerRequest(project_key=input_data)
-        elif isinstance(input_data, dict):
-            request = DruckerRequest(
-                project_key=input_data.get('project_key', self.project_key or ''),
-                limit=int(input_data.get('limit', 200)),
-                include_done=bool(input_data.get('include_done', False)),
-                stale_days=int(input_data.get('stale_days', 30)),
-                jql=input_data.get('jql'),
-                label_prefix=str(input_data.get('label_prefix', 'drucker') or 'drucker'),
-            )
-        else:
+        try:
+            request = self._build_request(input_data)
+        except ValueError as e:
             return AgentResponse.error_response(
-                'Invalid input: expected project key string or request dict'
+                str(e)
             )
 
         if not request.project_key:
             return AgentResponse.error_response('No project_key provided')
 
         try:
-            report = self.analyze_project_hygiene(request)
+            report, task_type = self._analyze_request(request)
             review_session = self.create_review_session(report)
         except Exception as e:
             log.error(f'Drucker hygiene analysis failed: {e}')
@@ -146,6 +224,7 @@ class DruckerCoordinatorAgent(BaseAgent):
         return AgentResponse.success_response(
             content=report.summary_markdown,
             metadata={
+                'task_type': task_type,
                 'hygiene_report': report.to_dict(),
                 'review_session': review_session.to_dict(),
             },
@@ -161,12 +240,12 @@ class DruckerCoordinatorAgent(BaseAgent):
         Execute one deterministic Drucker hygiene task and optionally persist it.
         '''
         self.project_key = request.project_key or self.project_key
-        report = self.analyze_project_hygiene(request)
+        report, task_type = self._analyze_request(request)
         review_session = self.create_review_session(report)
 
         result: Dict[str, Any] = {
             'ok': True,
-            'task_type': 'hygiene_report',
+            'task_type': task_type,
             'project_key': report.project_key,
             'report': report.to_dict(),
             'review_session': review_session.to_dict(),
@@ -183,6 +262,7 @@ class DruckerCoordinatorAgent(BaseAgent):
     def _build_hygiene_notification_payload(result: Dict[str, Any]) -> Dict[str, Any]:
         report = result.get('report', {})
         summary = report.get('summary', {})
+        task_type = str(result.get('task_type') or 'hygiene_report')
         stored = result.get('stored', {})
         text = (
             f'{report.get("project_key", "")}: '
@@ -194,8 +274,13 @@ class DruckerCoordinatorAgent(BaseAgent):
             f'Tickets with findings: {summary.get("tickets_with_findings", 0)}',
             f'Total tickets scanned: {summary.get("total_tickets", 0)}',
         ]
+        title = 'Drucker Hygiene Report'
+        if task_type == 'issue_check':
+            title = 'Drucker Issue Check'
+        elif task_type == 'ticket_intake_report':
+            title = 'Drucker Ticket Intake'
         return {
-            'title': f'Drucker Hygiene Report — {report.get("project_key", "")}',
+            'title': f'{title} — {report.get("project_key", "")}',
             'text': text,
             'body_lines': body_lines,
         }
@@ -221,10 +306,13 @@ class DruckerCoordinatorAgent(BaseAgent):
         try:
             request = DruckerRequest(
                 project_key=project_key,
+                ticket_key=poller_spec.get('ticket_key'),
                 limit=int(poller_spec.get('limit', 200)),
                 include_done=bool(poller_spec.get('include_done', False)),
                 stale_days=int(poller_spec.get('stale_days', 30)),
                 jql=poller_spec.get('jql'),
+                since=poller_spec.get('since'),
+                recent_only=bool(poller_spec.get('recent_only', False)),
                 label_prefix=str(
                     poller_spec.get('label_prefix', 'drucker') or 'drucker'
                 ),
@@ -332,6 +420,324 @@ class DruckerCoordinatorAgent(BaseAgent):
         )
         report.summary_markdown = self._format_report(report)
         return report
+
+    def analyze_ticket_hygiene(
+        self,
+        request: DruckerRequest,
+    ) -> DruckerHygieneReport:
+        '''
+        Run a one-shot ticket intake check for a specific Jira issue.
+        '''
+        if not request.ticket_key:
+            raise ValueError('Drucker ticket hygiene requires ticket_key')
+
+        log.info(
+            f'Creating Drucker issue check for {request.project_key}:{request.ticket_key}'
+        )
+
+        project_info = self._load_project_info(request.project_key)
+        ticket = self._load_ticket(request)
+        return self._build_intake_report(
+            request,
+            project_info=project_info,
+            tickets=[ticket],
+            monitor_scope='ticket',
+        )
+
+    def analyze_recent_ticket_intake(
+        self,
+        request: DruckerRequest,
+    ) -> DruckerHygieneReport:
+        '''
+        Run a checkpointed scan of recently created tickets for intake issues.
+        '''
+        log.info(f'Creating Drucker recent-ticket intake report for {request.project_key}')
+
+        project_info = self._load_project_info(request.project_key)
+        since_value, tickets = self._load_recent_tickets(request)
+        report = self._build_intake_report(
+            request,
+            project_info=project_info,
+            tickets=tickets,
+            monitor_scope='recent_ticket_intake',
+        )
+        report.request['since'] = since_value
+
+        findings_by_ticket: Dict[str, List[DruckerFinding]] = defaultdict(list)
+        for finding in report.findings:
+            findings_by_ticket[finding.ticket_key].append(finding)
+
+        processed_at = self._format_jql_datetime(datetime.now(timezone.utc))
+        for ticket in tickets:
+            ticket_key = str(ticket.get('key') or '')
+            if not ticket_key:
+                continue
+            self.monitor_state.mark_processed(
+                ticket_key,
+                project=request.project_key,
+                result={
+                    'monitor_scope': 'recent_ticket_intake',
+                    'finding_count': len(findings_by_ticket.get(ticket_key, [])),
+                },
+                timestamp=processed_at,
+            )
+
+        self.monitor_state.set_last_checked(
+            request.project_key,
+            timestamp=processed_at,
+        )
+        return report
+
+    def _build_intake_report(
+        self,
+        request: DruckerRequest,
+        *,
+        project_info: Dict[str, Any],
+        tickets: List[Dict[str, Any]],
+        monitor_scope: str,
+    ) -> DruckerHygieneReport:
+        findings = self._build_intake_findings(tickets, stale_days=request.stale_days)
+        actions = self._build_actions(
+            tickets,
+            findings,
+            label_prefix=request.label_prefix,
+        )
+        summary = self._build_summary(tickets, findings, actions)
+        summary['monitor_scope'] = monitor_scope
+        summary['source_ticket_count'] = len(tickets)
+        if request.ticket_key:
+            summary['ticket_key'] = request.ticket_key
+
+        report = DruckerHygieneReport(
+            project_key=request.project_key,
+            request=request.to_dict(),
+            project_info=project_info,
+            summary=summary,
+            findings=findings,
+            proposed_actions=actions,
+            tickets=tickets,
+        )
+        report.summary_markdown = self._format_report(report)
+        return report
+
+    def _build_intake_findings(
+        self,
+        tickets: List[Dict[str, Any]],
+        stale_days: int,
+    ) -> List[DruckerFinding]:
+        findings: List[DruckerFinding] = []
+
+        for ticket in tickets:
+            findings.extend(self._build_findings([ticket], stale_days=stale_days))
+            findings.extend(self._build_policy_findings(ticket))
+
+        for index, finding in enumerate(findings, 1):
+            finding.finding_id = f'F{index:03d}'
+
+        return findings
+
+    def _build_policy_findings(
+        self,
+        ticket: Dict[str, Any],
+    ) -> List[DruckerFinding]:
+        validation = determine_actions(
+            validate_ticket(ticket, self.monitor_config),
+            None,
+            self.monitor_config,
+        )
+        covered_fields = self._covered_hygiene_fields(ticket)
+        required_fields = [
+            field for field in validation.missing_required
+            if field not in covered_fields
+        ]
+        warned_fields = [
+            field for field in validation.missing_warned
+            if field not in covered_fields
+        ]
+
+        findings: List[DruckerFinding] = []
+        if required_fields:
+            findings.append(
+                DruckerFinding(
+                    finding_id='',
+                    ticket_key=str(ticket.get('key') or ''),
+                    category='missing_required_fields',
+                    severity='high',
+                    title='Ticket intake policy has missing required fields',
+                    description=(
+                        f'{ticket.get("key", "")} is missing required intake fields '
+                        f'for {validation.issue_type}: {", ".join(required_fields)}.'
+                    ),
+                    evidence=self._policy_evidence_lines(validation),
+                    recommendation=(
+                        'Populate the required intake fields before the ticket is '
+                        'treated as ready for active project management.'
+                    ),
+                )
+            )
+
+        if warned_fields:
+            findings.append(
+                DruckerFinding(
+                    finding_id='',
+                    ticket_key=str(ticket.get('key') or ''),
+                    category='missing_recommended_fields',
+                    severity='medium',
+                    title='Ticket intake policy has missing recommended fields',
+                    description=(
+                        f'{ticket.get("key", "")} is missing recommended intake fields '
+                        f'for {validation.issue_type}: {", ".join(warned_fields)}.'
+                    ),
+                    evidence=self._policy_evidence_lines(validation),
+                    recommendation=(
+                        'Add the recommended context fields so routing, prioritization, '
+                        'and downstream reporting stay reliable.'
+                    ),
+                )
+            )
+
+        return findings
+
+    @staticmethod
+    def _covered_hygiene_fields(ticket: Dict[str, Any]) -> set[str]:
+        covered: set[str] = set()
+        assignee = str(
+            ticket.get('assignee_display') or ticket.get('assignee') or ''
+        ).strip()
+
+        if assignee in ('', 'Unassigned'):
+            covered.add('assignee')
+        if not ticket.get('fix_versions'):
+            covered.add('fix_versions')
+        if not ticket.get('components'):
+            covered.add('components')
+        if not ticket.get('labels'):
+            covered.add('labels')
+
+        return covered
+
+    @staticmethod
+    def _policy_evidence_lines(validation: ValidationResult) -> List[str]:
+        action_lines = [
+            f'{action.get("field", "")}:{action.get("action", "")}'
+            for action in validation.actions
+            if action.get('field')
+        ]
+        evidence = [f'issue_type={validation.issue_type}']
+        if validation.missing_required:
+            evidence.append(
+                f'missing_required={", ".join(validation.missing_required)}'
+            )
+        if validation.missing_warned:
+            evidence.append(
+                f'missing_warned={", ".join(validation.missing_warned)}'
+            )
+        if action_lines:
+            evidence.append(f'policy_actions={", ".join(action_lines)}')
+        return evidence
+
+    def _load_ticket(self, request: DruckerRequest) -> Dict[str, Any]:
+        if not request.ticket_key:
+            raise ValueError('Drucker ticket hygiene requires ticket_key')
+
+        ticket_key = str(request.ticket_key).strip()
+        jql = (
+            f'project = "{request.project_key}" AND key = "{ticket_key}" '
+            'ORDER BY updated DESC'
+        )
+        result = search_tickets(
+            jql,
+            limit=1,
+            fields=self.DEFAULT_FIELDS,
+        )
+        if result.is_error:
+            raise RuntimeError(
+                result.error or f'Failed to load ticket {ticket_key}'
+            )
+        tickets = result.data or []
+        if not tickets:
+            raise RuntimeError(f'Ticket {ticket_key} was not found')
+
+        return self._normalize_ticket(tickets[0], stale_days=request.stale_days)
+
+    def _load_recent_tickets(
+        self,
+        request: DruckerRequest,
+    ) -> tuple[str, List[Dict[str, Any]]]:
+        since_value = self._resolve_recent_since(request)
+        result = search_tickets(
+            self._build_recent_jql(request, since_value),
+            limit=request.limit,
+            fields=self.DEFAULT_FIELDS,
+        )
+        if result.is_error:
+            raise RuntimeError(
+                result.error or f'Failed to search recent tickets for {request.project_key}'
+            )
+
+        tickets = [
+            self._normalize_ticket(ticket, stale_days=request.stale_days)
+            for ticket in result.data
+        ]
+        tickets = [
+            ticket for ticket in tickets
+            if not self.monitor_state.is_processed(str(ticket.get('key') or ''))
+        ]
+        return since_value, tickets
+
+    def _resolve_recent_since(self, request: DruckerRequest) -> str:
+        if request.since:
+            normalized = self._normalize_since_value(request.since)
+            if normalized:
+                return normalized
+
+        stored = self.monitor_state.get_last_checked(request.project_key)
+        normalized_stored = self._normalize_since_value(stored or '')
+        if normalized_stored:
+            return normalized_stored
+
+        return self._format_jql_datetime(
+            datetime.now(timezone.utc) - timedelta(hours=24)
+        )
+
+    def _build_recent_jql(
+        self,
+        request: DruckerRequest,
+        since_value: str,
+    ) -> str:
+        if request.jql:
+            return request.jql
+
+        clauses = [
+            f'project = "{request.project_key}"',
+            f'created >= "{since_value}"',
+        ]
+        if not request.include_done:
+            clauses.append('statusCategory != Done')
+        return ' AND '.join(clauses) + ' ORDER BY created ASC'
+
+    @classmethod
+    def _normalize_since_value(cls, value: str) -> Optional[str]:
+        parsed = cls._parse_jira_datetime(value)
+        if parsed is not None:
+            return cls._format_jql_datetime(parsed)
+
+        if not value:
+            return None
+
+        for fmt in ('%Y-%m-%d %H:%M', '%Y-%m-%d'):
+            try:
+                parsed = datetime.strptime(value, fmt)
+                return cls._format_jql_datetime(
+                    parsed.replace(tzinfo=timezone.utc)
+                )
+            except ValueError:
+                continue
+        return None
+
+    @staticmethod
+    def _format_jql_datetime(value: datetime) -> str:
+        return value.astimezone(timezone.utc).strftime('%Y-%m-%d %H:%M')
 
     def create_review_session(self, report: DruckerHygieneReport) -> ReviewSession:
         '''

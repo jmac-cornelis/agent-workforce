@@ -51,6 +51,7 @@ from agents.pm_runtime import normalize_csv_list, notify_shannon
 from collections import Counter
 from core.evidence import EvidenceBundle, load_evidence_bundle
 from core.release_tracking import (
+    ReleaseSnapshot,
     build_snapshot as build_release_snapshot,
     compute_delta,
     compute_velocity,
@@ -1508,6 +1509,223 @@ class GanttProjectPlannerAgent(BaseAgent):
     # Release Monitor — Bug tracking, velocity, readiness, and gap analysis
     # ===========================================================================
 
+    @staticmethod
+    def _serialize_release_snapshot(snapshot: ReleaseSnapshot) -> Dict[str, Any]:
+        return {
+            'release': snapshot.release,
+            'timestamp': snapshot.timestamp,
+            'total_tickets': snapshot.total_tickets,
+            'tickets': list(snapshot.tickets),
+        }
+
+    @staticmethod
+    def _deserialize_release_snapshot(data: Optional[Dict[str, Any]]) -> Optional[ReleaseSnapshot]:
+        if not data:
+            return None
+
+        release = str(data.get('release') or '').strip()
+        timestamp = str(data.get('timestamp') or '').strip()
+        tickets = list(data.get('tickets') or [])
+        total_tickets = int(data.get('total_tickets') or len(tickets))
+
+        if not release or not timestamp:
+            return None
+
+        return ReleaseSnapshot(
+            release=release,
+            timestamp=timestamp,
+            total_tickets=total_tickets,
+            tickets=tickets,
+        )
+
+    @staticmethod
+    def _build_bug_release_snapshot(snapshot: ReleaseSnapshot) -> ReleaseSnapshot:
+        bug_tickets = [
+            dict(ticket)
+            for ticket in snapshot.tickets
+            if str(ticket.get('issuetype', '')).lower() == 'bug'
+        ]
+        return ReleaseSnapshot(
+            release=snapshot.release,
+            timestamp=snapshot.timestamp,
+            total_tickets=len(bug_tickets),
+            tickets=bug_tickets,
+        )
+
+    @staticmethod
+    def _cycle_time_sample_key(sample: Dict[str, Any]) -> tuple[str, str, str, str]:
+        return (
+            str(sample.get('release') or ''),
+            str(sample.get('ticket_key') or ''),
+            str(sample.get('component') or ''),
+            str(sample.get('priority') or ''),
+        )
+
+    def _merge_cycle_time_samples(
+        self,
+        historical_samples: List[Dict[str, Any]],
+        current_samples: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        '''
+        Merge historical/current samples without re-counting previously closed tickets.
+        '''
+        merged: Dict[tuple[str, str, str, str], Dict[str, Any]] = {}
+
+        for sample in historical_samples:
+            if not isinstance(sample, dict):
+                continue
+            merged[self._cycle_time_sample_key(sample)] = dict(sample)
+
+        for sample in current_samples:
+            if not isinstance(sample, dict):
+                continue
+            merged[self._cycle_time_sample_key(sample)] = dict(sample)
+
+        return list(merged.values())
+
+    def _build_cycle_time_samples(
+        self,
+        release: str,
+        tickets: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        '''
+        Estimate cycle-time samples from closed tickets using created/resolved dates.
+        '''
+        samples: List[Dict[str, Any]] = []
+
+        for ticket in tickets:
+            created_dt = self._parse_jira_datetime(str(ticket.get('created', '') or ''))
+            resolved_dt = self._parse_jira_datetime(
+                str(ticket.get('resolutiondate', '') or '')
+            )
+            if not created_dt or not resolved_dt or resolved_dt < created_dt:
+                continue
+
+            duration_hours = round(
+                (resolved_dt - created_dt).total_seconds() / 3600.0,
+                2,
+            )
+            if duration_hours < 0:
+                continue
+
+            components_raw = ticket.get('components') or []
+            if isinstance(components_raw, str):
+                components = [
+                    item.strip() for item in components_raw.split(',')
+                    if item.strip()
+                ]
+            elif isinstance(components_raw, list):
+                components = [
+                    str(item).strip() for item in components_raw
+                    if str(item).strip()
+                ]
+            else:
+                components = []
+
+            if not components:
+                components = ['Unspecified']
+
+            for component in components:
+                samples.append({
+                    'release': release,
+                    'ticket_key': str(ticket.get('key') or ''),
+                    'component': component,
+                    'priority': str(ticket.get('priority') or 'Unknown'),
+                    'duration_hours': duration_hours,
+                })
+
+        return samples
+
+    def _build_cycle_time_stats(
+        self,
+        snapshot: ReleaseSnapshot,
+        cycle_time_samples: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        '''
+        Build component/priority cycle-time statistics for readiness assessment.
+        '''
+        relevant_samples = [
+            dict(item)
+            for item in cycle_time_samples
+            if str(item.get('release') or snapshot.release) == snapshot.release
+        ]
+        components = list(snapshot.by_component.keys()) or ['Unspecified']
+        tracked_priorities = ['P0-Stopper', 'P1-Critical']
+        stats: List[Dict[str, Any]] = []
+
+        for component in components:
+            for priority in tracked_priorities:
+                stat = compute_cycle_time_stats(
+                    relevant_samples,
+                    component=component,
+                    priority=priority,
+                )
+                if stat.sample_size <= 0:
+                    continue
+                stats.append({
+                    'release': snapshot.release,
+                    'component': stat.component,
+                    'priority': stat.priority,
+                    'avg_hours': stat.avg_hours,
+                    'median_hours': stat.median_hours,
+                    'sample_size': stat.sample_size,
+                })
+
+        return stats
+
+    def _build_velocity_summary(
+        self,
+        release_names: List[str],
+        current_snapshots: Dict[str, ReleaseSnapshot],
+        previous_snapshots: Dict[str, ReleaseSnapshot],
+    ) -> Optional[Dict[str, Any]]:
+        if not current_snapshots:
+            return None
+
+        by_release: Dict[str, Dict[str, Any]] = {}
+        total_opened = 0
+        total_closed = 0
+        total_daily_open = 0.0
+        total_daily_close = 0.0
+        total_daily_net = 0.0
+        total_snapshots_used = 0
+
+        for release in release_names:
+            current_snapshot = current_snapshots.get(release)
+            if current_snapshot is None:
+                continue
+
+            history: List[ReleaseSnapshot] = []
+            previous_snapshot = previous_snapshots.get(release)
+            if previous_snapshot is not None:
+                history.append(previous_snapshot)
+            history.append(current_snapshot)
+
+            velocity = compute_velocity(history, window_days=14)
+            by_release[release] = velocity
+            total_opened += int(velocity.get('opened', 0) or 0)
+            total_closed += int(velocity.get('closed', 0) or 0)
+            total_daily_open += float(velocity.get('daily_open_rate', 0.0) or 0.0)
+            total_daily_close += float(velocity.get('daily_close_rate', 0.0) or 0.0)
+            total_daily_net += float(velocity.get('daily_net_rate', 0.0) or 0.0)
+            total_snapshots_used += int(velocity.get('snapshots_used', 0) or 0)
+
+        if not by_release:
+            return None
+
+        if len(by_release) == 1:
+            return next(iter(by_release.values()))
+
+        return {
+            'by_release': by_release,
+            'snapshots_used': total_snapshots_used,
+            'opened': total_opened,
+            'closed': total_closed,
+            'daily_open_rate': total_daily_open,
+            'daily_close_rate': total_daily_close,
+            'daily_net_rate': total_daily_net,
+        }
+
     def create_release_monitor(
         self,
         request: ReleaseMonitorRequest,
@@ -1551,10 +1769,11 @@ class GanttProjectPlannerAgent(BaseAgent):
         if not release_names:
             log.warning('No releases found to monitor')
 
-        # Step 2: Query tickets and build bug summaries per release
+        # Step 2: Query tickets and build snapshots/bug summaries per release
         all_tickets_by_release: Dict[str, List[Dict[str, Any]]] = {}
         bug_summaries: List[BugSummary] = []
-        snapshots: List[Any] = []
+        current_snapshots: Dict[str, ReleaseSnapshot] = {}
+        current_cycle_time_samples: List[Dict[str, Any]] = []
 
         for release in release_names:
             tickets = self._query_release_tickets(release, request.scope_label)
@@ -1562,73 +1781,185 @@ class GanttProjectPlannerAgent(BaseAgent):
 
             mapping_tickets: list[Mapping[str, Any]] = list(tickets)
             snapshot = build_release_snapshot(mapping_tickets, release)
-            snapshots.append(snapshot)
+            current_snapshots[release] = snapshot
+            current_cycle_time_samples.extend(
+                self._build_cycle_time_samples(release, tickets)
+            )
 
-            # Build bug summary (bugs only)
             bug_summary = self._build_bug_summary(release, tickets)
             bug_summaries.append(bug_summary)
 
-        # Step 3: Delta comparison with previous snapshot
-        delta_data: Optional[Dict[str, Any]] = None
-        if request.compare_to_previous and len(snapshots) >= 2:
-            # Reasoning: when monitoring multiple releases, compare the last
-            # two snapshots chronologically. For single-release use, the caller
-            # should supply a stored previous snapshot externally.
+        # Step 3: Load the most recent compatible stored report
+        previous_report_data: Optional[Dict[str, Any]] = None
+        previous_snapshots: Dict[str, ReleaseSnapshot] = {}
+        historical_cycle_time_samples: List[Dict[str, Any]] = []
+        if request.compare_to_previous and release_names:
             try:
-                delta = compute_delta(snapshots[-1], snapshots[0])
-                delta_data = {
-                    'release': delta.release,
-                    'new_tickets': delta.new_tickets,
-                    'closed_tickets': delta.closed_tickets,
-                    'status_changes': delta.status_changes,
-                    'priority_changes': delta.priority_changes,
-                    'new_p0_p1': delta.new_p0_p1,
-                    'velocity': delta.velocity,
-                }
-                # Enrich bug summaries with delta info
-                for bs in bug_summaries:
-                    if bs.release == delta.release:
-                        bs.new_since_last = delta.new_tickets
-                        bs.closed_since_last = delta.closed_tickets
-                        bs.priority_changes = delta.priority_changes
+                previous_record = GanttReleaseMonitorStore().get_latest_compatible_report(
+                    project_key=project_key,
+                    releases=release_names,
+                    scope_label=request.scope_label,
+                )
+                if previous_record:
+                    previous_report_data = previous_record.get('report') or {}
+                    historical_cycle_time_samples = [
+                        dict(item)
+                        for item in (previous_report_data.get('cycle_time_samples') or [])
+                        if isinstance(item, dict)
+                    ]
+                    for release in release_names:
+                        snapshot = self._deserialize_release_snapshot(
+                            (previous_report_data.get('release_snapshots') or {}).get(release)
+                        )
+                        if snapshot is not None:
+                            previous_snapshots[release] = snapshot
+            except Exception as e:
+                log.warning(f'Previous report lookup failed: {e}')
+
+        # Step 4: Delta comparison with the previous compatible report
+        delta_data: Optional[Dict[str, Any]] = None
+        if previous_snapshots:
+            try:
+                delta_by_release: Dict[str, Dict[str, Any]] = {}
+                flat_new: List[Dict[str, str]] = []
+                flat_closed: List[Dict[str, str]] = []
+                flat_status_changes: List[Dict[str, str]] = []
+                flat_priority_changes: List[Dict[str, str]] = []
+                flat_new_p0_p1: List[Dict[str, str]] = []
+                total_velocity = 0.0
+
+                for bug_summary in bug_summaries:
+                    current_snapshot = current_snapshots.get(bug_summary.release)
+                    previous_snapshot = previous_snapshots.get(bug_summary.release)
+                    if current_snapshot is None or previous_snapshot is None:
+                        continue
+
+                    delta = compute_delta(
+                        self._build_bug_release_snapshot(current_snapshot),
+                        self._build_bug_release_snapshot(previous_snapshot),
+                    )
+                    delta_entry = {
+                        'release': delta.release,
+                        'new_tickets': list(delta.new_tickets),
+                        'closed_tickets': list(delta.closed_tickets),
+                        'status_changes': list(delta.status_changes),
+                        'priority_changes': list(delta.priority_changes),
+                        'new_p0_p1': list(delta.new_p0_p1),
+                        'velocity': delta.velocity,
+                    }
+                    delta_by_release[bug_summary.release] = delta_entry
+                    bug_summary.new_since_last = list(delta.new_tickets)
+                    bug_summary.closed_since_last = list(delta.closed_tickets)
+                    bug_summary.priority_changes = list(delta.priority_changes)
+
+                    flat_new.extend(
+                        {'release': delta.release, 'key': key}
+                        for key in delta.new_tickets
+                    )
+                    flat_closed.extend(
+                        {'release': delta.release, 'key': key}
+                        for key in delta.closed_tickets
+                    )
+                    flat_status_changes.extend(
+                        {
+                            'release': delta.release,
+                            'key': str(change.get('key', '')),
+                            'from': str(change.get('from', '')),
+                            'to': str(change.get('to', '')),
+                        }
+                        for change in delta.status_changes
+                    )
+                    flat_priority_changes.extend(
+                        {
+                            'release': delta.release,
+                            'key': str(change.get('key', '')),
+                            'from': str(change.get('from', '')),
+                            'to': str(change.get('to', '')),
+                        }
+                        for change in delta.priority_changes
+                    )
+                    flat_new_p0_p1.extend(
+                        {'release': delta.release, 'key': key}
+                        for key in delta.new_p0_p1
+                    )
+                    total_velocity += float(delta.velocity or 0.0)
+
+                if delta_by_release:
+                    primary_release = release_names[0] if len(release_names) == 1 else 'multiple'
+                    delta_data = {
+                        'comparison_basis': 'previous_report',
+                        'previous_report_id': str(
+                            previous_report_data.get('report_id') or ''
+                        ) if previous_report_data else '',
+                        'release': primary_release,
+                        'new_tickets': flat_new,
+                        'closed_tickets': flat_closed,
+                        'status_changes': flat_status_changes,
+                        'priority_changes': flat_priority_changes,
+                        'new_p0_p1': flat_new_p0_p1,
+                        'velocity': total_velocity,
+                        'by_release': delta_by_release,
+                    }
             except Exception as e:
                 log.warning(f'Delta computation failed: {e}')
 
-        # Step 4: Velocity
+        # Step 5: Velocity
         velocity_data: Optional[Dict[str, Any]] = None
-        if request.include_velocity and snapshots:
+        if request.include_velocity and current_snapshots:
             try:
-                velocity_data = compute_velocity(snapshots, window_days=14)
+                velocity_data = self._build_velocity_summary(
+                    release_names,
+                    current_snapshots,
+                    previous_snapshots,
+                )
             except Exception as e:
                 log.warning(f'Velocity computation failed: {e}')
 
-        # Step 5: Readiness assessment
+        # Step 6: Readiness assessment
         readiness_data: Optional[Dict[str, Any]] = None
-        if request.include_readiness and snapshots:
+        cycle_time_samples = self._merge_cycle_time_samples(
+            historical_cycle_time_samples,
+            current_cycle_time_samples,
+        )
+        cycle_time_stats: List[Dict[str, Any]] = []
+        if request.include_readiness and current_snapshots:
             try:
-                config = TrackerConfig(
-                    project=project_key,
-                    releases=release_names,
-                )
-                # Use the last snapshot for readiness
-                vel = velocity_data or {}
-                readiness_report = assess_readiness(
-                    snapshots[-1], vel, [], config,
-                )
-                readiness_data = {
-                    'release': readiness_report.release,
-                    'total_open': readiness_report.total_open,
-                    'p0_open': readiness_report.p0_open,
-                    'p1_open': readiness_report.p1_open,
-                    'daily_close_rate': readiness_report.daily_close_rate,
-                    'estimated_days_remaining': readiness_report.estimated_days_remaining,
-                    'stale_tickets': readiness_report.stale_tickets,
-                    'component_risks': readiness_report.component_risks,
-                }
+                primary_release = release_names[0] if release_names else ''
+                primary_snapshot = current_snapshots.get(primary_release)
+                if primary_snapshot is not None:
+                    config = TrackerConfig(
+                        project=project_key,
+                        releases=release_names,
+                    )
+                    cycle_time_stats = self._build_cycle_time_stats(
+                        primary_snapshot,
+                        cycle_time_samples,
+                    )
+                    velocity_for_readiness = velocity_data or {}
+                    if 'by_release' in velocity_for_readiness:
+                        velocity_for_readiness = (
+                            velocity_for_readiness.get('by_release') or {}
+                        ).get(primary_release, {})
+                    readiness_report = assess_readiness(
+                        primary_snapshot,
+                        velocity_for_readiness,
+                        cycle_time_stats,
+                        config,
+                    )
+                    readiness_data = {
+                        'release': readiness_report.release,
+                        'total_open': readiness_report.total_open,
+                        'p0_open': readiness_report.p0_open,
+                        'p1_open': readiness_report.p1_open,
+                        'daily_close_rate': readiness_report.daily_close_rate,
+                        'estimated_days_remaining': readiness_report.estimated_days_remaining,
+                        'stale_tickets': readiness_report.stale_tickets,
+                        'component_risks': readiness_report.component_risks,
+                    }
             except Exception as e:
                 log.warning(f'Readiness assessment failed: {e}')
 
-        # Step 6: Gap analysis (reuse roadmap snapshot machinery)
+        # Step 7: Gap analysis (reuse roadmap snapshot machinery)
         roadmap_data: Optional[Dict[str, Any]] = None
         if request.include_gap_analysis:
             try:
@@ -1647,18 +1978,25 @@ class GanttProjectPlannerAgent(BaseAgent):
         report = ReleaseMonitorReport(
             project_key=project_key,
             created_at=datetime.now(timezone.utc).isoformat(),
+            scope_label=request.scope_label or '',
             releases_monitored=release_names,
             bug_summaries=bug_summaries,
             velocity=velocity_data,
             readiness=readiness_data,
             roadmap_snapshot=roadmap_data,
             delta=delta_data,
+            release_snapshots={
+                release: self._serialize_release_snapshot(snapshot)
+                for release, snapshot in current_snapshots.items()
+            },
+            cycle_time_samples=cycle_time_samples,
+            cycle_time_stats=cycle_time_stats,
         )
 
         # Generate markdown summary
         report.summary_markdown = self._format_release_monitor_summary(report)
 
-        # Step 7: Generate xlsx
+        # Step 8: Generate xlsx
         if request.output_file:
             output_path = self._write_release_monitor_xlsx(
                 report, request.output_file, all_tickets_by_release,
@@ -1935,9 +2273,15 @@ class GanttProjectPlannerAgent(BaseAgent):
         new_tickets = delta.get('new_tickets', [])
         if new_tickets:
             row = self._write_section_divider(ws, row, 'New Bugs', len(headers))
-            for key in new_tickets:
+            for entry in new_tickets:
+                if isinstance(entry, dict):
+                    key = str(entry.get('key', ''))
+                    entry_release = str(entry.get('release', release))
+                else:
+                    key = str(entry)
+                    entry_release = release
                 ws.cell(row=row, column=1, value='New Bug')
-                ws.cell(row=row, column=2, value=release)
+                ws.cell(row=row, column=2, value=entry_release)
                 key_cell = ws.cell(row=row, column=3, value=key)
                 key_cell.hyperlink = f'{JIRA_BASE_URL}/browse/{key}'
                 key_cell.font = Font(color='0563C1', underline='single')
@@ -1951,9 +2295,15 @@ class GanttProjectPlannerAgent(BaseAgent):
             row = self._write_section_divider(
                 ws, row, 'Closed Bugs', len(headers),
             )
-            for key in closed_tickets:
+            for entry in closed_tickets:
+                if isinstance(entry, dict):
+                    key = str(entry.get('key', ''))
+                    entry_release = str(entry.get('release', release))
+                else:
+                    key = str(entry)
+                    entry_release = release
                 ws.cell(row=row, column=1, value='Closed Bug')
-                ws.cell(row=row, column=2, value=release)
+                ws.cell(row=row, column=2, value=entry_release)
                 key_cell = ws.cell(row=row, column=3, value=key)
                 key_cell.hyperlink = f'{JIRA_BASE_URL}/browse/{key}'
                 key_cell.font = Font(color='0563C1', underline='single')
@@ -1969,7 +2319,11 @@ class GanttProjectPlannerAgent(BaseAgent):
             )
             for change in priority_changes:
                 ws.cell(row=row, column=1, value='Priority Change')
-                ws.cell(row=row, column=2, value=release)
+                ws.cell(
+                    row=row,
+                    column=2,
+                    value=str(change.get('release', release)),
+                )
                 key = str(change.get('key', ''))
                 key_cell = ws.cell(row=row, column=3, value=key)
                 if key:
@@ -1990,7 +2344,11 @@ class GanttProjectPlannerAgent(BaseAgent):
             )
             for change in status_changes:
                 ws.cell(row=row, column=1, value='Status Change')
-                ws.cell(row=row, column=2, value=release)
+                ws.cell(
+                    row=row,
+                    column=2,
+                    value=str(change.get('release', release)),
+                )
                 key = str(change.get('key', ''))
                 key_cell = ws.cell(row=row, column=3, value=key)
                 if key:

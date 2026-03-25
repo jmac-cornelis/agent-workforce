@@ -1054,6 +1054,40 @@ async def create_drucker_hygiene_report(
 
 
 @_tool_decorator()
+async def create_drucker_issue_check(
+    project_key: str,
+    ticket_key: str,
+    stale_days: int = 30,
+    label_prefix: str = 'drucker',
+    persist: bool = True,
+) -> list[Any]:
+    """Run a Drucker issue-check for a specific Jira ticket."""
+    try:
+        agent = DruckerCoordinatorAgent(project_key=project_key)
+        request = DruckerRequest(
+            project_key=project_key,
+            ticket_key=ticket_key,
+            stale_days=stale_days,
+            label_prefix=label_prefix,
+        )
+        report = agent.analyze_ticket_hygiene(request)
+        review_session = agent.create_review_session(report)
+        result = {
+            'report': report.to_dict(),
+            'review_session': review_session.to_dict(),
+        }
+        if persist:
+            result['stored'] = DruckerReportStore().save_report(
+                report,
+                summary_markdown=report.summary_markdown,
+            )
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'create_drucker_issue_check failed: {e}')
+        return _error_result(str(e))
+
+
+@_tool_decorator()
 async def get_drucker_report(
     report_id: str,
     project_key: Optional[str] = None,

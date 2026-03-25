@@ -30,19 +30,25 @@ class DruckerRequest:
     Input request for generating a Drucker hygiene report.
     '''
     project_key: str = ''
+    ticket_key: Optional[str] = None
     limit: int = 200
     include_done: bool = False
     stale_days: int = 30
     jql: Optional[str] = None
+    since: Optional[str] = None
+    recent_only: bool = False
     label_prefix: str = 'drucker'
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             'project_key': self.project_key,
+            'ticket_key': self.ticket_key,
             'limit': self.limit,
             'include_done': self.include_done,
             'stale_days': self.stale_days,
             'jql': self.jql,
+            'since': self.since,
+            'recent_only': self.recent_only,
             'label_prefix': self.label_prefix,
         }
 

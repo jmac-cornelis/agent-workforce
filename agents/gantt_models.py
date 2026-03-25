@@ -544,6 +544,7 @@ class ReleaseMonitorReport:
     project_key: str = ""
     created_at: str = ""
     report_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    scope_label: str = ""
     releases_monitored: List[str] = field(default_factory=list)
 
     # Bug summaries per release
@@ -560,6 +561,11 @@ class ReleaseMonitorReport:
 
     # Delta from previous report
     delta: Optional[Dict[str, Any]] = None
+
+    # Historical release snapshots and cycle-time evidence
+    release_snapshots: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    cycle_time_samples: List[Dict[str, Any]] = field(default_factory=list)
+    cycle_time_stats: List[Dict[str, Any]] = field(default_factory=list)
 
     # Human-readable summary
     summary_markdown: str = ""
@@ -584,12 +590,16 @@ class ReleaseMonitorReport:
             "project_key": self.project_key,
             "created_at": self.created_at,
             "report_id": self.report_id,
+            "scope_label": self.scope_label,
             "releases_monitored": self.releases_monitored,
             "bug_summaries": [b.to_dict() for b in self.bug_summaries],
             "velocity": self.velocity,
             "readiness": self.readiness,
             "roadmap_snapshot": self.roadmap_snapshot,
             "delta": self.delta,
+            "release_snapshots": self.release_snapshots,
+            "cycle_time_samples": self.cycle_time_samples,
+            "cycle_time_stats": self.cycle_time_stats,
             "summary_markdown": self.summary_markdown,
             "output_file": self.output_file,
             "total_bugs": self.total_bugs,

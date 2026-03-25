@@ -808,6 +808,7 @@ def cmd_workflow(args):
     WORKFLOWS = {
         'bug-report': _workflow_bug_report,
         'drucker-hygiene': _workflow_drucker_hygiene,
+        'drucker-issue-check': _workflow_drucker_issue_check,
         'drucker-poll': _workflow_drucker_poll,
         'feature-plan': _workflow_feature_plan,
         'gantt-poll': _workflow_gantt_poll,
@@ -1921,6 +1922,90 @@ def _workflow_drucker_hygiene(args):
     return 0
 
 
+def _workflow_drucker_issue_check(args):
+    '''
+    Drucker workflow: single-ticket intake validation -> durable report + review session.
+    '''
+    log.debug(
+        f'Entering _workflow_drucker_issue_check(project={args.project}, '
+        f'ticket_key={args.ticket_key}, stale_days={args.stale_days})'
+    )
+
+    from agents.drucker_agent import DruckerCoordinatorAgent
+    from state.drucker_report_store import DruckerReportStore
+
+    output('')
+    output('=' * 60)
+    output('WORKFLOW: drucker-issue-check')
+    output('=' * 60)
+    output('')
+    output(f'Project: {args.project}')
+    output(f'Ticket: {args.ticket_key}')
+    output(f'Stale threshold: {args.stale_days} days')
+    output('')
+    output('Step 1/4: Building Drucker issue-check report...')
+
+    agent = DruckerCoordinatorAgent(project_key=args.project)
+    result = agent.run({
+        'project_key': args.project,
+        'ticket_key': args.ticket_key,
+        'stale_days': args.stale_days,
+    })
+
+    if not result.success:
+        output(f'ERROR: {result.error}')
+        return 1
+
+    report = result.metadata.get('hygiene_report')
+    review_session = result.metadata.get('review_session')
+
+    if not report:
+        output('ERROR: Drucker issue-check report missing from agent response')
+        return 1
+
+    output('Step 2/4: Persisting issue-check report...')
+
+    store = DruckerReportStore()
+    stored_summary = store.save_report(report, summary_markdown=result.content or '')
+
+    output(f'  Stored report ID: {stored_summary["report_id"]}')
+    output(f'  Stored in: {stored_summary["storage_dir"]}')
+
+    output('Step 3/4: Writing report files...')
+
+    default_base = (
+        f'{args.project.lower()}_{args.ticket_key.lower()}_drucker_issue_check.json'
+    )
+    output_base = args.output or default_base
+    json_path, md_path, review_path = _write_drucker_report_files(
+        report,
+        result.content or '',
+        review_session or {},
+        output_base,
+    )
+
+    output(f'  Saved: {json_path}')
+    output(f'  Saved: {md_path}')
+    output(f'  Saved: {review_path}')
+
+    output('Step 4/4: Reporting summary...')
+    output(f'  Findings: {report.get("summary", {}).get("finding_count", 0)}')
+    output(f'  Proposed actions: {report.get("summary", {}).get("action_count", 0)}')
+    output(
+        '  Tickets with findings: '
+        f'{report.get("summary", {}).get("tickets_with_findings", 0)}'
+    )
+
+    _print_workflow_summary('drucker-issue-check', [
+        (stored_summary['json_path'], 'stored issue-check report JSON'),
+        (stored_summary['markdown_path'], 'stored issue-check report Markdown'),
+        (json_path, 'exported issue-check report JSON'),
+        (md_path, 'exported issue-check report Markdown'),
+        (review_path, 'review session JSON'),
+    ])
+    return 0
+
+
 def _workflow_gantt_poll(args):
     '''
     Gantt workflow: run one or more scheduled planning/release-monitor cycles.
@@ -2026,6 +2111,9 @@ def _workflow_drucker_poll(args):
     output('')
     output(f'Project: {args.project}')
     output(f'Stale threshold: {args.stale_days} days')
+    output(f'Recent only: {"yes" if args.recent_only else "no"}')
+    if args.since:
+        output(f'Since: {args.since}')
     output(f'Poll interval: {args.poll_interval} seconds')
     output(
         'Cycles: '
@@ -2041,6 +2129,8 @@ def _workflow_drucker_poll(args):
         'limit': args.limit or 200,
         'include_done': args.include_done,
         'stale_days': args.stale_days,
+        'since': args.since,
+        'recent_only': args.recent_only,
         'persist': True,
         'notify_shannon': args.notify_shannon,
         'shannon_base_url': args.shannon_url,
@@ -2445,7 +2535,9 @@ Examples:
   %(prog)s --workflow gantt-poll --project STL --run-release-monitor --releases 12.1.1.x --max-cycles 2 --poll-interval 60
   %(prog)s --workflow drucker-hygiene --project STL
   %(prog)s --workflow drucker-hygiene --project STL --stale-days 21 --output stl_hygiene.json
+  %(prog)s --workflow drucker-issue-check --project STL --ticket-key STL-12345
   %(prog)s --workflow drucker-poll --project STL --max-cycles 2 --poll-interval 300 --notify-shannon
+  %(prog)s --workflow drucker-poll --project STL --recent-only --max-cycles 2 --poll-interval 300
   %(prog)s --workflow hypatia-generate --doc-title "STL Build Notes" --docs README.md AGENTS.md
   %(prog)s --workflow hypatia-generate --doc-title "Fabric Bring-Up Guide" --doc-type how_to --docs docs/source.md --target-file docs/fabric-bring-up.md
   %(prog)s --workflow hypatia-generate --doc-title "Release Notes Support" --docs notes.md --evidence release.json --doc-validation strict
@@ -2626,8 +2718,20 @@ Examples:
                        help='Disable previous-report delta comparison for --workflow gantt-release-monitor.')
     parser.add_argument('--stale-days', type=int, default=30, metavar='DAYS',
                        dest='stale_days',
-                       help='Stale-ticket threshold in days for --workflow drucker-hygiene '
-                            'and --workflow drucker-poll (default: 30).')
+                       help='Stale-ticket threshold in days for Drucker workflows '
+                            '(default: 30).')
+    parser.add_argument('--ticket-key', default=None, metavar='KEY',
+                       dest='ticket_key',
+                       help='Specific Jira ticket key for --workflow drucker-issue-check.')
+    parser.add_argument('--since', default=None, metavar='WHEN',
+                       dest='since',
+                       help='Optional checkpoint override for --workflow drucker-poll '
+                            'when using --recent-only. Accepts ISO timestamps or '
+                            '"YYYY-MM-DD HH:MM".')
+    parser.add_argument('--recent-only', action='store_true',
+                       dest='recent_only',
+                       help='Use recent-ticket intake scanning during --workflow drucker-poll '
+                            'instead of full-project hygiene scans.')
     parser.add_argument('--poll-interval', type=int, default=300, metavar='SECS',
                        dest='poll_interval',
                        help='Polling interval in seconds for --workflow gantt-poll '
@@ -2865,6 +2969,11 @@ Examples:
         elif args.workflow_name == 'drucker-hygiene':
             if not args.project:
                 parser.error('--workflow drucker-hygiene requires --project PROJECT_KEY')
+        elif args.workflow_name == 'drucker-issue-check':
+            if not args.project:
+                parser.error('--workflow drucker-issue-check requires --project PROJECT_KEY')
+            if not args.ticket_key:
+                parser.error('--workflow drucker-issue-check requires --ticket-key KEY')
         elif args.workflow_name == 'drucker-poll':
             if not args.project:
                 parser.error('--workflow drucker-poll requires --project PROJECT_KEY')
@@ -3029,9 +3138,18 @@ Examples:
             log.info(f'+  Include done: {"yes" if args.include_done else "no"}')
             if args.output:
                 log.info(f'+  Output: {args.output}')
+        elif args.workflow_name == 'drucker-issue-check':
+            log.info(f'+  Project: {args.project}')
+            log.info(f'+  Ticket: {args.ticket_key}')
+            log.info(f'+  Stale days: {args.stale_days}')
+            if args.output:
+                log.info(f'+  Output: {args.output}')
         elif args.workflow_name == 'drucker-poll':
             log.info(f'+  Project: {args.project}')
             log.info(f'+  Poll interval: {args.poll_interval}s')
+            log.info(f'+  Recent only: {"yes" if args.recent_only else "no"}')
+            if args.since:
+                log.info(f'+  Since: {args.since}')
             log.info(
                 '+  Max cycles: '
                 f'{"continuous" if args.max_cycles == 0 else args.max_cycles}'

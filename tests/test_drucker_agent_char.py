@@ -98,6 +98,73 @@ def test_drucker_agent_builds_hygiene_report_and_actions(monkeypatch: pytest.Mon
     assert 'STL-101' in report.summary_markdown
 
 
+def test_drucker_agent_issue_check_builds_policy_findings_and_actions(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from agents import drucker_agent as drucker_agent_module
+    from agents.drucker_agent import DruckerCoordinatorAgent
+
+    monkeypatch.setattr(
+        DruckerCoordinatorAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'drucker prompt'),
+    )
+    monkeypatch.setattr(drucker_agent_module, 'datetime', _FixedDateTime)
+    monkeypatch.setattr(
+        drucker_agent_module,
+        'get_project_info',
+        lambda project_key: ToolResult.success({
+            'key': project_key,
+            'name': 'Storage Team',
+        }),
+    )
+    monkeypatch.setattr(
+        drucker_agent_module,
+        'search_tickets',
+        lambda jql, limit=100, fields=None: ToolResult.success([
+            {
+                'key': 'STL-201',
+                'summary': 'New bug missing intake details',
+                'description': '',
+                'status': 'Open',
+                'priority': '',
+                'assignee': 'Jane Dev',
+                'assignee_display': 'Jane Dev',
+                'updated': '2026-03-15T10:00:00.000+0000',
+                'updated_date': '2026-03-15',
+                'fix_versions': ['12.1.0'],
+                'components': ['Fabric'],
+                'labels': ['triage'],
+                'issue_type': 'Bug',
+            },
+        ]),
+    )
+
+    agent = DruckerCoordinatorAgent(project_key='STL')
+    report = agent.analyze_ticket_hygiene(
+        DruckerRequest(
+            project_key='STL',
+            ticket_key='STL-201',
+            stale_days=21,
+        )
+    )
+
+    categories = {finding.category for finding in report.findings}
+    action_types = [action.action_type for action in report.proposed_actions]
+
+    assert report.summary['monitor_scope'] == 'ticket'
+    assert report.summary['ticket_key'] == 'STL-201'
+    assert report.summary['tickets_with_findings'] == 1
+    assert 'missing_required_fields' in categories
+    assert 'missing_recommended_fields' in categories
+    assert action_types == ['update', 'comment']
+    assert report.proposed_actions[0].update_fields['labels'] == [
+        'drucker-needs-metadata-review',
+        'drucker-needs-required-fields',
+        'triage',
+    ]
+
+
 def test_drucker_report_store_save_load_and_list(tmp_path):
     from state.drucker_report_store import DruckerReportStore
 
@@ -233,6 +300,93 @@ def test_drucker_agent_creates_review_session_and_executes_approved_actions(
     assert session.items[1].status.value == 'executed'
 
 
+def test_drucker_agent_recent_ticket_intake_uses_checkpoint_and_processed_state(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    from agents import drucker_agent as drucker_agent_module
+    from agents.drucker_agent import DruckerCoordinatorAgent
+
+    search_calls = []
+
+    monkeypatch.setattr(
+        DruckerCoordinatorAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'drucker prompt'),
+    )
+    monkeypatch.setattr(drucker_agent_module, 'datetime', _FixedDateTime)
+    monkeypatch.setenv(
+        'DRUCKER_MONITOR_STATE_DB',
+        str(tmp_path / 'drucker_monitor_state.db'),
+    )
+    monkeypatch.setattr(
+        drucker_agent_module,
+        'get_project_info',
+        lambda project_key: ToolResult.success({
+            'key': project_key,
+            'name': 'Storage Team',
+        }),
+    )
+    monkeypatch.setattr(
+        drucker_agent_module,
+        'search_tickets',
+        lambda jql, limit=100, fields=None: (
+            search_calls.append(jql)
+            or ToolResult.success([
+                {
+                    'key': 'STL-301',
+                    'summary': 'Recent bug missing priority',
+                    'description': '',
+                    'status': 'Open',
+                    'priority': '',
+                    'assignee': 'Jane Dev',
+                    'assignee_display': 'Jane Dev',
+                    'updated': '2026-03-15T10:00:00.000+0000',
+                    'updated_date': '2026-03-15',
+                    'fix_versions': ['12.1.0'],
+                    'components': ['Fabric'],
+                    'labels': ['triage'],
+                    'issue_type': 'Bug',
+                },
+                {
+                    'key': 'STL-302',
+                    'summary': 'Healthy recent story',
+                    'description': 'ready',
+                    'status': 'Open',
+                    'priority': 'Medium',
+                    'assignee': 'Jane Dev',
+                    'assignee_display': 'Jane Dev',
+                    'updated': '2026-03-15T10:00:00.000+0000',
+                    'updated_date': '2026-03-15',
+                    'fix_versions': ['12.1.0'],
+                    'components': ['Fabric'],
+                    'labels': ['triage'],
+                    'issue_type': 'Story',
+                },
+            ])
+        ),
+    )
+
+    agent = DruckerCoordinatorAgent(project_key='STL')
+    request = DruckerRequest(
+        project_key='STL',
+        recent_only=True,
+        since='2026-03-14 00:00',
+        stale_days=21,
+        limit=50,
+    )
+
+    first_report = agent.analyze_recent_ticket_intake(request)
+    second_report = agent.analyze_recent_ticket_intake(request)
+
+    assert 'created >=' in search_calls[0]
+    assert first_report.summary['monitor_scope'] == 'recent_ticket_intake'
+    assert first_report.summary['source_ticket_count'] == 2
+    assert first_report.summary['tickets_with_findings'] == 1
+    assert second_report.summary['source_ticket_count'] == 0
+    assert agent.monitor_state.get_last_checked('STL') is not None
+
+
 def test_drucker_agent_tick_persists_results_and_posts_notifications(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
@@ -304,6 +458,66 @@ def test_drucker_agent_tick_persists_results_and_posts_notifications(
     assert notification_calls[0]['url'] == 'http://shannon.test/v1/bot/notify'
 
 
+def test_drucker_agent_tick_recent_only_persists_recent_intake_report(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    from agents import pm_runtime
+    from agents.drucker_agent import DruckerCoordinatorAgent
+
+    class _FakeResponse:
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {'ok': True}
+
+    monkeypatch.setattr(
+        DruckerCoordinatorAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'drucker prompt'),
+    )
+    monkeypatch.setenv('DRUCKER_REPORT_DIR', str(tmp_path / 'reports'))
+    monkeypatch.setattr(pm_runtime.requests, 'post', lambda *args, **kwargs: _FakeResponse())
+
+    report = DruckerHygieneReport(
+        project_key='STL',
+        report_id='rep-intake',
+        summary={
+            'total_tickets': 2,
+            'finding_count': 2,
+            'action_count': 2,
+            'tickets_with_findings': 1,
+            'monitor_scope': 'recent_ticket_intake',
+        },
+        summary_markdown='# Intake Report',
+    )
+
+    monkeypatch.setattr(
+        DruckerCoordinatorAgent,
+        'analyze_recent_ticket_intake',
+        lambda self, request: report,
+    )
+    monkeypatch.setattr(
+        DruckerCoordinatorAgent,
+        'create_review_session',
+        lambda self, report: SimpleNamespace(
+            to_dict=lambda: {'session_id': report.report_id, 'items': []}
+        ),
+    )
+
+    agent = DruckerCoordinatorAgent(project_key='STL')
+    result = agent.tick({
+        'project_key': 'STL',
+        'stale_days': 21,
+        'recent_only': True,
+    })
+
+    assert result['ok'] is True
+    assert result['tasks'][0]['task_type'] == 'ticket_intake_report'
+    assert (tmp_path / 'reports' / 'STL' / 'rep-intake' / 'report.json').exists()
+
+
 def test_workflow_drucker_hygiene_writes_report_files(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
@@ -370,6 +584,65 @@ def test_workflow_drucker_hygiene_writes_report_files(
     assert review_payload['session_id'] == 'rep-101'
 
 
+def test_workflow_drucker_issue_check_writes_report_files(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    import pm_agent
+    from agents import drucker_agent as drucker_agent_module
+
+    class _FakeDruckerAgent:
+        def __init__(self, project_key=None, **kwargs):
+            self.project_key = project_key
+
+        def run(self, input_data):
+            return AgentResponse.success_response(
+                content='# Drucker Issue Check\n\nSummary',
+                metadata={
+                    'task_type': 'issue_check',
+                    'hygiene_report': {
+                        'report_id': 'rep-issue-101',
+                        'project_key': input_data['project_key'],
+                        'created_at': '2026-03-15T12:00:00+00:00',
+                        'summary': {
+                            'total_tickets': 1,
+                            'finding_count': 2,
+                            'action_count': 2,
+                            'tickets_with_findings': 1,
+                            'monitor_scope': 'ticket',
+                            'ticket_key': input_data['ticket_key'],
+                        },
+                        'findings': [],
+                        'proposed_actions': [],
+                    },
+                    'review_session': {
+                        'session_id': 'rep-issue-101',
+                        'items': [{'id': 'D001', 'action': 'comment'}],
+                    },
+                },
+            )
+
+    monkeypatch.setattr(drucker_agent_module, 'DruckerCoordinatorAgent', _FakeDruckerAgent)
+    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
+    monkeypatch.setenv('DRUCKER_REPORT_DIR', str(tmp_path / 'store'))
+
+    output_path = tmp_path / 'drucker_issue_check.json'
+    args = SimpleNamespace(
+        project='STL',
+        ticket_key='STL-201',
+        stale_days=21,
+        output=str(output_path),
+    )
+
+    exit_code = pm_agent._workflow_drucker_issue_check(args)
+
+    assert exit_code == 0
+    assert output_path.exists()
+    assert (tmp_path / 'drucker_issue_check.md').exists()
+    assert (tmp_path / 'drucker_issue_check_review.json').exists()
+    assert (tmp_path / 'store' / 'STL' / 'rep-issue-101' / 'report.json').exists()
+
+
 def test_workflow_drucker_poll_runs_poller(monkeypatch: pytest.MonkeyPatch):
     import pm_agent
     from agents import drucker_agent as drucker_agent_module
@@ -424,10 +697,71 @@ def test_workflow_drucker_poll_runs_poller(monkeypatch: pytest.MonkeyPatch):
         limit=50,
         include_done=False,
         stale_days=21,
+        recent_only=False,
+        since=None,
         notify_shannon=True,
         shannon_url='http://shannon.test',
         poll_interval=300,
         max_cycles=2,
+    )
+
+    assert pm_agent._workflow_drucker_poll(args) == 0
+
+
+def test_workflow_drucker_poll_passes_recent_only_options(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import pm_agent
+    from agents import drucker_agent as drucker_agent_module
+
+    class _FakeDruckerAgent:
+        def __init__(self, project_key=None, **_kwargs):
+            self.project_key = project_key
+
+        def run_poller(self, spec):
+            assert spec['project_key'] == 'STL'
+            assert spec['recent_only'] is True
+            assert spec['since'] == '2026-03-14 00:00'
+            return {
+                'ok': True,
+                'cycles_run': 1,
+                'cycle_summaries': [
+                    {
+                        'cycle_number': 1,
+                        'ok': True,
+                        'task_count': 1,
+                        'notification_count': 0,
+                        'errors': [],
+                    },
+                ],
+                'last_tick': {
+                    'tasks': [
+                        {
+                            'task_type': 'ticket_intake_report',
+                            'stored': {'report_id': 'rep-703'},
+                        }
+                    ]
+                },
+            }
+
+    monkeypatch.setattr(
+        drucker_agent_module,
+        'DruckerCoordinatorAgent',
+        _FakeDruckerAgent,
+    )
+    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
+
+    args = SimpleNamespace(
+        project='STL',
+        limit=50,
+        include_done=False,
+        stale_days=21,
+        notify_shannon=False,
+        shannon_url=None,
+        poll_interval=300,
+        max_cycles=1,
+        recent_only=True,
+        since='2026-03-14 00:00',
     )
 
     assert pm_agent._workflow_drucker_poll(args) == 0

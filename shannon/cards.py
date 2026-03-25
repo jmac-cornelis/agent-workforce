@@ -90,12 +90,15 @@ def build_drucker_hygiene_card(report_data: Dict[str, Any]) -> Dict[str, Any]:
     # Build fact set from summary
     by_severity = summary.get('by_severity', {})
     facts = {
-        'Total Findings': summary.get('total_findings', 0),
+        'Total Findings': summary.get(
+            'finding_count',
+            summary.get('total_findings', 0),
+        ),
         'Critical': by_severity.get('critical', 0),
         'High': by_severity.get('high', 0),
         'Medium': by_severity.get('medium', 0),
         'Low': by_severity.get('low', 0),
-        'Proposed Actions': len(proposed_actions),
+        'Proposed Actions': summary.get('action_count', len(proposed_actions)),
     }
 
     # Build body lines for top 5 findings
