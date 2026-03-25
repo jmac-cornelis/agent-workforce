@@ -1982,6 +1982,244 @@ async def daily_report(
 
 
 # ---------------------------------------------------------------------------
+# Tool 20: list_automations — List Jira automation rules
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def list_automations(project_key: str = '', state: str = '') -> list[Any]:
+    """List Jira automation rules, optionally filtered by project or state.
+
+    Args:
+        project_key: Optional project key to filter rules.
+        state: Optional state filter: 'ENABLED' or 'DISABLED'.
+    """
+    try:
+        jira = jira_utils.get_connection()
+        email, api_token = jira_utils.get_jira_credentials()
+        base_url = jira_utils._get_automation_base_url()
+
+        import requests
+        all_rules = []
+        offset = 0
+
+        while True:
+            params = {'limit': 100, 'offset': offset}
+            if state:
+                params['ruleState'] = state
+
+            response = requests.get(
+                f'{base_url}/rule/summary',
+                auth=(email, api_token),
+                headers={'Accept': 'application/json'},
+                params=params,
+            )
+            if response.status_code != 200:
+                return _error_result(f'Automation API error: {response.status_code} - {response.text}')
+
+            data = response.json()
+            rules = data.get('results', [])
+            all_rules.extend(rules)
+
+            total = data.get('total', len(all_rules))
+            if offset + len(rules) >= total or len(rules) == 0:
+                break
+            offset += len(rules)
+
+        result = []
+        for r in all_rules:
+            if project_key:
+                projects = r.get('projects', [])
+                project_keys = [p.get('projectKey', '') for p in projects]
+                if project_key not in project_keys:
+                    continue
+            result.append({
+                'id': r.get('id'),
+                'name': r.get('name', ''),
+                'state': r.get('state', ''),
+                'enabled': r.get('enabled', False),
+            })
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'list_automations failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 21: get_automation — Get full Jira automation rule config
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def get_automation(rule_uuid: str) -> list[Any]:
+    """Get the full configuration of a Jira automation rule.
+
+    Args:
+        rule_uuid: UUID of the automation rule to retrieve.
+    """
+    try:
+        jira = jira_utils.get_connection()
+        email, api_token = jira_utils.get_jira_credentials()
+        base_url = jira_utils._get_automation_base_url()
+
+        import requests
+        response = requests.get(
+            f'{base_url}/rule/{rule_uuid}',
+            auth=(email, api_token),
+            headers={'Accept': 'application/json'},
+        )
+        if response.status_code == 404:
+            return _error_result(f'Automation rule not found: {rule_uuid}')
+        if response.status_code != 200:
+            return _error_result(f'Automation API error: {response.status_code} - {response.text}')
+
+        rule = response.json()
+        return _json_result(rule)
+    except Exception as e:
+        log.error(f'get_automation failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 22: create_automation — Create a Jira automation rule from JSON
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def create_automation(rule_json: str, project_key: str = '') -> list[Any]:
+    """Create a new Jira automation rule from a JSON payload.
+
+    Args:
+        rule_json: JSON string defining the automation rule configuration.
+        project_key: Optional project key to scope the rule to.
+    """
+    try:
+        import json as _json
+        payload = _json.loads(rule_json)
+    except Exception as e:
+        return _error_result(f'Invalid JSON payload: {e}')
+
+    try:
+        jira = jira_utils.get_connection()
+        email, api_token = jira_utils.get_jira_credentials()
+        base_url = jira_utils._get_automation_base_url()
+
+        import requests
+        response = requests.post(
+            f'{base_url}/rule',
+            auth=(email, api_token),
+            headers={'Accept': 'application/json', 'Content-Type': 'application/json'},
+            json=payload,
+        )
+        if response.status_code not in (200, 201):
+            return _error_result(f'Automation API error: {response.status_code} - {response.text}')
+
+        created = response.json()
+        return _json_result(created)
+    except Exception as e:
+        log.error(f'create_automation failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 23: enable_automation — Enable a Jira automation rule
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def enable_automation(rule_uuid: str) -> list[Any]:
+    """Enable a Jira automation rule.
+
+    Args:
+        rule_uuid: UUID of the automation rule to enable.
+    """
+    try:
+        jira = jira_utils.get_connection()
+        email, api_token = jira_utils.get_jira_credentials()
+        base_url = jira_utils._get_automation_base_url()
+
+        import requests
+        response = requests.put(
+            f'{base_url}/rule/{rule_uuid}/state',
+            auth=(email, api_token),
+            headers={'Accept': 'application/json', 'Content-Type': 'application/json'},
+            json={'ruleState': 'ENABLED'},
+        )
+        if response.status_code == 404:
+            return _error_result(f'Automation rule not found: {rule_uuid}')
+        if response.status_code not in (200, 204):
+            return _error_result(f'Automation API error: {response.status_code} - {response.text}')
+
+        return _json_result({'rule_uuid': rule_uuid, 'state': 'ENABLED'})
+    except Exception as e:
+        log.error(f'enable_automation failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 24: disable_automation — Disable a Jira automation rule
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def disable_automation(rule_uuid: str) -> list[Any]:
+    """Disable a Jira automation rule.
+
+    Args:
+        rule_uuid: UUID of the automation rule to disable.
+    """
+    try:
+        jira = jira_utils.get_connection()
+        email, api_token = jira_utils.get_jira_credentials()
+        base_url = jira_utils._get_automation_base_url()
+
+        import requests
+        response = requests.put(
+            f'{base_url}/rule/{rule_uuid}/state',
+            auth=(email, api_token),
+            headers={'Accept': 'application/json', 'Content-Type': 'application/json'},
+            json={'ruleState': 'DISABLED'},
+        )
+        if response.status_code == 404:
+            return _error_result(f'Automation rule not found: {rule_uuid}')
+        if response.status_code not in (200, 204):
+            return _error_result(f'Automation API error: {response.status_code} - {response.text}')
+
+        return _json_result({'rule_uuid': rule_uuid, 'state': 'DISABLED'})
+    except Exception as e:
+        log.error(f'disable_automation failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 25: delete_automation — Delete a Jira automation rule
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def delete_automation(rule_uuid: str) -> list[Any]:
+    """Delete a Jira automation rule.
+
+    Args:
+        rule_uuid: UUID of the automation rule to delete.
+    """
+    try:
+        jira = jira_utils.get_connection()
+        email, api_token = jira_utils.get_jira_credentials()
+        base_url = jira_utils._get_automation_base_url()
+
+        import requests
+        response = requests.delete(
+            f'{base_url}/rule/{rule_uuid}',
+            auth=(email, api_token),
+            headers={'Accept': 'application/json'},
+        )
+        if response.status_code == 404:
+            return _error_result(f'Automation rule not found: {rule_uuid}')
+        if response.status_code not in (200, 204):
+            return _error_result(f'Automation API error: {response.status_code} - {response.text}')
+
+        return _json_result({'rule_uuid': rule_uuid, 'deleted': True})
+    except Exception as e:
+        log.error(f'delete_automation failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 

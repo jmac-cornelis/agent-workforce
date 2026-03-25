@@ -54,6 +54,15 @@ try:
         get_dashboard as _ju_get_dashboard,
         create_dashboard as _ju_create_dashboard,
         bulk_update_tickets as _ju_bulk_update_tickets,
+        # --- Automation imports ---
+        list_automations as _ju_list_automations,
+        get_automation as _ju_get_automation,
+        create_automation as _ju_create_automation,
+        enable_automation as _ju_enable_automation,
+        disable_automation as _ju_disable_automation,
+        delete_automation as _ju_delete_automation,
+        get_cloud_id as _ju_get_cloud_id,
+        JiraAutomationError,
     )
     JIRA_UTILS_AVAILABLE = True
 except ImportError as e:
@@ -1680,6 +1689,332 @@ def create_dashboard(name: str, description: str = '') -> ToolResult:
         return ToolResult.failure(f'Failed to create dashboard "{name}": {e}')
 
 
+# ****************************************************************************************
+# Automation Tools
+# ****************************************************************************************
+
+@tool(
+    name='list_automations',
+    description='List Jira automation rules, optionally filtered by state'
+)
+def list_automations(project_key: Optional[str] = None, state: Optional[str] = None) -> ToolResult:
+    '''
+    List accessible Jira automation rules.
+
+    Delegates to jira_utils.list_automations() which queries the Jira
+    Automation REST API.
+
+    Input:
+        project_key: Optional project key to filter rules.
+        state: Optional state filter: 'ENABLED' or 'DISABLED'.
+
+    Output:
+        ToolResult with list of automation rule dicts.
+    '''
+    log.debug(f'list_automations(project_key={project_key}, state={state})')
+
+    try:
+        jira = get_jira()
+
+        from jira_utils import get_jira_credentials, get_cloud_id
+        import requests
+        email, api_token = get_jira_credentials()
+        cloud_id = get_cloud_id()
+        base_url = f'https://api.atlassian.com/automation/public/jira/{cloud_id}/rest/v1'
+
+        all_rules = []
+        offset = 0
+        limit = 100
+
+        while True:
+            params = {'limit': limit, 'offset': offset}
+            if state:
+                params['ruleState'] = state
+
+            response = requests.get(
+                f'{base_url}/rule/summary',
+                auth=(email, api_token),
+                headers={'Accept': 'application/json'},
+                params=params,
+            )
+            if response.status_code != 200:
+                raise Exception(f'Automation API error: {response.status_code} - {response.text}')
+
+            data = response.json()
+            rules = data.get('results', [])
+            all_rules.extend(rules)
+
+            total = data.get('total', len(all_rules))
+            if offset + len(rules) >= total or len(rules) == 0:
+                break
+            offset += len(rules)
+
+        result = []
+        for r in all_rules:
+            if project_key:
+                projects = r.get('projects', [])
+                project_keys = [p.get('projectKey', '') for p in projects]
+                if project_key not in project_keys:
+                    continue
+            result.append({
+                'id': str(r.get('id', '')),
+                'name': r.get('name', ''),
+                'state': r.get('state', ''),
+                'enabled': r.get('enabled', False),
+            })
+
+        return ToolResult.success(result, count=len(result))
+
+    except Exception as e:
+        log.error(f'Failed to list automations: {e}')
+        return ToolResult.failure(f'Failed to list automations: {e}')
+
+
+@tool(
+    name='get_automation',
+    description='Get full configuration of a Jira automation rule'
+)
+def get_automation(rule_uuid: str) -> ToolResult:
+    '''
+    Get full configuration of a Jira automation rule.
+
+    Queries the Jira Automation REST API for the complete rule definition.
+
+    Input:
+        rule_uuid: The UUID of the automation rule.
+
+    Output:
+        ToolResult with full rule configuration dict.
+    '''
+    log.debug(f'get_automation(rule_uuid={rule_uuid})')
+
+    try:
+        jira = get_jira()
+
+        from jira_utils import get_jira_credentials, get_cloud_id
+        import requests
+        email, api_token = get_jira_credentials()
+        cloud_id = get_cloud_id()
+        base_url = f'https://api.atlassian.com/automation/public/jira/{cloud_id}/rest/v1'
+
+        response = requests.get(
+            f'{base_url}/rule/{rule_uuid}',
+            auth=(email, api_token),
+            headers={'Accept': 'application/json'},
+        )
+
+        if response.status_code == 404:
+            return ToolResult.failure(f'Automation rule {rule_uuid} not found')
+        if response.status_code != 200:
+            raise Exception(f'Automation API error: {response.status_code} - {response.text}')
+
+        data = response.json()
+        return ToolResult.success(data)
+
+    except Exception as e:
+        log.error(f'Failed to get automation {rule_uuid}: {e}')
+        return ToolResult.failure(f'Failed to get automation {rule_uuid}: {e}')
+
+
+@tool(
+    name='create_automation',
+    description='Create a Jira automation rule from a JSON definition'
+)
+def create_automation(rule_json: str, project_key: Optional[str] = None) -> ToolResult:
+    '''
+    Create a Jira automation rule from a JSON definition string.
+
+    POSTs the parsed JSON payload to the Jira Automation REST API.
+
+    Input:
+        rule_json: JSON string defining the automation rule.
+        project_key: Optional project key to scope the rule.
+
+    Output:
+        ToolResult with created rule data.
+    '''
+    log.debug(f'create_automation(rule_json=<{len(rule_json)} chars>, project_key={project_key})')
+
+    try:
+        jira = get_jira()
+
+        import json
+        try:
+            payload = json.loads(rule_json)
+        except json.JSONDecodeError as je:
+            return ToolResult.failure(f'Invalid JSON: {je}')
+
+        from jira_utils import get_jira_credentials, get_cloud_id
+        import requests
+        email, api_token = get_jira_credentials()
+        cloud_id = get_cloud_id()
+        base_url = f'https://api.atlassian.com/automation/public/jira/{cloud_id}/rest/v1'
+
+        response = requests.post(
+            f'{base_url}/rule',
+            auth=(email, api_token),
+            headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+            json=payload,
+        )
+
+        if response.status_code not in (200, 201):
+            raise Exception(f'Automation API error: {response.status_code} - {response.text}')
+
+        data = response.json()
+        result = {
+            'id': str(data.get('id', '')),
+            'name': data.get('name', ''),
+            'state': data.get('state', ''),
+        }
+
+        log.info(f'Created automation rule: {result["id"]} - {result["name"]}')
+        return ToolResult.success(result)
+
+    except Exception as e:
+        log.error(f'Failed to create automation: {e}')
+        return ToolResult.failure(f'Failed to create automation: {e}')
+
+
+@tool(
+    name='enable_automation',
+    description='Enable a Jira automation rule'
+)
+def enable_automation(rule_uuid: str) -> ToolResult:
+    '''
+    Enable a Jira automation rule.
+
+    Sets the rule state to ENABLED via the Jira Automation REST API.
+
+    Input:
+        rule_uuid: The UUID of the automation rule to enable.
+
+    Output:
+        ToolResult confirming the rule was enabled.
+    '''
+    log.debug(f'enable_automation(rule_uuid={rule_uuid})')
+
+    try:
+        jira = get_jira()
+
+        from jira_utils import get_jira_credentials, get_cloud_id
+        import requests
+        email, api_token = get_jira_credentials()
+        cloud_id = get_cloud_id()
+        base_url = f'https://api.atlassian.com/automation/public/jira/{cloud_id}/rest/v1'
+
+        response = requests.put(
+            f'{base_url}/rule/{rule_uuid}/state',
+            auth=(email, api_token),
+            headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+            json={'ruleState': 'ENABLED'},
+        )
+
+        if response.status_code == 404:
+            return ToolResult.failure(f'Automation rule {rule_uuid} not found')
+        if response.status_code not in (200, 204):
+            raise Exception(f'Automation API error: {response.status_code} - {response.text}')
+
+        log.info(f'Enabled automation rule: {rule_uuid}')
+        return ToolResult.success({'rule_uuid': rule_uuid, 'state': 'ENABLED'})
+
+    except Exception as e:
+        log.error(f'Failed to enable automation {rule_uuid}: {e}')
+        return ToolResult.failure(f'Failed to enable automation {rule_uuid}: {e}')
+
+
+@tool(
+    name='disable_automation',
+    description='Disable a Jira automation rule'
+)
+def disable_automation(rule_uuid: str) -> ToolResult:
+    '''
+    Disable a Jira automation rule.
+
+    Sets the rule state to DISABLED via the Jira Automation REST API.
+
+    Input:
+        rule_uuid: The UUID of the automation rule to disable.
+
+    Output:
+        ToolResult confirming the rule was disabled.
+    '''
+    log.debug(f'disable_automation(rule_uuid={rule_uuid})')
+
+    try:
+        jira = get_jira()
+
+        from jira_utils import get_jira_credentials, get_cloud_id
+        import requests
+        email, api_token = get_jira_credentials()
+        cloud_id = get_cloud_id()
+        base_url = f'https://api.atlassian.com/automation/public/jira/{cloud_id}/rest/v1'
+
+        response = requests.put(
+            f'{base_url}/rule/{rule_uuid}/state',
+            auth=(email, api_token),
+            headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
+            json={'ruleState': 'DISABLED'},
+        )
+
+        if response.status_code == 404:
+            return ToolResult.failure(f'Automation rule {rule_uuid} not found')
+        if response.status_code not in (200, 204):
+            raise Exception(f'Automation API error: {response.status_code} - {response.text}')
+
+        log.info(f'Disabled automation rule: {rule_uuid}')
+        return ToolResult.success({'rule_uuid': rule_uuid, 'state': 'DISABLED'})
+
+    except Exception as e:
+        log.error(f'Failed to disable automation {rule_uuid}: {e}')
+        return ToolResult.failure(f'Failed to disable automation {rule_uuid}: {e}')
+
+
+@tool(
+    name='delete_automation',
+    description='Delete a Jira automation rule'
+)
+def delete_automation(rule_uuid: str) -> ToolResult:
+    '''
+    Delete a Jira automation rule.
+
+    Sends a DELETE request to the Jira Automation REST API.
+
+    Input:
+        rule_uuid: The UUID of the automation rule to delete.
+
+    Output:
+        ToolResult confirming the rule was deleted.
+    '''
+    log.debug(f'delete_automation(rule_uuid={rule_uuid})')
+
+    try:
+        jira = get_jira()
+
+        from jira_utils import get_jira_credentials, get_cloud_id
+        import requests
+        email, api_token = get_jira_credentials()
+        cloud_id = get_cloud_id()
+        base_url = f'https://api.atlassian.com/automation/public/jira/{cloud_id}/rest/v1'
+
+        response = requests.delete(
+            f'{base_url}/rule/{rule_uuid}',
+            auth=(email, api_token),
+            headers={'Accept': 'application/json'},
+        )
+
+        if response.status_code == 404:
+            return ToolResult.failure(f'Automation rule {rule_uuid} not found')
+        if response.status_code not in (200, 204):
+            raise Exception(f'Automation API error: {response.status_code} - {response.text}')
+
+        log.info(f'Deleted automation rule: {rule_uuid}')
+        return ToolResult.success({'rule_uuid': rule_uuid, 'deleted': True})
+
+    except Exception as e:
+        log.error(f'Failed to delete automation {rule_uuid}: {e}')
+        return ToolResult.failure(f'Failed to delete automation {rule_uuid}: {e}')
+
+
 @tool(
     name='bulk_update_tickets',
     description='Bulk update tickets from a CSV file (set release, labels, etc.)'
@@ -2138,6 +2473,32 @@ class JiraTools(BaseTool):
         set_labels: Optional[str] = None
     ) -> ToolResult:
         return bulk_update_tickets(input_file, set_release, set_labels)
+
+    # --- Automation delegates ---
+
+    @tool(description='List Jira automation rules')
+    def list_automations(self, project_key: Optional[str] = None, state: Optional[str] = None) -> ToolResult:
+        return list_automations(project_key, state)
+
+    @tool(description='Get full automation rule configuration')
+    def get_automation(self, rule_uuid: str) -> ToolResult:
+        return get_automation(rule_uuid)
+
+    @tool(description='Create an automation rule from JSON')
+    def create_automation(self, rule_json: str, project_key: Optional[str] = None) -> ToolResult:
+        return create_automation(rule_json, project_key)
+
+    @tool(description='Enable an automation rule')
+    def enable_automation(self, rule_uuid: str) -> ToolResult:
+        return enable_automation(rule_uuid)
+
+    @tool(description='Disable an automation rule')
+    def disable_automation(self, rule_uuid: str) -> ToolResult:
+        return disable_automation(rule_uuid)
+
+    @tool(description='Delete an automation rule')
+    def delete_automation(self, rule_uuid: str) -> ToolResult:
+        return delete_automation(rule_uuid)
 
     # --- Daily reporting delegates ---
 
