@@ -78,12 +78,14 @@ def load_env(
             return loaded
 
     # Path 3: fallback to repo-root .env (legacy pattern)
-    load_dotenv(override=override)
-    # load_dotenv() auto-discovers .env; record the path if it exists
+    # Walk from CWD upward to find .env explicitly — do NOT rely on
+    # load_dotenv()'s internal find_dotenv() which starts from the
+    # calling module's directory, not CWD.
     cwd = Path.cwd()
     for ancestor in [cwd] + list(cwd.parents):
         root_env = ancestor / '.env'
         if root_env.is_file():
+            load_dotenv(dotenv_path=str(root_env), override=override)
             loaded.append(str(root_env))
             log.debug('Loaded env from root .env: %s', root_env)
             break
