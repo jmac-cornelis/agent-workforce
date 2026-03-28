@@ -448,6 +448,42 @@ def test_get_pr_reviews_returns_list(monkeypatch: pytest.MonkeyPatch):
     assert reviews[0]['state'] == 'APPROVED'
 
 
+def test_get_pr_review_requests_returns_users_and_teams(monkeypatch: pytest.MonkeyPatch):
+    '''Verify get_pr_review_requests returns users and teams lists.'''
+    _patch_common(monkeypatch)
+
+    reviewer_user = SimpleNamespace(login='reviewer1')
+    reviewer_team = SimpleNamespace(slug='firmware-team')
+    fake_pr = SimpleNamespace(
+        requested_reviewers=[reviewer_user],
+        requested_teams=[reviewer_team],
+    )
+    fake_repo = SimpleNamespace(get_pull=lambda n: fake_pr)
+    fake_gh = SimpleNamespace(get_repo=lambda name: fake_repo)
+    monkeypatch.setattr(github_utils, 'get_connection', lambda: fake_gh)
+
+    result = github_utils.get_pr_review_requests('cornelisnetworks/opa-psm2', 42)
+
+    assert isinstance(result, dict)
+    assert result['users'] == ['reviewer1']
+    assert result['teams'] == ['firmware-team']
+
+
+def test_get_pr_review_requests_empty(monkeypatch: pytest.MonkeyPatch):
+    '''Verify empty lists returned when no review requests exist.'''
+    _patch_common(monkeypatch)
+
+    fake_pr = SimpleNamespace(requested_reviewers=[], requested_teams=[])
+    fake_repo = SimpleNamespace(get_pull=lambda n: fake_pr)
+    fake_gh = SimpleNamespace(get_repo=lambda name: fake_repo)
+    monkeypatch.setattr(github_utils, 'get_connection', lambda: fake_gh)
+
+    result = github_utils.get_pr_review_requests('cornelisnetworks/opa-psm2', 99)
+
+    assert result['users'] == []
+    assert result['teams'] == []
+
+
 # =========================================================================
 # E) Hygiene analysis
 # =========================================================================
@@ -663,6 +699,64 @@ def test_handle_args_list_prs(monkeypatch: pytest.MonkeyPatch):
     args = github_utils.handle_args()
 
     assert args.list_prs == 'cornelisnetworks/opa-psm2'
+
+
+def test_main_list_repos_json(monkeypatch: pytest.MonkeyPatch, capsys):
+    '''Verify main() routes --list-repos to list_repos() in JSON mode.'''
+    _patch_common(monkeypatch)
+
+    monkeypatch.setattr(sys, 'argv', [
+        'github_utils.py', '--list-repos', 'cornelisnetworks', '--json', '--quiet',
+    ])
+
+    fake_repos = [
+        {'full_name': 'cornelisnetworks/opa-psm2', 'name': 'opa-psm2'},
+        {'full_name': 'cornelisnetworks/opa-ff', 'name': 'opa-ff'},
+    ]
+    monkeypatch.setattr(github_utils, 'list_repos', lambda org: fake_repos)
+
+    github_utils.main()
+
+
+def test_main_stale_prs_json(monkeypatch: pytest.MonkeyPatch, capsys):
+    '''Verify main() routes --stale-prs with --json output.'''
+    _patch_common(monkeypatch)
+
+    monkeypatch.setattr(sys, 'argv', [
+        'github_utils.py', '--stale-prs', 'cornelisnetworks/opa-psm2',
+        '--days', '7', '--json', '--quiet',
+    ])
+
+    fake_findings = [
+        {
+            'pr': {'number': 42, 'author': 'dev1', 'title': 'old change'},
+            'days_stale': 10,
+            'severity': 'high',
+        }
+    ]
+    monkeypatch.setattr(github_utils, 'analyze_pr_staleness',
+                        lambda repo, stale_days=5: fake_findings)
+
+    github_utils.main()
+
+
+def test_main_credentials_error_exits(monkeypatch: pytest.MonkeyPatch):
+    '''Verify main() exits with code 1 on GitHubCredentialsError.'''
+    _patch_common(monkeypatch)
+
+    monkeypatch.setattr(sys, 'argv', [
+        'github_utils.py', '--rate-limit', '--quiet',
+    ])
+
+    def _raise_creds_error():
+        raise github_utils.GitHubCredentialsError('No token set')
+
+    monkeypatch.setattr(github_utils, 'get_rate_limit', _raise_creds_error)
+
+    with pytest.raises(SystemExit) as exc_info:
+        github_utils.main()
+
+    assert exc_info.value.code == 1
 
 
 # =========================================================================

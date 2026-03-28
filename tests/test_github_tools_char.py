@@ -264,8 +264,24 @@ def test_get_rate_limit_status_returns_info(monkeypatch: pytest.MonkeyPatch):
 # E) Error handling
 # ****************************************************************************************
 
+def test_get_pr_review_requests_returns_success(monkeypatch: pytest.MonkeyPatch):
+    from tools import github_tools
+
+    monkeypatch.setattr(github_tools, 'get_github', lambda: object())
+    monkeypatch.setattr(
+        github_tools,
+        '_get_pr_review_requests',
+        lambda repo, pr: {'users': ['reviewer1'], 'teams': ['firmware-team']},
+    )
+
+    result = github_tools.get_pr_review_requests('cornelisnetworks/opa-psm2', 42)
+
+    assert result.is_success
+    assert result.data['users'] == ['reviewer1']
+    assert result.data['teams'] == ['firmware-team']
+
+
 def test_tool_returns_failure_on_exception(monkeypatch: pytest.MonkeyPatch):
-    '''Stub get_github to raise RuntimeError, verify ToolResult.is_success is False.'''
     from tools import github_tools
 
     monkeypatch.setattr(
