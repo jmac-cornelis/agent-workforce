@@ -32,6 +32,7 @@ def notify_shannon(
     body_lines: Optional[Iterable[str]] = None,
     shannon_base_url: Optional[str] = None,
     timeout: int = 15,
+    dry_run: bool = True,
 ) -> Dict[str, Any]:
     '''
     Post a proactive notification through Shannon and return a structured result.
@@ -47,6 +48,14 @@ def notify_shannon(
         'text': text,
         'body_lines': [str(line) for line in (body_lines or []) if str(line).strip()],
     }
+
+    if dry_run:
+        return {
+            'ok': True,
+            'dry_run': True,
+            'base_url': base_url,
+            'payload': payload,
+        }
 
     try:
         response = requests.post(

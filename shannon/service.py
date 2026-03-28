@@ -700,8 +700,8 @@ class ShannonService:
     ) -> Dict[str, Any]:
         activity = response.to_message_activity()
         if reply and reference.reply_to_id:
-            return self.poster.reply_to_activity(reference, reference.reply_to_id, activity)
-        return self.poster.send_to_conversation(reference, activity)
+            return self.poster.reply_to_activity(reference, reference.reply_to_id, activity, dry_run=False)
+        return self.poster.send_to_conversation(reference, activity, dry_run=False)
 
     def process_teams_activity(self, activity: Dict[str, Any]) -> Dict[str, Any]:
         '''

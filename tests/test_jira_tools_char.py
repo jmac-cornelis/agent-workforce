@@ -97,6 +97,7 @@ def test_transition_ticket_tool_applies_transition_and_comment(
         'In Progress',
         comment='Started work',
         fields={'resolution': {'name': 'Fixed'}},
+        dry_run=False,
     )
 
     assert result.is_success

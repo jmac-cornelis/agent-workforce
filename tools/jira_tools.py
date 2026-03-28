@@ -588,22 +588,27 @@ def transition_ticket(
     to_status: str,
     comment: Optional[str] = None,
     fields: Optional[Dict[str, Any]] = None,
+    dry_run: bool = True,
 ) -> ToolResult:
     '''
     Transition a Jira ticket to a new status.
+
+    Safety model:
+        Dry-run by default (no changes).  Pass dry_run=False to execute.
 
     Input:
         ticket_key: Jira issue key.
         to_status: Transition name or destination status name.
         comment: Optional comment to add after the transition.
         fields: Optional transition field payload.
+        dry_run: If True, preview only — no changes made.
 
     Output:
         ToolResult with the updated ticket and applied transition metadata.
     '''
     log.debug(
         f'transition_ticket(ticket_key={ticket_key}, to_status={to_status}, '
-        f'comment_provided={comment is not None})'
+        f'comment_provided={comment is not None}, dry_run={dry_run})'
     )
 
     try:
@@ -616,6 +621,19 @@ def transition_ticket(
             return ToolResult.failure(
                 f'Cannot transition to "{to_status}". Available transitions: {available}'
             )
+
+        # Dry-run: preview only, no mutation
+        if dry_run:
+            preview = {
+                'dry_run': True,
+                'ticket_key': ticket_key,
+                'current_status': str(issue.fields.status),
+                'target_status': to_status,
+                'transition': _normalize_transition(target),
+                'comment_would_add': comment is not None,
+                'fields_would_set': fields is not None,
+            }
+            return ToolResult.success(preview)
 
         transition_kwargs: dict[str, Any] = {}
         if fields:
@@ -638,14 +656,28 @@ def transition_ticket(
 @tool(
     description='Add a comment to a Jira ticket'
 )
-def add_ticket_comment(ticket_key: str, body: str) -> ToolResult:
+def add_ticket_comment(ticket_key: str, body: str, dry_run: bool = True) -> ToolResult:
     '''
     Add a comment to a Jira ticket.
+
+    Input:
+        ticket_key: Jira issue key.
+        body: Comment body text.
+        dry_run: If True, preview only — no changes made.
     '''
-    log.debug(f'add_ticket_comment(ticket_key={ticket_key})')
+    log.debug(f'add_ticket_comment(ticket_key={ticket_key}, dry_run={dry_run})')
 
     try:
         jira = get_jira()
+
+        if dry_run:
+            return ToolResult.success({
+                'dry_run': True,
+                'ticket_key': ticket_key,
+                'comment_body_length': len(body),
+                'comment_body_preview': body[:200],
+            })
+
         issue = jira.issue(ticket_key)
         comment = jira.add_comment(issue, body)
         result = {
@@ -672,11 +704,12 @@ def create_ticket(
     labels: Optional[List[str]] = None,
     parent_key: Optional[str] = None,
     product_family: Optional[List[str]] = None,
-    custom_fields: Optional[Dict[str, Any]] = None
+    custom_fields: Optional[Dict[str, Any]] = None,
+    dry_run: bool = True,
 ) -> ToolResult:
     '''
     Create a new Jira ticket.
-    
+
     Input:
         project_key: The project key.
         summary: Ticket summary/title.
@@ -690,7 +723,8 @@ def create_ticket(
         product_family: Optional list of Product Family values (e.g. ['CN5000']).
             Maps to Jira custom field customfield_28434.
         custom_fields: Optional dictionary of custom field values.
-    
+        dry_run: If True, preview only — no changes made.
+
     Output:
         ToolResult with created ticket information.
     '''
@@ -767,7 +801,17 @@ def create_ticket(
 
         if custom_fields:
             fields.update(custom_fields)
-        
+
+        if dry_run:
+            return ToolResult.success({
+                'dry_run': True,
+                'project_key': project_key,
+                'summary': summary,
+                'issue_type': issue_type,
+                'fields': {k: v for k, v in fields.items()
+                           if k not in ('project', 'summary', 'issuetype')},
+            })
+
         log.info(f'Creating ticket: {summary}')
         try:
             issue = jira.create_issue(fields=fields)
@@ -859,11 +903,12 @@ def update_ticket(
     fix_versions: Optional[List[str]] = None,
     components: Optional[List[str]] = None,
     labels: Optional[List[str]] = None,
-    custom_fields: Optional[Dict[str, Any]] = None
+    custom_fields: Optional[Dict[str, Any]] = None,
+    dry_run: bool = True,
 ) -> ToolResult:
     '''
     Update an existing Jira ticket.
-    
+
     Input:
         ticket_key: The ticket key (e.g., 'PROJ-123').
         summary: New summary (optional).
@@ -875,22 +920,22 @@ def update_ticket(
         components: New components (optional).
         labels: New labels (optional).
         custom_fields: Custom field updates (optional).
-    
+        dry_run: If True, preview only — no changes made.
+
     Output:
         ToolResult with updated ticket information.
     '''
-    log.debug(f'update_ticket(ticket_key={ticket_key})')
-    
+    log.debug(f'update_ticket(ticket_key={ticket_key}, dry_run={dry_run})')
+
     try:
         jira = get_jira()
         issue = jira.issue(ticket_key)
-        
-        # Build update fields
+
         fields = {}
-        
+
         if summary:
             fields['summary'] = summary
-        
+
         if description:
             fields['description'] = {
                 'type': 'doc',
@@ -904,7 +949,7 @@ def update_ticket(
                     }
                 ]
             }
-        
+
         if assignee:
             fields['assignee'] = {'id': assignee}
 
@@ -913,22 +958,29 @@ def update_ticket(
 
         if fix_versions is not None:
             fields['fixVersions'] = [{'name': v} for v in fix_versions]
-        
+
         if components is not None:
             fields['components'] = [{'name': c} for c in components]
-        
+
         if labels is not None:
             fields['labels'] = labels
-        
+
         if custom_fields:
             fields.update(custom_fields)
-        
-        # Update fields
+
+        if dry_run:
+            return ToolResult.success({
+                'dry_run': True,
+                'ticket_key': ticket_key,
+                'current_summary': str(issue.fields.summary),
+                'fields_would_update': list(fields.keys()),
+                'status_would_transition': status,
+            })
+
         if fields:
             issue.update(fields=fields)
             log.info(f'Updated ticket fields: {ticket_key}')
-        
-        # Handle status transition
+
         if status:
             transitions = jira.transitions(issue)
             for t in transitions:
@@ -938,12 +990,11 @@ def update_ticket(
                     break
             else:
                 log.warning(f'Transition to {status} not available for {ticket_key}')
-        
-        # Fetch updated issue
+
         updated_issue = jira.issue(ticket_key)
-        
+
         return ToolResult.success(_issue_to_dict(updated_issue))
-        
+
     except Exception as e:
         log.error(f'Failed to update ticket: {e}')
         return ToolResult.failure(f'Failed to update {ticket_key}: {e}')
@@ -957,26 +1008,38 @@ def create_release(
     name: str,
     description: Optional[str] = None,
     start_date: Optional[str] = None,
-    release_date: Optional[str] = None
+    release_date: Optional[str] = None,
+    dry_run: bool = True,
 ) -> ToolResult:
     '''
     Create a new release/version.
-    
+
     Input:
         project_key: The project key.
         name: Release name.
         description: Optional release description.
         start_date: Optional start date (YYYY-MM-DD).
         release_date: Optional release date (YYYY-MM-DD).
-    
+        dry_run: If True, preview only — no changes made.
+
     Output:
         ToolResult with created release information.
     '''
-    log.debug(f'create_release(project={project_key}, name={name})')
-    
+    log.debug(f'create_release(project={project_key}, name={name}, dry_run={dry_run})')
+
     try:
         jira = get_jira()
-        
+
+        if dry_run:
+            return ToolResult.success({
+                'dry_run': True,
+                'project_key': project_key,
+                'name': name,
+                'description': description or '',
+                'start_date': start_date,
+                'release_date': release_date,
+            })
+
         version = jira.create_version(
             name=name,
             project=project_key,
@@ -984,7 +1047,7 @@ def create_release(
             startDate=start_date,
             releaseDate=release_date
         )
-        
+
         result = {
             'id': version.id,
             'name': version.name,
@@ -992,10 +1055,10 @@ def create_release(
             'startDate': getattr(version, 'startDate', None),
             'releaseDate': getattr(version, 'releaseDate', None)
         }
-        
+
         log.info(f'Created release: {name}')
         return ToolResult.success(result)
-        
+
     except Exception as e:
         log.error(f'Failed to create release: {e}')
         return ToolResult.failure(f'Failed to create release {name}: {e}')
@@ -1007,37 +1070,47 @@ def create_release(
 def link_tickets(
     from_key: str,
     to_key: str,
-    link_type: str = 'Relates'
+    link_type: str = 'Relates',
+    dry_run: bool = True,
 ) -> ToolResult:
     '''
     Create a link between two tickets.
-    
+
     Input:
         from_key: Source ticket key.
         to_key: Target ticket key.
         link_type: Link type (Relates, Blocks, Clones, etc.).
-    
+        dry_run: If True, preview only — no changes made.
+
     Output:
         ToolResult confirming link creation.
     '''
-    log.debug(f'link_tickets(from={from_key}, to={to_key}, type={link_type})')
-    
+    log.debug(f'link_tickets(from={from_key}, to={to_key}, type={link_type}, dry_run={dry_run})')
+
     try:
+        if dry_run:
+            return ToolResult.success({
+                'dry_run': True,
+                'from': from_key,
+                'to': to_key,
+                'type': link_type,
+            })
+
         jira = get_jira()
-        
+
         jira.create_issue_link(
             type=link_type,
             inwardIssue=from_key,
             outwardIssue=to_key
         )
-        
+
         log.info(f'Created link: {from_key} -{link_type}-> {to_key}')
         return ToolResult.success({
             'from': from_key,
             'to': to_key,
             'type': link_type
         })
-        
+
     except Exception as e:
         log.error(f'Failed to link tickets: {e}')
         return ToolResult.failure(f'Failed to link {from_key} to {to_key}: {e}')
@@ -1082,31 +1155,39 @@ def get_components(project_key: str) -> ToolResult:
 @tool(
     description='Assign a ticket to a user'
 )
-def assign_ticket(ticket_key: str, assignee: str) -> ToolResult:
+def assign_ticket(ticket_key: str, assignee: str, dry_run: bool = True) -> ToolResult:
     '''
     Assign a ticket to a user.
-    
+
     Input:
         ticket_key: The ticket key.
         assignee: Assignee account ID or email.
-    
+        dry_run: If True, preview only — no changes made.
+
     Output:
         ToolResult confirming assignment.
     '''
-    log.debug(f'assign_ticket(ticket_key={ticket_key}, assignee={assignee})')
-    
+    log.debug(f'assign_ticket(ticket_key={ticket_key}, assignee={assignee}, dry_run={dry_run})')
+
     try:
+        if dry_run:
+            return ToolResult.success({
+                'dry_run': True,
+                'ticket': ticket_key,
+                'assignee': assignee,
+            })
+
         jira = get_jira()
         issue = jira.issue(ticket_key)
-        
+
         jira.assign_issue(issue, assignee)
-        
+
         log.info(f'Assigned {ticket_key} to {assignee}')
         return ToolResult.success({
             'ticket': ticket_key,
             'assignee': assignee
         })
-        
+
     except Exception as e:
         log.error(f'Failed to assign ticket: {e}')
         return ToolResult.failure(f'Failed to assign {ticket_key}: {e}')
@@ -1631,27 +1712,30 @@ def get_dashboard(dashboard_id: str) -> ToolResult:
     name='create_dashboard',
     description='Create a new Jira dashboard'
 )
-def create_dashboard(name: str, description: str = '') -> ToolResult:
+def create_dashboard(name: str, description: str = '', dry_run: bool = True) -> ToolResult:
     '''
     Create a new Jira dashboard.
-
-    Delegates to jira_utils.create_dashboard() which POSTs to the
-    Jira REST API to create a dashboard.
 
     Input:
         name: Name for the new dashboard.
         description: Optional description for the dashboard.
+        dry_run: If True, preview only — no changes made.
 
     Output:
         ToolResult with created dashboard details (id, name, view URL).
     '''
-    log.debug(f'create_dashboard(name={name}, description={description})')
+    log.debug(f'create_dashboard(name={name}, description={description}, dry_run={dry_run})')
 
     try:
         jira = get_jira()
 
-        # create_dashboard prints to stdout and returns None.
-        # We call the REST API directly for structured return data.
+        if dry_run:
+            return ToolResult.success({
+                'dry_run': True,
+                'name': name,
+                'description': description,
+            })
+
         from jira_utils import get_jira_credentials, JIRA_URL as _JIRA_URL
         import requests
         email, api_token = get_jira_credentials()
@@ -1820,20 +1904,19 @@ def get_automation(rule_uuid: str) -> ToolResult:
     name='create_automation',
     description='Create a Jira automation rule from a JSON definition'
 )
-def create_automation(rule_json: str, project_key: Optional[str] = None) -> ToolResult:
+def create_automation(rule_json: str, project_key: Optional[str] = None, dry_run: bool = True) -> ToolResult:
     '''
     Create a Jira automation rule from a JSON definition string.
-
-    POSTs the parsed JSON payload to the Jira Automation REST API.
 
     Input:
         rule_json: JSON string defining the automation rule.
         project_key: Optional project key to scope the rule.
+        dry_run: If True, preview only — no changes made.
 
     Output:
         ToolResult with created rule data.
     '''
-    log.debug(f'create_automation(rule_json=<{len(rule_json)} chars>, project_key={project_key})')
+    log.debug(f'create_automation(rule_json=<{len(rule_json)} chars>, project_key={project_key}, dry_run={dry_run})')
 
     try:
         jira = get_jira()
@@ -1843,6 +1926,14 @@ def create_automation(rule_json: str, project_key: Optional[str] = None) -> Tool
             payload = json.loads(rule_json)
         except json.JSONDecodeError as je:
             return ToolResult.failure(f'Invalid JSON: {je}')
+
+        if dry_run:
+            return ToolResult.success({
+                'dry_run': True,
+                'rule_name': payload.get('name', '<unnamed>'),
+                'project_key': project_key,
+                'payload_keys': list(payload.keys()),
+            })
 
         from jira_utils import get_jira_credentials, get_cloud_id
         import requests
@@ -1879,22 +1970,28 @@ def create_automation(rule_json: str, project_key: Optional[str] = None) -> Tool
     name='enable_automation',
     description='Enable a Jira automation rule'
 )
-def enable_automation(rule_uuid: str) -> ToolResult:
+def enable_automation(rule_uuid: str, dry_run: bool = True) -> ToolResult:
     '''
     Enable a Jira automation rule.
 
-    Sets the rule state to ENABLED via the Jira Automation REST API.
-
     Input:
         rule_uuid: The UUID of the automation rule to enable.
+        dry_run: If True, preview only — no changes made.
 
     Output:
         ToolResult confirming the rule was enabled.
     '''
-    log.debug(f'enable_automation(rule_uuid={rule_uuid})')
+    log.debug(f'enable_automation(rule_uuid={rule_uuid}, dry_run={dry_run})')
 
     try:
         jira = get_jira()
+
+        if dry_run:
+            return ToolResult.success({
+                'dry_run': True,
+                'rule_uuid': rule_uuid,
+                'target_state': 'ENABLED',
+            })
 
         from jira_utils import get_jira_credentials, get_cloud_id
         import requests
@@ -1926,22 +2023,28 @@ def enable_automation(rule_uuid: str) -> ToolResult:
     name='disable_automation',
     description='Disable a Jira automation rule'
 )
-def disable_automation(rule_uuid: str) -> ToolResult:
+def disable_automation(rule_uuid: str, dry_run: bool = True) -> ToolResult:
     '''
     Disable a Jira automation rule.
 
-    Sets the rule state to DISABLED via the Jira Automation REST API.
-
     Input:
         rule_uuid: The UUID of the automation rule to disable.
+        dry_run: If True, preview only — no changes made.
 
     Output:
         ToolResult confirming the rule was disabled.
     '''
-    log.debug(f'disable_automation(rule_uuid={rule_uuid})')
+    log.debug(f'disable_automation(rule_uuid={rule_uuid}, dry_run={dry_run})')
 
     try:
         jira = get_jira()
+
+        if dry_run:
+            return ToolResult.success({
+                'dry_run': True,
+                'rule_uuid': rule_uuid,
+                'target_state': 'DISABLED',
+            })
 
         from jira_utils import get_jira_credentials, get_cloud_id
         import requests
@@ -1973,22 +2076,28 @@ def disable_automation(rule_uuid: str) -> ToolResult:
     name='delete_automation',
     description='Delete a Jira automation rule'
 )
-def delete_automation(rule_uuid: str) -> ToolResult:
+def delete_automation(rule_uuid: str, dry_run: bool = True) -> ToolResult:
     '''
     Delete a Jira automation rule.
 
-    Sends a DELETE request to the Jira Automation REST API.
-
     Input:
         rule_uuid: The UUID of the automation rule to delete.
+        dry_run: If True, preview only — no changes made.
 
     Output:
         ToolResult confirming the rule was deleted.
     '''
-    log.debug(f'delete_automation(rule_uuid={rule_uuid})')
+    log.debug(f'delete_automation(rule_uuid={rule_uuid}, dry_run={dry_run})')
 
     try:
         jira = get_jira()
+
+        if dry_run:
+            return ToolResult.success({
+                'dry_run': True,
+                'rule_uuid': rule_uuid,
+                'action': 'DELETE',
+            })
 
         from jira_utils import get_jira_credentials, get_cloud_id
         import requests
@@ -2022,46 +2131,42 @@ def delete_automation(rule_uuid: str) -> ToolResult:
 def bulk_update_tickets(
     input_file: str,
     set_release: Optional[str] = None,
-    set_labels: Optional[str] = None
+    set_labels: Optional[str] = None,
+    dry_run: bool = True,
 ) -> ToolResult:
     '''
     Bulk update tickets loaded from a CSV file.
-
-    Delegates to jira_utils.bulk_update_tickets() which reads ticket keys
-    from a CSV and applies the requested operations.
 
     Input:
         input_file: Path to the CSV file containing ticket keys.
         set_release: Optional release/version name to set on all tickets.
         set_labels: Optional comma-separated labels to set on tickets.
+        dry_run: If True, preview only — no changes made.
 
     Output:
         ToolResult confirming the bulk update operation.
     '''
-    log.debug(f'bulk_update_tickets(input_file={input_file}, set_release={set_release}, set_labels={set_labels})')
+    log.debug(f'bulk_update_tickets(input_file={input_file}, set_release={set_release}, set_labels={set_labels}, dry_run={dry_run})')
 
     try:
         jira = get_jira()
 
-        # Validate input file exists
         if not os.path.isfile(input_file):
             return ToolResult.failure(f'Input file not found: {input_file}')
 
-        # Delegate to jira_utils.bulk_update_tickets.
-        # Note: dry_run=False to actually execute; the tool caller is
-        # responsible for confirming intent before invoking this tool.
         _ju_bulk_update_tickets(
             jira,
             input_file,
             set_release=set_release,
-            dry_run=False,
+            dry_run=dry_run,
         )
 
         result = {
+            'dry_run': dry_run,
             'input_file': input_file,
             'set_release': set_release,
             'set_labels': set_labels,
-            'status': 'completed',
+            'status': 'preview' if dry_run else 'completed',
         }
 
         return ToolResult.success(result)

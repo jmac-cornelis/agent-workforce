@@ -453,7 +453,8 @@ Then execute the approved items.'''
                     project_key=data['project_key'],
                     name=data['name'],
                     description=data.get('description'),
-                    release_date=data.get('release_date')
+                    release_date=data.get('release_date'),
+                    dry_run=False,
                 )
                 
                 if result.is_success:
@@ -470,7 +471,8 @@ Then execute the approved items.'''
                     assignee=data.get('assignee'),
                     components=data.get('components'),
                     fix_versions=data.get('fix_versions'),
-                    labels=data.get('labels')
+                    labels=data.get('labels'),
+                    dry_run=False,
                 )
                 
                 if result.is_success:
@@ -490,6 +492,7 @@ Then execute the approved items.'''
                     components=data.get('components'),
                     labels=data.get('labels'),
                     custom_fields=data.get('custom_fields'),
+                    dry_run=False,
                 )
 
                 if result.is_success:
@@ -501,6 +504,7 @@ Then execute the approved items.'''
                 result = add_ticket_comment(
                     ticket_key=data['ticket_key'],
                     body=data.get('body', ''),
+                    dry_run=False,
                 )
 
                 if result.is_success:
@@ -514,6 +518,7 @@ Then execute the approved items.'''
                     to_status=data['to_status'],
                     comment=data.get('comment'),
                     fields=data.get('fields'),
+                    dry_run=False,
                 )
 
                 if result.is_success:

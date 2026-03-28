@@ -110,15 +110,26 @@ class JiraCommentNotifier(NotificationBackend):
         message: str,
         level: str = 'flag',
         context: Optional[Dict[str, Any]] = None,
-    ) -> bool:
+        dry_run: bool = True,
+    ) -> Any:
         ctx = context or {}
         field = ctx.get('field')
 
-        if self.has_existing_comment(ticket_key, field=field):
-            return False
-
         title = self._LEVEL_TITLES[self._normalize_level(level)]
         body = f'{self.MARKER} {title}\n\n{message}'
+
+        if dry_run:
+            has_existing = self.has_existing_comment(ticket_key, field=field)
+            return {
+                'dry_run': True,
+                'ticket_key': ticket_key,
+                'level': self._normalize_level(level),
+                'body': body,
+                'would_skip': has_existing,
+            }
+
+        if self.has_existing_comment(ticket_key, field=field):
+            return False
 
         try:
             self.jira.add_comment(ticket_key, body)
