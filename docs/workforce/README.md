@@ -58,7 +58,7 @@ These agents provide context, traceability, and institutional knowledge.
 | **[Herodotus](HERODOTUS_KNOWLEDGE_CAPTURE_AGENT_PLAN.md)** | Knowledge Capture | Ingests Teams meeting transcripts and produces structured summaries, decisions, and action items. |
 | **[Hypatia](HYPATIA_DOCUMENTATION_AGENT_PLAN.md)** | Documentation | Produces as-built, user, and engineering docs from authoritative system records via Sphinx/ReadTheDocs. |
 | **[Nightingale](NIGHTINGALE_BUG_TRIAGE_REPRODUCTION_PLAN.md)** | Bug Investigation | Reacts to Jira bugs, assembles build/test/release context, drives targeted reproduction, and produces investigation summaries. |
-| **[Drucker](DRUCKER_JIRA_COORDINATOR_PLAN.md)** | Jira Coordination | Keeps Jira operationally coherent with triage, hygiene, routing, and evidence-backed workflow nudges. |
+| **[Drucker](DRUCKER_JIRA_COORDINATOR_PLAN.md)** | Engineering Hygiene | Keeps Jira and GitHub operationally coherent with triage, PR lifecycle monitoring, hygiene scans, routing, and evidence-backed workflow nudges. |
 
 ### Planning & Delivery
 
@@ -111,7 +111,7 @@ graph TB
         HER[Herodotus<br/>Knowledge Capture]
         HYP[Hypatia<br/>Documentation]
         NIG[Nightingale<br/>Bug Investigation]
-        DRU[Drucker<br/>Jira Coordinator]
+        DRU[Drucker<br/>Engineering Hygiene]
     end
     subgraph Plan["Planning & Delivery"]
         GAN[Gantt<br/>Project Planner]
@@ -232,7 +232,7 @@ Agents are built in dependency order. Each phase delivers working capabilities t
 | **3** | Versioning & Traceability | Babbage, Linnaeus | Version mapping and traceability link builds, tests, issues, and releases — requires build and test records from Phases 1–2. |
 | **4** | Knowledge Capture | Herodotus | Meeting summaries and action items feed into planning and documentation. Independent of build/test but benefits from traceability links. |
 | **5** | Quality & Release | Linus, Hedy, Hypatia, Nightingale | Code review, release orchestration, documentation, and bug investigation all consume evidence from Phases 1–3. |
-| **6** | Project Management | Drucker, Gantt, Brooks | Jira coordination, project planning, and delivery tracking aggregate signals from all other agents. |
+| **6** | Project Management | Drucker, Gantt, Brooks | Engineering hygiene (Jira + GitHub), project planning, and delivery tracking aggregate signals from all other agents. |
 
 ### Dependency Chain
 

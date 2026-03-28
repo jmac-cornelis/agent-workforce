@@ -48,7 +48,7 @@ AGENTS = [
     {'name': 'Herodotus', 'title': 'Herodotus — Knowledge Capture Agent', 'plan': 'HERODOTUS_KNOWLEDGE_CAPTURE_AGENT_PLAN.md', 'diagram': 'HERODOTUS_USE_CASE.drawio', 'zone': 'Intelligence & Knowledge', 'role': 'Knowledge Capture', 'wave': 3, 'sprint': 'S5'},
     {'name': 'Hypatia', 'title': 'Hypatia — Documentation Agent', 'plan': 'HYPATIA_DOCUMENTATION_AGENT_PLAN.md', 'diagram': 'HYPATIA_USE_CASE.drawio', 'zone': 'Intelligence & Knowledge', 'role': 'Documentation', 'wave': 4, 'sprint': 'S7'},
     {'name': 'Nightingale', 'title': 'Nightingale — Bug Investigation Agent', 'plan': 'NIGHTINGALE_BUG_TRIAGE_REPRODUCTION_PLAN.md', 'diagram': 'NIGHTINGALE_USE_CASE.drawio', 'zone': 'Intelligence & Knowledge', 'role': 'Bug Investigation', 'wave': 4, 'sprint': 'S6'},
-    {'name': 'Drucker', 'title': 'Drucker — Jira Coordinator Agent', 'plan': 'DRUCKER_JIRA_COORDINATOR_PLAN.md', 'diagram': 'DRUCKER_USE_CASE.drawio', 'zone': 'Intelligence & Knowledge', 'role': 'Jira Coordinator', 'wave': 5, 'sprint': 'S7'},
+    {'name': 'Drucker', 'title': 'Drucker — Engineering Hygiene Agent', 'plan': 'DRUCKER_JIRA_COORDINATOR_PLAN.md', 'diagram': 'DRUCKER_USE_CASE.drawio', 'zone': 'Intelligence & Knowledge', 'role': 'Engineering Hygiene', 'wave': 5, 'sprint': 'S7'},
     {'name': 'Gantt', 'title': 'Gantt — Project Planner Agent', 'plan': 'GANTT_PROJECT_PLANNER_PLAN.md', 'diagram': 'GANTT_USE_CASE.drawio', 'zone': 'Planning & Delivery', 'role': 'Project Planner', 'wave': 5, 'sprint': 'S7'},
     {'name': 'Brooks', 'title': 'Brooks — Delivery Manager Agent', 'plan': 'BROOKS_DELIVERY_MANAGER_PLAN.md', 'diagram': 'BROOKS_USE_CASE.drawio', 'zone': 'Planning & Delivery', 'role': 'Delivery Manager', 'wave': 5, 'sprint': 'S8'},
 ]

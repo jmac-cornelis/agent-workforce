@@ -1,17 +1,20 @@
-# Drucker Jira Coordinator Plan
+# Drucker Engineering Hygiene Agent Plan
 
 ## Summary
-Drucker should be the Jira workflow-coordination agent for the platform. Its v1 job is to keep Jira operationally coherent: triage incoming issues, enforce workflow hygiene, route work to the right owners or queues, and apply evidence-backed status nudges based on build, test, release, and traceability signals.
+Drucker should be the engineering hygiene agent for both Jira workflow coordination and GitHub PR lifecycle management for the platform. Its v1 Jira job is to keep Jira operationally coherent: triage incoming issues, enforce workflow hygiene, route work to the right owners or queues, and apply evidence-backed status nudges based on build, test, release, and traceability signals. For GitHub, it scans PRs for staleness, missing reviews, and lifecycle issues.
 
-Drucker should not replace Jira as the system of record. It should make Jira cleaner, more current, and more trustworthy.
+Drucker should not replace Jira or GitHub as systems of record. It should make both cleaner, more current, and more trustworthy.
 
 ## Product definition
 ### Goal
 - consume Jira issue events and scheduled hygiene checks
+- consume GitHub PR state from configured repositories via scheduled polling
 - detect missing required metadata, stale workflow state, and routing mistakes
+- detect stale PRs, missing review requests, and PR lifecycle anomalies
 - correlate issue state with technical evidence from Josephine, Faraday, Hedy, Babbage, and Linnaeus
 - propose or apply safe Jira workflow updates under policy
 - produce durable triage, routing, and workflow-audit records
+- deliver GitHub PR hygiene findings through Shannon (Teams) notifications
 
 ### Non-goals for v1
 - replacing Hedy release decisions
@@ -19,17 +22,24 @@ Drucker should not replace Jira as the system of record. It should make Jira cle
 - replacing Herodotus meeting follow-up capture
 - replacing Gantt planning or Brooks delivery reporting
 - autonomous closure or reprioritization of important issues without approval
+- replacing Linus code review quality assessments
+- writing comments or status checks directly on GitHub PRs (notifications go through Shannon)
+- discovering GitHub repositories automatically (repos are explicitly configured)
 
 ### Position in the system
 - Jira remains the work and defect source of truth
+- GitHub remains the source of truth for PR state and review status
 - Linnaeus owns exact linkage between issues, builds, tests, and releases
 - Hedy owns release-state decisions and release-facing Jira interactions
 - Herodotus may suggest new follow-up items from meetings
+- Linus owns code review quality; Drucker owns PR lifecycle hygiene (staleness, review coverage)
 - Drucker keeps issue workflow, assignment, and field hygiene aligned with those signals
+- The branch/PR naming enforcement proposal (plans/branch-pr-naming-proposal.md) is a future Drucker scan type
 
 ## Triggering model
 - Drucker should run as an always-on Jira coordination service.
-- Normal work should start from Jira issue events, direct issue-evaluation requests, and scheduled hygiene scans for stale or incomplete work.
+- Normal work should start from Jira issue events, direct issue-evaluation requests, scheduled Jira hygiene scans, and scheduled GitHub PR hygiene scans for stale or incomplete PRs.
+- GitHub scans run on a configurable schedule (default: daily) independent of Jira polling frequency.
 - Humans should be able to approve, apply, or suppress workflow actions and write-backs under policy.
 
 ## Architecture
@@ -40,6 +50,7 @@ Drucker should be split into these concerns:
 - `RoutingCoordinator`: proposes or applies assignment, component, label, or queue changes
 - `EvidenceCorrelator`: pulls build, test, release, and traceability facts into issue context
 - `JiraWritebackCoordinator`: performs approval-backed comments, links, and safe field updates
+- `GitHubPRScanEngine`: evaluates open PRs for staleness, missing reviews, and lifecycle anomalies
 
 Required internal objects:
 - `IssueCoordinationRequest`
@@ -47,6 +58,8 @@ Required internal objects:
 - `WorkflowRecommendation`
 - `RoutingDecision`
 - `IssueAuditRecord`
+- `PRHygieneFinding`
+- `PRHygieneAction`
 
 ### Jira grounding
 Drucker should be grounded in the existing Jira integration model already present in `fuze`:
@@ -59,6 +72,15 @@ Grounding references:
 - [fuze/plugins/drivers/atlassian/_jira.py](/Users/johnmacdonald/code/cornelis/fuze/plugins/drivers/atlassian/_jira.py)
 - [fuze/docs/source/fuze-workspaces.rst](/Users/johnmacdonald/code/cornelis/fuze/docs/source/fuze-workspaces.rst)
 
+### GitHub grounding
+Drucker's GitHub PR scanning builds on the existing adapter skeleton:
+- `adapters/github/adapter.py` defines `GitHubAdapter` ABC and `PREvent` model
+- `adapters/github/webhook.py` provides webhook receiver with HMAC verification
+- The REST adapter requires `list_open_pull_requests()` to be implemented for PR hygiene scanning
+- Authentication uses a GitHub personal access token (`GITHUB_TOKEN` env var)
+
+The scan architecture follows the same polling pattern as Jira scans: config → tick dispatch → adapter → findings → Shannon notification.
+
 ## Coordination model
 ### Inputs
 - Jira issue create/update events
@@ -70,6 +92,8 @@ Grounding references:
 - release-state evidence from Hedy
 - version context from Babbage
 - optional action-item candidates from Herodotus
+- GitHub PR state from configured repositories (open PRs, review status, age, labels)
+- GitHub PR metadata: author, reviewers, branch names, mergeable state
 
 ### Outputs
 Drucker should produce:
@@ -79,6 +103,8 @@ Drucker should produce:
 - safe workflow-transition recommendations
 - assignment or queue recommendations
 - issue hygiene summaries
+- GitHub PR hygiene findings (stale PRs, missing reviews)
+- GitHub PR lifecycle notifications delivered through Shannon
 
 ### Coordination rules
 - every recommendation must cite the rule or evidence that caused it
@@ -87,6 +113,9 @@ Drucker should produce:
 - unresolved missing build/test context should be visible quickly on defects
 - stale ownership and stale workflow state should be surfaced before they silently age out
 - Drucker may coordinate, but it must not overwrite Linnaeus traceability facts or Hedy release state
+- GitHub findings should be delivered through Shannon, not written as GitHub PR comments or status checks
+- repeat notifications for the same PR should be suppressed within a configurable window
+- GitHub scan results should be stored alongside Jira hygiene reports in the report store
 
 ## Public API and contracts
 ### API surface
@@ -101,6 +130,10 @@ Drucker should produce:
   - return current coordination record, evidence, and applied actions
 - `GET /v1/jira/projects/{project_key}/hygiene`
   - return stale issues, missing metadata, and routing anomalies
+- `GET /v1/github/repos/{owner}/{repo}/hygiene`
+  - return PR hygiene findings for a repo
+- `POST /v1/github/scan`
+  - trigger an on-demand GitHub PR hygiene scan
 
 ### Internal contracts
 - `IssueCoordinationRequest`
@@ -108,6 +141,9 @@ Drucker should produce:
 - `WorkflowRecommendation`
 - `RoutingDecision`
 - `IssueAuditRecord`
+- `PRHygieneFinding`
+- `PRHygieneAction`
+- `PRHygieneReport`
 
 ## Workflow scope
 ### What Drucker should own
@@ -117,12 +153,18 @@ Drucker should produce:
 - routing to components, queues, or assignees under policy
 - status nudges when technical evidence contradicts issue state
 - summarized Jira hygiene reports for humans
+- GitHub PR staleness detection and notification
+- GitHub PR review coverage monitoring
+- GitHub PR lifecycle hygiene (future: naming compliance, merge conflicts, CI failure follow-up)
 
 ### What Drucker should not own
 - release ticket creation and release stage transitions already anchored in Hedy and existing `fuze` release automation
 - build-to-issue linkage truth already anchored in Linnaeus
 - milestone planning already anchored in Gantt
 - delivery health interpretation already anchored in Brooks
+- code review quality assessment already anchored in Linus
+- GitHub Actions CI/CD pipeline configuration
+- direct GitHub PR comments or status check writes
 
 ## Observability and operations
 ### Structured events
@@ -132,6 +174,10 @@ Emit:
 - `jira.routing_recommended`
 - `jira.workflow_nudge_recommended`
 - `jira.writeback_applied`
+- `github.pr_scan_completed`
+- `github.stale_pr_detected`
+- `github.missing_review_detected`
+- `github.pr_hygiene_report_generated`
 
 ### Metrics
 Collect:
@@ -140,6 +186,10 @@ Collect:
 - routing-correction count
 - recommendation acceptance rate
 - issue-to-build evidence coverage
+- stale PR count by repo
+- missing-review PR count by repo
+- GitHub scan frequency and duration
+- notification delivery rate for GitHub findings
 
 ### Operator controls
 - approve or reject a proposed write-back
@@ -216,6 +266,26 @@ sequenceDiagram
     EC-->>D: Evidence report
     D->>D: Generate hygiene report
     D->>JI: Nudge stale items
+```
+
+### GitHub PR Hygiene Scan
+
+```mermaid
+sequenceDiagram
+    participant SCH as Scheduler
+    participant D as Drucker API
+    participant GH as GitHubRESTAdapter
+    participant S as Shannon
+    SCH->>D: Scheduled github-pr-hygiene scan
+    D->>GH: list_open_pull_requests(repo)
+    GH-->>D: Open PRs with metadata
+    D->>D: Evaluate staleness & review coverage
+    D->>D: Generate findings & actions
+    alt Findings exist
+        D->>S: Notify PR hygiene findings
+        S->>S: Post to Teams channel
+    end
+    D->>D: Store report
 ```
 
 ## Decision Logging & Audit Trail
@@ -304,13 +374,23 @@ Exit criteria:
 - write-backs are auditable and policy-controlled
 - project hygiene views are usable by humans
 
-### Phase 4. Operational automation
+### Phase 4. Operational automation & GitHub PR hygiene
 - add scheduled stale-issue scans
 - add queue-level summaries and escalation hooks into Brooks or Teams
+- add GitHub PR staleness scanning on daily schedule
+- add missing-review detection
+- deliver findings through Shannon
 
 Exit criteria:
 - Jira hygiene no longer depends on manual sweeps
 - escalations remain reviewable and suppressible
+- stale PRs are detected and notified through Teams
+
+### Phase 5. Extended GitHub hygiene
+- additional scan types (review request stale, naming compliance, draft PR stale, merge conflicts, PR size warning, CI failure follow-up)
+
+Exit criteria:
+- 4+ GitHub scan types operational; evaluate extraction to dedicated agent
 
 ## Test and acceptance plan
 ### Intake behavior
@@ -333,8 +413,19 @@ Exit criteria:
 - suppressions are honored and auditable
 - recommendation history remains queryable
 
+### GitHub PR hygiene behavior
+- stale PR is detected when no update in configured threshold days
+- PR with no reviewers and no approvals produces missing_review finding
+- PR within threshold age stays quiet
+- Shannon notification includes PR author, number, title, and age
+- scan results are stored in report store
+- repeat notifications for same PR are suppressed within configured window
+
 ## Assumptions
 - Jira remains the source of truth for issue workflow
+- GitHub remains the source of truth for PR state
 - Drucker is advisory-first in v1
+- GitHub PR scans use explicit repo allowlists, not org-wide discovery
+- PR hygiene notifications go through Shannon, not direct GitHub API writes
 - Linnaeus, Hedy, and Herodotus continue to own their current domains
 - existing `fuze` Jira automation remains available during migration
