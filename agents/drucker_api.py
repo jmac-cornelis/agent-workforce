@@ -49,6 +49,8 @@ class DruckerPollerTickRequest(BaseModel):
     shannon_base_url: Optional[str] = None
     config_path: Optional[str] = None
     job_name: Optional[str] = None
+    github_repos: Optional[List[str]] = None
+    github_stale_days: int = 5
 
 
 class IssueCheckRequest(BaseModel):
@@ -296,7 +298,7 @@ def create_app() -> FastAPI:
         global _run_count, _total_findings, _last_run_at
 
         agent = DruckerCoordinatorAgent(project_key=body.project_key)
-        result = agent.tick({
+        spec = {
             'project_key': body.project_key,
             'limit': body.limit,
             'stale_days': body.stale_days,
@@ -310,7 +312,11 @@ def create_app() -> FastAPI:
             'shannon_base_url': body.shannon_base_url,
             'config_path': body.config_path,
             'job_name': body.job_name,
-        })
+        }
+        if body.github_repos:
+            spec['github_repos'] = body.github_repos
+            spec['github_stale_days'] = body.github_stale_days
+        result = agent.tick(spec)
 
         for task in result.get('tasks', []):
             report = task.get('report', {})

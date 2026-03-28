@@ -1087,6 +1087,13 @@ def _build_main_args(**overrides):
         'favourite_only': False,
         'get_filter': None,
         'run_filter': None,
+        'list_automations': False,
+        'get_automation': None,
+        'create_automation': None,
+        'enable_automation': None,
+        'disable_automation': None,
+        'delete_automation': None,
+        'automation_state': None,
     }
     defaults.update(overrides)
     return argparse.Namespace(**defaults)
