@@ -26,6 +26,10 @@ from shannon.cards import (
     build_gantt_release_monitor_card,
     build_gantt_release_survey_card,
     build_gantt_snapshot_card,
+    build_pr_hygiene_card,
+    build_pr_list_card,
+    build_pr_reviews_card,
+    build_pr_stale_card,
 )
 from shannon.models import AuditRecord, ConversationReference, ShannonResponse, normalize_command_text
 from shannon.poster import BasePoster, build_poster_from_env
@@ -403,6 +407,10 @@ class ShannonService:
             '/hygiene-run': build_drucker_hygiene_card,
             '/hygiene-report': build_drucker_hygiene_card,
             '/bug-activity': build_bug_activity_card,
+            '/pr-hygiene': build_pr_hygiene_card,
+            '/pr-stale': build_pr_stale_card,
+            '/pr-reviews': build_pr_reviews_card,
+            '/pr-list': build_pr_list_card,
         },
         'gantt': {
             '/planning-snapshot': build_gantt_snapshot_card,
@@ -430,6 +438,18 @@ class ShannonService:
 
         card_builder = self.AGENT_CARD_BUILDERS.get(agent_id, {}).get(command)
         if card_builder and isinstance(data, dict):
+            if agent_id == 'drucker' and command in ('/pr-hygiene', '/pr-stale', '/pr-reviews', '/pr-list'):
+                card = card_builder(data)
+                repo = data.get('repo', '')
+                total = data.get('total_findings', data.get('total', len(data.get('prs', []))))
+                label = 'findings' if command != '/pr-list' else 'PRs'
+                return ShannonResponse(
+                    text=f'{repo}: {total} {label}',
+                    card=card,
+                    command=command,
+                    decision='agent_call_success',
+                )
+
             if agent_id == 'drucker':
                 report = data.get('report', data)
                 card = card_builder(report)

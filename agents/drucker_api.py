@@ -6,9 +6,9 @@ import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from dotenv import load_dotenv
+from config.env_loader import load_env
 
-load_dotenv()
+load_env()
 
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
@@ -71,6 +71,20 @@ class IntakeRunRequest(BaseModel):
 class BugActivityRequest(BaseModel):
     project_key: str = 'STL'
     target_date: Optional[str] = None
+
+
+class PRHygieneRequest(BaseModel):
+    repo: str
+    stale_days: int = 5
+
+
+class PRStaleRequest(BaseModel):
+    repo: str
+    stale_days: int = 5
+
+
+class PRReviewsRequest(BaseModel):
+    repo: str
 
 
 def create_app() -> FastAPI:
@@ -342,6 +356,85 @@ def create_app() -> FastAPI:
             return {'ok': True, 'data': result}
         except Exception as e:
             log.error(f'Bug activity report failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/github/pr-hygiene')
+    def github_pr_hygiene(body: PRHygieneRequest) -> Dict[str, Any]:
+        try:
+            import github_utils
+            report = github_utils.analyze_repo_pr_hygiene(
+                body.repo,
+                stale_days=body.stale_days,
+            )
+            return {'ok': True, 'data': report}
+        except Exception as e:
+            log.error(f'GitHub PR hygiene scan failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/github/pr-stale')
+    def github_pr_stale(body: PRStaleRequest) -> Dict[str, Any]:
+        try:
+            import github_utils
+            stale = github_utils.analyze_pr_staleness(
+                body.repo,
+                stale_days=body.stale_days,
+            )
+            return {
+                'ok': True,
+                'data': {
+                    'repo': body.repo,
+                    'stale_days': body.stale_days,
+                    'stale_prs': stale,
+                    'total_findings': len(stale),
+                },
+            }
+        except Exception as e:
+            log.error(f'GitHub stale PR scan failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/github/pr-reviews')
+    def github_pr_reviews(body: PRReviewsRequest) -> Dict[str, Any]:
+        try:
+            import github_utils
+            findings = github_utils.analyze_missing_reviews(body.repo)
+            return {
+                'ok': True,
+                'data': {
+                    'repo': body.repo,
+                    'missing_reviews': findings,
+                    'total_findings': len(findings),
+                },
+            }
+        except Exception as e:
+            log.error(f'GitHub missing reviews scan failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.get('/v1/github/prs/{owner}/{repo}')
+    def github_pr_list(
+        owner: str,
+        repo: str,
+        state: str = Query(default='open', regex='^(open|closed|all)$'),
+        limit: int = Query(default=50, ge=1, le=500),
+    ) -> Dict[str, Any]:
+        repo_name = f'{owner}/{repo}'
+        try:
+            import github_utils
+            prs = github_utils.list_pull_requests(
+                repo_name,
+                state=state,
+                limit=limit,
+            )
+            return {
+                'ok': True,
+                'data': {
+                    'repo': repo_name,
+                    'state': state,
+                    'prs': prs,
+                    'total': len(prs),
+                },
+            }
+        except Exception as e:
+            log.error(f'GitHub PR list failed: {e}')
             return {'ok': False, 'error': str(e)}
 
     return app

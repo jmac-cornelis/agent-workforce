@@ -1,0 +1,17 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+.env
+.env.*
+!.env.example
+.sisyphus/
+docs/
+plans/
+tests/
+scripts/
+*.log
+*.md
+!requirements.txt
+.venv/
+*.egg-info/

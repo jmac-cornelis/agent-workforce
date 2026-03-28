@@ -14,10 +14,9 @@ import sys
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
-from dotenv import load_dotenv
+from config.env_loader import load_env
 
-# Load environment variables
-load_dotenv()
+load_env()
 
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))

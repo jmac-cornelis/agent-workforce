@@ -38,8 +38,8 @@ agents:
 
   - agent_id: drucker
     display_name: Drucker
-    role: Jira Hygiene Analyst
-    description: Deterministic Jira hygiene analysis and remediation
+    role: Engineering Hygiene
+    description: Deterministic engineering hygiene analysis — Jira ticket quality and GitHub PR lifecycle
     zone: service_infrastructure
     channel_name: agent-drucker
     channel_id: "19:966aaabccc2a4ecd879d427edc83aaf0@thread.tacv2"
@@ -47,6 +47,7 @@ agents:
     api_base_url: http://localhost:8201
     approval_types: []
     custom_commands:
+      # --- Jira hygiene commands ---
       - command: /issue-check
         description: Run intake validation for one Jira ticket
         api_method: POST
@@ -71,6 +72,23 @@ agents:
         description: Bug ticket activity today (opened, status changes, comments)
         api_method: POST
         api_path: /v1/activity/bugs
+      # --- GitHub PR hygiene commands ---
+      - command: /pr-hygiene
+        description: Full PR hygiene scan — stale PRs and missing reviews
+        api_method: POST
+        api_path: /v1/github/pr-hygiene
+      - command: /pr-stale
+        description: Find stale PRs with no activity
+        api_method: POST
+        api_path: /v1/github/pr-stale
+      - command: /pr-reviews
+        description: Find PRs missing code review
+        api_method: POST
+        api_path: /v1/github/pr-reviews
+      - command: /pr-list
+        description: List open PRs for a repository
+        api_method: GET
+        api_path: /v1/github/prs
     timeout_seconds: 30
 
   - agent_id: gantt

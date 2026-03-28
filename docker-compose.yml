@@ -1,0 +1,384 @@
+# ==========================================================================
+# Cornelis Networks — AI Agent Workforce Docker Compose
+# ==========================================================================
+# Architecture: single-image multi-entrypoint deployment.
+#   All agent services share the cornelis/agent-workforce image; each
+#   service overrides the entrypoint command to launch its own FastAPI app.
+#
+# Credentials: organised into credential-domain env files under config/env/.
+#   shared.env  — common settings (database URLs, log level, etc.)
+#   jira.env    — Jira API token and base URL
+#   llm.env     — LLM provider keys (OpenAI / Azure OpenAI)
+#   github.env  — GitHub PAT and org settings
+#   teams.env   — Microsoft Teams webhook / Azure AD creds
+#
+# Host deployment: this is a single Compose file. Host distribution across
+#   multiple machines is handled by Ansible at deploy time — do NOT split
+#   this file per host.
+#
+# Port scheme: 82xx — each agent is assigned a unique port in the 8200 range.
+#
+# Profiles:
+#   default  — starts infrastructure + implemented agents (shannon, drucker,
+#              gantt, hypatia)
+#   future   — reserved slots for agents not yet implemented; start
+#              explicitly: docker compose --profile future up josephine
+# ==========================================================================
+
+version: '3.8'
+
+# ---------------------------------------------------------------------------
+# Networks
+# ---------------------------------------------------------------------------
+networks:
+  workforce-net:
+    driver: bridge
+
+# ---------------------------------------------------------------------------
+# Named volumes
+# ---------------------------------------------------------------------------
+volumes:
+  pg-data:        # PostgreSQL data
+  redis-data:     # Redis data
+  agent-state:    # Shared agent state (JSON / SQLite stores)
+  agent-logs:     # Shared log volume
+  agent-artifacts: # Build / test artifacts
+
+# ---------------------------------------------------------------------------
+# Shared agent base (YAML anchor — DRY)
+# ---------------------------------------------------------------------------
+x-agent-base: &agent-base
+  image: cornelis/agent-workforce:${IMAGE_TAG:-latest}
+  restart: unless-stopped
+  networks:
+    - workforce-net
+  volumes:
+    - agent-state:/data/state
+    - agent-logs:/data/logs
+    - ./config:/app/config:ro
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  healthcheck:
+    test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:${PORT}/health')"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+
+# ---------------------------------------------------------------------------
+# Services
+# ---------------------------------------------------------------------------
+services:
+
+  # =========================================================================
+  # Infrastructure services
+  # =========================================================================
+
+  postgres:
+    image: postgres:16-bookworm
+    container_name: postgres
+    restart: unless-stopped
+    networks:
+      - workforce-net
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=workforce
+      - POSTGRES_USER=workforce
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workforce"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-bookworm
+    container_name: redis
+    restart: unless-stopped
+    networks:
+      - workforce-net
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    image: nginx:stable
+    container_name: nginx
+    restart: unless-stopped
+    networks:
+      - workforce-net
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./config/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - shannon
+      - drucker
+      - gantt
+      - hypatia
+
+  # =========================================================================
+  # Implemented agent services (started by default)
+  # Port allocation: 82xx per host group
+  # =========================================================================
+
+  shannon:
+    <<: *agent-base
+    container_name: shannon
+    command: ["uvicorn", "agents.shannon_api:app", "--host", "0.0.0.0", "--port", "8200"]
+    ports:
+      - "8200:8200"
+    environment:
+      - PORT=8200
+      - AGENT_ID=shannon
+    env_file:
+      - config/env/shared.env
+      - config/env/llm.env
+      - config/env/teams.env
+
+  drucker:
+    <<: *agent-base
+    container_name: drucker
+    command: ["uvicorn", "agents.drucker_api:app", "--host", "0.0.0.0", "--port", "8201"]
+    ports:
+      - "8201:8201"
+    environment:
+      - PORT=8201
+      - AGENT_ID=drucker
+    env_file:
+      - config/env/shared.env
+      - config/env/jira.env
+      - config/env/llm.env
+      - config/env/github.env
+
+  gantt:
+    <<: *agent-base
+    container_name: gantt
+    command: ["uvicorn", "agents.gantt_api:app", "--host", "0.0.0.0", "--port", "8202"]
+    ports:
+      - "8202:8202"
+    environment:
+      - PORT=8202
+      - AGENT_ID=gantt
+    env_file:
+      - config/env/shared.env
+      - config/env/jira.env
+      - config/env/llm.env
+
+  hypatia:
+    <<: *agent-base
+    container_name: hypatia
+    command: ["uvicorn", "agents.hypatia_api:app", "--host", "0.0.0.0", "--port", "8203"]
+    ports:
+      - "8203:8203"
+    environment:
+      - PORT=8203
+      - AGENT_ID=hypatia
+    env_file:
+      - config/env/shared.env
+      - config/env/llm.env
+
+  # =========================================================================
+  # Future agent services (profile: future — not started by default)
+  # Start explicitly: docker compose --profile future up <service>
+  # Port allocation: 82xx per host group
+  # =========================================================================
+
+  josephine:
+    <<: *agent-base
+    container_name: josephine
+    profiles: ["future"]
+    command: ["uvicorn", "agents.josephine_api:app", "--host", "0.0.0.0", "--port", "8210"]
+    ports:
+      - "8210:8210"
+    environment:
+      - PORT=8210
+      - AGENT_ID=josephine
+    env_file:
+      - config/env/shared.env
+      - config/env/github.env
+
+  ada:
+    <<: *agent-base
+    container_name: ada
+    profiles: ["future"]
+    command: ["uvicorn", "agents.ada_api:app", "--host", "0.0.0.0", "--port", "8211"]
+    ports:
+      - "8211:8211"
+    environment:
+      - PORT=8211
+      - AGENT_ID=ada
+    env_file:
+      - config/env/shared.env
+      - config/env/llm.env
+
+  curie:
+    <<: *agent-base
+    container_name: curie
+    profiles: ["future"]
+    command: ["uvicorn", "agents.curie_api:app", "--host", "0.0.0.0", "--port", "8212"]
+    ports:
+      - "8212:8212"
+    environment:
+      - PORT=8212
+      - AGENT_ID=curie
+    env_file:
+      - config/env/shared.env
+      - config/env/llm.env
+
+  faraday:
+    <<: *agent-base
+    container_name: faraday
+    profiles: ["future"]
+    command: ["uvicorn", "agents.faraday_api:app", "--host", "0.0.0.0", "--port", "8213"]
+    ports:
+      - "8213:8213"
+    environment:
+      - PORT=8213
+      - AGENT_ID=faraday
+    env_file:
+      - config/env/shared.env
+
+  tesla:
+    <<: *agent-base
+    container_name: tesla
+    profiles: ["future"]
+    command: ["uvicorn", "agents.tesla_api:app", "--host", "0.0.0.0", "--port", "8214"]
+    ports:
+      - "8214:8214"
+    environment:
+      - PORT=8214
+      - AGENT_ID=tesla
+    env_file:
+      - config/env/shared.env
+
+  hedy:
+    <<: *agent-base
+    container_name: hedy
+    profiles: ["future"]
+    command: ["uvicorn", "agents.hedy_api:app", "--host", "0.0.0.0", "--port", "8220"]
+    ports:
+      - "8220:8220"
+    environment:
+      - PORT=8220
+      - AGENT_ID=hedy
+    env_file:
+      - config/env/shared.env
+      - config/env/jira.env
+      - config/env/llm.env
+      - config/env/github.env
+
+  linus:
+    <<: *agent-base
+    container_name: linus
+    profiles: ["future"]
+    command: ["uvicorn", "agents.linus_api:app", "--host", "0.0.0.0", "--port", "8221"]
+    ports:
+      - "8221:8221"
+    environment:
+      - PORT=8221
+      - AGENT_ID=linus
+    env_file:
+      - config/env/shared.env
+      - config/env/llm.env
+      - config/env/github.env
+
+  babbage:
+    <<: *agent-base
+    container_name: babbage
+    profiles: ["future"]
+    command: ["uvicorn", "agents.babbage_api:app", "--host", "0.0.0.0", "--port", "8222"]
+    ports:
+      - "8222:8222"
+    environment:
+      - PORT=8222
+      - AGENT_ID=babbage
+    env_file:
+      - config/env/shared.env
+      - config/env/jira.env
+
+  linnaeus:
+    <<: *agent-base
+    container_name: linnaeus
+    profiles: ["future"]
+    command: ["uvicorn", "agents.linnaeus_api:app", "--host", "0.0.0.0", "--port", "8223"]
+    ports:
+      - "8223:8223"
+    environment:
+      - PORT=8223
+      - AGENT_ID=linnaeus
+    env_file:
+      - config/env/shared.env
+      - config/env/jira.env
+
+  herodotus:
+    <<: *agent-base
+    container_name: herodotus
+    profiles: ["future"]
+    command: ["uvicorn", "agents.herodotus_api:app", "--host", "0.0.0.0", "--port", "8224"]
+    ports:
+      - "8224:8224"
+    environment:
+      - PORT=8224
+      - AGENT_ID=herodotus
+    env_file:
+      - config/env/shared.env
+      - config/env/llm.env
+      - config/env/teams.env
+
+  nightingale:
+    <<: *agent-base
+    container_name: nightingale
+    profiles: ["future"]
+    command: ["uvicorn", "agents.nightingale_api:app", "--host", "0.0.0.0", "--port", "8225"]
+    ports:
+      - "8225:8225"
+    environment:
+      - PORT=8225
+      - AGENT_ID=nightingale
+    env_file:
+      - config/env/shared.env
+      - config/env/jira.env
+      - config/env/llm.env
+      - config/env/github.env
+
+  brooks:
+    <<: *agent-base
+    container_name: brooks
+    profiles: ["future"]
+    command: ["uvicorn", "agents.brooks_api:app", "--host", "0.0.0.0", "--port", "8226"]
+    ports:
+      - "8226:8226"
+    environment:
+      - PORT=8226
+      - AGENT_ID=brooks
+    env_file:
+      - config/env/shared.env
+      - config/env/jira.env
+      - config/env/llm.env
+
+  brandeis:
+    <<: *agent-base
+    container_name: brandeis
+    profiles: ["future"]
+    command: ["uvicorn", "agents.brandeis_api:app", "--host", "0.0.0.0", "--port", "8227"]
+    ports:
+      - "8227:8227"
+    environment:
+      - PORT=8227
+      - AGENT_ID=brandeis
+    env_file:
+      - config/env/shared.env
+      - config/env/github.env

@@ -6,9 +6,9 @@ import sys
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
-from dotenv import load_dotenv
+from config.env_loader import load_env
 
-load_dotenv()
+load_env()
 
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
