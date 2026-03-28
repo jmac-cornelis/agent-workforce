@@ -31,6 +31,21 @@ from typing import Optional
 
 from dotenv import load_dotenv
 
+# Dry-run resolution — import from config layer with standalone fallback.
+try:
+    from config.env_loader import resolve_dry_run
+except ImportError:
+    def resolve_dry_run(explicit=None):
+        '''Inline fallback for standalone CLI use (no config package).'''
+        if explicit is not None:
+            return explicit
+        env_val = os.environ.get('DRY_RUN', '').strip().lower()
+        if env_val in ('0', 'false', 'no', 'off'):
+            return False
+        if env_val in ('1', 'true', 'yes', 'on'):
+            return True
+        return True
+
 # Load environment variables from the default .env if present.
 #
 # CLI users can override this at runtime with --env; see handle_args().
@@ -4018,7 +4033,7 @@ def create_ticket(
     labels=None,
     parent_key=None,
     product_family=None,
-    dry_run=True,
+    dry_run=None,
 ):
     '''
     Create a Jira ticket.
@@ -4108,7 +4123,7 @@ def create_ticket(
 
     output('')
     output('=' * 80)
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output('CREATE TICKET - DRY RUN (no changes will be made)')
     else:
         output('CREATE TICKET - EXECUTING')
@@ -4131,7 +4146,7 @@ def create_ticket(
         output(f'Product Family: {", ".join(pf_display)}')
     output('-' * 80)
 
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output('Would create ticket with the above fields.')
         output('To execute creation, add --execute.')
         output('=' * 80)
@@ -4201,7 +4216,7 @@ def create_ticket(
 
 
 def bulk_update_tickets(jira, input_file, set_release=None, remove_release=False,
-                        transition=None, assign=None, dry_run=True, max_updates=None,
+                        transition=None, assign=None, dry_run=None, max_updates=None,
                         fix_version_mode='replace'):
     '''
     Perform bulk updates on tickets loaded from a CSV file.
@@ -4269,7 +4284,7 @@ def bulk_update_tickets(jira, input_file, set_release=None, remove_release=False
     # Print summary
     output()
     output('=' * 80)
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output('BULK UPDATE - DRY RUN (no changes will be made)')
     else:
         output('BULK UPDATE - EXECUTING CHANGES')
@@ -4306,7 +4321,7 @@ def bulk_update_tickets(jira, input_file, set_release=None, remove_release=False
         if has_csv_fix_version and csv_fix_versions:
             per_ticket_versions = [v.strip() for v in csv_fix_versions.split(',') if v.strip()]
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             dry_ops = list(operations)
             if per_ticket_versions:
                 dry_ops = [f'Set fix versions to: {", ".join(per_ticket_versions)} (mode={fix_version_mode})']
@@ -4380,7 +4395,7 @@ def bulk_update_tickets(jira, input_file, set_release=None, remove_release=False
         if len(errors) > 10:
             output(f'  ... and {len(errors) - 10} more errors')
     
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output()
         output('This was a DRY RUN. To execute changes, add --execute flag.')
     
@@ -4388,7 +4403,7 @@ def bulk_update_tickets(jira, input_file, set_release=None, remove_release=False
     output()
 
 
-def bulk_delete_tickets(jira, input_file, delete_subtasks=False, dry_run=True, max_deletes=None, force=False):
+def bulk_delete_tickets(jira, input_file, delete_subtasks=False, dry_run=None, max_deletes=None, force=False):
     '''
     Perform bulk deletion of tickets listed in a CSV file.
 
@@ -4435,7 +4450,7 @@ def bulk_delete_tickets(jira, input_file, delete_subtasks=False, dry_run=True, m
     # Print summary
     output()
     output('=' * 80)
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output('BULK DELETE - DRY RUN (no changes will be made)')
     else:
         output('BULK DELETE - EXECUTING DELETES')
@@ -4480,7 +4495,7 @@ def bulk_delete_tickets(jira, input_file, delete_subtasks=False, dry_run=True, m
 
         status_str = f'[{i}/{len(tickets)}] {ticket_key}'
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             output(f'{status_str}: Would delete (delete_subtasks={delete_subtasks})')
             success_count += 1
             continue
@@ -4532,7 +4547,7 @@ def bulk_delete_tickets(jira, input_file, delete_subtasks=False, dry_run=True, m
         if len(errors) > 10:
             output(f'  ... and {len(errors) - 10} more errors')
 
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output()
         output('This was a DRY RUN. To execute deletions, add --execute flag.')
 
@@ -5139,7 +5154,7 @@ def get_dashboard(jira, dashboard_id):
         raise JiraDashboardError(str(e))
 
 
-def create_dashboard(jira, name, description=None, share_permissions=None, dry_run=True):
+def create_dashboard(jira, name, description=None, share_permissions=None, dry_run=None):
     '''
     Create a new dashboard.
 
@@ -5168,7 +5183,7 @@ def create_dashboard(jira, name, description=None, share_permissions=None, dry_r
         else:
             parsed_permissions = share_permissions
 
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output('')
         output('DRY RUN (no changes will be made)')
         output('=' * 80)
@@ -5227,7 +5242,7 @@ def create_dashboard(jira, name, description=None, share_permissions=None, dry_r
         raise JiraDashboardError(str(e))
 
 
-def update_dashboard(jira, dashboard_id, name=None, description=None, share_permissions=None, dry_run=True):
+def update_dashboard(jira, dashboard_id, name=None, description=None, share_permissions=None, dry_run=None):
     '''
     Update an existing dashboard.
 
@@ -5247,7 +5262,7 @@ def update_dashboard(jira, dashboard_id, name=None, description=None, share_perm
     '''
     log.debug(f'Entering update_dashboard(dashboard_id={dashboard_id}, name={name}, description={description}, dry_run={dry_run})')
     
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output('')
         output('DRY RUN (no changes will be made)')
         output('=' * 80)
@@ -5337,7 +5352,7 @@ def update_dashboard(jira, dashboard_id, name=None, description=None, share_perm
         raise JiraDashboardError(str(e))
 
 
-def delete_dashboard(jira, dashboard_id, force=False, dry_run=True):
+def delete_dashboard(jira, dashboard_id, force=False, dry_run=None):
     '''
     Delete a dashboard.
 
@@ -5355,7 +5370,7 @@ def delete_dashboard(jira, dashboard_id, force=False, dry_run=True):
     '''
     log.debug(f'Entering delete_dashboard(dashboard_id={dashboard_id}, force={force}, dry_run={dry_run})')
     
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output('')
         output('DRY RUN (no changes will be made)')
         output('=' * 80)
@@ -5422,7 +5437,7 @@ def delete_dashboard(jira, dashboard_id, force=False, dry_run=True):
         raise JiraDashboardError(str(e))
 
 
-def copy_dashboard(jira, dashboard_id, name, description=None, share_permissions=None, dry_run=True):
+def copy_dashboard(jira, dashboard_id, name, description=None, share_permissions=None, dry_run=None):
     '''
     Copy/clone an existing dashboard.
 
@@ -5442,7 +5457,7 @@ def copy_dashboard(jira, dashboard_id, name, description=None, share_permissions
     '''
     log.debug(f'Entering copy_dashboard(dashboard_id={dashboard_id}, name={name}, description={description}, dry_run={dry_run})')
     
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output('')
         output('DRY RUN (no changes will be made)')
         output('=' * 80)
@@ -5589,7 +5604,7 @@ def list_gadgets(jira, dashboard_id):
         raise JiraDashboardError(str(e))
 
 
-def add_gadget(jira, dashboard_id, module_key, position=None, color=None, properties=None, dry_run=True):
+def add_gadget(jira, dashboard_id, module_key, position=None, color=None, properties=None, dry_run=None):
     '''
     Add a gadget to a dashboard.
 
@@ -5624,7 +5639,7 @@ def add_gadget(jira, dashboard_id, module_key, position=None, color=None, proper
         if color.lower() not in valid_colors:
             raise JiraDashboardError(f'Invalid color "{color}". Valid colors: {", ".join(valid_colors)}')
 
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output('')
         output('DRY RUN (no changes will be made)')
         output('=' * 80)
@@ -5709,7 +5724,7 @@ def add_gadget(jira, dashboard_id, module_key, position=None, color=None, proper
         raise JiraDashboardError(str(e))
 
 
-def remove_gadget(jira, dashboard_id, gadget_id, dry_run=True):
+def remove_gadget(jira, dashboard_id, gadget_id, dry_run=None):
     '''
     Remove a gadget from a dashboard.
 
@@ -5727,7 +5742,7 @@ def remove_gadget(jira, dashboard_id, gadget_id, dry_run=True):
     '''
     log.debug(f'Entering remove_gadget(dashboard_id={dashboard_id}, gadget_id={gadget_id}, dry_run={dry_run})')
     
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output('')
         output('DRY RUN (no changes will be made)')
         output('=' * 80)
@@ -5774,7 +5789,7 @@ def remove_gadget(jira, dashboard_id, gadget_id, dry_run=True):
         raise JiraDashboardError(str(e))
 
 
-def update_gadget(jira, dashboard_id, gadget_id, position=None, color=None, dry_run=True):
+def update_gadget(jira, dashboard_id, gadget_id, position=None, color=None, dry_run=None):
     '''
     Update a gadget on a dashboard.
 
@@ -5811,7 +5826,7 @@ def update_gadget(jira, dashboard_id, gadget_id, position=None, color=None, dry_
         if color.lower() not in valid_colors:
             raise JiraDashboardError(f'Invalid color "{color}". Valid colors: {", ".join(valid_colors)}')
 
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output('')
         output('DRY RUN (no changes will be made)')
         output('=' * 80)
@@ -6045,7 +6060,7 @@ def get_automation(jira, rule_uuid):
         raise JiraAutomationError(str(e))
 
 
-def create_automation(jira, rule_file, project_key=None, dry_run=True):
+def create_automation(jira, rule_file, project_key=None, dry_run=None):
     '''
     Create an automation rule from a JSON file.
 
@@ -6072,7 +6087,7 @@ def create_automation(jira, rule_file, project_key=None, dry_run=True):
 
         rule_name = payload.get('name', 'Unnamed Rule')
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             output('')
             output('=' * 80)
             output('DRY RUN — Automation Rule Creation')
@@ -6138,7 +6153,7 @@ def create_automation(jira, rule_file, project_key=None, dry_run=True):
         raise JiraAutomationError(str(e))
 
 
-def enable_automation(jira, rule_uuid, dry_run=True):
+def enable_automation(jira, rule_uuid, dry_run=None):
     '''
     Enable an automation rule.
 
@@ -6155,7 +6170,7 @@ def enable_automation(jira, rule_uuid, dry_run=True):
     '''
     log.debug(f'Entering enable_automation(rule_uuid={rule_uuid}, dry_run={dry_run})')
 
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output('')
         output('DRY RUN (no changes will be made)')
         output('=' * 80)
@@ -6213,7 +6228,7 @@ def enable_automation(jira, rule_uuid, dry_run=True):
         raise JiraAutomationError(str(e))
 
 
-def disable_automation(jira, rule_uuid, dry_run=True):
+def disable_automation(jira, rule_uuid, dry_run=None):
     '''
     Disable an automation rule.
 
@@ -6230,7 +6245,7 @@ def disable_automation(jira, rule_uuid, dry_run=True):
     '''
     log.debug(f'Entering disable_automation(rule_uuid={rule_uuid}, dry_run={dry_run})')
 
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output('')
         output('DRY RUN (no changes will be made)')
         output('=' * 80)

@@ -22,6 +22,7 @@ from shannon.cards import (
     build_bug_activity_card,
     build_drucker_hygiene_card,
     build_drucker_summary_card,
+    build_dry_run_preview_card,
     build_fact_card,
     build_gantt_release_monitor_card,
     build_gantt_release_survey_card,
@@ -421,6 +422,8 @@ class ShannonService:
         },
     }
 
+    MUTATION_COMMANDS: set[str] = set()
+
     def _agent_response_to_shannon(
         self,
         agent_id: str,
@@ -435,6 +438,15 @@ class ShannonService:
             )
 
         data = result.get('data', result)
+
+        if isinstance(data, dict) and data.get('dry_run') is True:
+            card = build_dry_run_preview_card(agent_id, command, data)
+            return ShannonResponse(
+                text=f'Dry-run preview for {command}. Send again with "execute" to confirm.',
+                card=card,
+                command=command,
+                decision='dry_run_preview',
+            )
 
         card_builder = self.AGENT_CARD_BUILDERS.get(agent_id, {}).get(command)
         if card_builder and isinstance(data, dict):
@@ -640,14 +652,26 @@ class ShannonService:
                 json_body = None
                 params = None
                 args = parts[1:] if len(parts) > 1 else []
+
+                execute_requested = (
+                    len(args) > 0
+                    and args[-1].lower() == 'execute'
+                )
+                if execute_requested:
+                    args = args[:-1]
+
                 if method.upper() == 'POST':
                     json_body = {
                         args[i]: args[i + 1]
                         for i in range(0, len(args) - 1, 2)
                     } if args else {}
+                    is_mutation = (
+                        command in self.MUTATION_COMMANDS
+                        or cc.get('mutation', False)
+                    )
+                    if is_mutation:
+                        json_body['dry_run'] = not execute_requested
                 elif args:
-                    # Append first arg as path segment (e.g. /hygiene-report <id>)
-                    # and pass remaining as query params
                     path = f'{path.rstrip("/")}/{args[0]}'
                     if len(args) > 1:
                         params = {'args': ' '.join(args[1:])}

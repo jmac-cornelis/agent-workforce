@@ -94,3 +94,24 @@ def load_env(
         log.debug('No .env files found; relying on process environment')
 
     return loaded
+
+
+def resolve_dry_run(explicit: Optional[bool] = None) -> bool:
+    '''
+    Resolve effective dry-run state from explicit param, env var, or safe default.
+
+    Priority (highest first):
+        1. explicit — API caller or CLI flag override
+        2. DRY_RUN env var — operator/deploy config
+        3. Default: True (safe, no mutations)
+
+    The env var accepts: true/1/yes/on → True; false/0/no/off → False.
+    '''
+    if explicit is not None:
+        return explicit
+    env_val = os.environ.get('DRY_RUN', '').strip().lower()
+    if env_val in ('0', 'false', 'no', 'off'):
+        return False
+    if env_val in ('1', 'true', 'yes', 'on'):
+        return True
+    return True

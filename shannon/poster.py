@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
+from config.env_loader import resolve_dry_run
 from shannon.models import ConversationReference
 
 # Logging config - follows jira_utils.py pattern
@@ -33,7 +34,7 @@ class BasePoster:
         reference: ConversationReference,
         activity_id: str,
         activity: Dict[str, Any],
-        dry_run: bool = True,
+        dry_run: Optional[bool] = None,
     ) -> Dict[str, Any]:
         raise NotImplementedError
 
@@ -41,7 +42,7 @@ class BasePoster:
         self,
         reference: ConversationReference,
         activity: Dict[str, Any],
-        dry_run: bool = True,
+        dry_run: Optional[bool] = None,
     ) -> Dict[str, Any]:
         raise NotImplementedError
 
@@ -59,9 +60,9 @@ class MemoryPoster(BasePoster):
         reference: ConversationReference,
         activity_id: str,
         activity: Dict[str, Any],
-        dry_run: bool = True,
+        dry_run: Optional[bool] = None,
     ) -> Dict[str, Any]:
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return {
                 'ok': True,
                 'dry_run': True,
@@ -86,9 +87,9 @@ class MemoryPoster(BasePoster):
         self,
         reference: ConversationReference,
         activity: Dict[str, Any],
-        dry_run: bool = True,
+        dry_run: Optional[bool] = None,
     ) -> Dict[str, Any]:
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return {
                 'ok': True,
                 'dry_run': True,
@@ -162,9 +163,9 @@ class WorkflowsPoster(BasePoster):
             }],
         }
 
-    def _post(self, activity: Dict[str, Any], dry_run: bool = True) -> Dict[str, Any]:
+    def _post(self, activity: Dict[str, Any], dry_run: Optional[bool] = None) -> Dict[str, Any]:
         payload = self._build_payload(activity)
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return {
                 'ok': True,
                 'dry_run': True,
@@ -186,7 +187,7 @@ class WorkflowsPoster(BasePoster):
         reference: ConversationReference,
         activity_id: str,
         activity: Dict[str, Any],
-        dry_run: bool = True,
+        dry_run: Optional[bool] = None,
     ) -> Dict[str, Any]:
         log.debug(
             'WorkflowsPoster: reply_to_activity posted as new message '
@@ -200,7 +201,7 @@ class WorkflowsPoster(BasePoster):
         self,
         reference: ConversationReference,
         activity: Dict[str, Any],
-        dry_run: bool = True,
+        dry_run: Optional[bool] = None,
     ) -> Dict[str, Any]:
         return self._post(activity, dry_run=dry_run)
 
@@ -263,7 +264,7 @@ class BotFrameworkPoster(BasePoster):
         reference: ConversationReference,
         activity_id: str,
         activity: Dict[str, Any],
-        dry_run: bool = True,
+        dry_run: Optional[bool] = None,
     ) -> Dict[str, Any]:
         if not reference.conversation_id or not activity_id:
             raise ValueError('reply_to_activity requires conversation_id and activity_id')
@@ -272,7 +273,7 @@ class BotFrameworkPoster(BasePoster):
             f'{self._base_service_url(reference)}/v3/conversations/'
             f'{reference.conversation_id}/activities/{activity_id}'
         )
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return {
                 'ok': True,
                 'dry_run': True,
@@ -288,7 +289,7 @@ class BotFrameworkPoster(BasePoster):
         self,
         reference: ConversationReference,
         activity: Dict[str, Any],
-        dry_run: bool = True,
+        dry_run: Optional[bool] = None,
     ) -> Dict[str, Any]:
         if not reference.conversation_id:
             raise ValueError('send_to_conversation requires conversation_id')
@@ -297,7 +298,7 @@ class BotFrameworkPoster(BasePoster):
             f'{self._base_service_url(reference)}/v3/conversations/'
             f'{reference.conversation_id}/activities'
         )
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return {
                 'ok': True,
                 'dry_run': True,
