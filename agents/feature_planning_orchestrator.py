@@ -1853,13 +1853,14 @@ class FeaturePlanningOrchestrator(BaseAgent):
             )
 
             result = create_ticket(
-                project_key=project_key,
-                summary=summary,
-                issue_type='Initiative',
-                description=description,
-                components=components or None,
-                product_family=product_family or None,
-            )
+                    project_key=project_key,
+                    summary=summary,
+                    issue_type='Initiative',
+                    description=description,
+                    components=components or None,
+                    product_family=product_family or None,
+                    dry_run=False,
+                )
 
             if hasattr(result, 'is_success') and result.is_success:
                 new_key = result.data.get('key', '')
@@ -2186,6 +2187,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
                     labels=epic_data.get('labels'),
                     parent_key=initiative_key or None,
                     product_family=product_family,
+                    dry_run=False,
                 )
 
                 epic_key = None
@@ -2240,6 +2242,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
                         parent_key=epic_key,
                         assignee=story_data.get('assignee'),
                         product_family=product_family,
+                        dry_run=False,
                     )
 
                     if hasattr(story_result, 'is_success') and story_result.is_success:
@@ -2272,6 +2275,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
                             from_key=from_key,
                             to_key=to_key,
                             link_type='Relates',
+                            dry_run=False,
                         )
                         if hasattr(link_result, 'is_success') and link_result.is_success:
                             created_links.append({'from': from_key, 'to': to_key})
@@ -2298,6 +2302,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
                         from_key=from_key,
                         to_key=to_key,
                         link_type='Relates',
+                        dry_run=False,
                     )
                     if hasattr(link_result, 'is_success') and link_result.is_success:
                         created_links.append({'from': from_key, 'to': to_key})

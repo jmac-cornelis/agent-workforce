@@ -33,6 +33,7 @@ class BasePoster:
         reference: ConversationReference,
         activity_id: str,
         activity: Dict[str, Any],
+        dry_run: bool = True,
     ) -> Dict[str, Any]:
         raise NotImplementedError
 
@@ -40,6 +41,7 @@ class BasePoster:
         self,
         reference: ConversationReference,
         activity: Dict[str, Any],
+        dry_run: bool = True,
     ) -> Dict[str, Any]:
         raise NotImplementedError
 
@@ -57,7 +59,18 @@ class MemoryPoster(BasePoster):
         reference: ConversationReference,
         activity_id: str,
         activity: Dict[str, Any],
+        dry_run: bool = True,
     ) -> Dict[str, Any]:
+        if dry_run:
+            return {
+                'ok': True,
+                'dry_run': True,
+                'mode': 'memory',
+                'kind': 'reply',
+                'activity_id': activity_id,
+                'conversation_id': reference.conversation_id,
+                'activity': activity,
+            }
         record = {
             'mode': 'memory',
             'kind': 'reply',
@@ -73,7 +86,17 @@ class MemoryPoster(BasePoster):
         self,
         reference: ConversationReference,
         activity: Dict[str, Any],
+        dry_run: bool = True,
     ) -> Dict[str, Any]:
+        if dry_run:
+            return {
+                'ok': True,
+                'dry_run': True,
+                'mode': 'memory',
+                'kind': 'conversation',
+                'conversation_id': reference.conversation_id,
+                'activity': activity,
+            }
         record = {
             'mode': 'memory',
             'kind': 'conversation',
@@ -139,8 +162,16 @@ class WorkflowsPoster(BasePoster):
             }],
         }
 
-    def _post(self, activity: Dict[str, Any]) -> Dict[str, Any]:
+    def _post(self, activity: Dict[str, Any], dry_run: bool = True) -> Dict[str, Any]:
         payload = self._build_payload(activity)
+        if dry_run:
+            return {
+                'ok': True,
+                'dry_run': True,
+                'mode': 'workflows',
+                'webhook_url': self.webhook_url,
+                'payload': payload,
+            }
         response = self.session.post(
             self.webhook_url,
             json=payload,
@@ -155,12 +186,13 @@ class WorkflowsPoster(BasePoster):
         reference: ConversationReference,
         activity_id: str,
         activity: Dict[str, Any],
+        dry_run: bool = True,
     ) -> Dict[str, Any]:
         log.debug(
             'WorkflowsPoster: reply_to_activity posted as new message '
             '(threading not supported on Workflows webhooks)'
         )
-        result = self._post(activity)
+        result = self._post(activity, dry_run=dry_run)
         result['threading'] = False
         return result
 
@@ -168,8 +200,9 @@ class WorkflowsPoster(BasePoster):
         self,
         reference: ConversationReference,
         activity: Dict[str, Any],
+        dry_run: bool = True,
     ) -> Dict[str, Any]:
-        return self._post(activity)
+        return self._post(activity, dry_run=dry_run)
 
 
 class BotFrameworkPoster(BasePoster):
@@ -230,6 +263,7 @@ class BotFrameworkPoster(BasePoster):
         reference: ConversationReference,
         activity_id: str,
         activity: Dict[str, Any],
+        dry_run: bool = True,
     ) -> Dict[str, Any]:
         if not reference.conversation_id or not activity_id:
             raise ValueError('reply_to_activity requires conversation_id and activity_id')
@@ -238,6 +272,14 @@ class BotFrameworkPoster(BasePoster):
             f'{self._base_service_url(reference)}/v3/conversations/'
             f'{reference.conversation_id}/activities/{activity_id}'
         )
+        if dry_run:
+            return {
+                'ok': True,
+                'dry_run': True,
+                'mode': 'botframework',
+                'url': url,
+                'activity': activity,
+            }
         response = self.session.post(url, json=activity, headers=self._headers(), timeout=30)
         response.raise_for_status()
         return {'ok': True, 'mode': 'botframework', **response.json()}
@@ -246,6 +288,7 @@ class BotFrameworkPoster(BasePoster):
         self,
         reference: ConversationReference,
         activity: Dict[str, Any],
+        dry_run: bool = True,
     ) -> Dict[str, Any]:
         if not reference.conversation_id:
             raise ValueError('send_to_conversation requires conversation_id')
@@ -254,6 +297,14 @@ class BotFrameworkPoster(BasePoster):
             f'{self._base_service_url(reference)}/v3/conversations/'
             f'{reference.conversation_id}/activities'
         )
+        if dry_run:
+            return {
+                'ok': True,
+                'dry_run': True,
+                'mode': 'botframework',
+                'url': url,
+                'activity': activity,
+            }
         response = self.session.post(url, json=activity, headers=self._headers(), timeout=30)
         response.raise_for_status()
         return {'ok': True, 'mode': 'botframework', **response.json()}

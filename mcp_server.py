@@ -477,6 +477,7 @@ async def transition_ticket(
     to_status: str,
     comment: Optional[str] = None,
     fields: Optional[dict[str, Any]] = None,
+    dry_run: bool = True,
 ) -> list[Any]:
     """Transition a Jira ticket to a new status.
 
@@ -485,6 +486,7 @@ async def transition_ticket(
         to_status: Transition name or destination status name.
         comment: Optional comment to add after the transition.
         fields: Optional transition field payload.
+        dry_run: Preview only — do not apply the transition.
     """
     try:
         jira = jira_utils.get_connection()
@@ -496,6 +498,18 @@ async def transition_ticket(
             return _error_result(
                 f'Cannot transition to "{to_status}". Available transitions: {available}'
             )
+
+        if dry_run:
+            current_status = str(getattr(issue.fields, 'status', ''))
+            return _json_result({
+                'dry_run': True,
+                'ticket_key': ticket_key,
+                'current_status': current_status,
+                'target_status': to_status,
+                'transition': _normalize_transition(target),
+                'comment_would_add': comment is not None,
+                'fields_would_set': list(fields.keys()) if fields else [],
+            })
 
         transition_kwargs: dict[str, Any] = {}
         if fields:
@@ -516,9 +530,22 @@ async def transition_ticket(
 
 
 @_tool_decorator()
-async def add_ticket_comment(ticket_key: str, body: str) -> list[Any]:
-    """Add a comment to a Jira ticket."""
+async def add_ticket_comment(ticket_key: str, body: str, dry_run: bool = True) -> list[Any]:
+    """Add a comment to a Jira ticket.
+
+    Args:
+        ticket_key: Jira issue key.
+        body: Comment body text.
+        dry_run: Preview only — do not post the comment.
+    """
     try:
+        if dry_run:
+            return _json_result({
+                'dry_run': True,
+                'ticket_key': ticket_key,
+                'comment_body_length': len(body),
+                'comment_body_preview': body[:200],
+            })
         jira = jira_utils.get_connection()
         issue = jira.issue(ticket_key)
         comment = jira.add_comment(issue, body)
@@ -1358,6 +1385,7 @@ async def create_ticket(
     fix_version: Optional[str] = None,
     labels: Optional[str] = None,
     parent_key: Optional[str] = None,
+    dry_run: bool = True,
 ) -> list[Any]:
     """Create a new Jira ticket.
 
@@ -1371,17 +1399,27 @@ async def create_ticket(
         fix_version: Optional fix-version name to set.
         labels: Optional comma-separated label string (e.g. 'backend,urgent').
         parent_key: Optional parent issue key for sub-tasks or child issues.
+        dry_run: Preview only — do not create the ticket.
     """
     try:
-        jira = jira_utils.get_connection()
-
-        # Convert comma-separated labels to list
         labels_list = [l.strip() for l in labels.split(',')] if labels else None
-
-        # Convert fix_version to list
         fix_versions_list = [fix_version] if fix_version else None
 
-        # Call jira_utils.create_ticket with dry_run=False so it actually creates
+        if dry_run:
+            return _json_result({
+                'dry_run': True,
+                'project_key': project_key,
+                'summary': summary,
+                'issue_type': issue_type,
+                'description': description[:200] if description else None,
+                'assignee': assignee,
+                'priority': priority,
+                'fix_version': fix_version,
+                'labels': labels_list,
+                'parent_key': parent_key,
+            })
+
+        jira = jira_utils.get_connection()
         jira_utils.create_ticket(
             jira,
             project_key=project_key,
@@ -1395,9 +1433,6 @@ async def create_ticket(
             dry_run=False,
         )
 
-        # jira_utils.create_ticket prints the key but doesn't return it.
-        # Search for the just-created ticket by summary to return its key.
-        # Use a targeted JQL query.
         issues = jira_utils.run_jql_query(
             jira,
             f'project = "{project_key}" AND summary ~ "{summary}" ORDER BY created DESC',
@@ -1427,6 +1462,7 @@ async def update_ticket(
     fix_version: Optional[str] = None,
     labels: Optional[str] = None,
     description: Optional[str] = None,
+    dry_run: bool = True,
 ) -> list[Any]:
     """Update fields on an existing Jira ticket.
 
@@ -1441,12 +1477,9 @@ async def update_ticket(
         fix_version: Fix-version name to set (replaces existing).
         labels: Comma-separated labels to set (replaces existing).
         description: New plain-text description.
+        dry_run: Preview only — do not apply updates.
     """
     try:
-        jira = jira_utils.get_connection()
-        issue = jira.issue(ticket_key)
-
-        # Build the update fields dict
         update_fields: dict[str, Any] = {}
         if summary is not None:
             update_fields['summary'] = summary
@@ -1459,13 +1492,25 @@ async def update_ticket(
         if labels is not None:
             update_fields['labels'] = [l.strip() for l in labels.split(',')]
         if description is not None:
+            update_fields['description'] = description
+
+        if dry_run:
+            return _json_result({
+                'dry_run': True,
+                'ticket_key': ticket_key,
+                'fields_would_update': list(update_fields.keys()),
+                'status_would_transition': status,
+            })
+
+        jira = jira_utils.get_connection()
+        issue = jira.issue(ticket_key)
+
+        if description is not None:
             update_fields['description'] = jira_utils._adf_from_text(description)
 
-        # Apply field updates
         if update_fields:
             issue.update(fields=update_fields)
 
-        # Handle status transition separately (requires workflow transition)
         if status is not None:
             transitions = jira.transitions(issue)
             target = None
@@ -1817,7 +1862,7 @@ async def get_components(project_key: str) -> list[Any]:
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def assign_ticket(ticket_key: str, assignee: str) -> list[Any]:
+async def assign_ticket(ticket_key: str, assignee: str, dry_run: bool = True) -> list[Any]:
     """Assign a Jira ticket to a user.
 
     Args:
@@ -1825,8 +1870,15 @@ async def assign_ticket(ticket_key: str, assignee: str) -> list[Any]:
         assignee: The accountId, display name, email, or username of the user
                   to assign, or 'unassigned' to clear.  Human-readable values
                   are automatically resolved to accountIds via UserResolver.
+        dry_run: Preview only — do not change the assignee.
     """
     try:
+        if dry_run:
+            return _json_result({
+                'dry_run': True,
+                'ticket_key': ticket_key,
+                'assignee': assignee,
+            })
         jira = jira_utils.get_connection()
         issue = jira.issue(ticket_key)
 
@@ -1860,7 +1912,7 @@ async def assign_ticket(ticket_key: str, assignee: str) -> list[Any]:
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def link_tickets(from_key: str, to_key: str, link_type: str = 'Relates') -> list[Any]:
+async def link_tickets(from_key: str, to_key: str, link_type: str = 'Relates', dry_run: bool = True) -> list[Any]:
     """Create a link between two Jira tickets.
 
     Args:
@@ -1868,8 +1920,16 @@ async def link_tickets(from_key: str, to_key: str, link_type: str = 'Relates') -
         to_key: Target issue key (e.g. 'STL-200').
         link_type: Link type name (e.g. 'Relates', 'Blocks', 'is blocked by',
                    'Cloners', 'Duplicate'). Default: 'Relates'.
+        dry_run: Preview only — do not create the link.
     """
     try:
+        if dry_run:
+            return _json_result({
+                'dry_run': True,
+                'from_key': from_key,
+                'to_key': to_key,
+                'link_type': link_type,
+            })
         jira = jira_utils.get_connection()
         jira.create_issue_link(
             type=link_type,
@@ -2170,12 +2230,13 @@ async def get_automation(rule_uuid: str) -> list[Any]:
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def create_automation(rule_json: str, project_key: str = '') -> list[Any]:
+async def create_automation(rule_json: str, project_key: str = '', dry_run: bool = True) -> list[Any]:
     """Create a new Jira automation rule from a JSON payload.
 
     Args:
         rule_json: JSON string defining the automation rule configuration.
         project_key: Optional project key to scope the rule to.
+        dry_run: Preview only — do not create the rule.
     """
     try:
         import json as _json
@@ -2184,6 +2245,14 @@ async def create_automation(rule_json: str, project_key: str = '') -> list[Any]:
         return _error_result(f'Invalid JSON payload: {e}')
 
     try:
+        if dry_run:
+            return _json_result({
+                'dry_run': True,
+                'rule_name': payload.get('name', ''),
+                'project_key': project_key,
+                'payload_keys': list(payload.keys()),
+            })
+
         jira = jira_utils.get_connection()
         email, api_token = jira_utils.get_jira_credentials()
         base_url = jira_utils._get_automation_base_url()
@@ -2210,13 +2279,20 @@ async def create_automation(rule_json: str, project_key: str = '') -> list[Any]:
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def enable_automation(rule_uuid: str) -> list[Any]:
+async def enable_automation(rule_uuid: str, dry_run: bool = True) -> list[Any]:
     """Enable a Jira automation rule.
 
     Args:
         rule_uuid: UUID of the automation rule to enable.
+        dry_run: Preview only — do not change the rule state.
     """
     try:
+        if dry_run:
+            return _json_result({
+                'dry_run': True,
+                'rule_uuid': rule_uuid,
+                'target_state': 'ENABLED',
+            })
         jira = jira_utils.get_connection()
         email, api_token = jira_utils.get_jira_credentials()
         base_url = jira_utils._get_automation_base_url()
@@ -2244,13 +2320,20 @@ async def enable_automation(rule_uuid: str) -> list[Any]:
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def disable_automation(rule_uuid: str) -> list[Any]:
+async def disable_automation(rule_uuid: str, dry_run: bool = True) -> list[Any]:
     """Disable a Jira automation rule.
 
     Args:
         rule_uuid: UUID of the automation rule to disable.
+        dry_run: Preview only — do not change the rule state.
     """
     try:
+        if dry_run:
+            return _json_result({
+                'dry_run': True,
+                'rule_uuid': rule_uuid,
+                'target_state': 'DISABLED',
+            })
         jira = jira_utils.get_connection()
         email, api_token = jira_utils.get_jira_credentials()
         base_url = jira_utils._get_automation_base_url()
@@ -2278,13 +2361,20 @@ async def disable_automation(rule_uuid: str) -> list[Any]:
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def delete_automation(rule_uuid: str) -> list[Any]:
+async def delete_automation(rule_uuid: str, dry_run: bool = True) -> list[Any]:
     """Delete a Jira automation rule.
 
     Args:
         rule_uuid: UUID of the automation rule to delete.
+        dry_run: Preview only — do not delete the rule.
     """
     try:
+        if dry_run:
+            return _json_result({
+                'dry_run': True,
+                'rule_uuid': rule_uuid,
+                'action': 'DELETE',
+            })
         jira = jira_utils.get_connection()
         email, api_token = jira_utils.get_jira_credentials()
         base_url = jira_utils._get_automation_base_url()

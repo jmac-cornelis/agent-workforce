@@ -252,6 +252,7 @@ async def test_create_ticket_success_with_key_lookup(import_mcp_server, monkeypa
         fix_version='12.1.1',
         labels='backend, urgent',
         parent_key='STL-100',
+        dry_run=False,
     )
     data = _payload(result)
 
@@ -286,6 +287,7 @@ async def test_create_ticket_success_without_lookup_result(import_mcp_server, mo
         project_key='STL',
         summary='New ticket',
         issue_type='Task',
+        dry_run=False,
     )
     data = _payload(result)
 
@@ -316,6 +318,7 @@ async def test_update_ticket_updates_fields_and_transitions(import_mcp_server, m
         fix_version='12.1.2',
         labels='alpha, beta',
         description='Updated body',
+        dry_run=False,
     )
     data = _payload(result)
 
@@ -347,7 +350,7 @@ async def test_update_ticket_matches_transition_destination_name(import_mcp_serv
     monkeypatch.setattr(import_mcp_server.jira_utils, 'get_connection', lambda: jira)
     monkeypatch.setattr(import_mcp_server.jira_utils, 'run_jql_query', lambda _jira, _jql, limit=1: [_issue(key='STL-721')])
 
-    result = await import_mcp_server.update_ticket(ticket_key='STL-721', status='verify')
+    result = await import_mcp_server.update_ticket(ticket_key='STL-721', status='verify', dry_run=False)
     data = _payload(result)
 
     jira.transition_issue.assert_called_once_with(issue_resource, '33')
@@ -366,7 +369,7 @@ async def test_update_ticket_returns_error_when_transition_not_available(import_
 
     monkeypatch.setattr(import_mcp_server.jira_utils, 'get_connection', lambda: jira)
 
-    result = await import_mcp_server.update_ticket(ticket_key='STL-722', status='Closed')
+    result = await import_mcp_server.update_ticket(ticket_key='STL-722', status='Closed', dry_run=False)
     data = _payload(result)
 
     assert 'Cannot transition to "Closed"' in data['error']
@@ -755,7 +758,7 @@ async def test_assign_ticket_unassigned(import_mcp_server, monkeypatch):
 
     monkeypatch.setattr(import_mcp_server.jira_utils, 'get_connection', lambda: jira)
 
-    result = await import_mcp_server.assign_ticket('STL-800', 'unassigned')
+    result = await import_mcp_server.assign_ticket('STL-800', 'unassigned', dry_run=False)
     data = _payload(result)
 
     issue.update.assert_called_once_with(fields={'assignee': None})
@@ -775,7 +778,7 @@ async def test_assign_ticket_resolved_via_user_resolver(import_mcp_server, monke
     monkeypatch.setattr(import_mcp_server.jira_utils, 'get_connection', lambda: jira)
     monkeypatch.setattr(import_mcp_server.jira_utils, 'get_user_resolver', lambda: resolver)
 
-    result = await import_mcp_server.assign_ticket('STL-801', 'Jane Smith')
+    result = await import_mcp_server.assign_ticket('STL-801', 'Jane Smith', dry_run=False)
     data = _payload(result)
 
     resolver.resolve.assert_called_once_with('Jane Smith', project_key='STL')
@@ -794,7 +797,7 @@ async def test_assign_ticket_unresolved_user(import_mcp_server, monkeypatch):
     monkeypatch.setattr(import_mcp_server.jira_utils, 'get_connection', lambda: jira)
     monkeypatch.setattr(import_mcp_server.jira_utils, 'get_user_resolver', lambda: resolver)
 
-    result = await import_mcp_server.assign_ticket('STL-802', 'Unknown User')
+    result = await import_mcp_server.assign_ticket('STL-802', 'Unknown User', dry_run=False)
     data = _payload(result)
 
     assert data['error'] == 'Could not resolve assignee "Unknown User" to a Jira accountId'
@@ -804,7 +807,7 @@ async def test_assign_ticket_unresolved_user(import_mcp_server, monkeypatch):
 async def test_assign_ticket_error(import_mcp_server, monkeypatch):
     monkeypatch.setattr(import_mcp_server.jira_utils, 'get_connection', lambda: (_ for _ in ()).throw(RuntimeError('assign failed')))
 
-    result = await import_mcp_server.assign_ticket('STL-803', 'someone')
+    result = await import_mcp_server.assign_ticket('STL-803', 'someone', dry_run=False)
     data = _payload(result)
 
     assert data['error'] == 'assign failed'
@@ -815,7 +818,7 @@ async def test_link_tickets_success(import_mcp_server, monkeypatch):
     jira = MagicMock()
     monkeypatch.setattr(import_mcp_server.jira_utils, 'get_connection', lambda: jira)
 
-    result = await import_mcp_server.link_tickets('STL-810', 'STL-811', link_type='Blocks')
+    result = await import_mcp_server.link_tickets('STL-810', 'STL-811', link_type='Blocks', dry_run=False)
     data = _payload(result)
 
     jira.create_issue_link.assert_called_once_with(
@@ -832,7 +835,7 @@ async def test_link_tickets_success(import_mcp_server, monkeypatch):
 async def test_link_tickets_error(import_mcp_server, monkeypatch):
     monkeypatch.setattr(import_mcp_server.jira_utils, 'get_connection', lambda: (_ for _ in ()).throw(RuntimeError('link failed')))
 
-    result = await import_mcp_server.link_tickets('STL-810', 'STL-811')
+    result = await import_mcp_server.link_tickets('STL-810', 'STL-811', dry_run=False)
     data = _payload(result)
 
     assert data['error'] == 'link failed'

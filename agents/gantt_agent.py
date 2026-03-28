@@ -417,6 +417,7 @@ class GanttProjectPlannerAgent(BaseAgent):
                         notify_shannon(
                             agent_id='gantt',
                             shannon_base_url=shannon_base_url,
+                            dry_run=False,
                             **self._build_snapshot_notification_payload(planning_result),
                         )
                     )
@@ -462,6 +463,7 @@ class GanttProjectPlannerAgent(BaseAgent):
                         notify_shannon(
                             agent_id='gantt',
                             shannon_base_url=shannon_base_url,
+                            dry_run=False,
                             **self._build_release_monitor_notification_payload(
                                 release_result
                             ),
@@ -496,6 +498,7 @@ class GanttProjectPlannerAgent(BaseAgent):
                         notify_shannon(
                             agent_id='gantt',
                             shannon_base_url=shannon_base_url,
+                            dry_run=False,
                             **self._build_release_survey_notification_payload(
                                 survey_result
                             ),
