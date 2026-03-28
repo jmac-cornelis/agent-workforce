@@ -5,14 +5,19 @@ from agents.gantt_models import (
     DependencyGraph,
     PlanningSnapshot,
     ReleaseMonitorReport,
+    ReleaseSurveyReleaseSummary,
+    ReleaseSurveyReport,
 )
 from tools.gantt_tools import (
     GanttTools,
     create_gantt_snapshot,
     create_release_monitor,
+    create_release_survey,
     get_gantt_release_monitor_report,
+    get_gantt_release_survey,
     list_gantt_dependency_reviews,
     list_gantt_release_monitor_reports,
+    list_gantt_release_surveys,
     review_gantt_dependency,
 )
 
@@ -173,6 +178,98 @@ def test_get_and_list_gantt_release_monitor_reports_tools(
     assert list_result.metadata['count'] == 1
 
 
+def test_create_release_survey_tool_persists_report(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    from agents import gantt_agent as gantt_agent_module
+
+    class _FakeGanttAgent:
+        def __init__(self, project_key=None, **_kwargs):
+            self.project_key = project_key
+
+        def create_release_survey(self, request):
+            assert request.releases == ['12.2.0.x']
+            assert request.survey_mode == 'bug'
+            survey = ReleaseSurveyReport(
+                project_key=request.project_key,
+                created_at='2026-03-25T12:00:00+00:00',
+                survey_mode='bug',
+                releases_surveyed=request.releases or [],
+                release_summaries=[
+                    ReleaseSurveyReleaseSummary(
+                        release='12.2.0.x',
+                        total_tickets=4,
+                        done_tickets=[{'key': 'STL-1'}],
+                        in_progress_tickets=[{'key': 'STL-2'}],
+                        remaining_tickets=[{'key': 'STL-3'}],
+                        blocked_tickets=[{'key': 'STL-4'}],
+                    )
+                ],
+                summary_markdown='# Release Survey',
+            )
+            survey.survey_id = 'survey-201'
+            return survey
+
+    monkeypatch.setattr(gantt_agent_module, 'GanttProjectPlannerAgent', _FakeGanttAgent)
+    monkeypatch.setenv('GANTT_RELEASE_SURVEY_DIR', str(tmp_path / 'surveys'))
+
+    result = create_release_survey(
+        project_key='STL',
+        releases='12.2.0.x',
+        scope_label='CN6000',
+        survey_mode='bug',
+        persist=True,
+    )
+
+    assert result.is_success
+    assert result.data['survey']['project_key'] == 'STL'
+    assert result.data['survey']['survey_mode'] == 'bug'
+    assert result.data['stored']['survey_id'] == 'survey-201'
+    assert (tmp_path / 'surveys' / 'STL' / 'survey-201' / 'survey.json').exists()
+    assert result.metadata['survey_id'] == 'survey-201'
+
+
+def test_get_and_list_gantt_release_surveys_tools(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    from state.gantt_release_survey_store import GanttReleaseSurveyStore
+
+    store = GanttReleaseSurveyStore(storage_dir=str(tmp_path / 'surveys'))
+    store.save_survey(
+        {
+            'survey_id': 'survey-301',
+            'project_key': 'STL',
+            'created_at': '2026-03-25T12:00:00+00:00',
+            'releases_surveyed': ['12.2.0.x'],
+            'release_summaries': [],
+            'summary_markdown': '# Stored Release Survey',
+            'total_tickets': 10,
+            'done_count': 4,
+            'in_progress_count': 3,
+            'remaining_count': 2,
+            'blocked_count': 1,
+            'stale_count': 0,
+            'unassigned_count': 0,
+        },
+        summary_markdown='# Stored Release Survey',
+    )
+
+    monkeypatch.setenv('GANTT_RELEASE_SURVEY_DIR', str(tmp_path / 'surveys'))
+
+    get_result = get_gantt_release_survey('survey-301', project_key='STL')
+    list_result = list_gantt_release_surveys(project_key='STL', limit=5)
+
+    assert get_result.is_success
+    assert get_result.data['survey']['survey_id'] == 'survey-301'
+    assert get_result.data['summary_markdown'] == '# Stored Release Survey'
+
+    assert list_result.is_success
+    assert list_result.data[0]['survey_id'] == 'survey-301'
+    assert list_result.metadata['count'] == 1
+
+
 def test_gantt_tools_collection_registers_methods():
     tools = GanttTools()
 
@@ -182,6 +279,9 @@ def test_gantt_tools_collection_registers_methods():
     assert tools.get_tool('create_release_monitor') is not None
     assert tools.get_tool('get_gantt_release_monitor_report') is not None
     assert tools.get_tool('list_gantt_release_monitor_reports') is not None
+    assert tools.get_tool('create_release_survey') is not None
+    assert tools.get_tool('get_gantt_release_survey') is not None
+    assert tools.get_tool('list_gantt_release_surveys') is not None
     assert tools.get_tool('review_gantt_dependency') is not None
     assert tools.get_tool('list_gantt_dependency_reviews') is not None
 

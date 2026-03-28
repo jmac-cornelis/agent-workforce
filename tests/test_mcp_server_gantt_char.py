@@ -2,7 +2,12 @@ import json
 
 import pytest
 
-from agents.gantt_models import BugSummary, ReleaseMonitorReport
+from agents.gantt_models import (
+    BugSummary,
+    ReleaseMonitorReport,
+    ReleaseSurveyReleaseSummary,
+    ReleaseSurveyReport,
+)
 
 
 def _payload(result):
@@ -283,4 +288,116 @@ async def test_list_gantt_release_monitor_reports_tool(
     data = _payload(result)
 
     assert data[0]['report_id'] == 'report-601'
+    assert data[0]['project_key'] == 'STL'
+
+
+@pytest.mark.asyncio
+async def test_create_release_survey_tool(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
+    class _FakeGanttAgent:
+        def __init__(self, project_key=None, **_kwargs):
+            self.project_key = project_key
+
+        def create_release_survey(self, request):
+            assert request.releases == ['12.2.0.x']
+            assert request.survey_mode == 'bug'
+            survey = ReleaseSurveyReport(
+                project_key=request.project_key,
+                created_at='2026-03-25T12:00:00+00:00',
+                survey_mode='bug',
+                releases_surveyed=request.releases or [],
+                release_summaries=[
+                    ReleaseSurveyReleaseSummary(
+                        release='12.2.0.x',
+                        total_tickets=4,
+                        done_tickets=[{'key': 'STL-1'}],
+                        in_progress_tickets=[{'key': 'STL-2'}],
+                        remaining_tickets=[{'key': 'STL-3'}],
+                        blocked_tickets=[{'key': 'STL-4'}],
+                    )
+                ],
+                summary_markdown='# Release Survey',
+            )
+            survey.survey_id = 'survey-401'
+            return survey
+
+    class _FakeStore:
+        def save_survey(self, survey, summary_markdown=None):
+            assert survey.survey_id == 'survey-401'
+            assert summary_markdown == '# Release Survey'
+            return {
+                'survey_id': survey.survey_id,
+                'project_key': survey.project_key,
+                'storage_dir': '/tmp/store/STL/survey-401',
+            }
+
+    monkeypatch.setattr(import_mcp_server, 'GanttProjectPlannerAgent', _FakeGanttAgent)
+    monkeypatch.setattr(import_mcp_server, 'GanttReleaseSurveyStore', _FakeStore)
+
+    result = await import_mcp_server.create_release_survey(
+        project_key='STL',
+        releases='12.2.0.x',
+        survey_mode='bug',
+        persist=True,
+    )
+    data = _payload(result)
+
+    assert data['survey']['project_key'] == 'STL'
+    assert data['survey']['survey_mode'] == 'bug'
+    assert data['stored']['survey_id'] == 'survey-401'
+
+
+@pytest.mark.asyncio
+async def test_get_gantt_release_survey_tool(
+    import_mcp_server,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _FakeStore:
+        def get_survey(self, survey_id, project_key=None):
+            assert survey_id == 'survey-501'
+            assert project_key == 'STL'
+            return {
+                'survey': {'survey_id': survey_id, 'project_key': project_key},
+                'summary': {'survey_id': survey_id, 'project_key': project_key},
+                'summary_markdown': '# Stored Release Survey',
+            }
+
+    monkeypatch.setattr(import_mcp_server, 'GanttReleaseSurveyStore', _FakeStore)
+
+    result = await import_mcp_server.get_gantt_release_survey(
+        'survey-501',
+        project_key='STL',
+    )
+    data = _payload(result)
+
+    assert data['survey']['survey_id'] == 'survey-501'
+    assert data['summary_markdown'] == '# Stored Release Survey'
+
+
+@pytest.mark.asyncio
+async def test_list_gantt_release_surveys_tool(
+    import_mcp_server,
+    monkeypatch: pytest.MonkeyPatch,
+):
+    class _FakeStore:
+        def list_surveys(self, project_key=None, limit=20):
+            assert project_key == 'STL'
+            assert limit == 10
+            return [
+                {
+                    'survey_id': 'survey-601',
+                    'project_key': 'STL',
+                    'created_at': '2026-03-25T12:00:00+00:00',
+                    'total_tickets': 8,
+                }
+            ]
+
+    monkeypatch.setattr(import_mcp_server, 'GanttReleaseSurveyStore', _FakeStore)
+
+    result = await import_mcp_server.list_gantt_release_surveys(
+        project_key='STL',
+        limit=10,
+    )
+    data = _payload(result)
+
+    assert data[0]['survey_id'] == 'survey-601'
     assert data[0]['project_key'] == 'STL'

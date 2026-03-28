@@ -24,6 +24,7 @@ from shannon.cards import (
     build_drucker_summary_card,
     build_fact_card,
     build_gantt_release_monitor_card,
+    build_gantt_release_survey_card,
     build_gantt_snapshot_card,
 )
 from shannon.models import AuditRecord, ConversationReference, ShannonResponse, normalize_command_text
@@ -407,6 +408,8 @@ class ShannonService:
             '/planning-snapshot': build_gantt_snapshot_card,
             '/release-monitor': build_gantt_release_monitor_card,
             '/release-report': build_gantt_release_monitor_card,
+            '/release-survey': build_gantt_release_survey_card,
+            '/release-survey-report': build_gantt_release_survey_card,
         },
     }
 
@@ -483,6 +486,24 @@ class ShannonService:
                         f'{report.get("total_bugs", 0)} bugs, '
                         f'P0={report.get("total_p0", 0)}, '
                         f'P1={report.get("total_p1", 0)}'
+                    ),
+                    card=card,
+                    command=command,
+                    decision='agent_call_success',
+                )
+
+            if agent_id == 'gantt' and command in (
+                '/release-survey',
+                '/release-survey-report',
+            ):
+                survey = data.get('survey', {})
+                return ShannonResponse(
+                    text=(
+                        f'{survey.get("project_key", "")}: '
+                        f'{survey.get("done_count", 0)} done, '
+                        f'{survey.get("in_progress_count", 0)} in progress, '
+                        f'{survey.get("remaining_count", 0)} remaining, '
+                        f'{survey.get("blocked_count", 0)} blocked'
                     ),
                     card=card,
                     command=command,

@@ -637,6 +637,150 @@ def list_gantt_release_monitor_reports(
         )
 
 
+@tool(
+    description='Generate a release execution survey focused on done, active, and remaining work'
+)
+def create_release_survey(
+    project_key: str = 'STL',
+    releases: Optional[str] = None,
+    scope_label: Optional[str] = None,
+    survey_mode: str = 'feature_dev',
+    output_file: Optional[str] = None,
+    persist: bool = True,
+) -> ToolResult:
+    '''
+    Generate a Gantt release execution survey.
+
+    Input:
+        project_key: Jira project key (default "STL").
+        releases: Comma-separated fix version names to survey.
+        scope_label: Optional scope label filter, accepts CSV values
+                     (for example "CN5000,CN6000").
+        survey_mode: 'feature_dev' excludes bugs; 'bug' includes only bugs.
+        output_file: Output xlsx path (defaults to
+                     "{project_key}_release_survey.xlsx").
+        persist: Save the survey for later retrieval.
+
+    Output:
+        ToolResult with the generated release survey and optional storage metadata.
+    '''
+    log.debug(
+        f'create_release_survey(project_key={project_key}, '
+        f'releases={releases}, scope_label={scope_label}, '
+        f'survey_mode={survey_mode}, '
+        f'output_file={output_file}, persist={persist})'
+    )
+
+    try:
+        from agents.gantt_agent import GanttProjectPlannerAgent
+        from agents.gantt_models import ReleaseSurveyRequest
+        from state.gantt_release_survey_store import GanttReleaseSurveyStore
+
+        parsed_releases = (
+            [r.strip() for r in releases.split(',') if r.strip()]
+            if releases else None
+        )
+        resolved_output_file = output_file or f'{project_key}_release_survey.xlsx'
+
+        request = ReleaseSurveyRequest(
+            project_key=project_key,
+            releases=parsed_releases,
+            scope_label=scope_label or '',
+            survey_mode=survey_mode,
+            output_file=resolved_output_file,
+        )
+
+        agent = GanttProjectPlannerAgent(project_key=project_key)
+        survey = agent.create_release_survey(request)
+
+        result = {
+            'survey': survey.to_dict(),
+        }
+
+        if persist:
+            stored = GanttReleaseSurveyStore().save_survey(
+                survey,
+                summary_markdown=survey.summary_markdown,
+            )
+            result['stored'] = stored
+
+        return ToolResult.success(
+            result,
+            survey_id=survey.survey_id,
+            project_key=project_key,
+            releases=parsed_releases,
+            persisted=persist,
+        )
+    except Exception as e:
+        log.error(f'Failed to create release survey: {e}')
+        return ToolResult.failure(f'Failed to create release survey: {e}')
+
+
+@tool(
+    description='Get a persisted Gantt release-survey report by survey ID'
+)
+def get_gantt_release_survey(
+    survey_id: str,
+    project_key: Optional[str] = None,
+) -> ToolResult:
+    '''
+    Get a persisted Gantt release-survey report by survey ID.
+    '''
+    log.debug(
+        f'get_gantt_release_survey(survey_id={survey_id}, '
+        f'project_key={project_key})'
+    )
+
+    try:
+        from state.gantt_release_survey_store import GanttReleaseSurveyStore
+
+        record = GanttReleaseSurveyStore().get_survey(
+            survey_id,
+            project_key=project_key,
+        )
+        if not record:
+            return ToolResult.failure(
+                f'Gantt release survey {survey_id} not found'
+            )
+
+        return ToolResult.success(
+            record,
+            survey_id=survey_id,
+            project_key=project_key,
+        )
+    except Exception as e:
+        log.error(f'Failed to get Gantt release survey: {e}')
+        return ToolResult.failure(f'Failed to get Gantt release survey: {e}')
+
+
+@tool(
+    description='List persisted Gantt release-survey reports'
+)
+def list_gantt_release_surveys(
+    project_key: Optional[str] = None,
+    limit: int = 20,
+) -> ToolResult:
+    '''
+    List persisted Gantt release-survey reports.
+    '''
+    log.debug(
+        f'list_gantt_release_surveys(project_key={project_key}, '
+        f'limit={limit})'
+    )
+
+    try:
+        from state.gantt_release_survey_store import GanttReleaseSurveyStore
+
+        rows = GanttReleaseSurveyStore().list_surveys(
+            project_key=project_key,
+            limit=limit,
+        )
+        return ToolResult.success(rows, count=len(rows), project_key=project_key)
+    except Exception as e:
+        log.error(f'Failed to list Gantt release surveys: {e}')
+        return ToolResult.failure(f'Failed to list Gantt release surveys: {e}')
+
+
 class GanttTools(BaseTool):
     '''
     Collection of Gantt planning tools for agent use.
@@ -800,3 +944,38 @@ class GanttTools(BaseTool):
         limit: int = 20,
     ) -> ToolResult:
         return list_gantt_release_monitor_reports(project_key, limit)
+
+    @tool(description='Generate a release execution survey focused on done, active, and remaining work')
+    def create_release_survey(
+        self,
+        project_key: str = 'STL',
+        releases: Optional[str] = None,
+        scope_label: Optional[str] = None,
+        survey_mode: str = 'feature_dev',
+        output_file: Optional[str] = None,
+        persist: bool = True,
+    ) -> ToolResult:
+        return create_release_survey(
+            project_key,
+            releases,
+            scope_label,
+            survey_mode,
+            output_file,
+            persist,
+        )
+
+    @tool(description='Get a persisted Gantt release-survey report by survey ID')
+    def get_gantt_release_survey(
+        self,
+        survey_id: str,
+        project_key: Optional[str] = None,
+    ) -> ToolResult:
+        return get_gantt_release_survey(survey_id, project_key)
+
+    @tool(description='List persisted Gantt release-survey reports')
+    def list_gantt_release_surveys(
+        self,
+        project_key: Optional[str] = None,
+        limit: int = 20,
+    ) -> ToolResult:
+        return list_gantt_release_surveys(project_key, limit)

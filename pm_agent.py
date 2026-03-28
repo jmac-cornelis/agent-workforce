@@ -817,6 +817,9 @@ def cmd_workflow(args):
         'gantt-release-monitor': _workflow_gantt_release_monitor,
         'gantt-release-monitor-get': _workflow_gantt_release_monitor_get,
         'gantt-release-monitor-list': _workflow_gantt_release_monitor_list,
+        'gantt-release-survey': _workflow_gantt_release_survey,
+        'gantt-release-survey-get': _workflow_gantt_release_survey_get,
+        'gantt-release-survey-list': _workflow_gantt_release_survey_list,
         'gantt-snapshot': _workflow_gantt_snapshot,
         'gantt-snapshot-get': _workflow_gantt_snapshot_get,
         'gantt-snapshot-list': _workflow_gantt_snapshot_list,
@@ -1845,6 +1848,222 @@ def _workflow_gantt_release_monitor_list(args):
     return 0
 
 
+def _workflow_gantt_release_survey(args):
+    '''
+    Gantt workflow: release execution survey -> durable survey + exports.
+    '''
+    log.debug(
+        f'Entering _workflow_gantt_release_survey(project={args.project}, '
+        f'releases={args.releases}, scope_label={args.scope_label}, '
+        f'survey_mode={args.survey_mode})'
+    )
+
+    from agents.gantt_agent import GanttProjectPlannerAgent
+    from agents.gantt_models import ReleaseSurveyRequest
+    from state.gantt_release_survey_store import GanttReleaseSurveyStore
+
+    output('')
+    output('=' * 60)
+    output('WORKFLOW: gantt-release-survey')
+    output('=' * 60)
+    output('')
+    output(f'Project: {args.project}')
+    if args.releases:
+        output(f'Releases: {args.releases}')
+    if args.scope_label:
+        output(f'Scope label: {args.scope_label}')
+    output(f'Survey mode: {args.survey_mode}')
+    output('')
+    output('Step 1/4: Building release survey...')
+
+    output_base = args.output or f'{args.project.lower()}_release_survey.json'
+    json_path_hint, md_path_hint, xlsx_path_hint = _resolve_gantt_release_survey_paths(
+        output_base,
+    )
+
+    agent = GanttProjectPlannerAgent(project_key=args.project)
+    request = ReleaseSurveyRequest(
+        project_key=args.project,
+        releases=[
+            item.strip() for item in str(args.releases or '').split(',')
+            if item.strip()
+        ] or None,
+        scope_label=args.scope_label or '',
+        survey_mode=args.survey_mode,
+        output_file=xlsx_path_hint,
+    )
+    survey = agent.create_release_survey(request)
+
+    output('Step 2/4: Persisting release survey...')
+
+    store = GanttReleaseSurveyStore()
+    stored_summary = store.save_survey(
+        survey,
+        summary_markdown=survey.summary_markdown,
+    )
+
+    output(f'  Stored survey ID: {stored_summary["survey_id"]}')
+    output(f'  Stored in: {stored_summary["storage_dir"]}')
+
+    output('Step 3/4: Writing survey files...')
+    json_path, md_path = _write_gantt_release_survey_files(
+        survey.to_dict(),
+        survey.summary_markdown or '',
+        output_base,
+    )
+
+    output(f'  Saved: {json_path}')
+    output(f'  Saved: {md_path}')
+    if survey.output_file:
+        output(f'  Saved: {survey.output_file}')
+
+    output('Step 4/4: Reporting summary...')
+    output(f'  Releases surveyed: {len(survey.releases_surveyed)}')
+    output(f'  Total tickets: {survey.total_tickets}')
+    output(f'  Done: {survey.done_count}')
+    output(f'  In progress: {survey.in_progress_count}')
+    output(f'  Remaining: {survey.remaining_count}')
+    output(f'  Blocked: {survey.blocked_count}')
+
+    created_files = [
+        (stored_summary['json_path'], 'stored release survey JSON'),
+        (stored_summary['markdown_path'], 'stored release survey Markdown'),
+        (json_path, 'exported release survey JSON'),
+        (md_path, 'exported release survey Markdown'),
+    ]
+    if survey.output_file:
+        created_files.append((survey.output_file, 'release survey workbook'))
+
+    _print_workflow_summary('gantt-release-survey', created_files)
+    return 0
+
+
+def _workflow_gantt_release_survey_get(args):
+    '''
+    Gantt workflow: load a persisted release-survey report and display/export it.
+    '''
+    log.debug(
+        f'Entering _workflow_gantt_release_survey_get(survey_id={args.survey_id}, '
+        f'project={args.project})'
+    )
+
+    from state.gantt_release_survey_store import GanttReleaseSurveyStore
+
+    output('')
+    output('=' * 60)
+    output('WORKFLOW: gantt-release-survey-get')
+    output('=' * 60)
+    output('')
+    output(f'Survey ID: {args.survey_id}')
+    if args.project:
+        output(f'Project: {args.project}')
+    output('')
+    output('Step 1/2: Loading stored release survey...')
+
+    store = GanttReleaseSurveyStore()
+    record = store.get_survey(args.survey_id, project_key=args.project)
+    if not record:
+        output(f'ERROR: Stored Gantt release survey not found: {args.survey_id}')
+        return 1
+
+    survey = record['survey']
+    summary = record['summary']
+    summary_markdown = record['summary_markdown'] or str(
+        survey.get('summary_markdown') or ''
+    )
+
+    output(f'  Project: {summary["project_key"]}')
+    output(f'  Created at: {summary["created_at"]}')
+    output(f'  Releases: {summary["release_count"]}')
+    output(f'  Total tickets: {summary["total_tickets"]}')
+    output(f'  Done: {summary["done_count"]}')
+    output(f'  In progress: {summary["in_progress_count"]}')
+    output(f'  Remaining: {summary["remaining_count"]}')
+    output(f'  Blocked: {summary["blocked_count"]}')
+    output(f'  Stored in: {summary["storage_dir"]}')
+
+    created_files = []
+    if args.output:
+        output('Step 2/2: Writing exported survey files...')
+        json_path, md_path = _write_gantt_release_survey_files(
+            survey,
+            summary_markdown,
+            args.output,
+        )
+        output(f'  Saved: {json_path}')
+        output(f'  Saved: {md_path}')
+        created_files.extend([
+            (json_path, 'exported release survey JSON'),
+            (md_path, 'exported release survey Markdown'),
+        ])
+    else:
+        output('Step 2/2: Rendering stored survey summary...')
+        output('')
+        output(summary_markdown or '(No summary markdown stored for this survey.)')
+
+    if created_files:
+        _print_workflow_summary('gantt-release-survey-get', created_files)
+
+    return 0
+
+
+def _workflow_gantt_release_survey_list(args):
+    '''
+    Gantt workflow: list persisted release-survey reports.
+    '''
+    log.debug(
+        f'Entering _workflow_gantt_release_survey_list(project={args.project}, '
+        f'limit={args.limit})'
+    )
+
+    from state.gantt_release_survey_store import GanttReleaseSurveyStore
+
+    output('')
+    output('=' * 60)
+    output('WORKFLOW: gantt-release-survey-list')
+    output('=' * 60)
+    output('')
+    if args.project:
+        output(f'Project filter: {args.project}')
+    if args.limit:
+        output(f'Limit: {args.limit}')
+    output('')
+    output('Loading stored release surveys...')
+
+    store = GanttReleaseSurveyStore()
+    surveys = store.list_surveys(project_key=args.project, limit=args.limit)
+    if not surveys:
+        if args.project:
+            output(f'No stored release surveys found for project {args.project}.')
+        else:
+            output('No stored release surveys found.')
+        return 0
+
+    output('')
+    output(
+        'SURVEY ID                            PROJECT  CREATED AT                  RELS  TOTAL  DONE  INPR  LEFT  BLKD'
+    )
+    output(
+        '-----------------------------------  -------  --------------------------  ----  -----  ----  ----  ----  ----'
+    )
+    for item in surveys:
+        output(
+            f'{item["survey_id"]:<35}  '
+            f'{item["project_key"]:<7}  '
+            f'{item["created_at"]:<26}  '
+            f'{item["release_count"]:>4}  '
+            f'{item["total_tickets"]:>5}  '
+            f'{item["done_count"]:>4}  '
+            f'{item["in_progress_count"]:>4}  '
+            f'{item["remaining_count"]:>4}  '
+            f'{item["blocked_count"]:>4}'
+        )
+
+    output('')
+    output(f'Total stored surveys: {len(surveys)}')
+    return 0
+
+
 def _workflow_drucker_hygiene(args):
     '''
     Drucker workflow: Jira project hygiene analysis -> durable report + review session.
@@ -2174,6 +2393,9 @@ def _workflow_gantt_poll(args):
         'Release monitor: '
         f'{"yes" if (args.run_release_monitor or args.releases or args.scope_label) else "no"}'
     )
+    output(f'Release survey: {"yes" if args.run_release_survey else "no"}')
+    if args.run_release_survey:
+        output(f'Release survey mode: {args.survey_mode}')
     output(f'Poll interval: {args.poll_interval} seconds')
     output(
         'Cycles: '
@@ -2190,6 +2412,7 @@ def _workflow_gantt_poll(args):
         'run_release_monitor': bool(
             args.run_release_monitor or args.releases or args.scope_label
         ),
+        'run_release_survey': bool(args.run_release_survey),
         'planning_horizon_days': args.planning_horizon,
         'limit': args.limit or 200,
         'include_done': args.include_done,
@@ -2202,6 +2425,7 @@ def _workflow_gantt_poll(args):
         'include_velocity': args.include_velocity,
         'include_readiness': args.include_readiness,
         'compare_to_previous': args.compare_to_previous,
+        'survey_mode': args.survey_mode,
         'persist': True,
         'notify_shannon': args.notify_shannon,
         'shannon_base_url': args.shannon_url,
@@ -2234,6 +2458,12 @@ def _workflow_gantt_poll(args):
             output(
                 '  Latest release report: '
                 f'{stored.get("report_id") or task.get("report", {}).get("report_id", "")}'
+            )
+        if task.get('task_type') == 'release_survey':
+            stored = task.get('stored', {})
+            output(
+                '  Latest release survey: '
+                f'{stored.get("survey_id") or task.get("survey", {}).get("survey_id", "")}'
             )
 
     return 0 if result.get('ok', False) else 1
@@ -2506,6 +2736,40 @@ def _write_gantt_release_monitor_files(
     return json_path, md_path
 
 
+def _resolve_gantt_release_survey_paths(output_base: str) -> tuple[str, str, str]:
+    '''
+    Resolve JSON, Markdown, and xlsx paths for release-survey workflow output.
+    '''
+    output_root, output_ext = os.path.splitext(output_base)
+    if output_ext.lower() == '.md':
+        output_root = output_root or 'gantt_release_survey'
+    elif output_ext.lower() != '.json':
+        output_root = output_base
+
+    return output_root + '.json', output_root + '.md', output_root + '.xlsx'
+
+
+def _write_gantt_release_survey_files(
+    survey: dict[str, Any],
+    summary_markdown: str,
+    output_base: str,
+):
+    '''
+    Write release-survey report JSON + Markdown files and return their paths.
+    '''
+    json_path, md_path, _xlsx_path = _resolve_gantt_release_survey_paths(output_base)
+
+    os.makedirs(os.path.dirname(json_path) or '.', exist_ok=True)
+
+    with open(json_path, 'w', encoding='utf-8') as f:
+        json.dump(survey, f, indent=2, default=str)
+
+    with open(md_path, 'w', encoding='utf-8') as f:
+        f.write(summary_markdown or '')
+
+    return json_path, md_path
+
+
 def _write_drucker_report_files(
     report: dict[str, Any],
     summary_markdown: str,
@@ -2733,6 +2997,9 @@ Examples:
   %(prog)s --workflow gantt-release-monitor --project STL --scope-label CN6000 --output stl_release_monitor.json
   %(prog)s --workflow gantt-release-monitor-list --project STL
   %(prog)s --workflow gantt-release-monitor-get --report-id 12345678-1234-1234-1234-123456789abc
+  %(prog)s --workflow gantt-release-survey --project STL --releases 12.2.0.x --scope-label CN6000
+  %(prog)s --workflow gantt-release-survey-list --project STL
+  %(prog)s --workflow gantt-release-survey-get --survey-id 12345678-1234-1234-1234-123456789abc
   %(prog)s --workflow gantt-poll --project STL --run-release-monitor --releases 12.1.1.x --max-cycles 2 --poll-interval 60
   %(prog)s --workflow drucker-bug-activity --project STL --target-date 2026-03-25
   %(prog)s --workflow drucker-hygiene --project STL
@@ -2885,16 +3152,24 @@ Examples:
                             '(default: 90).')
     parser.add_argument('--releases', default=None, metavar='CSV',
                        dest='releases',
-                       help='Comma-separated release names for --workflow gantt-release-monitor '
-                            'and --workflow gantt-poll.')
+                       help='Comma-separated release names for --workflow gantt-release-monitor, '
+                            '--workflow gantt-release-survey, and --workflow gantt-poll.')
     parser.add_argument('--scope-label', default=None, metavar='LABEL',
                        dest='scope_label',
-                       help='Optional scope label for --workflow gantt-release-monitor '
-                            'and --workflow gantt-poll.')
+                       help='Optional scope label for --workflow gantt-release-monitor, '
+                            '--workflow gantt-release-survey, and --workflow gantt-poll.')
+    parser.add_argument('--survey-mode', default='feature-dev', metavar='MODE',
+                       dest='survey_mode',
+                       help='Release survey mode for --workflow gantt-release-survey '
+                            'and --workflow gantt-poll. Use "feature-dev" '
+                            '(exclude bugs) or "bug" (only bugs).')
     parser.add_argument('--run-release-monitor', action='store_true',
                        dest='run_release_monitor',
                        help='Include release-monitor work during --workflow gantt-poll '
                             'even when --releases is omitted.')
+    parser.add_argument('--run-release-survey', action='store_true',
+                       dest='run_release_survey',
+                       help='Include release-survey work during --workflow gantt-poll.')
     parser.add_argument('--include-done', action='store_true',
                        dest='include_done',
                        help='Include done/closed issues in --workflow gantt-snapshot, '
@@ -2905,6 +3180,9 @@ Examples:
     parser.add_argument('--report-id', default=None, metavar='ID',
                        dest='report_id',
                        help='Stored report ID for --workflow gantt-release-monitor-get.')
+    parser.add_argument('--survey-id', default=None, metavar='ID',
+                       dest='survey_id',
+                       help='Stored survey ID for --workflow gantt-release-survey-get.')
     parser.add_argument('--no-gap-analysis', action='store_false',
                        dest='include_gap_analysis',
                        help='Disable roadmap gap analysis for --workflow gantt-release-monitor.')
@@ -3168,10 +3446,18 @@ Examples:
         elif args.workflow_name == 'gantt-release-monitor':
             if not args.project:
                 parser.error('--workflow gantt-release-monitor requires --project PROJECT_KEY')
+        elif args.workflow_name == 'gantt-release-survey':
+            if not args.project:
+                parser.error('--workflow gantt-release-survey requires --project PROJECT_KEY')
         elif args.workflow_name == 'gantt-release-monitor-get':
             if not args.report_id:
                 parser.error('--workflow gantt-release-monitor-get requires --report-id ID')
+        elif args.workflow_name == 'gantt-release-survey-get':
+            if not args.survey_id:
+                parser.error('--workflow gantt-release-survey-get requires --survey-id ID')
         elif args.workflow_name == 'gantt-release-monitor-list':
+            pass
+        elif args.workflow_name == 'gantt-release-survey-list':
             pass
         elif args.workflow_name == 'gantt-poll':
             if not args.project:
@@ -3333,13 +3619,31 @@ Examples:
             log.info(f'+  Readiness: {"yes" if args.include_readiness else "no"}')
             if args.output:
                 log.info(f'+  Output: {args.output}')
+        elif args.workflow_name == 'gantt-release-survey':
+            log.info(f'+  Project: {args.project}')
+            if args.releases:
+                log.info(f'+  Releases: {args.releases}')
+            if args.scope_label:
+                log.info(f'+  Scope label: {args.scope_label}')
+            log.info(f'+  Survey mode: {args.survey_mode}')
+            if args.output:
+                log.info(f'+  Output: {args.output}')
         elif args.workflow_name == 'gantt-release-monitor-get':
             log.info(f'+  Report ID: {args.report_id}')
             if args.project:
                 log.info(f'+  Project: {args.project}')
             if args.output:
                 log.info(f'+  Output: {args.output}')
+        elif args.workflow_name == 'gantt-release-survey-get':
+            log.info(f'+  Survey ID: {args.survey_id}')
+            if args.project:
+                log.info(f'+  Project: {args.project}')
+            if args.output:
+                log.info(f'+  Output: {args.output}')
         elif args.workflow_name == 'gantt-release-monitor-list':
+            if args.project:
+                log.info(f'+  Project: {args.project}')
+        elif args.workflow_name == 'gantt-release-survey-list':
             if args.project:
                 log.info(f'+  Project: {args.project}')
         elif args.workflow_name == 'gantt-poll':
@@ -3349,6 +3653,12 @@ Examples:
                 '+  Max cycles: '
                 f'{"continuous" if args.max_cycles == 0 else args.max_cycles}'
             )
+            log.info(
+                '+  Release survey: '
+                f'{"yes" if args.run_release_survey else "no"}'
+            )
+            if args.run_release_survey:
+                log.info(f'+  Survey mode: {args.survey_mode}')
         elif args.workflow_name == 'gantt-snapshot-get':
             log.info(f'+  Snapshot ID: {args.snapshot_id}')
             if args.project:

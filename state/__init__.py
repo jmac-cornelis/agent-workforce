@@ -23,6 +23,7 @@ __all__ = [
     'DruckerReportStore',
     'GanttDependencyReviewStore',
     'GanttReleaseMonitorStore',
+    'GanttReleaseSurveyStore',
     'GanttSnapshotStore',
     'HypatiaRecordStore',
     'ShannonStateStore',
@@ -42,6 +43,10 @@ def __getattr__(name: str) -> Any:
         from state.gantt_release_monitor_store import GanttReleaseMonitorStore
 
         return GanttReleaseMonitorStore
+    if name == 'GanttReleaseSurveyStore':
+        from state.gantt_release_survey_store import GanttReleaseSurveyStore
+
+        return GanttReleaseSurveyStore
     if name == 'GanttSnapshotStore':
         from state.gantt_snapshot_store import GanttSnapshotStore
 

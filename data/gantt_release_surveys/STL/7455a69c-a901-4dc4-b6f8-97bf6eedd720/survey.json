@@ -1,0 +1,2119 @@
+{
+  "project_key": "STL",
+  "created_at": "2026-03-25T20:17:24.981390+00:00",
+  "survey_id": "7455a69c-a901-4dc4-b6f8-97bf6eedd720",
+  "scope_label": "CN5000,CN6000",
+  "survey_mode": "feature_dev",
+  "releases_surveyed": [
+    "12.2.0.x"
+  ],
+  "release_summaries": [
+    {
+      "release": "12.2.0.x",
+      "total_tickets": 40,
+      "status_breakdown": {
+        "In Review": 2,
+        "Closed": 18,
+        "To Do": 1,
+        "In Progress": 6,
+        "Open": 11,
+        "Verify": 1,
+        "Ready": 1
+      },
+      "priority_breakdown": {
+        "P4-Low": 3,
+        "P3-Medium": 37
+      },
+      "issue_type_breakdown": {
+        "Story": 30,
+        "Epic": 7,
+        "Initiative": 3
+      },
+      "component_breakdown": {
+        "Chassis GUI": 7,
+        "Chassis Mgmt": 11,
+        "MYR FW": 2,
+        "CN5000 FM": 3,
+        "MYR Host Driver": 5,
+        "SW Release Tracking": 3,
+        "Chassis Firmware": 3,
+        "8051 FW": 2,
+        "FW Tools": 1,
+        "CYR Ethernet Driver": 1,
+        "JKR Host Driver": 2,
+        "JKR UEFI Driver": 1,
+        "WFR Host Driver": 1,
+        "CYR FW": 1,
+        "CN5000 Fabric Performance": 1,
+        "FM": 2
+      },
+      "family_breakdowns": {
+        "CN5000": {
+          "total_tickets": 26,
+          "in_progress_tickets": [
+            {
+              "release": "12.2.0.x",
+              "key": "STL-75784",
+              "summary": "Identify changes needed for configuration of lifetime and VL arbitration settings",
+              "status": "In Progress",
+              "priority": "P3-Medium",
+              "issue_type": "Story",
+              "assignee": "King, Charles",
+              "components": [
+                "FM",
+                "MYR FW"
+              ],
+              "component_csv": "FM, MYR FW",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2025-12-05T11:45:49.579-0500",
+              "updated": "2026-03-01T10:01:37.012-0500",
+              "resolutiondate": "",
+              "reporter": "Novak, Eugene",
+              "labels": [
+                "Approved_12.0.2_SV",
+                "Requested_12.0.2_fm"
+              ],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-75784",
+              "bucket": "in_progress",
+              "age_days": 24,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-73745",
+              "summary": "[Feature] Secure PXE Boot (UEFI)",
+              "status": "In Progress",
+              "priority": "P3-Medium",
+              "issue_type": "Initiative",
+              "assignee": "Kresge, Greg",
+              "components": [
+                "SW Release Tracking"
+              ],
+              "component_csv": "SW Release Tracking",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2025-07-11T15:29:05.439-0400",
+              "updated": "2026-03-19T13:21:14.942-0400",
+              "resolutiondate": "",
+              "reporter": "Prakash, Om",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-73745",
+              "bucket": "in_progress",
+              "age_days": 6,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-70348",
+              "summary": "DCS: Enable ip forwarding for the IB0 interface",
+              "status": "In Review",
+              "priority": "P3-Medium",
+              "issue_type": "Story",
+              "assignee": "Reddington, Tom",
+              "components": [
+                "Chassis Mgmt"
+              ],
+              "component_csv": "Chassis Mgmt",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2024-09-17T08:26:58.819-0400",
+              "updated": "2026-03-20T16:22:44.508-0400",
+              "resolutiondate": "",
+              "reporter": "Reddington, Tom",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-70348",
+              "bucket": "in_progress",
+              "age_days": 4,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-76455",
+              "summary": "Serdes CSR update for rx_ds[dcoreg_nt] and tx_ds[dcoreg_nt]",
+              "status": "In Progress",
+              "priority": "P3-Medium",
+              "issue_type": "Story",
+              "assignee": "Johanson, Jim",
+              "components": [
+                "8051 FW"
+              ],
+              "component_csv": "8051 FW",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2026-02-05T10:30:01.283-0500",
+              "updated": "2026-03-23T14:17:37.486-0400",
+              "resolutiondate": "",
+              "reporter": "Johanson, Jim",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-76455",
+              "bucket": "in_progress",
+              "age_days": 2,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-76673",
+              "summary": "LPO debounce min and serdes hex file changes",
+              "status": "In Progress",
+              "priority": "P3-Medium",
+              "issue_type": "Story",
+              "assignee": "Johanson, Jim",
+              "components": [
+                "8051 FW"
+              ],
+              "component_csv": "8051 FW",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2026-02-25T11:22:17.747-0500",
+              "updated": "2026-03-23T14:19:12.469-0400",
+              "resolutiondate": "",
+              "reporter": "Johanson, Jim",
+              "labels": [
+                "LinkWG"
+              ],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-76673",
+              "bucket": "in_progress",
+              "age_days": 2,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-76728",
+              "summary": "MYR IPoIB Configuration",
+              "status": "In Progress",
+              "priority": "P3-Medium",
+              "issue_type": "Story",
+              "assignee": "Spinhirne, Alec",
+              "components": [
+                "Chassis Mgmt"
+              ],
+              "component_csv": "Chassis Mgmt",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2026-02-27T13:52:41.749-0500",
+              "updated": "2026-03-23T15:59:55.411-0400",
+              "resolutiondate": "",
+              "reporter": "Spinhirne, Alec",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-76728",
+              "bucket": "in_progress",
+              "age_days": 2,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-71715",
+              "summary": "Enable IPoIB with the MYR host driver on real HW",
+              "status": "In Progress",
+              "priority": "P3-Medium",
+              "issue_type": "Story",
+              "assignee": "Child, Nicholas",
+              "components": [
+                "MYR Host Driver"
+              ],
+              "component_csv": "MYR Host Driver",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2025-01-22T13:59:22.327-0500",
+              "updated": "2026-03-25T16:06:10.776-0400",
+              "resolutiondate": "",
+              "reporter": "Dalessandro, Dennis",
+              "labels": [
+                "scrubbed"
+              ],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-71715",
+              "bucket": "in_progress",
+              "age_days": 0,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-76978",
+              "summary": "Resolve all oelint-adv lint violations across meta-cornelis recipes",
+              "status": "Verify",
+              "priority": "P3-Medium",
+              "issue_type": "Story",
+              "assignee": "Reddington, Tom",
+              "components": [
+                "Chassis Mgmt"
+              ],
+              "component_csv": "Chassis Mgmt",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2026-03-17T09:57:27.761-0400",
+              "updated": "2026-03-25T15:14:11.116-0400",
+              "resolutiondate": "",
+              "reporter": "Reddington, Tom",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-76978",
+              "bucket": "in_progress",
+              "age_days": 0,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-76985",
+              "summary": "Harden cnshell socket protocol: JSON serialization, Unix socket auth, restricted bind",
+              "status": "In Review",
+              "priority": "P4-Low",
+              "issue_type": "Story",
+              "assignee": "Cook, Sam",
+              "components": [
+                "Chassis GUI"
+              ],
+              "component_csv": "Chassis GUI",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2026-03-17T14:50:03.532-0400",
+              "updated": "2026-03-18T07:26:40.679-0400",
+              "resolutiondate": "",
+              "reporter": "Cook, Sam",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-76985",
+              "bucket": "in_progress",
+              "age_days": 7,
+              "is_stale": false,
+              "is_unassigned": false
+            }
+          ],
+          "remaining_tickets": [
+            {
+              "release": "12.2.0.x",
+              "key": "STL-69164",
+              "summary": "Exclude Preemption related tags from CN5000 FM configuration file",
+              "status": "Open",
+              "priority": "P3-Medium",
+              "issue_type": "Story",
+              "assignee": "Robin, Debobroto Das",
+              "components": [
+                "FM"
+              ],
+              "component_csv": "FM",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2024-05-09T11:40:18.820-0400",
+              "updated": "2026-03-01T10:01:35.519-0500",
+              "resolutiondate": "",
+              "reporter": "Ramanan, Aruna",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-69164",
+              "bucket": "remaining",
+              "age_days": 24,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-74384",
+              "summary": "FM: Create a new LinkDownReason for an FPE Catastrophic Error",
+              "status": "Open",
+              "priority": "P3-Medium",
+              "issue_type": "Story",
+              "assignee": "King, Charles",
+              "components": [
+                "CN5000 FM"
+              ],
+              "component_csv": "CN5000 FM",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2025-08-18T09:52:23.486-0400",
+              "updated": "2026-03-01T10:01:37.845-0500",
+              "resolutiondate": "",
+              "reporter": "Rothermel, Brent",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-74384",
+              "bucket": "remaining",
+              "age_days": 24,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-75393",
+              "summary": "Re-enable telemetry in FM",
+              "status": "Open",
+              "priority": "P3-Medium",
+              "issue_type": "Story",
+              "assignee": "Fisher, Josh",
+              "components": [
+                "CN5000 FM"
+              ],
+              "component_csv": "CN5000 FM",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2025-10-28T16:15:22.259-0400",
+              "updated": "2026-03-01T10:02:48.680-0500",
+              "resolutiondate": "",
+              "reporter": "Fisher, Josh",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-75393",
+              "bucket": "remaining",
+              "age_days": 24,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-68268",
+              "summary": "MYR Linux Driver Work - ipoib",
+              "status": "Open",
+              "priority": "P3-Medium",
+              "issue_type": "Epic",
+              "assignee": "Dalessandro, Dennis",
+              "components": [
+                "MYR Host Driver"
+              ],
+              "component_csv": "MYR Host Driver",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2024-03-01T09:19:45.061-0500",
+              "updated": "2026-03-25T11:02:47.991-0400",
+              "resolutiondate": "",
+              "reporter": "Dalessandro, Dennis",
+              "labels": [
+                "JKR_Driver_Epic"
+              ],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-68268",
+              "bucket": "remaining",
+              "age_days": 0,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-69162",
+              "summary": "BMC: IPoIB",
+              "status": "Open",
+              "priority": "P3-Medium",
+              "issue_type": "Epic",
+              "assignee": "Spinhirne, Alec",
+              "components": [
+                "Chassis Mgmt"
+              ],
+              "component_csv": "Chassis Mgmt",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2024-05-09T10:37:41.092-0400",
+              "updated": "2026-03-25T15:48:37.376-0400",
+              "resolutiondate": "",
+              "reporter": "Novak, Eugene",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-69162",
+              "bucket": "remaining",
+              "age_days": 0,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-75274",
+              "summary": "[Feature] SLES 16.0 Support",
+              "status": "Open",
+              "priority": "P3-Medium",
+              "issue_type": "Initiative",
+              "assignee": "Vogel, Steve",
+              "components": [
+                "SW Release Tracking"
+              ],
+              "component_csv": "SW Release Tracking",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2025-10-21T16:45:21.005-0400",
+              "updated": "2026-03-25T10:05:06.471-0400",
+              "resolutiondate": "",
+              "reporter": "Vogel, Steve",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-75274",
+              "bucket": "remaining",
+              "age_days": 0,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-75284",
+              "summary": "[Feature] RHEL/Rocky 10.1 support",
+              "status": "Open",
+              "priority": "P3-Medium",
+              "issue_type": "Initiative",
+              "assignee": "Vogel, Steve",
+              "components": [
+                "SW Release Tracking"
+              ],
+              "component_csv": "SW Release Tracking",
+              "product_family": [
+                "OPA100",
+                "CN5000"
+              ],
+              "product_family_csv": "OPA100, CN5000",
+              "created": "2025-10-21T16:48:02.483-0400",
+              "updated": "2026-03-25T10:02:02.994-0400",
+              "resolutiondate": "",
+              "reporter": "Vogel, Steve",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-75284",
+              "bucket": "remaining",
+              "age_days": 0,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-71339",
+              "summary": "Use the CAPABILITY_MASK from the ini file for reporting capabilities to the FM",
+              "status": "To Do",
+              "priority": "P4-Low",
+              "issue_type": "Story",
+              "assignee": "Johanson, Jim",
+              "components": [
+                "MYR FW"
+              ],
+              "component_csv": "MYR FW",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2024-12-07T09:55:44.259-0500",
+              "updated": "2026-03-01T10:06:30.482-0500",
+              "resolutiondate": "",
+              "reporter": "Novak, Eugene",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-71339",
+              "bucket": "remaining",
+              "age_days": 24,
+              "is_stale": false,
+              "is_unassigned": false
+            }
+          ],
+          "epics": [
+            {
+              "release": "12.2.0.x",
+              "key": "STL-68268",
+              "summary": "MYR Linux Driver Work - ipoib",
+              "status": "Open",
+              "priority": "P3-Medium",
+              "issue_type": "Epic",
+              "assignee": "Dalessandro, Dennis",
+              "components": [
+                "MYR Host Driver"
+              ],
+              "component_csv": "MYR Host Driver",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2024-03-01T09:19:45.061-0500",
+              "updated": "2026-03-25T11:02:47.991-0400",
+              "resolutiondate": "",
+              "reporter": "Dalessandro, Dennis",
+              "labels": [
+                "JKR_Driver_Epic"
+              ],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-68268",
+              "bucket": "remaining",
+              "age_days": 0,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-69162",
+              "summary": "BMC: IPoIB",
+              "status": "Open",
+              "priority": "P3-Medium",
+              "issue_type": "Epic",
+              "assignee": "Spinhirne, Alec",
+              "components": [
+                "Chassis Mgmt"
+              ],
+              "component_csv": "Chassis Mgmt",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2024-05-09T10:37:41.092-0400",
+              "updated": "2026-03-25T15:48:37.376-0400",
+              "resolutiondate": "",
+              "reporter": "Novak, Eugene",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-69162",
+              "bucket": "remaining",
+              "age_days": 0,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-73590",
+              "summary": "CN5000 BTS Kernel - Reliability Framework",
+              "status": "Closed",
+              "priority": "P3-Medium",
+              "issue_type": "Epic",
+              "assignee": "Blocksome, Michael",
+              "components": [
+                "CN5000 Fabric Performance",
+                "JKR Host Driver"
+              ],
+              "component_csv": "CN5000 Fabric Performance, JKR Host Driver",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2025-07-02T18:21:13.852-0400",
+              "updated": "2026-03-03T13:04:44.349-0500",
+              "resolutiondate": "",
+              "reporter": "Prakash, Om",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-73590",
+              "bucket": "done",
+              "age_days": 22,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-63015",
+              "summary": "BMC: Drivers",
+              "status": "Closed",
+              "priority": "P3-Medium",
+              "issue_type": "Epic",
+              "assignee": "Novak, Eugene",
+              "components": [
+                "Chassis Mgmt"
+              ],
+              "component_csv": "Chassis Mgmt",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2022-01-19T14:59:55.327-0500",
+              "updated": "2026-03-04T13:41:34.972-0500",
+              "resolutiondate": "",
+              "reporter": "Srinivasan, Usha",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-63015",
+              "bucket": "done",
+              "age_days": 21,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-62433",
+              "summary": "Redfish Phase 1",
+              "status": "Closed",
+              "priority": "P3-Medium",
+              "issue_type": "Epic",
+              "assignee": "Cook, Sam",
+              "components": [
+                "Chassis GUI"
+              ],
+              "component_csv": "Chassis GUI",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2021-09-29T14:10:34.574-0400",
+              "updated": "2026-03-14T09:52:56.284-0400",
+              "resolutiondate": "",
+              "reporter": "Srinivasan, Usha",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-62433",
+              "bucket": "done",
+              "age_days": 11,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-69160",
+              "summary": "Port Subdivision Phase 2",
+              "status": "Closed",
+              "priority": "P3-Medium",
+              "issue_type": "Epic",
+              "assignee": "Novak, Eugene",
+              "components": [
+                "CN5000 FM"
+              ],
+              "component_csv": "CN5000 FM",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2024-05-09T10:18:55.416-0400",
+              "updated": "2026-03-25T16:14:48.266-0400",
+              "resolutiondate": "",
+              "reporter": "Shereda, Charles",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-69160",
+              "bucket": "done",
+              "age_days": 0,
+              "is_stale": false,
+              "is_unassigned": false
+            }
+          ]
+        },
+        "CN6000": {
+          "total_tickets": 14,
+          "in_progress_tickets": [],
+          "remaining_tickets": [
+            {
+              "release": "12.2.0.x",
+              "key": "STL-76915",
+              "summary": "Add Support for CKF in Chassis Manager",
+              "status": "Open",
+              "priority": "P3-Medium",
+              "issue_type": "Story",
+              "assignee": "Nagarajan, Gnaneshwar",
+              "components": [
+                "Chassis Firmware"
+              ],
+              "component_csv": "Chassis Firmware",
+              "product_family": [
+                "CN6000"
+              ],
+              "product_family_csv": "CN6000",
+              "created": "2026-03-10T10:40:32.005-0400",
+              "updated": "2026-03-11T09:13:50.710-0400",
+              "resolutiondate": "",
+              "reporter": "Nagarajan, Gnaneshwar",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-76915",
+              "bucket": "remaining",
+              "age_days": 14,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-75467",
+              "summary": "[FW Tools] CYR host-side tool needed that changes INI settings to/from OPA/ETH",
+              "status": "Ready",
+              "priority": "P3-Medium",
+              "issue_type": "Story",
+              "assignee": "Adusumilli, Jitendra",
+              "components": [
+                "FW Tools"
+              ],
+              "component_csv": "FW Tools",
+              "product_family": [
+                "CN6000"
+              ],
+              "product_family_csv": "CN6000",
+              "created": "2025-11-04T14:00:36.669-0500",
+              "updated": "2026-03-20T10:39:19.706-0400",
+              "resolutiondate": "",
+              "reporter": "McCrory, Duane",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-75467",
+              "bucket": "remaining",
+              "age_days": 5,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-77014",
+              "summary": "[PQC] Phase 1 - PQC boot sequence",
+              "status": "Open",
+              "priority": "P3-Medium",
+              "issue_type": "Story",
+              "assignee": "Adusumilli, Jitendra",
+              "components": [
+                "CYR FW"
+              ],
+              "component_csv": "CYR FW",
+              "product_family": [
+                "CN6000"
+              ],
+              "product_family_csv": "CN6000",
+              "created": "2026-03-20T07:36:07.798-0400",
+              "updated": "2026-03-20T09:11:55.148-0400",
+              "resolutiondate": "",
+              "reporter": "Davis, Paul",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-77014",
+              "bucket": "remaining",
+              "age_days": 5,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-76933",
+              "summary": "MYR Driver - CKF will not need FWF logic",
+              "status": "Open",
+              "priority": "P3-Medium",
+              "issue_type": "Story",
+              "assignee": "Child, Nicholas",
+              "components": [
+                "MYR Host Driver"
+              ],
+              "component_csv": "MYR Host Driver",
+              "product_family": [
+                "CN6000"
+              ],
+              "product_family_csv": "CN6000",
+              "created": "2026-03-12T11:01:21.391-0400",
+              "updated": "2026-03-23T09:46:33.795-0400",
+              "resolutiondate": "",
+              "reporter": "Spinhirne, Alec",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-76933",
+              "bucket": "remaining",
+              "age_days": 2,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            {
+              "release": "12.2.0.x",
+              "key": "STL-76192",
+              "summary": "CN6000 Edge Cook Forest: Modify Config File in FPDM to support new Port Side Band Signal routings",
+              "status": "Open",
+              "priority": "P3-Medium",
+              "issue_type": "Story",
+              "assignee": "Nagarajan, Gnaneshwar",
+              "components": [
+                "Chassis Firmware"
+              ],
+              "component_csv": "Chassis Firmware",
+              "product_family": [
+                "CN6000"
+              ],
+              "product_family_csv": "CN6000",
+              "created": "2026-01-16T16:12:10.715-0500",
+              "updated": "2026-03-25T09:06:56.711-0400",
+              "resolutiondate": "",
+              "reporter": "Nagarajan, Gnaneshwar",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-76192",
+              "bucket": "remaining",
+              "age_days": 0,
+              "is_stale": false,
+              "is_unassigned": false
+            }
+          ],
+          "epics": [
+            {
+              "release": "12.2.0.x",
+              "key": "STL-74114",
+              "summary": "[SR-IOV Driver] SR-IOV Ethernet Support - Driver",
+              "status": "Closed",
+              "priority": "P3-Medium",
+              "issue_type": "Epic",
+              "assignee": "Tauferner, Andrew",
+              "components": [
+                "CYR Ethernet Driver",
+                "JKR Host Driver",
+                "JKR UEFI Driver",
+                "MYR Host Driver",
+                "WFR Host Driver"
+              ],
+              "component_csv": "CYR Ethernet Driver, JKR Host Driver, JKR UEFI Driver, MYR Host Driver, WFR Host Driver",
+              "product_family": [
+                "CN6000"
+              ],
+              "product_family_csv": "CN6000",
+              "created": "2025-07-31T17:46:44.158-0400",
+              "updated": "2026-03-20T10:38:43.648-0400",
+              "resolutiondate": "",
+              "reporter": "Prakash, Om",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-74114",
+              "bucket": "done",
+              "age_days": 5,
+              "is_stale": false,
+              "is_unassigned": false
+            }
+          ]
+        }
+      },
+      "family_epic_analysis": {
+        "CN5000": [
+          {
+            "family": "CN5000",
+            "epic": {
+              "release": "12.2.0.x",
+              "key": "STL-68268",
+              "summary": "MYR Linux Driver Work - ipoib",
+              "status": "Open",
+              "priority": "P3-Medium",
+              "issue_type": "Epic",
+              "assignee": "Dalessandro, Dennis",
+              "components": [
+                "MYR Host Driver"
+              ],
+              "component_csv": "MYR Host Driver",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2024-03-01T09:19:45.061-0500",
+              "updated": "2026-03-25T11:02:47.991-0400",
+              "resolutiondate": "",
+              "reporter": "Dalessandro, Dennis",
+              "labels": [
+                "JKR_Driver_Epic"
+              ],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-68268",
+              "bucket": "remaining",
+              "age_days": 0,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            "error": "",
+            "total_descendant_count": 2,
+            "open_child_count": 2,
+            "open_by_status": {
+              "In Progress": 1,
+              "Ready": 1
+            },
+            "open_by_type": {
+              "Story": 2
+            },
+            "ready_to_close": false,
+            "open_children": [
+              {
+                "key": "STL-71715",
+                "summary": "Enable IPoIB with the MYR host driver on real HW",
+                "issue_type": "Story",
+                "status": "In Progress",
+                "priority": "P3-Medium",
+                "assignee": "Child, Nicholas",
+                "depth": 1,
+                "fix_version_csv": "12.2.0.x, 12.1.1.x",
+                "url": "https://cornelisnetworks.atlassian.net/browse/STL-71715"
+              },
+              {
+                "key": "STL-65825",
+                "summary": "Enable IPoIB with the MYR host driver in simulator",
+                "issue_type": "Story",
+                "status": "Ready",
+                "priority": "P3-Medium",
+                "assignee": "Child, Nicholas",
+                "depth": 1,
+                "fix_version_csv": "FutureDev",
+                "url": "https://cornelisnetworks.atlassian.net/browse/STL-65825"
+              }
+            ]
+          },
+          {
+            "family": "CN5000",
+            "epic": {
+              "release": "12.2.0.x",
+              "key": "STL-69162",
+              "summary": "BMC: IPoIB",
+              "status": "Open",
+              "priority": "P3-Medium",
+              "issue_type": "Epic",
+              "assignee": "Spinhirne, Alec",
+              "components": [
+                "Chassis Mgmt"
+              ],
+              "component_csv": "Chassis Mgmt",
+              "product_family": [
+                "CN5000"
+              ],
+              "product_family_csv": "CN5000",
+              "created": "2024-05-09T10:37:41.092-0400",
+              "updated": "2026-03-25T15:48:37.376-0400",
+              "resolutiondate": "",
+              "reporter": "Novak, Eugene",
+              "labels": [],
+              "url": "https://cornelisnetworks.atlassian.net/browse/STL-69162",
+              "bucket": "remaining",
+              "age_days": 0,
+              "is_stale": false,
+              "is_unassigned": false
+            },
+            "error": "",
+            "total_descendant_count": 4,
+            "open_child_count": 1,
+            "open_by_status": {
+              "In Review": 1
+            },
+            "open_by_type": {
+              "Story": 1
+            },
+            "ready_to_close": false,
+            "open_children": [
+              {
+                "key": "STL-70348",
+                "summary": "DCS: Enable ip forwarding for the IB0 interface",
+                "issue_type": "Story",
+                "status": "In Review",
+                "priority": "P3-Medium",
+                "assignee": "Reddington, Tom",
+                "depth": 1,
+                "fix_version_csv": "12.2.0.x",
+                "url": "https://cornelisnetworks.atlassian.net/browse/STL-70348"
+              }
+            ]
+          }
+        ],
+        "CN6000": []
+      },
+      "done_count": 18,
+      "in_progress_count": 9,
+      "remaining_count": 13,
+      "blocked_count": 0,
+      "stale_count": 0,
+      "unassigned_count": 0,
+      "completion_pct": 45.0,
+      "done_tickets": [
+        {
+          "release": "12.2.0.x",
+          "key": "STL-69160",
+          "summary": "Port Subdivision Phase 2",
+          "status": "Closed",
+          "priority": "P3-Medium",
+          "issue_type": "Epic",
+          "assignee": "Novak, Eugene",
+          "components": [
+            "CN5000 FM"
+          ],
+          "component_csv": "CN5000 FM",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2024-05-09T10:18:55.416-0400",
+          "updated": "2026-03-25T16:14:48.266-0400",
+          "resolutiondate": "",
+          "reporter": "Shereda, Charles",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-69160",
+          "bucket": "done",
+          "age_days": 0,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-74833",
+          "summary": "bmcMgmtWho - Add option for CKF",
+          "status": "Closed",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Spinhirne, Alec",
+          "components": [
+            "Chassis Mgmt"
+          ],
+          "component_csv": "Chassis Mgmt",
+          "product_family": [
+            "CN6000"
+          ],
+          "product_family_csv": "CN6000",
+          "created": "2025-09-16T09:01:37.782-0400",
+          "updated": "2026-03-23T09:38:00.933-0400",
+          "resolutiondate": "",
+          "reporter": "Novak, Eugene",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-74833",
+          "bucket": "done",
+          "age_days": 2,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-74832",
+          "summary": "Mapping Port Config to ASICs",
+          "status": "Closed",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Spinhirne, Alec",
+          "components": [
+            "Chassis Mgmt"
+          ],
+          "component_csv": "Chassis Mgmt",
+          "product_family": [
+            "CN6000"
+          ],
+          "product_family_csv": "CN6000",
+          "created": "2025-09-16T09:01:36.786-0400",
+          "updated": "2026-03-23T09:37:54.534-0400",
+          "resolutiondate": "",
+          "reporter": "Novak, Eugene",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-74832",
+          "bucket": "done",
+          "age_days": 2,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-74114",
+          "summary": "[SR-IOV Driver] SR-IOV Ethernet Support - Driver",
+          "status": "Closed",
+          "priority": "P3-Medium",
+          "issue_type": "Epic",
+          "assignee": "Tauferner, Andrew",
+          "components": [
+            "CYR Ethernet Driver",
+            "JKR Host Driver",
+            "JKR UEFI Driver",
+            "MYR Host Driver",
+            "WFR Host Driver"
+          ],
+          "component_csv": "CYR Ethernet Driver, JKR Host Driver, JKR UEFI Driver, MYR Host Driver, WFR Host Driver",
+          "product_family": [
+            "CN6000"
+          ],
+          "product_family_csv": "CN6000",
+          "created": "2025-07-31T17:46:44.158-0400",
+          "updated": "2026-03-20T10:38:43.648-0400",
+          "resolutiondate": "",
+          "reporter": "Prakash, Om",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-74114",
+          "bucket": "done",
+          "age_days": 5,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-76618",
+          "summary": "Add CKF led configuration to manny",
+          "status": "Closed",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Nagarajan, Gnaneshwar",
+          "components": [
+            "Chassis GUI"
+          ],
+          "component_csv": "Chassis GUI",
+          "product_family": [
+            "CN6000"
+          ],
+          "product_family_csv": "CN6000",
+          "created": "2026-02-19T08:22:51.930-0500",
+          "updated": "2026-03-18T09:05:16.648-0400",
+          "resolutiondate": "",
+          "reporter": "DeMario, Joseph",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-76618",
+          "bucket": "done",
+          "age_days": 7,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-76543",
+          "summary": "Add CKF sensors and enum to CnChassisFactory",
+          "status": "Closed",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Nagarajan, Gnaneshwar",
+          "components": [
+            "Chassis GUI"
+          ],
+          "component_csv": "Chassis GUI",
+          "product_family": [
+            "CN6000"
+          ],
+          "product_family_csv": "CN6000",
+          "created": "2026-02-10T10:14:13.107-0500",
+          "updated": "2026-03-18T09:05:10.470-0400",
+          "resolutiondate": "",
+          "reporter": "DeMario, Joseph",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-76543",
+          "bucket": "done",
+          "age_days": 7,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-76607",
+          "summary": "Add overlay to convert port fm view to cable view",
+          "status": "Closed",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "DeMario, Joseph",
+          "components": [
+            "Chassis GUI"
+          ],
+          "component_csv": "Chassis GUI",
+          "product_family": [
+            "CN6000"
+          ],
+          "product_family_csv": "CN6000",
+          "created": "2026-02-18T14:38:08.116-0500",
+          "updated": "2026-03-17T16:30:32.009-0400",
+          "resolutiondate": "",
+          "reporter": "DeMario, Joseph",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-76607",
+          "bucket": "done",
+          "age_days": 7,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-62433",
+          "summary": "Redfish Phase 1",
+          "status": "Closed",
+          "priority": "P3-Medium",
+          "issue_type": "Epic",
+          "assignee": "Cook, Sam",
+          "components": [
+            "Chassis GUI"
+          ],
+          "component_csv": "Chassis GUI",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2021-09-29T14:10:34.574-0400",
+          "updated": "2026-03-14T09:52:56.284-0400",
+          "resolutiondate": "",
+          "reporter": "Srinivasan, Usha",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-62433",
+          "bucket": "done",
+          "age_days": 11,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-76541",
+          "summary": "Establish PortMap format for CKF",
+          "status": "Closed",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "DeMario, Joseph",
+          "components": [
+            "Chassis GUI"
+          ],
+          "component_csv": "Chassis GUI",
+          "product_family": [
+            "CN6000"
+          ],
+          "product_family_csv": "CN6000",
+          "created": "2026-02-10T10:05:44.265-0500",
+          "updated": "2026-03-12T11:52:22.333-0400",
+          "resolutiondate": "",
+          "reporter": "DeMario, Joseph",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-76541",
+          "bucket": "done",
+          "age_days": 13,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-73439",
+          "summary": "CN6000 New BMC SPI Chip Select Component",
+          "status": "Closed",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "DeMario, Joseph",
+          "components": [
+            "Chassis Mgmt"
+          ],
+          "component_csv": "Chassis Mgmt",
+          "product_family": [
+            "CN6000"
+          ],
+          "product_family_csv": "CN6000",
+          "created": "2025-06-23T13:14:44.615-0400",
+          "updated": "2026-03-12T08:31:32.870-0400",
+          "resolutiondate": "",
+          "reporter": "Srinivasan, Usha",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-73439",
+          "bucket": "done",
+          "age_days": 13,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-76671",
+          "summary": "Add boardRev and generation to cnBoardId",
+          "status": "Closed",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Nagarajan, Gnaneshwar",
+          "components": [
+            "Chassis Firmware"
+          ],
+          "component_csv": "Chassis Firmware",
+          "product_family": [
+            "CN6000"
+          ],
+          "product_family_csv": "CN6000",
+          "created": "2026-02-25T11:09:36.174-0500",
+          "updated": "2026-03-11T10:58:40.187-0400",
+          "resolutiondate": "",
+          "reporter": "Nagarajan, Gnaneshwar",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-76671",
+          "bucket": "done",
+          "age_days": 14,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-68629",
+          "summary": "Investigate Openbmc phosphor-logging in 2.18",
+          "status": "Closed",
+          "priority": "P4-Low",
+          "issue_type": "Story",
+          "assignee": "Reddington, Tom",
+          "components": [
+            "Chassis Mgmt"
+          ],
+          "component_csv": "Chassis Mgmt",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2024-04-02T08:32:30.807-0400",
+          "updated": "2026-03-09T08:54:33.413-0400",
+          "resolutiondate": "",
+          "reporter": "Reddington, Tom",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-68629",
+          "bucket": "done",
+          "age_days": 16,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-76018",
+          "summary": "Change dbus objects for cn-sw-server",
+          "status": "Closed",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Cook, Sam",
+          "components": [
+            "Chassis GUI"
+          ],
+          "component_csv": "Chassis GUI",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2026-01-07T16:14:42.680-0500",
+          "updated": "2026-03-09T08:49:44.832-0400",
+          "resolutiondate": "",
+          "reporter": "Cook, Sam",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-76018",
+          "bucket": "done",
+          "age_days": 16,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-63015",
+          "summary": "BMC: Drivers",
+          "status": "Closed",
+          "priority": "P3-Medium",
+          "issue_type": "Epic",
+          "assignee": "Novak, Eugene",
+          "components": [
+            "Chassis Mgmt"
+          ],
+          "component_csv": "Chassis Mgmt",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2022-01-19T14:59:55.327-0500",
+          "updated": "2026-03-04T13:41:34.972-0500",
+          "resolutiondate": "",
+          "reporter": "Srinivasan, Usha",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-63015",
+          "bucket": "done",
+          "age_days": 21,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-73590",
+          "summary": "CN5000 BTS Kernel - Reliability Framework",
+          "status": "Closed",
+          "priority": "P3-Medium",
+          "issue_type": "Epic",
+          "assignee": "Blocksome, Michael",
+          "components": [
+            "CN5000 Fabric Performance",
+            "JKR Host Driver"
+          ],
+          "component_csv": "CN5000 Fabric Performance, JKR Host Driver",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2025-07-02T18:21:13.852-0400",
+          "updated": "2026-03-03T13:04:44.349-0500",
+          "resolutiondate": "",
+          "reporter": "Prakash, Om",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-73590",
+          "bucket": "done",
+          "age_days": 22,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-73860",
+          "summary": "MYR Driver - Sending packets from user-space takes ~100ms for driver to respond",
+          "status": "Closed",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Child, Nicholas",
+          "components": [
+            "MYR Host Driver"
+          ],
+          "component_csv": "MYR Host Driver",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2025-07-18T16:51:52.167-0400",
+          "updated": "2026-03-02T15:33:24.993-0500",
+          "resolutiondate": "",
+          "reporter": "Spinhirne, Alec",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-73860",
+          "bucket": "done",
+          "age_days": 22,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-76624",
+          "summary": "FPDM Production Code Hardening \u2014 Fix 6 Defects Found During Unit Test Coverage (spec-005)",
+          "status": "Closed",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Novak, Eugene",
+          "components": [
+            "Chassis Mgmt"
+          ],
+          "component_csv": "Chassis Mgmt",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2026-02-19T10:10:47.131-0500",
+          "updated": "2026-03-02T14:00:44.841-0500",
+          "resolutiondate": "",
+          "reporter": "Novak, Eugene",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-76624",
+          "bucket": "done",
+          "age_days": 23,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-70256",
+          "summary": "Integration: Verify integration of IPoIB in simulation",
+          "status": "Closed",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Reddington, Tom",
+          "components": [
+            "Chassis Mgmt"
+          ],
+          "component_csv": "Chassis Mgmt",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2024-09-10T08:15:07.966-0400",
+          "updated": "2026-03-01T10:09:59.918-0500",
+          "resolutiondate": "",
+          "reporter": "Reddington, Tom",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-70256",
+          "bucket": "done",
+          "age_days": 24,
+          "is_stale": false,
+          "is_unassigned": false
+        }
+      ],
+      "in_progress_tickets": [
+        {
+          "release": "12.2.0.x",
+          "key": "STL-75784",
+          "summary": "Identify changes needed for configuration of lifetime and VL arbitration settings",
+          "status": "In Progress",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "King, Charles",
+          "components": [
+            "FM",
+            "MYR FW"
+          ],
+          "component_csv": "FM, MYR FW",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2025-12-05T11:45:49.579-0500",
+          "updated": "2026-03-01T10:01:37.012-0500",
+          "resolutiondate": "",
+          "reporter": "Novak, Eugene",
+          "labels": [
+            "Approved_12.0.2_SV",
+            "Requested_12.0.2_fm"
+          ],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-75784",
+          "bucket": "in_progress",
+          "age_days": 24,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-73745",
+          "summary": "[Feature] Secure PXE Boot (UEFI)",
+          "status": "In Progress",
+          "priority": "P3-Medium",
+          "issue_type": "Initiative",
+          "assignee": "Kresge, Greg",
+          "components": [
+            "SW Release Tracking"
+          ],
+          "component_csv": "SW Release Tracking",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2025-07-11T15:29:05.439-0400",
+          "updated": "2026-03-19T13:21:14.942-0400",
+          "resolutiondate": "",
+          "reporter": "Prakash, Om",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-73745",
+          "bucket": "in_progress",
+          "age_days": 6,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-70348",
+          "summary": "DCS: Enable ip forwarding for the IB0 interface",
+          "status": "In Review",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Reddington, Tom",
+          "components": [
+            "Chassis Mgmt"
+          ],
+          "component_csv": "Chassis Mgmt",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2024-09-17T08:26:58.819-0400",
+          "updated": "2026-03-20T16:22:44.508-0400",
+          "resolutiondate": "",
+          "reporter": "Reddington, Tom",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-70348",
+          "bucket": "in_progress",
+          "age_days": 4,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-76455",
+          "summary": "Serdes CSR update for rx_ds[dcoreg_nt] and tx_ds[dcoreg_nt]",
+          "status": "In Progress",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Johanson, Jim",
+          "components": [
+            "8051 FW"
+          ],
+          "component_csv": "8051 FW",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2026-02-05T10:30:01.283-0500",
+          "updated": "2026-03-23T14:17:37.486-0400",
+          "resolutiondate": "",
+          "reporter": "Johanson, Jim",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-76455",
+          "bucket": "in_progress",
+          "age_days": 2,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-76673",
+          "summary": "LPO debounce min and serdes hex file changes",
+          "status": "In Progress",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Johanson, Jim",
+          "components": [
+            "8051 FW"
+          ],
+          "component_csv": "8051 FW",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2026-02-25T11:22:17.747-0500",
+          "updated": "2026-03-23T14:19:12.469-0400",
+          "resolutiondate": "",
+          "reporter": "Johanson, Jim",
+          "labels": [
+            "LinkWG"
+          ],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-76673",
+          "bucket": "in_progress",
+          "age_days": 2,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-76728",
+          "summary": "MYR IPoIB Configuration",
+          "status": "In Progress",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Spinhirne, Alec",
+          "components": [
+            "Chassis Mgmt"
+          ],
+          "component_csv": "Chassis Mgmt",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2026-02-27T13:52:41.749-0500",
+          "updated": "2026-03-23T15:59:55.411-0400",
+          "resolutiondate": "",
+          "reporter": "Spinhirne, Alec",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-76728",
+          "bucket": "in_progress",
+          "age_days": 2,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-71715",
+          "summary": "Enable IPoIB with the MYR host driver on real HW",
+          "status": "In Progress",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Child, Nicholas",
+          "components": [
+            "MYR Host Driver"
+          ],
+          "component_csv": "MYR Host Driver",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2025-01-22T13:59:22.327-0500",
+          "updated": "2026-03-25T16:06:10.776-0400",
+          "resolutiondate": "",
+          "reporter": "Dalessandro, Dennis",
+          "labels": [
+            "scrubbed"
+          ],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-71715",
+          "bucket": "in_progress",
+          "age_days": 0,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-76978",
+          "summary": "Resolve all oelint-adv lint violations across meta-cornelis recipes",
+          "status": "Verify",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Reddington, Tom",
+          "components": [
+            "Chassis Mgmt"
+          ],
+          "component_csv": "Chassis Mgmt",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2026-03-17T09:57:27.761-0400",
+          "updated": "2026-03-25T15:14:11.116-0400",
+          "resolutiondate": "",
+          "reporter": "Reddington, Tom",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-76978",
+          "bucket": "in_progress",
+          "age_days": 0,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-76985",
+          "summary": "Harden cnshell socket protocol: JSON serialization, Unix socket auth, restricted bind",
+          "status": "In Review",
+          "priority": "P4-Low",
+          "issue_type": "Story",
+          "assignee": "Cook, Sam",
+          "components": [
+            "Chassis GUI"
+          ],
+          "component_csv": "Chassis GUI",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2026-03-17T14:50:03.532-0400",
+          "updated": "2026-03-18T07:26:40.679-0400",
+          "resolutiondate": "",
+          "reporter": "Cook, Sam",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-76985",
+          "bucket": "in_progress",
+          "age_days": 7,
+          "is_stale": false,
+          "is_unassigned": false
+        }
+      ],
+      "remaining_tickets": [
+        {
+          "release": "12.2.0.x",
+          "key": "STL-69164",
+          "summary": "Exclude Preemption related tags from CN5000 FM configuration file",
+          "status": "Open",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Robin, Debobroto Das",
+          "components": [
+            "FM"
+          ],
+          "component_csv": "FM",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2024-05-09T11:40:18.820-0400",
+          "updated": "2026-03-01T10:01:35.519-0500",
+          "resolutiondate": "",
+          "reporter": "Ramanan, Aruna",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-69164",
+          "bucket": "remaining",
+          "age_days": 24,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-74384",
+          "summary": "FM: Create a new LinkDownReason for an FPE Catastrophic Error",
+          "status": "Open",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "King, Charles",
+          "components": [
+            "CN5000 FM"
+          ],
+          "component_csv": "CN5000 FM",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2025-08-18T09:52:23.486-0400",
+          "updated": "2026-03-01T10:01:37.845-0500",
+          "resolutiondate": "",
+          "reporter": "Rothermel, Brent",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-74384",
+          "bucket": "remaining",
+          "age_days": 24,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-75393",
+          "summary": "Re-enable telemetry in FM",
+          "status": "Open",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Fisher, Josh",
+          "components": [
+            "CN5000 FM"
+          ],
+          "component_csv": "CN5000 FM",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2025-10-28T16:15:22.259-0400",
+          "updated": "2026-03-01T10:02:48.680-0500",
+          "resolutiondate": "",
+          "reporter": "Fisher, Josh",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-75393",
+          "bucket": "remaining",
+          "age_days": 24,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-76915",
+          "summary": "Add Support for CKF in Chassis Manager",
+          "status": "Open",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Nagarajan, Gnaneshwar",
+          "components": [
+            "Chassis Firmware"
+          ],
+          "component_csv": "Chassis Firmware",
+          "product_family": [
+            "CN6000"
+          ],
+          "product_family_csv": "CN6000",
+          "created": "2026-03-10T10:40:32.005-0400",
+          "updated": "2026-03-11T09:13:50.710-0400",
+          "resolutiondate": "",
+          "reporter": "Nagarajan, Gnaneshwar",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-76915",
+          "bucket": "remaining",
+          "age_days": 14,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-75467",
+          "summary": "[FW Tools] CYR host-side tool needed that changes INI settings to/from OPA/ETH",
+          "status": "Ready",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Adusumilli, Jitendra",
+          "components": [
+            "FW Tools"
+          ],
+          "component_csv": "FW Tools",
+          "product_family": [
+            "CN6000"
+          ],
+          "product_family_csv": "CN6000",
+          "created": "2025-11-04T14:00:36.669-0500",
+          "updated": "2026-03-20T10:39:19.706-0400",
+          "resolutiondate": "",
+          "reporter": "McCrory, Duane",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-75467",
+          "bucket": "remaining",
+          "age_days": 5,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-77014",
+          "summary": "[PQC] Phase 1 - PQC boot sequence",
+          "status": "Open",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Adusumilli, Jitendra",
+          "components": [
+            "CYR FW"
+          ],
+          "component_csv": "CYR FW",
+          "product_family": [
+            "CN6000"
+          ],
+          "product_family_csv": "CN6000",
+          "created": "2026-03-20T07:36:07.798-0400",
+          "updated": "2026-03-20T09:11:55.148-0400",
+          "resolutiondate": "",
+          "reporter": "Davis, Paul",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-77014",
+          "bucket": "remaining",
+          "age_days": 5,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-76933",
+          "summary": "MYR Driver - CKF will not need FWF logic",
+          "status": "Open",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Child, Nicholas",
+          "components": [
+            "MYR Host Driver"
+          ],
+          "component_csv": "MYR Host Driver",
+          "product_family": [
+            "CN6000"
+          ],
+          "product_family_csv": "CN6000",
+          "created": "2026-03-12T11:01:21.391-0400",
+          "updated": "2026-03-23T09:46:33.795-0400",
+          "resolutiondate": "",
+          "reporter": "Spinhirne, Alec",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-76933",
+          "bucket": "remaining",
+          "age_days": 2,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-68268",
+          "summary": "MYR Linux Driver Work - ipoib",
+          "status": "Open",
+          "priority": "P3-Medium",
+          "issue_type": "Epic",
+          "assignee": "Dalessandro, Dennis",
+          "components": [
+            "MYR Host Driver"
+          ],
+          "component_csv": "MYR Host Driver",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2024-03-01T09:19:45.061-0500",
+          "updated": "2026-03-25T11:02:47.991-0400",
+          "resolutiondate": "",
+          "reporter": "Dalessandro, Dennis",
+          "labels": [
+            "JKR_Driver_Epic"
+          ],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-68268",
+          "bucket": "remaining",
+          "age_days": 0,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-69162",
+          "summary": "BMC: IPoIB",
+          "status": "Open",
+          "priority": "P3-Medium",
+          "issue_type": "Epic",
+          "assignee": "Spinhirne, Alec",
+          "components": [
+            "Chassis Mgmt"
+          ],
+          "component_csv": "Chassis Mgmt",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2024-05-09T10:37:41.092-0400",
+          "updated": "2026-03-25T15:48:37.376-0400",
+          "resolutiondate": "",
+          "reporter": "Novak, Eugene",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-69162",
+          "bucket": "remaining",
+          "age_days": 0,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-75274",
+          "summary": "[Feature] SLES 16.0 Support",
+          "status": "Open",
+          "priority": "P3-Medium",
+          "issue_type": "Initiative",
+          "assignee": "Vogel, Steve",
+          "components": [
+            "SW Release Tracking"
+          ],
+          "component_csv": "SW Release Tracking",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2025-10-21T16:45:21.005-0400",
+          "updated": "2026-03-25T10:05:06.471-0400",
+          "resolutiondate": "",
+          "reporter": "Vogel, Steve",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-75274",
+          "bucket": "remaining",
+          "age_days": 0,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-75284",
+          "summary": "[Feature] RHEL/Rocky 10.1 support",
+          "status": "Open",
+          "priority": "P3-Medium",
+          "issue_type": "Initiative",
+          "assignee": "Vogel, Steve",
+          "components": [
+            "SW Release Tracking"
+          ],
+          "component_csv": "SW Release Tracking",
+          "product_family": [
+            "OPA100",
+            "CN5000"
+          ],
+          "product_family_csv": "OPA100, CN5000",
+          "created": "2025-10-21T16:48:02.483-0400",
+          "updated": "2026-03-25T10:02:02.994-0400",
+          "resolutiondate": "",
+          "reporter": "Vogel, Steve",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-75284",
+          "bucket": "remaining",
+          "age_days": 0,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-76192",
+          "summary": "CN6000 Edge Cook Forest: Modify Config File in FPDM to support new Port Side Band Signal routings",
+          "status": "Open",
+          "priority": "P3-Medium",
+          "issue_type": "Story",
+          "assignee": "Nagarajan, Gnaneshwar",
+          "components": [
+            "Chassis Firmware"
+          ],
+          "component_csv": "Chassis Firmware",
+          "product_family": [
+            "CN6000"
+          ],
+          "product_family_csv": "CN6000",
+          "created": "2026-01-16T16:12:10.715-0500",
+          "updated": "2026-03-25T09:06:56.711-0400",
+          "resolutiondate": "",
+          "reporter": "Nagarajan, Gnaneshwar",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-76192",
+          "bucket": "remaining",
+          "age_days": 0,
+          "is_stale": false,
+          "is_unassigned": false
+        },
+        {
+          "release": "12.2.0.x",
+          "key": "STL-71339",
+          "summary": "Use the CAPABILITY_MASK from the ini file for reporting capabilities to the FM",
+          "status": "To Do",
+          "priority": "P4-Low",
+          "issue_type": "Story",
+          "assignee": "Johanson, Jim",
+          "components": [
+            "MYR FW"
+          ],
+          "component_csv": "MYR FW",
+          "product_family": [
+            "CN5000"
+          ],
+          "product_family_csv": "CN5000",
+          "created": "2024-12-07T09:55:44.259-0500",
+          "updated": "2026-03-01T10:06:30.482-0500",
+          "resolutiondate": "",
+          "reporter": "Novak, Eugene",
+          "labels": [],
+          "url": "https://cornelisnetworks.atlassian.net/browse/STL-71339",
+          "bucket": "remaining",
+          "age_days": 24,
+          "is_stale": false,
+          "is_unassigned": false
+        }
+      ],
+      "blocked_tickets": [],
+      "stale_tickets": [],
+      "unassigned_tickets": []
+    }
+  ],
+  "summary_markdown": "# Release Survey: STL\n\n**Survey ID**: 7455a69c-a901-4dc4-b6f8-97bf6eedd720\n**Created**: 2026-03-25T20:17:24.981390+00:00\n**Survey Mode**: Feature Dev\n**Releases Surveyed**: 12.2.0.x\n**Scope Label**: CN5000,CN6000\n\n## Overall\n\n- Total tickets: 40\n- Done: 18 (45.0%)\n- In progress: 9\n- Remaining: 13\n- Blocked: 0\n- Stale: 0\n- Unassigned: 0\n\n## 12.2.0.x\n\n- Total tickets: 40\n- Done: 18 (45.0%)\n- In progress: 9\n- Remaining: 13\n- Blocked: 0\n- Stale: 0\n- Unassigned: 0\n- Status mix: Closed=18, In Progress=6, In Review=2, Open=11, Ready=1, To Do=1, Verify=1\n- Priority mix: P3-Medium=37, P4-Low=3\n\n### In Progress (9)\n| Ticket | Summary | Product Family | Status | Assignee | Manager | Priority | Updated |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| [STL-75784](https://cornelisnetworks.atlassian.net/browse/STL-75784) | Identify changes needed for configuration of lifetime and VL arbitration settings | CN5000 | In Progress | King, Charles | Eugene Novak | P3-Medium | 2026-03-01 |\n| [STL-73745](https://cornelisnetworks.atlassian.net/browse/STL-73745) | [Feature] Secure PXE Boot (UEFI) | CN5000 | In Progress | Kresge, Greg | Paul Davis | P3-Medium | 2026-03-19 |\n| [STL-70348](https://cornelisnetworks.atlassian.net/browse/STL-70348) | DCS: Enable ip forwarding for the IB0 interface | CN5000 | In Review | Reddington, Tom | Eugene Novak | P3-Medium | 2026-03-20 |\n| [STL-76455](https://cornelisnetworks.atlassian.net/browse/STL-76455) | Serdes CSR update for rx_ds[dcoreg_nt] and tx_ds[dcoreg_nt] | CN5000 | In Progress | Johanson, Jim | Paul Davis | P3-Medium | 2026-03-23 |\n| [STL-76673](https://cornelisnetworks.atlassian.net/browse/STL-76673) | LPO debounce min and serdes hex file changes | CN5000 | In Progress | Johanson, Jim | Paul Davis | P3-Medium | 2026-03-23 |\n| [STL-76728](https://cornelisnetworks.atlassian.net/browse/STL-76728) | MYR IPoIB Configuration | CN5000 | In Progress | Spinhirne, Alec | Eugene Novak | P3-Medium | 2026-03-23 |\n| [STL-71715](https://cornelisnetworks.atlassian.net/browse/STL-71715) | Enable IPoIB with the MYR host driver on real HW | CN5000 | In Progress | Child, Nicholas | Heqing Zhu | P3-Medium | 2026-03-25 |\n| [STL-76978](https://cornelisnetworks.atlassian.net/browse/STL-76978) | Resolve all oelint-adv lint violations across meta-cornelis recipes | CN5000 | Verify | Reddington, Tom | Eugene Novak | P3-Medium | 2026-03-25 |\n| [STL-76985](https://cornelisnetworks.atlassian.net/browse/STL-76985) | Harden cnshell socket protocol: JSON serialization, Unix socket auth, restricted bind | CN5000 | In Review | Cook, Sam | Eugene Novak | P4-Low | 2026-03-18 |\n\n### Blocked (0)\n- None\n\n### Remaining (13)\n| Ticket | Summary | Product Family | Status | Assignee | Manager | Priority | Updated |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| [STL-69164](https://cornelisnetworks.atlassian.net/browse/STL-69164) | Exclude Preemption related tags from CN5000 FM configuration file | CN5000 | Open | Robin, Debobroto Das | Manager Not Found | P3-Medium | 2026-03-01 |\n| [STL-74384](https://cornelisnetworks.atlassian.net/browse/STL-74384) | FM: Create a new LinkDownReason for an FPE Catastrophic Error | CN5000 | Open | King, Charles | Eugene Novak | P3-Medium | 2026-03-01 |\n| [STL-75393](https://cornelisnetworks.atlassian.net/browse/STL-75393) | Re-enable telemetry in FM | CN5000 | Open | Fisher, Josh | Eugene Novak | P3-Medium | 2026-03-01 |\n| [STL-76915](https://cornelisnetworks.atlassian.net/browse/STL-76915) | Add Support for CKF in Chassis Manager | CN6000 | Open | Nagarajan, Gnaneshwar | Eugene Novak | P3-Medium | 2026-03-11 |\n| [STL-75467](https://cornelisnetworks.atlassian.net/browse/STL-75467) | [FW Tools] CYR host-side tool needed that changes INI settings to/from OPA/ETH | CN6000 | Ready | Adusumilli, Jitendra | Paul Davis | P3-Medium | 2026-03-20 |\n| [STL-77014](https://cornelisnetworks.atlassian.net/browse/STL-77014) | [PQC] Phase 1 - PQC boot sequence | CN6000 | Open | Adusumilli, Jitendra | Paul Davis | P3-Medium | 2026-03-20 |\n| [STL-76933](https://cornelisnetworks.atlassian.net/browse/STL-76933) | MYR Driver - CKF will not need FWF logic | CN6000 | Open | Child, Nicholas | Heqing Zhu | P3-Medium | 2026-03-23 |\n| [STL-68268](https://cornelisnetworks.atlassian.net/browse/STL-68268) | MYR Linux Driver Work - ipoib | CN5000 | Open | Dalessandro, Dennis | Heqing Zhu | P3-Medium | 2026-03-25 |\n| [STL-69162](https://cornelisnetworks.atlassian.net/browse/STL-69162) | BMC: IPoIB | CN5000 | Open | Spinhirne, Alec | Eugene Novak | P3-Medium | 2026-03-25 |\n| [STL-75274](https://cornelisnetworks.atlassian.net/browse/STL-75274) | [Feature] SLES 16.0 Support | CN5000 | Open | Vogel, Steve | Manager Not Found | P3-Medium | 2026-03-25 |\n| [STL-75284](https://cornelisnetworks.atlassian.net/browse/STL-75284) | [Feature] RHEL/Rocky 10.1 support | OPA100, CN5000 | Open | Vogel, Steve | Manager Not Found | P3-Medium | 2026-03-25 |\n| [STL-76192](https://cornelisnetworks.atlassian.net/browse/STL-76192) | CN6000 Edge Cook Forest: Modify Config File in FPDM to support new Port Side Band Signal routings | CN6000 | Open | Nagarajan, Gnaneshwar | Eugene Novak | P3-Medium | 2026-03-25 |\n| [STL-71339](https://cornelisnetworks.atlassian.net/browse/STL-71339) | Use the CAPABILITY_MASK from the ini file for reporting capabilities to the FM | CN5000 | To Do | Johanson, Jim | Paul Davis | P4-Low | 2026-03-01 |\n\n### Done (18)\n- [STL-69160](https://cornelisnetworks.atlassian.net/browse/STL-69160): Port Subdivision Phase 2 (Closed; Novak, Eugene; P3-Medium; updated 2026-03-25)\n- [STL-74833](https://cornelisnetworks.atlassian.net/browse/STL-74833): bmcMgmtWho - Add option for CKF (Closed; Spinhirne, Alec; P3-Medium; updated 2026-03-23)\n- [STL-74832](https://cornelisnetworks.atlassian.net/browse/STL-74832): Mapping Port Config to ASICs (Closed; Spinhirne, Alec; P3-Medium; updated 2026-03-23)\n- [STL-74114](https://cornelisnetworks.atlassian.net/browse/STL-74114): [SR-IOV Driver] SR-IOV Ethernet Support - Driver (Closed; Tauferner, Andrew; P3-Medium; updated 2026-03-20)\n- [STL-76618](https://cornelisnetworks.atlassian.net/browse/STL-76618): Add CKF led configuration to manny (Closed; Nagarajan, Gnaneshwar; P3-Medium; updated 2026-03-18)\n- [STL-76543](https://cornelisnetworks.atlassian.net/browse/STL-76543): Add CKF sensors and enum to CnChassisFactory (Closed; Nagarajan, Gnaneshwar; P3-Medium; updated 2026-03-18)\n- [STL-76607](https://cornelisnetworks.atlassian.net/browse/STL-76607): Add overlay to convert port fm view to cable view (Closed; DeMario, Joseph; P3-Medium; updated 2026-03-17)\n- [STL-62433](https://cornelisnetworks.atlassian.net/browse/STL-62433): Redfish Phase 1 (Closed; Cook, Sam; P3-Medium; updated 2026-03-14)\n- [STL-76541](https://cornelisnetworks.atlassian.net/browse/STL-76541): Establish PortMap format for CKF (Closed; DeMario, Joseph; P3-Medium; updated 2026-03-12)\n- [STL-73439](https://cornelisnetworks.atlassian.net/browse/STL-73439): CN6000 New BMC SPI Chip Select Component (Closed; DeMario, Joseph; P3-Medium; updated 2026-03-12)\n- [STL-76671](https://cornelisnetworks.atlassian.net/browse/STL-76671): Add boardRev and generation to cnBoardId (Closed; Nagarajan, Gnaneshwar; P3-Medium; updated 2026-03-11)\n- [STL-68629](https://cornelisnetworks.atlassian.net/browse/STL-68629): Investigate Openbmc phosphor-logging in 2.18 (Closed; Reddington, Tom; P4-Low; updated 2026-03-09)\n- [STL-76018](https://cornelisnetworks.atlassian.net/browse/STL-76018): Change dbus objects for cn-sw-server (Closed; Cook, Sam; P3-Medium; updated 2026-03-09)\n- [STL-63015](https://cornelisnetworks.atlassian.net/browse/STL-63015): BMC: Drivers (Closed; Novak, Eugene; P3-Medium; updated 2026-03-04)\n- [STL-73590](https://cornelisnetworks.atlassian.net/browse/STL-73590): CN5000 BTS Kernel - Reliability Framework (Closed; Blocksome, Michael; P3-Medium; updated 2026-03-03)\n- [STL-73860](https://cornelisnetworks.atlassian.net/browse/STL-73860): MYR Driver - Sending packets from user-space takes ~100ms for driver to respond (Closed; Child, Nicholas; P3-Medium; updated 2026-03-02)\n- [STL-76624](https://cornelisnetworks.atlassian.net/browse/STL-76624): FPDM Production Code Hardening \u2014 Fix 6 Defects Found During Unit Test Coverage (spec-005) (Closed; Novak, Eugene; P3-Medium; updated 2026-03-02)\n- [STL-70256](https://cornelisnetworks.atlassian.net/browse/STL-70256): Integration: Verify integration of IPoIB in simulation (Closed; Reddington, Tom; P3-Medium; updated 2026-03-01)\n\n### Product Family Breakouts\n\n- Tickets can appear in more than one family table when Jira lists multiple product families.\n\n#### CN5000 In Progress (9)\n| Ticket | Summary | Product Family | Status | Assignee | Manager | Priority | Updated |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| [STL-75784](https://cornelisnetworks.atlassian.net/browse/STL-75784) | Identify changes needed for configuration of lifetime and VL arbitration settings | CN5000 | In Progress | King, Charles | Eugene Novak | P3-Medium | 2026-03-01 |\n| [STL-73745](https://cornelisnetworks.atlassian.net/browse/STL-73745) | [Feature] Secure PXE Boot (UEFI) | CN5000 | In Progress | Kresge, Greg | Paul Davis | P3-Medium | 2026-03-19 |\n| [STL-70348](https://cornelisnetworks.atlassian.net/browse/STL-70348) | DCS: Enable ip forwarding for the IB0 interface | CN5000 | In Review | Reddington, Tom | Eugene Novak | P3-Medium | 2026-03-20 |\n| [STL-76455](https://cornelisnetworks.atlassian.net/browse/STL-76455) | Serdes CSR update for rx_ds[dcoreg_nt] and tx_ds[dcoreg_nt] | CN5000 | In Progress | Johanson, Jim | Paul Davis | P3-Medium | 2026-03-23 |\n| [STL-76673](https://cornelisnetworks.atlassian.net/browse/STL-76673) | LPO debounce min and serdes hex file changes | CN5000 | In Progress | Johanson, Jim | Paul Davis | P3-Medium | 2026-03-23 |\n| [STL-76728](https://cornelisnetworks.atlassian.net/browse/STL-76728) | MYR IPoIB Configuration | CN5000 | In Progress | Spinhirne, Alec | Eugene Novak | P3-Medium | 2026-03-23 |\n| [STL-71715](https://cornelisnetworks.atlassian.net/browse/STL-71715) | Enable IPoIB with the MYR host driver on real HW | CN5000 | In Progress | Child, Nicholas | Heqing Zhu | P3-Medium | 2026-03-25 |\n| [STL-76978](https://cornelisnetworks.atlassian.net/browse/STL-76978) | Resolve all oelint-adv lint violations across meta-cornelis recipes | CN5000 | Verify | Reddington, Tom | Eugene Novak | P3-Medium | 2026-03-25 |\n| [STL-76985](https://cornelisnetworks.atlassian.net/browse/STL-76985) | Harden cnshell socket protocol: JSON serialization, Unix socket auth, restricted bind | CN5000 | In Review | Cook, Sam | Eugene Novak | P4-Low | 2026-03-18 |\n\n#### CN5000 Remaining (8)\n| Ticket | Summary | Product Family | Status | Assignee | Manager | Priority | Updated |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| [STL-69164](https://cornelisnetworks.atlassian.net/browse/STL-69164) | Exclude Preemption related tags from CN5000 FM configuration file | CN5000 | Open | Robin, Debobroto Das | Manager Not Found | P3-Medium | 2026-03-01 |\n| [STL-74384](https://cornelisnetworks.atlassian.net/browse/STL-74384) | FM: Create a new LinkDownReason for an FPE Catastrophic Error | CN5000 | Open | King, Charles | Eugene Novak | P3-Medium | 2026-03-01 |\n| [STL-75393](https://cornelisnetworks.atlassian.net/browse/STL-75393) | Re-enable telemetry in FM | CN5000 | Open | Fisher, Josh | Eugene Novak | P3-Medium | 2026-03-01 |\n| [STL-68268](https://cornelisnetworks.atlassian.net/browse/STL-68268) | MYR Linux Driver Work - ipoib | CN5000 | Open | Dalessandro, Dennis | Heqing Zhu | P3-Medium | 2026-03-25 |\n| [STL-69162](https://cornelisnetworks.atlassian.net/browse/STL-69162) | BMC: IPoIB | CN5000 | Open | Spinhirne, Alec | Eugene Novak | P3-Medium | 2026-03-25 |\n| [STL-75274](https://cornelisnetworks.atlassian.net/browse/STL-75274) | [Feature] SLES 16.0 Support | CN5000 | Open | Vogel, Steve | Manager Not Found | P3-Medium | 2026-03-25 |\n| [STL-75284](https://cornelisnetworks.atlassian.net/browse/STL-75284) | [Feature] RHEL/Rocky 10.1 support | OPA100, CN5000 | Open | Vogel, Steve | Manager Not Found | P3-Medium | 2026-03-25 |\n| [STL-71339](https://cornelisnetworks.atlassian.net/browse/STL-71339) | Use the CAPABILITY_MASK from the ini file for reporting capabilities to the FM | CN5000 | To Do | Johanson, Jim | Paul Davis | P4-Low | 2026-03-01 |\n\n#### CN5000 Epics (6)\n| Ticket | Summary | Product Family | Status | Assignee | Manager | Priority | Updated |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| [STL-73590](https://cornelisnetworks.atlassian.net/browse/STL-73590) | CN5000 BTS Kernel - Reliability Framework | CN5000 | Closed | Blocksome, Michael | Heqing Zhu | P3-Medium | 2026-03-03 |\n| [STL-63015](https://cornelisnetworks.atlassian.net/browse/STL-63015) | BMC: Drivers | CN5000 | Closed | Novak, Eugene | Heqing Zhu | P3-Medium | 2026-03-04 |\n| [STL-62433](https://cornelisnetworks.atlassian.net/browse/STL-62433) | Redfish Phase 1 | CN5000 | Closed | Cook, Sam | Eugene Novak | P3-Medium | 2026-03-14 |\n| [STL-68268](https://cornelisnetworks.atlassian.net/browse/STL-68268) | MYR Linux Driver Work - ipoib | CN5000 | Open | Dalessandro, Dennis | Heqing Zhu | P3-Medium | 2026-03-25 |\n| [STL-69160](https://cornelisnetworks.atlassian.net/browse/STL-69160) | Port Subdivision Phase 2 | CN5000 | Closed | Novak, Eugene | Heqing Zhu | P3-Medium | 2026-03-25 |\n| [STL-69162](https://cornelisnetworks.atlassian.net/browse/STL-69162) | BMC: IPoIB | CN5000 | Open | Spinhirne, Alec | Eugene Novak | P3-Medium | 2026-03-25 |\n\n#### CN5000 Open Epic Child Analysis (2)\n##### [STL-68268](https://cornelisnetworks.atlassian.net/browse/STL-68268): MYR Linux Driver Work - ipoib\n- Epic status: Open; open descendants: 2 of 2 non-bug descendants\n- Open type mix: Story=2\n\n| Depth | Ticket | Type | Summary | Status | Assignee | Manager | Priority | Fix Versions |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| 1 | [STL-71715](https://cornelisnetworks.atlassian.net/browse/STL-71715) | Story | Enable IPoIB with the MYR host driver on real HW | In Progress | Child, Nicholas | Heqing Zhu | P3-Medium | 12.2.0.x, 12.1.1.x |\n| 1 | [STL-65825](https://cornelisnetworks.atlassian.net/browse/STL-65825) | Story | Enable IPoIB with the MYR host driver in simulator | Ready | Child, Nicholas | Heqing Zhu | P3-Medium | FutureDev |\n\n##### [STL-69162](https://cornelisnetworks.atlassian.net/browse/STL-69162): BMC: IPoIB\n- Epic status: Open; open descendants: 1 of 4 non-bug descendants\n- Open type mix: Story=1\n\n| Depth | Ticket | Type | Summary | Status | Assignee | Manager | Priority | Fix Versions |\n| --- | --- | --- | --- | --- | --- | --- | --- | --- |\n| 1 | [STL-70348](https://cornelisnetworks.atlassian.net/browse/STL-70348) | Story | DCS: Enable ip forwarding for the IB0 interface | In Review | Reddington, Tom | Eugene Novak | P3-Medium | 12.2.0.x |\n\n#### CN6000 In Progress (0)\n- None\n\n#### CN6000 Remaining (5)\n| Ticket | Summary | Product Family | Status | Assignee | Manager | Priority | Updated |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| [STL-76915](https://cornelisnetworks.atlassian.net/browse/STL-76915) | Add Support for CKF in Chassis Manager | CN6000 | Open | Nagarajan, Gnaneshwar | Eugene Novak | P3-Medium | 2026-03-11 |\n| [STL-75467](https://cornelisnetworks.atlassian.net/browse/STL-75467) | [FW Tools] CYR host-side tool needed that changes INI settings to/from OPA/ETH | CN6000 | Ready | Adusumilli, Jitendra | Paul Davis | P3-Medium | 2026-03-20 |\n| [STL-77014](https://cornelisnetworks.atlassian.net/browse/STL-77014) | [PQC] Phase 1 - PQC boot sequence | CN6000 | Open | Adusumilli, Jitendra | Paul Davis | P3-Medium | 2026-03-20 |\n| [STL-76933](https://cornelisnetworks.atlassian.net/browse/STL-76933) | MYR Driver - CKF will not need FWF logic | CN6000 | Open | Child, Nicholas | Heqing Zhu | P3-Medium | 2026-03-23 |\n| [STL-76192](https://cornelisnetworks.atlassian.net/browse/STL-76192) | CN6000 Edge Cook Forest: Modify Config File in FPDM to support new Port Side Band Signal routings | CN6000 | Open | Nagarajan, Gnaneshwar | Eugene Novak | P3-Medium | 2026-03-25 |\n\n#### CN6000 Epics (1)\n| Ticket | Summary | Product Family | Status | Assignee | Manager | Priority | Updated |\n| --- | --- | --- | --- | --- | --- | --- | --- |\n| [STL-74114](https://cornelisnetworks.atlassian.net/browse/STL-74114) | [SR-IOV Driver] SR-IOV Ethernet Support - Driver | CN6000 | Closed | Tauferner, Andrew | Manager Not Found | P3-Medium | 2026-03-20 |\n\n#### CN6000 Open Epic Child Analysis (0)\n- None\n",
+  "output_file": "",
+  "total_tickets": 40,
+  "done_count": 18,
+  "in_progress_count": 9,
+  "remaining_count": 13,
+  "blocked_count": 0,
+  "stale_count": 0,
+  "unassigned_count": 0,
+  "completion_pct": 45.0
+}

@@ -73,12 +73,13 @@ import confluence_utils
 from agents.drucker_agent import DruckerCoordinatorAgent
 from agents.drucker_models import DruckerRequest
 from agents.gantt_agent import GanttProjectPlannerAgent
-from agents.gantt_models import PlanningRequest, ReleaseMonitorRequest
+from agents.gantt_models import PlanningRequest, ReleaseMonitorRequest, ReleaseSurveyRequest
 from agents.hypatia_agent import HypatiaDocumentationAgent
 from agents.hypatia_models import DocumentationRequest
 from state.drucker_report_store import DruckerReportStore
 from state.gantt_dependency_review_store import GanttDependencyReviewStore
 from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+from state.gantt_release_survey_store import GanttReleaseSurveyStore
 from state.gantt_snapshot_store import GanttSnapshotStore
 from state.hypatia_record_store import HypatiaRecordStore
 
@@ -358,6 +359,15 @@ def _release_monitor_record_to_dict(record: dict[str, Any]) -> dict[str, Any]:
     """Normalize a stored Gantt release-monitor record for MCP responses."""
     return {
         'report': record.get('report'),
+        'summary': record.get('summary'),
+        'summary_markdown': record.get('summary_markdown', ''),
+    }
+
+
+def _release_survey_record_to_dict(record: dict[str, Any]) -> dict[str, Any]:
+    """Normalize a stored Gantt release-survey record for MCP responses."""
+    return {
+        'survey': record.get('survey'),
         'summary': record.get('summary'),
         'summary_markdown': record.get('summary_markdown', ''),
     }
@@ -1008,6 +1018,80 @@ async def list_gantt_release_monitor_reports(
         return _json_result(rows)
     except Exception as e:
         log.error(f'list_gantt_release_monitor_reports failed: {e}')
+        return _error_result(str(e))
+
+
+@_tool_decorator()
+async def create_release_survey(
+    project_key: str = 'STL',
+    releases: Optional[str] = None,
+    scope_label: Optional[str] = None,
+    survey_mode: str = 'feature_dev',
+    output_file: Optional[str] = None,
+    persist: bool = True,
+) -> list[Any]:
+    """Generate a Gantt release-survey report."""
+    try:
+        parsed_releases = (
+            [item.strip() for item in releases.split(',') if item.strip()]
+            if releases else None
+        )
+        request = ReleaseSurveyRequest(
+            project_key=project_key,
+            releases=parsed_releases,
+            scope_label=scope_label or '',
+            survey_mode=survey_mode,
+            output_file=output_file or f'{project_key}_release_survey.xlsx',
+        )
+        agent = GanttProjectPlannerAgent(project_key=project_key)
+        survey = agent.create_release_survey(request)
+        result = {
+            'survey': survey.to_dict(),
+        }
+        if persist:
+            result['stored'] = GanttReleaseSurveyStore().save_survey(
+                survey,
+                summary_markdown=survey.summary_markdown,
+            )
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'create_release_survey failed: {e}')
+        return _error_result(str(e))
+
+
+@_tool_decorator()
+async def get_gantt_release_survey(
+    survey_id: str,
+    project_key: Optional[str] = None,
+) -> list[Any]:
+    """Get a persisted Gantt release-survey report by survey ID."""
+    try:
+        record = GanttReleaseSurveyStore().get_survey(
+            survey_id,
+            project_key=project_key,
+        )
+        if not record:
+            return _error_result(f'Gantt release survey {survey_id} not found')
+        return _json_result(_release_survey_record_to_dict(record))
+    except Exception as e:
+        log.error(f'get_gantt_release_survey failed: {e}')
+        return _error_result(str(e))
+
+
+@_tool_decorator()
+async def list_gantt_release_surveys(
+    project_key: Optional[str] = None,
+    limit: int = 20,
+) -> list[Any]:
+    """List persisted Gantt release-survey reports."""
+    try:
+        rows = GanttReleaseSurveyStore().list_surveys(
+            project_key=project_key,
+            limit=limit,
+        )
+        return _json_result(rows)
+    except Exception as e:
+        log.error(f'list_gantt_release_surveys failed: {e}')
         return _error_result(str(e))
 
 

@@ -12,11 +12,13 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import sys
 import time
 from datetime import datetime, timezone
+from html import escape
 from typing import Any, Dict, Iterable, List, Mapping, Optional
 
 from openpyxl import Workbook
@@ -41,6 +43,9 @@ from agents.gantt_models import (
     PlanningSnapshot,
     ReleaseMonitorReport,
     ReleaseMonitorRequest,
+    ReleaseSurveyReleaseSummary,
+    ReleaseSurveyReport,
+    ReleaseSurveyRequest,
     RoadmapGap,
     RoadmapItem,
     RoadmapRequest,
@@ -62,6 +67,7 @@ from core.release_tracking import (
 )
 from state.gantt_dependency_review_store import GanttDependencyReviewStore
 from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+from state.gantt_release_survey_store import GanttReleaseSurveyStore
 from state.gantt_snapshot_store import GanttSnapshotStore
 from excel_utils import (
     STATUS_FILL_COLORS,
@@ -86,6 +92,12 @@ log = logging.getLogger(os.path.basename(sys.argv[0]))
 
 # Jira base URL for hyperlinks
 JIRA_BASE_URL = 'https://cornelisnetworks.atlassian.net'
+CONFLUENCE_JIRA_SERVER = os.getenv('CONFLUENCE_JIRA_SERVER') or 'System Jira'
+CONFLUENCE_JIRA_SERVER_ID = (
+    os.getenv('CONFLUENCE_JIRA_SERVER_ID')
+    or os.getenv('JIRA_SERVER_ID')
+    or '332fe428-27be-3c06-ad09-b2cd4d269bee'
+)
 
 # Issue types to exclude from the roadmap (Bugs are not roadmap items)
 _EXCLUDED_TYPES = {'Bug', 'bug'}
@@ -113,6 +125,15 @@ class GanttProjectPlannerAgent(BaseAgent):
     '''
 
     STALE_DAYS = 30
+    RELEASE_SURVEY_MODE_FEATURE_DEV = 'feature_dev'
+    RELEASE_SURVEY_MODE_BUG = 'bug'
+    _RELEASE_SURVEY_MANAGER_ALIASES = {
+        'cook sam': 'samuel cook',
+        'dennis dalessandro': 'denny dalessandro',
+        'nicholas child': 'nick child',
+        'sam cook': 'samuel cook',
+    }
+    _release_survey_manager_lookup_cache: Optional[Dict[str, str]] = None
 
     def __init__(self, project_key: Optional[str] = None, **kwargs):
         '''
@@ -210,7 +231,7 @@ class GanttProjectPlannerAgent(BaseAgent):
     def run_once(
         self,
         task_type: str,
-        request: PlanningRequest | ReleaseMonitorRequest,
+        request: PlanningRequest | ReleaseMonitorRequest | ReleaseSurveyRequest,
         *,
         persist: bool = True,
     ) -> Dict[str, Any]:
@@ -252,6 +273,26 @@ class GanttProjectPlannerAgent(BaseAgent):
             }
             if persist:
                 result['stored'] = GanttReleaseMonitorStore().save_report(
+                    report,
+                    summary_markdown=report.summary_markdown,
+                )
+            return result
+
+        if task_type == 'release_survey':
+            if not isinstance(request, ReleaseSurveyRequest):
+                raise TypeError('release_survey requires a ReleaseSurveyRequest')
+
+            self.project_key = request.project_key or self.project_key
+            report = self.create_release_survey(request)
+            result = {
+                'ok': True,
+                'task_type': task_type,
+                'project_key': report.project_key,
+                'survey': report.to_dict(),
+                'summary_markdown': report.summary_markdown,
+            }
+            if persist:
+                result['stored'] = GanttReleaseSurveyStore().save_survey(
                     report,
                     summary_markdown=report.summary_markdown,
                 )
@@ -305,6 +346,27 @@ class GanttProjectPlannerAgent(BaseAgent):
             )
         return {
             'title': f'Gantt Release Monitor — {report.get("project_key", "")}',
+            'text': text,
+            'body_lines': body_lines,
+        }
+
+    @staticmethod
+    def _build_release_survey_notification_payload(result: Dict[str, Any]) -> Dict[str, Any]:
+        survey = result.get('survey', {})
+        stored = result.get('stored', {})
+        text = (
+            f'{survey.get("project_key", "")}: '
+            f'{survey.get("done_count", 0)} done, '
+            f'{survey.get("in_progress_count", 0)} in progress, '
+            f'{survey.get("remaining_count", 0)} remaining'
+        )
+        body_lines = [
+            f'Survey ID: {stored.get("survey_id") or survey.get("survey_id", "")}',
+            f'Releases: {", ".join(survey.get("releases_surveyed", [])) or "none"}',
+            f'Blocked: {survey.get("blocked_count", 0)}',
+        ]
+        return {
+            'title': f'Gantt Release Survey — {survey.get("project_key", "")}',
             'text': text,
             'body_lines': body_lines,
         }
@@ -407,6 +469,40 @@ class GanttProjectPlannerAgent(BaseAgent):
                     )
             except Exception as e:
                 errors.append(f'release_monitor: {e}')
+
+        run_release_survey = bool(poller_spec.get('run_release_survey', False))
+        if run_release_survey:
+            try:
+                survey_request = ReleaseSurveyRequest(
+                    project_key=project_key,
+                    releases=release_names or None,
+                    scope_label=poller_spec.get('scope_label'),
+                    survey_mode=str(
+                        poller_spec.get('survey_mode')
+                        or poller_spec.get('release_survey_mode')
+                        or self.RELEASE_SURVEY_MODE_FEATURE_DEV
+                    ),
+                    output_file=poller_spec.get('survey_output_file')
+                    or poller_spec.get('output_file'),
+                )
+                survey_result = self.run_once(
+                    'release_survey',
+                    survey_request,
+                    persist=persist,
+                )
+                tasks.append(survey_result)
+                if notify_enabled:
+                    notifications.append(
+                        notify_shannon(
+                            agent_id='gantt',
+                            shannon_base_url=shannon_base_url,
+                            **self._build_release_survey_notification_payload(
+                                survey_result
+                            ),
+                        )
+                    )
+            except Exception as e:
+                errors.append(f'release_survey: {e}')
 
         return {
             'ok': not errors,
@@ -1742,6 +1838,7 @@ class GanttProjectPlannerAgent(BaseAgent):
         6. Return ReleaseMonitorReport.
         '''
         project_key = request.project_key or self.project_key or 'STL'
+        self.project_key = project_key
         log.info(
             f'Creating release monitor for {project_key} '
             f'(releases={request.releases}, scope={request.scope_label})'
@@ -2006,6 +2103,728 @@ class GanttProjectPlannerAgent(BaseAgent):
 
         return report
 
+    def create_release_survey(
+        self,
+        request: ReleaseSurveyRequest,
+    ) -> ReleaseSurveyReport:
+        '''
+        Create a release execution survey focused on done, active, and remaining work.
+        '''
+        project_key = request.project_key or self.project_key or 'STL'
+        self.project_key = project_key
+        survey_mode = self._normalize_release_survey_mode(request.survey_mode)
+        log.info(
+            f'Creating release survey for {project_key} '
+            f'(releases={request.releases}, scope={request.scope_label}, '
+            f'survey_mode={survey_mode})'
+        )
+
+        if request.releases:
+            release_names = list(request.releases)
+        else:
+            result = get_releases(
+                project_key,
+                include_released=False,
+                include_unreleased=True,
+            )
+            if result.is_success:
+                release_names = [
+                    item.get('name', '')
+                    for item in result.data
+                    if not item.get('released', False) and item.get('name')
+                ]
+            else:
+                log.warning(f'Failed to fetch releases for survey: {result.error}')
+                release_names = []
+
+        release_summaries: List[ReleaseSurveyReleaseSummary] = []
+        for release in release_names:
+            tickets = self._query_release_tickets(release, request.scope_label)
+            tickets = [
+                ticket
+                for ticket in tickets
+                if self._ticket_matches_release_survey_mode(ticket, survey_mode)
+            ]
+            classified = [
+                self._classify_release_survey_ticket(release, ticket)
+                for ticket in tickets
+            ]
+            family_names = self._release_survey_family_names(
+                request.scope_label,
+                classified,
+            )
+            family_breakdowns = self._build_release_survey_family_breakdowns(
+                family_names,
+                classified,
+            )
+            hierarchy_cache: Dict[str, Dict[str, Any]] = {}
+            family_epic_analysis = self._build_release_survey_family_epic_analysis(
+                family_names,
+                family_breakdowns,
+                survey_mode,
+                hierarchy_cache=hierarchy_cache,
+            )
+
+            by_status: Counter[str] = Counter()
+            by_priority: Counter[str] = Counter()
+            by_issue_type: Counter[str] = Counter()
+            by_component: Counter[str] = Counter()
+            done_tickets: List[Dict[str, Any]] = []
+            in_progress_tickets: List[Dict[str, Any]] = []
+            remaining_tickets: List[Dict[str, Any]] = []
+            blocked_tickets: List[Dict[str, Any]] = []
+            stale_tickets: List[str] = []
+            unassigned_tickets: List[str] = []
+
+            for ticket in classified:
+                by_status[str(ticket.get('status') or 'Unknown')] += 1
+                by_priority[str(ticket.get('priority') or 'Unspecified')] += 1
+                by_issue_type[str(ticket.get('issue_type') or 'Unknown')] += 1
+
+                components = ticket.get('components') or ['Unspecified']
+                for component in components:
+                    by_component[str(component or 'Unspecified')] += 1
+
+                bucket = str(ticket.get('bucket') or 'remaining')
+                if bucket == 'done':
+                    done_tickets.append(ticket)
+                elif bucket == 'in_progress':
+                    in_progress_tickets.append(ticket)
+                elif bucket == 'blocked':
+                    blocked_tickets.append(ticket)
+                else:
+                    remaining_tickets.append(ticket)
+
+                if ticket.get('is_stale'):
+                    stale_tickets.append(str(ticket.get('key') or ''))
+                if ticket.get('is_unassigned'):
+                    unassigned_tickets.append(str(ticket.get('key') or ''))
+
+            release_summaries.append(
+                ReleaseSurveyReleaseSummary(
+                    release=release,
+                    total_tickets=len(classified),
+                    status_breakdown=dict(by_status),
+                    priority_breakdown=dict(by_priority),
+                    issue_type_breakdown=dict(by_issue_type),
+                    component_breakdown=dict(by_component),
+                    family_breakdowns=family_breakdowns,
+                    family_epic_analysis=family_epic_analysis,
+                    done_tickets=self._sort_release_survey_bucket(
+                        done_tickets,
+                        bucket='done',
+                    ),
+                    in_progress_tickets=self._sort_release_survey_bucket(
+                        in_progress_tickets,
+                        bucket='in_progress',
+                    ),
+                    remaining_tickets=self._sort_release_survey_bucket(
+                        remaining_tickets,
+                        bucket='remaining',
+                    ),
+                    blocked_tickets=self._sort_release_survey_bucket(
+                        blocked_tickets,
+                        bucket='blocked',
+                    ),
+                    stale_tickets=sorted(key for key in stale_tickets if key),
+                    unassigned_tickets=sorted(
+                        key for key in unassigned_tickets if key
+                    ),
+                )
+            )
+
+        report = ReleaseSurveyReport(
+            project_key=project_key,
+            created_at=datetime.now(timezone.utc).isoformat(),
+            scope_label=request.scope_label or '',
+            survey_mode=survey_mode,
+            releases_surveyed=release_names,
+            release_summaries=release_summaries,
+        )
+        report.summary_markdown = self._format_release_survey_summary(report)
+
+        if request.output_file:
+            output_path = self._write_release_survey_xlsx(report, request.output_file)
+            report.output_file = output_path
+            log.info(f'Wrote release survey xlsx to {output_path}')
+
+        return report
+
+    @classmethod
+    def _normalize_release_survey_mode(cls, survey_mode: Optional[str]) -> str:
+        '''
+        Normalize survey-mode aliases to the supported release-survey modes.
+        '''
+        normalized = str(survey_mode or '').strip().lower().replace('-', '_')
+        if not normalized:
+            return cls.RELEASE_SURVEY_MODE_FEATURE_DEV
+        if normalized in (
+            cls.RELEASE_SURVEY_MODE_FEATURE_DEV,
+            'feature',
+            'featuredev',
+        ):
+            return cls.RELEASE_SURVEY_MODE_FEATURE_DEV
+        if normalized in (
+            cls.RELEASE_SURVEY_MODE_BUG,
+            'bugs',
+            'bug_only',
+            'bugs_only',
+            'bugonly',
+        ):
+            return cls.RELEASE_SURVEY_MODE_BUG
+        raise ValueError(
+            f'Unsupported release survey mode: {survey_mode}. '
+            'Use "feature_dev" or "bug".'
+        )
+
+    @staticmethod
+    def _ticket_matches_release_survey_mode(
+        ticket: Dict[str, Any],
+        survey_mode: str,
+    ) -> bool:
+        '''
+        Apply the issue-type boundary for the requested release-survey mode.
+        '''
+        issue_type = str(ticket.get('issuetype') or '').strip().casefold()
+        is_bug = issue_type == 'bug'
+        if survey_mode == GanttProjectPlannerAgent.RELEASE_SURVEY_MODE_BUG:
+            return is_bug
+        return not is_bug
+
+    def _classify_release_survey_ticket(
+        self,
+        release: str,
+        ticket: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        '''
+        Normalize and bucket a release ticket for survey reporting.
+        '''
+        status = str(ticket.get('status') or '').strip()
+        priority = str(ticket.get('priority') or 'Unspecified').strip() or 'Unspecified'
+        issue_type = str(
+            ticket.get('issuetype') or ticket.get('issue_type') or 'Unknown'
+        ).strip() or 'Unknown'
+        assignee = str(ticket.get('assignee') or 'Unassigned').strip() or 'Unassigned'
+        updated_raw = str(ticket.get('updated') or '').strip()
+        resolution_raw = str(ticket.get('resolutiondate') or '').strip()
+        updated_dt = self.backlog_interpreter.parse_jira_datetime(updated_raw)
+        resolved_dt = self.backlog_interpreter.parse_jira_datetime(resolution_raw)
+        age_days = 0
+        if updated_dt is not None:
+            age_days = max((self._utc_now() - updated_dt).days, 0)
+
+        raw_components = ticket.get('components') or []
+        if isinstance(raw_components, list):
+            components = [
+                str(component).strip()
+                for component in raw_components
+                if str(component).strip()
+            ]
+        elif str(raw_components).strip():
+            components = [
+                part.strip() for part in str(raw_components).split(',')
+                if part.strip()
+            ]
+        else:
+            components = []
+
+        product_family = self._normalize_release_survey_field_values(
+            ticket.get('product_family')
+        )
+
+        status_lower = status.casefold()
+        is_done = bool(resolved_dt) or self.backlog_interpreter.is_done_status(status)
+        is_blocked = (
+            not is_done
+            and any(
+                token in status_lower
+                for token in ('block', 'hold', 'wait', 'stalled', 'depend')
+            )
+        )
+        is_in_progress = (
+            not is_done
+            and not is_blocked
+            and any(
+                token in status_lower
+                for token in (
+                    'progress',
+                    'review',
+                    'verify',
+                    'test',
+                    'qa',
+                    'develop',
+                    'implement',
+                    'validation',
+                    'integration',
+                )
+            )
+        )
+
+        if is_done:
+            bucket = 'done'
+        elif is_blocked:
+            bucket = 'blocked'
+        elif is_in_progress:
+            bucket = 'in_progress'
+        else:
+            bucket = 'remaining'
+
+        return {
+            'release': release,
+            'key': str(ticket.get('key') or ''),
+            'summary': str(ticket.get('summary') or ''),
+            'status': status,
+            'priority': priority,
+            'issue_type': issue_type,
+            'assignee': assignee,
+            'components': components or ['Unspecified'],
+            'component_csv': ', '.join(components) if components else 'Unspecified',
+            'product_family': product_family or ['Unspecified'],
+            'product_family_csv': (
+                ', '.join(product_family) if product_family else 'Unspecified'
+            ),
+            'created': str(ticket.get('created') or ''),
+            'updated': updated_raw,
+            'resolutiondate': resolution_raw,
+            'reporter': str(ticket.get('reporter') or ''),
+            'labels': list(ticket.get('labels') or []),
+            'url': str(ticket.get('url') or ''),
+            'bucket': bucket,
+            'age_days': age_days,
+            'is_stale': age_days >= self.STALE_DAYS and not is_done,
+            'is_unassigned': assignee.casefold() == 'unassigned',
+        }
+
+    def _release_survey_family_names(
+        self,
+        scope_label: Optional[str],
+        tickets: List[Dict[str, Any]],
+    ) -> List[str]:
+        '''
+        Determine which product-family buckets should be rendered for the survey.
+        '''
+        requested_families = normalize_csv_list(scope_label)
+        if requested_families:
+            return requested_families
+
+        discovered: Dict[str, str] = {}
+        for ticket in tickets:
+            for family in list(ticket.get('product_family') or []):
+                family_name = str(family or '').strip()
+                if not family_name or family_name.casefold() == 'unspecified':
+                    continue
+                discovered.setdefault(family_name.casefold(), family_name)
+
+        return list(discovered.values())
+
+    @staticmethod
+    def _ticket_matches_release_survey_family(
+        ticket: Dict[str, Any],
+        family_name: str,
+    ) -> bool:
+        '''
+        Return whether the ticket belongs to the named product-family bucket.
+        '''
+        target = str(family_name or '').strip().casefold()
+        if not target:
+            return False
+
+        ticket_families = [
+            str(value or '').strip().casefold()
+            for value in list(ticket.get('product_family') or [])
+            if str(value or '').strip()
+        ]
+        return target in ticket_families
+
+    def _sort_release_survey_epics(
+        self,
+        tickets: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        '''
+        Sort epics with unfinished items first, then by priority.
+        '''
+        return sorted(
+            tickets,
+            key=lambda item: (
+                1 if str(item.get('bucket') or '') == 'done' else 0,
+                self._release_survey_priority_rank(str(item.get('priority') or '')),
+                -int(item.get('age_days') or 0),
+                str(item.get('key') or ''),
+            ),
+        )
+
+    def _build_release_survey_family_breakdowns(
+        self,
+        family_names: List[str],
+        tickets: List[Dict[str, Any]],
+    ) -> Dict[str, Dict[str, Any]]:
+        '''
+        Build per-family ticket buckets for the survey markdown.
+        '''
+        breakdowns: Dict[str, Dict[str, Any]] = {}
+        for family_name in family_names:
+            family_tickets = [
+                ticket
+                for ticket in tickets
+                if self._ticket_matches_release_survey_family(ticket, family_name)
+            ]
+            epics = [
+                ticket
+                for ticket in family_tickets
+                if str(ticket.get('issue_type') or '').casefold() == 'epic'
+            ]
+            breakdowns[family_name] = {
+                'total_tickets': len(family_tickets),
+                'in_progress_tickets': self._sort_release_survey_bucket(
+                    [
+                        ticket for ticket in family_tickets
+                        if str(ticket.get('bucket') or '') == 'in_progress'
+                    ],
+                    bucket='in_progress',
+                ),
+                'remaining_tickets': self._sort_release_survey_bucket(
+                    [
+                        ticket for ticket in family_tickets
+                        if str(ticket.get('bucket') or '') == 'remaining'
+                    ],
+                    bucket='remaining',
+                ),
+                'epics': self._sort_release_survey_epics(epics),
+            }
+
+        return breakdowns
+
+    def _build_release_survey_family_epic_analysis(
+        self,
+        family_names: List[str],
+        family_breakdowns: Dict[str, Dict[str, Any]],
+        survey_mode: str,
+        *,
+        hierarchy_cache: Optional[Dict[str, Dict[str, Any]]] = None,
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        '''
+        Build open-child analysis for unfinished epics in each product family.
+        '''
+        analysis_by_family: Dict[str, List[Dict[str, Any]]] = {}
+        resolved_cache = hierarchy_cache if hierarchy_cache is not None else {}
+
+        for family_name in family_names:
+            family_epics = list(
+                (family_breakdowns.get(family_name) or {}).get('epics') or []
+            )
+            analysis_entries: List[Dict[str, Any]] = []
+            for epic in family_epics:
+                if str(epic.get('bucket') or '') == 'done':
+                    continue
+                analysis_entries.append(
+                    self._build_release_survey_epic_analysis_entry(
+                        family_name,
+                        epic,
+                        survey_mode,
+                        hierarchy_cache=resolved_cache,
+                    )
+                )
+            analysis_by_family[family_name] = analysis_entries
+
+        return analysis_by_family
+
+    def _build_release_survey_epic_analysis_entry(
+        self,
+        family_name: str,
+        epic: Dict[str, Any],
+        survey_mode: str,
+        *,
+        hierarchy_cache: Dict[str, Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        '''
+        Analyze the unfinished descendants of one epic.
+        '''
+        epic_key = str(epic.get('key') or '').strip()
+        cached_entry = hierarchy_cache.get(epic_key)
+        if cached_entry is None:
+            try:
+                result = get_children_hierarchy(root_key=epic_key, limit=500)
+                if result.is_success:
+                    cached_entry = {
+                        'items': list(result.data or []),
+                        'error': '',
+                    }
+                else:
+                    cached_entry = {
+                        'items': [],
+                        'error': str(result.error or 'Hierarchy lookup failed'),
+                    }
+            except Exception as e:
+                cached_entry = {
+                    'items': [],
+                    'error': str(e),
+                }
+            hierarchy_cache[epic_key] = cached_entry
+
+        hierarchy_items = list(cached_entry.get('items') or [])
+        error_text = str(cached_entry.get('error') or '')
+        open_children: List[Dict[str, Any]] = []
+        open_by_status: Counter[str] = Counter()
+        open_by_type: Counter[str] = Counter()
+        total_descendants = 0
+
+        for item in hierarchy_items[1:]:
+            issue_type = str(item.get('type') or item.get('issue_type') or 'Unknown')
+            if not self._ticket_matches_release_survey_mode(
+                {'issuetype': issue_type},
+                survey_mode,
+            ):
+                continue
+
+            total_descendants += 1
+            status = str(item.get('status') or '')
+            if self.backlog_interpreter.is_done_status(status):
+                continue
+
+            fix_versions = list(item.get('fix_versions') or [])
+            fix_version_csv = ', '.join(
+                str(value).strip()
+                for value in fix_versions
+                if str(value).strip()
+            )
+
+            open_child = {
+                'key': str(item.get('key') or ''),
+                'summary': str(item.get('summary') or ''),
+                'issue_type': issue_type or 'Unknown',
+                'status': status,
+                'priority': str(item.get('priority') or 'Unspecified'),
+                'assignee': str(item.get('assignee') or 'Unassigned'),
+                'depth': int(item.get('depth') or 0),
+                'fix_version_csv': fix_version_csv or 'Unspecified',
+                'url': str(item.get('url') or ''),
+            }
+            open_children.append(open_child)
+            open_by_status[open_child['status'] or 'Unknown'] += 1
+            open_by_type[open_child['issue_type'] or 'Unknown'] += 1
+
+        return {
+            'family': family_name,
+            'epic': dict(epic),
+            'error': error_text,
+            'total_descendant_count': total_descendants,
+            'open_child_count': len(open_children),
+            'open_by_status': dict(open_by_status),
+            'open_by_type': dict(open_by_type),
+            'ready_to_close': not open_children and not error_text,
+            'open_children': open_children,
+        }
+
+    @classmethod
+    def _release_survey_priority_rank(cls, priority: str) -> int:
+        '''
+        Return a sortable priority rank for survey ticket ordering.
+        '''
+        normalized = str(priority or '').casefold()
+        if 'p0' in normalized or 'stopper' in normalized or 'blocker' in normalized:
+            return 0
+        if 'p1' in normalized or 'critical' in normalized:
+            return 1
+        if 'p2' in normalized or 'high' in normalized:
+            return 2
+        if 'p3' in normalized or 'medium' in normalized:
+            return 3
+        if 'p4' in normalized or 'low' in normalized:
+            return 4
+        return 5
+
+    @classmethod
+    def _normalize_release_survey_person_name(cls, raw_name: Any) -> str:
+        '''
+        Normalize a Jira or org-chart display name for manager lookups.
+        '''
+        name = str(raw_name or '').strip()
+        if not name:
+            return ''
+
+        if ',' in name:
+            parts = [part.strip() for part in name.split(',') if part.strip()]
+            if len(parts) >= 2:
+                name = ' '.join(parts[1:] + [parts[0]])
+
+        normalized = ' '.join(name.split()).casefold()
+        return cls._RELEASE_SURVEY_MANAGER_ALIASES.get(normalized, normalized)
+
+    @classmethod
+    def _release_survey_person_lookup_keys(cls, raw_name: Any) -> List[str]:
+        '''
+        Build candidate lookup keys for a Jira assignee display name.
+        '''
+        normalized = cls._normalize_release_survey_person_name(raw_name)
+        if not normalized:
+            return []
+
+        lookup_keys = [normalized]
+        name_parts = normalized.split()
+        if len(name_parts) > 2:
+            lookup_keys.append(f'{name_parts[0]} {name_parts[-1]}')
+
+        return lookup_keys
+
+    @classmethod
+    def _get_release_survey_manager_lookup(cls) -> Dict[str, str]:
+        '''
+        Load direct-manager mappings from the local org chart.
+        '''
+        if cls._release_survey_manager_lookup_cache is not None:
+            return cls._release_survey_manager_lookup_cache
+
+        org_chart_path = os.path.join('data', 'knowledge', 'heqing_org.json')
+        if not os.path.exists(org_chart_path):
+            cls._release_survey_manager_lookup_cache = {}
+            return cls._release_survey_manager_lookup_cache
+
+        try:
+            with open(org_chart_path, 'r', encoding='utf-8') as f:
+                org_chart_data = json.load(f)
+        except Exception as e:
+            log.warning(f'Failed to load release survey org chart {org_chart_path}: {e}')
+            cls._release_survey_manager_lookup_cache = {}
+            return cls._release_survey_manager_lookup_cache
+
+        root = (
+            org_chart_data.get('org_chart', {}).get('root')
+            if isinstance(org_chart_data, dict)
+            else None
+        )
+        if not isinstance(root, dict):
+            cls._release_survey_manager_lookup_cache = {}
+            return cls._release_survey_manager_lookup_cache
+
+        manager_lookup: Dict[str, str] = {}
+
+        def _walk(node: Mapping[str, Any], manager_name: str = '') -> None:
+            current_name = str(node.get('name') or '').strip()
+            normalized_name = cls._normalize_release_survey_person_name(current_name)
+            if normalized_name and manager_name:
+                manager_lookup[normalized_name] = manager_name
+
+            for child in list(node.get('children') or []):
+                if isinstance(child, dict):
+                    _walk(child, current_name)
+
+        _walk(root)
+        cls._release_survey_manager_lookup_cache = manager_lookup
+        return cls._release_survey_manager_lookup_cache
+
+    @classmethod
+    def _lookup_release_survey_manager_name(
+        cls,
+        assignee: Any,
+        manager_lookup: Optional[Mapping[str, str]] = None,
+    ) -> str:
+        '''
+        Resolve the assignee's direct manager from the local org chart.
+        '''
+        assignee_name = str(assignee or '').strip()
+        if not assignee_name:
+            return 'Unassigned'
+
+        if assignee_name.casefold() == 'unassigned':
+            return 'Unassigned'
+
+        resolved_lookup = (
+            manager_lookup
+            if manager_lookup is not None
+            else cls._get_release_survey_manager_lookup()
+        )
+        for lookup_key in cls._release_survey_person_lookup_keys(assignee_name):
+            manager_name = str(resolved_lookup.get(lookup_key) or '').strip()
+            if manager_name:
+                return manager_name
+
+        return 'Manager Not Found'
+
+    @staticmethod
+    def _escape_release_survey_table_cell(value: Any) -> str:
+        '''
+        Escape a Markdown table cell.
+        '''
+        text = ' '.join(str(value or '').splitlines()).strip()
+        if not text:
+            return ''
+        return text.replace('|', '\\|')
+
+    @staticmethod
+    def _normalize_release_survey_field_values(raw_value: Any) -> List[str]:
+        '''
+        Normalize Jira multi-value fields into a list of display strings.
+        '''
+        if raw_value is None:
+            return []
+
+        values = raw_value if isinstance(raw_value, list) else [raw_value]
+        normalized: List[str] = []
+        for item in values:
+            if item is None:
+                continue
+
+            if isinstance(item, str):
+                parts = [part.strip() for part in item.split(',') if part.strip()]
+                normalized.extend(parts or [item.strip()])
+                continue
+
+            if isinstance(item, Mapping):
+                candidate = item.get('name') or item.get('value')
+                if candidate:
+                    normalized.append(str(candidate).strip())
+                continue
+
+            candidate = getattr(item, 'name', None) or getattr(item, 'value', None)
+            if candidate:
+                normalized.append(str(candidate).strip())
+                continue
+
+            text = str(item).strip()
+            if text:
+                normalized.append(text)
+
+        return [value for value in normalized if value]
+
+    def _release_survey_datetime_sort_value(self, raw_value: Any) -> datetime:
+        '''
+        Parse a Jira timestamp for survey sorting.
+        '''
+        parsed = self.backlog_interpreter.parse_jira_datetime(str(raw_value or ''))
+        if parsed is not None:
+            return parsed
+        return datetime.min.replace(tzinfo=timezone.utc)
+
+    def _sort_release_survey_bucket(
+        self,
+        tickets: List[Dict[str, Any]],
+        *,
+        bucket: str,
+    ) -> List[Dict[str, Any]]:
+        '''
+        Sort survey ticket buckets for readable summaries and exports.
+        '''
+        if bucket == 'done':
+            return sorted(
+                tickets,
+                key=lambda item: (
+                    self._release_survey_datetime_sort_value(
+                        item.get('resolutiondate') or item.get('updated')
+                    ),
+                    str(item.get('key') or ''),
+                ),
+                reverse=True,
+            )
+
+        return sorted(
+            tickets,
+            key=lambda item: (
+                self._release_survey_priority_rank(str(item.get('priority') or '')),
+                -int(item.get('age_days') or 0),
+                str(item.get('key') or ''),
+            ),
+        )
+
     def _query_release_tickets(
         self,
         release: str,
@@ -2022,7 +2841,13 @@ class GanttProjectPlannerAgent(BaseAgent):
             f'fixVersion = "{release}"',
         ]
         if scope_label:
-            jql_parts.append(f'labels = "{scope_label}"')
+            scope_values = normalize_csv_list(scope_label)
+            if scope_values:
+                scope_clauses: List[str] = []
+                for scope_value in scope_values:
+                    scope_clauses.append(f'labels = "{scope_value}"')
+                    scope_clauses.append(f'"product family" = "{scope_value}"')
+                jql_parts.append(f'({" OR ".join(scope_clauses)})')
         jql = ' AND '.join(jql_parts) + ' ORDER BY priority ASC, updated DESC'
 
         log.debug(f'Release ticket query JQL: {jql}')
@@ -2047,11 +2872,20 @@ class GanttProjectPlannerAgent(BaseAgent):
                 'priority': t.get('priority', ''),
                 'issuetype': t.get('issue_type') or t.get('type') or '',
                 'assignee': t.get('assignee', ''),
+                'reporter': t.get('reporter', ''),
                 'fix_versions': t.get('fix_versions') or t.get('fix_version', ''),
                 'components': t.get('components') or t.get('component', ''),
+                'product_family': (
+                    t.get('product_family')
+                    or t.get('customfield_28434')
+                    or t.get('customfield_28382')
+                    or []
+                ),
+                'labels': t.get('labels') or [],
                 'created': t.get('created', ''),
                 'updated': t.get('updated', ''),
                 'resolutiondate': t.get('resolutiondate', ''),
+                'url': t.get('url', ''),
             })
         return normalized
 
@@ -2551,3 +3385,855 @@ class GanttProjectPlannerAgent(BaseAgent):
             lines.append('')
 
         return '\n'.join(lines)
+
+    def _write_release_survey_xlsx(
+        self,
+        report: ReleaseSurveyReport,
+        output_file: str,
+    ) -> str:
+        '''
+        Generate a multi-sheet xlsx workbook for the release survey report.
+        '''
+        wb = Workbook()
+
+        ws_overview = wb.active or wb.create_sheet()
+        ws_overview.title = 'Overview'
+        self._write_release_survey_overview_sheet(ws_overview, report)
+
+        ws_in_progress = wb.create_sheet('In Progress')
+        self._write_release_survey_ticket_sheet(
+            ws_in_progress,
+            self._aggregate_release_survey_tickets(report, 'in_progress_tickets'),
+        )
+
+        ws_blocked = wb.create_sheet('Blocked')
+        self._write_release_survey_ticket_sheet(
+            ws_blocked,
+            self._aggregate_release_survey_tickets(report, 'blocked_tickets'),
+        )
+
+        ws_remaining = wb.create_sheet('Remaining')
+        self._write_release_survey_ticket_sheet(
+            ws_remaining,
+            self._aggregate_release_survey_tickets(report, 'remaining_tickets'),
+        )
+
+        ws_done = wb.create_sheet('Done')
+        self._write_release_survey_ticket_sheet(
+            ws_done,
+            self._aggregate_release_survey_tickets(report, 'done_tickets'),
+        )
+
+        os.makedirs(os.path.dirname(output_file) or '.', exist_ok=True)
+        wb.save(output_file)
+        return output_file
+
+    @staticmethod
+    def _aggregate_release_survey_tickets(
+        report: ReleaseSurveyReport,
+        attribute: str,
+    ) -> List[Dict[str, Any]]:
+        '''
+        Flatten per-release survey ticket buckets into one export list.
+        '''
+        rows: List[Dict[str, Any]] = []
+        for summary in report.release_summaries:
+            rows.extend(list(getattr(summary, attribute, [])))
+        return rows
+
+    def _write_release_survey_overview_sheet(
+        self,
+        ws: Any,
+        report: ReleaseSurveyReport,
+    ) -> None:
+        '''
+        Write the Overview sheet for the release survey workbook.
+        '''
+        headers = [
+            'Release',
+            'Total',
+            'Done',
+            'In Progress',
+            'Remaining',
+            'Blocked',
+            'Stale',
+            'Unassigned',
+            'Completion %',
+        ]
+        for col_idx, header in enumerate(headers, 1):
+            ws.cell(row=1, column=col_idx, value=header)
+
+        for row_idx, summary in enumerate(report.release_summaries, 2):
+            ws.cell(row=row_idx, column=1, value=summary.release)
+            ws.cell(row=row_idx, column=2, value=summary.total_tickets)
+            ws.cell(row=row_idx, column=3, value=summary.done_count)
+            ws.cell(row=row_idx, column=4, value=summary.in_progress_count)
+            ws.cell(row=row_idx, column=5, value=summary.remaining_count)
+            ws.cell(row=row_idx, column=6, value=summary.blocked_count)
+            ws.cell(row=row_idx, column=7, value=summary.stale_count)
+            ws.cell(row=row_idx, column=8, value=summary.unassigned_count)
+            ws.cell(row=row_idx, column=9, value=round(summary.completion_pct, 1))
+
+        total_row = len(report.release_summaries) + 2
+        ws.cell(row=total_row, column=1, value='TOTAL')
+        ws.cell(row=total_row, column=2, value=report.total_tickets)
+        ws.cell(row=total_row, column=3, value=report.done_count)
+        ws.cell(row=total_row, column=4, value=report.in_progress_count)
+        ws.cell(row=total_row, column=5, value=report.remaining_count)
+        ws.cell(row=total_row, column=6, value=report.blocked_count)
+        ws.cell(row=total_row, column=7, value=report.stale_count)
+        ws.cell(row=total_row, column=8, value=report.unassigned_count)
+        ws.cell(row=total_row, column=9, value=round(report.completion_pct, 1))
+
+        _apply_header_style(ws, len(headers))
+        _auto_fit_columns(ws)
+
+    def _write_release_survey_ticket_sheet(
+        self,
+        ws: Any,
+        tickets: List[Dict[str, Any]],
+    ) -> None:
+        '''
+        Write a release survey ticket bucket sheet.
+        '''
+        headers = [
+            'Release',
+            'Key',
+            'Summary',
+            'Status',
+            'Priority',
+            'Issue Type',
+            'Assignee',
+            'Components',
+            'Updated',
+            'Resolved',
+            'Age Days',
+        ]
+        for col_idx, header in enumerate(headers, 1):
+            ws.cell(row=1, column=col_idx, value=header)
+
+        row = 2
+        for ticket in tickets:
+            ws.cell(row=row, column=1, value=ticket.get('release', ''))
+            key = str(ticket.get('key', ''))
+            key_cell = ws.cell(row=row, column=2, value=key)
+            if key:
+                key_cell.hyperlink = str(
+                    ticket.get('url') or f'{JIRA_BASE_URL}/browse/{key}'
+                )
+                key_cell.font = Font(color='0563C1', underline='single')
+            ws.cell(row=row, column=3, value=ticket.get('summary', ''))
+            ws.cell(row=row, column=4, value=ticket.get('status', ''))
+            ws.cell(row=row, column=5, value=ticket.get('priority', ''))
+            ws.cell(row=row, column=6, value=ticket.get('issue_type', ''))
+            ws.cell(row=row, column=7, value=ticket.get('assignee', ''))
+            ws.cell(row=row, column=8, value=ticket.get('component_csv', ''))
+            ws.cell(row=row, column=9, value=ticket.get('updated', ''))
+            ws.cell(row=row, column=10, value=ticket.get('resolutiondate', ''))
+            ws.cell(row=row, column=11, value=ticket.get('age_days', 0))
+            row += 1
+
+        _apply_header_style(ws, len(headers))
+        _apply_status_conditional_formatting(ws, headers)
+        _apply_priority_conditional_formatting(ws, headers)
+        ws.freeze_panes = 'A2'
+        _auto_fit_columns(ws)
+
+    @classmethod
+    def _format_release_survey_confluence_markdown(
+        cls,
+        report: ReleaseSurveyReport,
+    ) -> str:
+        '''
+        Generate a Confluence-oriented survey view with live Jira macros.
+        '''
+        lines = [
+            f'# Release Survey: {report.project_key}',
+            '',
+            f'**Survey ID**: {report.survey_id}',
+            f'**Created**: {report.created_at}',
+            f'**Survey Mode**: {report.survey_mode.replace("_", " ").title()}',
+            f'**Releases Surveyed**: {", ".join(report.releases_surveyed)}',
+        ]
+        if report.scope_label:
+            lines.append(f'**Scope Label**: {report.scope_label}')
+        lines.extend([
+            '',
+            '## Snapshot Totals',
+            '',
+            '- Counts in this section are a point-in-time snapshot.',
+            '- Jira macro sections below are live Jira views and may drift after publication.',
+            f'- Total tickets: {report.total_tickets}',
+            f'- Done: {report.done_count} ({report.completion_pct:.1f}%)',
+            f'- In progress: {report.in_progress_count}',
+            f'- Remaining: {report.remaining_count}',
+            f'- Blocked: {report.blocked_count}',
+            f'- Stale: {report.stale_count}',
+            f'- Unassigned: {report.unassigned_count}',
+            '',
+        ])
+
+        if not report.release_summaries:
+            lines.append('No releases matched this survey.')
+            return '\n'.join(lines)
+
+        for summary in report.release_summaries:
+            lines.extend([
+                f'## {summary.release}',
+                '',
+                f'- Snapshot total tickets: {summary.total_tickets}',
+                f'- Snapshot done: {summary.done_count} ({summary.completion_pct:.1f}%)',
+                f'- Snapshot in progress: {summary.in_progress_count}',
+                f'- Snapshot remaining: {summary.remaining_count}',
+                f'- Snapshot blocked: {summary.blocked_count}',
+                f'- Snapshot stale: {summary.stale_count}',
+                f'- Snapshot unassigned: {summary.unassigned_count}',
+            ])
+
+            if summary.status_breakdown:
+                status_line = ', '.join(
+                    f'{status}={count}'
+                    for status, count in sorted(summary.status_breakdown.items())
+                )
+                lines.append(f'- Snapshot status mix: {status_line}')
+
+            lines.append('')
+
+            cls._append_release_survey_confluence_jira_macro(
+                lines,
+                'In Progress',
+                project_key=report.project_key,
+                release=summary.release,
+                scope_label=report.scope_label,
+                survey_mode=report.survey_mode,
+                statuses=cls._release_survey_ticket_statuses(
+                    summary.in_progress_tickets
+                ),
+                snapshot_count=len(summary.in_progress_tickets),
+            )
+            cls._append_release_survey_ticket_lines(
+                lines,
+                'Blocked',
+                summary.blocked_tickets,
+                limit=25,
+            )
+            cls._append_release_survey_confluence_jira_macro(
+                lines,
+                'Remaining',
+                project_key=report.project_key,
+                release=summary.release,
+                scope_label=report.scope_label,
+                survey_mode=report.survey_mode,
+                statuses=cls._release_survey_ticket_statuses(
+                    summary.remaining_tickets
+                ),
+                snapshot_count=len(summary.remaining_tickets),
+            )
+            cls._append_release_survey_ticket_lines(
+                lines,
+                'Done',
+                summary.done_tickets,
+                limit=20,
+            )
+
+            family_breakdowns = dict(summary.family_breakdowns or {})
+            family_epic_analysis = dict(summary.family_epic_analysis or {})
+            if family_breakdowns:
+                lines.extend([
+                    '### Product Family Breakouts',
+                    '',
+                    '- The Jira tables in this section are live views filtered by product family.',
+                    '',
+                ])
+                for family_name, family_view in family_breakdowns.items():
+                    cls._append_release_survey_confluence_jira_macro(
+                        lines,
+                        f'{family_name} In Progress',
+                        project_key=report.project_key,
+                        release=summary.release,
+                        scope_label=report.scope_label,
+                        survey_mode=report.survey_mode,
+                        family_name=family_name,
+                        statuses=cls._release_survey_ticket_statuses(
+                            list(family_view.get('in_progress_tickets') or [])
+                        ),
+                        snapshot_count=len(
+                            list(family_view.get('in_progress_tickets') or [])
+                        ),
+                        heading_level='####',
+                    )
+                    cls._append_release_survey_confluence_jira_macro(
+                        lines,
+                        f'{family_name} Remaining',
+                        project_key=report.project_key,
+                        release=summary.release,
+                        scope_label=report.scope_label,
+                        survey_mode=report.survey_mode,
+                        family_name=family_name,
+                        statuses=cls._release_survey_ticket_statuses(
+                            list(family_view.get('remaining_tickets') or [])
+                        ),
+                        snapshot_count=len(
+                            list(family_view.get('remaining_tickets') or [])
+                        ),
+                        heading_level='####',
+                    )
+                    cls._append_release_survey_confluence_jira_macro(
+                        lines,
+                        f'{family_name} Epics',
+                        project_key=report.project_key,
+                        release=summary.release,
+                        scope_label=report.scope_label,
+                        survey_mode=report.survey_mode,
+                        family_name=family_name,
+                        issue_type='Epic',
+                        snapshot_count=len(list(family_view.get('epics') or [])),
+                        heading_level='####',
+                    )
+                    cls._append_release_survey_epic_analysis(
+                        lines,
+                        family_name,
+                        list(family_epic_analysis.get(family_name) or []),
+                        limit=40,
+                        heading_level='####',
+                    )
+
+        return '\n'.join(lines)
+
+    @staticmethod
+    def _release_survey_jql_literal(value: Any) -> str:
+        '''
+        Escape a string for a quoted JQL literal.
+        '''
+        return str(value or '').replace('\\', '\\\\').replace('"', '\\"')
+
+    @classmethod
+    def _release_survey_scope_clause(cls, scope_label: Optional[str]) -> str:
+        '''
+        Build the release-survey scope clause used for Jira macro queries.
+        '''
+        scope_values = normalize_csv_list(scope_label)
+        if not scope_values:
+            return ''
+
+        scope_clauses: List[str] = []
+        for scope_value in scope_values:
+            escaped_scope = cls._release_survey_jql_literal(scope_value)
+            scope_clauses.append(f'labels = "{escaped_scope}"')
+            scope_clauses.append(f'"product family" = "{escaped_scope}"')
+        return f'({" OR ".join(scope_clauses)})'
+
+    @staticmethod
+    def _release_survey_ticket_statuses(
+        tickets: List[Dict[str, Any]],
+    ) -> List[str]:
+        '''
+        Collect the distinct Jira statuses present in one ticket bucket.
+        '''
+        seen: Dict[str, str] = {}
+        for ticket in tickets:
+            status = str(ticket.get('status') or '').strip()
+            if status:
+                seen.setdefault(status.casefold(), status)
+        return list(seen.values())
+
+    @classmethod
+    def _build_release_survey_jql(
+        cls,
+        *,
+        project_key: str,
+        release: str,
+        scope_label: Optional[str],
+        survey_mode: str,
+        family_name: Optional[str] = None,
+        statuses: Optional[List[str]] = None,
+        issue_type: Optional[str] = None,
+    ) -> str:
+        '''
+        Build a Jira query that approximates one survey section dynamically.
+        '''
+        clauses = [
+            f'project = {project_key}',
+            f'fixVersion = "{cls._release_survey_jql_literal(release)}"',
+        ]
+
+        scope_clause = cls._release_survey_scope_clause(scope_label)
+        if scope_clause:
+            clauses.append(scope_clause)
+
+        if survey_mode == cls.RELEASE_SURVEY_MODE_BUG:
+            clauses.append('issuetype = Bug')
+        else:
+            clauses.append('issuetype != Bug')
+
+        if family_name:
+            clauses.append(
+                f'"product family" = "{cls._release_survey_jql_literal(family_name)}"'
+            )
+
+        if issue_type:
+            clauses.append(
+                f'issuetype = "{cls._release_survey_jql_literal(issue_type)}"'
+            )
+
+        if statuses:
+            status_literals = ', '.join(
+                f'"{cls._release_survey_jql_literal(status)}"'
+                for status in statuses
+                if str(status or '').strip()
+            )
+            if status_literals:
+                clauses.append(f'status in ({status_literals})')
+
+        return ' AND '.join(clauses) + ' ORDER BY priority ASC, updated DESC'
+
+    @classmethod
+    def _build_release_survey_jira_macro_block(
+        cls,
+        *,
+        jql: str,
+        columns: Optional[List[str]] = None,
+        column_ids: Optional[List[str]] = None,
+        maximum_issues: int = 200,
+    ) -> str:
+        '''
+        Build a Confluence Jira Issues macro block for one live section.
+        '''
+        macro_columns = columns or [
+            'key',
+            'summary',
+            'type',
+            'status',
+            'assignee',
+            'priority',
+            'updated',
+        ]
+        macro_column_ids = column_ids or [
+            'issuekey',
+            'summary',
+            'issuetype',
+            'status',
+            'assignee',
+            'priority',
+            'updated',
+        ]
+        column_csv = ','.join(macro_columns)
+        column_id_csv = ','.join(macro_column_ids)
+        escaped_jql = escape(jql)
+        escaped_server = escape(CONFLUENCE_JIRA_SERVER)
+        escaped_server_id = escape(CONFLUENCE_JIRA_SERVER_ID)
+
+        return '\n'.join([
+            '<div>',
+            '<ac:structured-macro ac:name="jira" ac:schema-version="1" data-layout="full-width">',
+            f'<ac:parameter ac:name="server">{escaped_server}</ac:parameter>',
+            f'<ac:parameter ac:name="columns">{column_csv}</ac:parameter>',
+            f'<ac:parameter ac:name="columnIds">{column_id_csv}</ac:parameter>',
+            f'<ac:parameter ac:name="maximumIssues">{maximum_issues}</ac:parameter>',
+            f'<ac:parameter ac:name="jqlQuery">{escaped_jql}</ac:parameter>',
+            f'<ac:parameter ac:name="serverId">{escaped_server_id}</ac:parameter>',
+            '</ac:structured-macro>',
+            '</div>',
+        ])
+
+    @classmethod
+    def _append_release_survey_confluence_jira_macro(
+        cls,
+        lines: List[str],
+        heading: str,
+        *,
+        project_key: str,
+        release: str,
+        scope_label: Optional[str],
+        survey_mode: str,
+        snapshot_count: int,
+        family_name: Optional[str] = None,
+        statuses: Optional[List[str]] = None,
+        issue_type: Optional[str] = None,
+        heading_level: str = '###',
+    ) -> None:
+        '''
+        Append a live Jira macro section for the Confluence survey page.
+        '''
+        lines.append(f'{heading_level} {heading}')
+        if snapshot_count <= 0:
+            lines.extend([
+                'Snapshot count at publish time: 0.',
+                '',
+                '- None',
+                '',
+            ])
+            return
+
+        lines.extend([
+            f'Snapshot count at publish time: {snapshot_count}. '
+            'This Jira table stays live after publication.',
+            '',
+            cls._build_release_survey_jira_macro_block(
+                jql=cls._build_release_survey_jql(
+                    project_key=project_key,
+                    release=release,
+                    scope_label=scope_label,
+                    survey_mode=survey_mode,
+                    family_name=family_name,
+                    statuses=statuses,
+                    issue_type=issue_type,
+                ),
+            ),
+            '',
+        ])
+
+    @staticmethod
+    def _format_release_survey_summary(
+        report: ReleaseSurveyReport,
+    ) -> str:
+        '''
+        Generate a markdown summary for a release execution survey.
+        '''
+        lines = [
+            f'# Release Survey: {report.project_key}',
+            '',
+            f'**Survey ID**: {report.survey_id}',
+            f'**Created**: {report.created_at}',
+            f'**Survey Mode**: {report.survey_mode.replace("_", " ").title()}',
+            f'**Releases Surveyed**: {", ".join(report.releases_surveyed)}',
+        ]
+        if report.scope_label:
+            lines.append(f'**Scope Label**: {report.scope_label}')
+        lines.extend([
+            '',
+            '## Overall',
+            '',
+            f'- Total tickets: {report.total_tickets}',
+            f'- Done: {report.done_count} ({report.completion_pct:.1f}%)',
+            f'- In progress: {report.in_progress_count}',
+            f'- Remaining: {report.remaining_count}',
+            f'- Blocked: {report.blocked_count}',
+            f'- Stale: {report.stale_count}',
+            f'- Unassigned: {report.unassigned_count}',
+            '',
+        ])
+
+        if not report.release_summaries:
+            lines.append('No releases matched this survey.')
+            return '\n'.join(lines)
+
+        for summary in report.release_summaries:
+            lines.extend([
+                f'## {summary.release}',
+                '',
+                f'- Total tickets: {summary.total_tickets}',
+                f'- Done: {summary.done_count} ({summary.completion_pct:.1f}%)',
+                f'- In progress: {summary.in_progress_count}',
+                f'- Remaining: {summary.remaining_count}',
+                f'- Blocked: {summary.blocked_count}',
+                f'- Stale: {summary.stale_count}',
+                f'- Unassigned: {summary.unassigned_count}',
+            ])
+
+            if summary.status_breakdown:
+                status_line = ', '.join(
+                    f'{status}={count}'
+                    for status, count in sorted(summary.status_breakdown.items())
+                )
+                lines.append(f'- Status mix: {status_line}')
+
+            if summary.priority_breakdown:
+                priority_line = ', '.join(
+                    f'{priority}={count}'
+                    for priority, count in sorted(summary.priority_breakdown.items())
+                )
+                lines.append(f'- Priority mix: {priority_line}')
+
+            lines.append('')
+            GanttProjectPlannerAgent._append_release_survey_ticket_table(
+                lines,
+                'In Progress',
+                summary.in_progress_tickets,
+                limit=25,
+                sort_by_priority=True,
+            )
+            GanttProjectPlannerAgent._append_release_survey_ticket_lines(
+                lines,
+                'Blocked',
+                summary.blocked_tickets,
+                limit=25,
+            )
+            GanttProjectPlannerAgent._append_release_survey_ticket_table(
+                lines,
+                'Remaining',
+                summary.remaining_tickets,
+                limit=20,
+                sort_by_priority=True,
+            )
+            GanttProjectPlannerAgent._append_release_survey_ticket_lines(
+                lines,
+                'Done',
+                summary.done_tickets,
+                limit=20,
+            )
+
+            family_breakdowns = dict(summary.family_breakdowns or {})
+            family_epic_analysis = dict(summary.family_epic_analysis or {})
+            if family_breakdowns:
+                lines.extend([
+                    '### Product Family Breakouts',
+                    '',
+                    '- Tickets can appear in more than one family table when Jira lists multiple product families.',
+                    '',
+                ])
+                for family_name, family_view in family_breakdowns.items():
+                    GanttProjectPlannerAgent._append_release_survey_ticket_table(
+                        lines,
+                        f'{family_name} In Progress',
+                        list(family_view.get('in_progress_tickets') or []),
+                        limit=25,
+                        sort_by_priority=True,
+                        heading_level='####',
+                    )
+                    GanttProjectPlannerAgent._append_release_survey_ticket_table(
+                        lines,
+                        f'{family_name} Remaining',
+                        list(family_view.get('remaining_tickets') or []),
+                        limit=25,
+                        sort_by_priority=True,
+                        heading_level='####',
+                    )
+                    GanttProjectPlannerAgent._append_release_survey_ticket_table(
+                        lines,
+                        f'{family_name} Epics',
+                        list(family_view.get('epics') or []),
+                        limit=25,
+                        sort_by_priority=True,
+                        heading_level='####',
+                    )
+                    GanttProjectPlannerAgent._append_release_survey_epic_analysis(
+                        lines,
+                        family_name,
+                        list(family_epic_analysis.get(family_name) or []),
+                        limit=40,
+                        heading_level='####',
+                    )
+
+        return '\n'.join(lines)
+
+    @staticmethod
+    def _append_release_survey_ticket_lines(
+        lines: List[str],
+        heading: str,
+        tickets: List[Dict[str, Any]],
+        *,
+        limit: int,
+        sort_by_priority: bool = False,
+        heading_level: str = '###',
+    ) -> None:
+        '''
+        Append one survey ticket bucket to the markdown summary.
+        '''
+        lines.append(f'{heading_level} {heading} ({len(tickets)})')
+        if not tickets:
+            lines.extend(['- None', ''])
+            return
+
+        ordered_tickets = list(tickets)
+        if sort_by_priority:
+            ordered_tickets = sorted(
+                ordered_tickets,
+                key=lambda item: (
+                    GanttProjectPlannerAgent._release_survey_priority_rank(
+                        str(item.get('priority') or '')
+                    ),
+                    -int(item.get('age_days') or 0),
+                    str(item.get('key') or ''),
+                ),
+            )
+
+        for ticket in ordered_tickets[:limit]:
+            key = str(ticket.get('key') or '')
+            ticket_url = str(ticket.get('url') or f'{JIRA_BASE_URL}/browse/{key}')
+            key_text = f'[{key}]({ticket_url})' if key else ticket_url
+            summary = str(ticket.get('summary') or '')
+            status = str(ticket.get('status') or '')
+            assignee = str(ticket.get('assignee') or 'Unassigned')
+            priority = str(ticket.get('priority') or 'Unspecified')
+            updated = str(ticket.get('updated') or '')[:10]
+            lines.append(
+                f'- {key_text}: {summary} '
+                f'({status}; {assignee}; {priority}; updated {updated})'
+            )
+
+        if len(ordered_tickets) > limit:
+            lines.append(f'- ...and {len(ordered_tickets) - limit} more')
+
+        lines.append('')
+
+    @classmethod
+    def _append_release_survey_ticket_table(
+        cls,
+        lines: List[str],
+        heading: str,
+        tickets: List[Dict[str, Any]],
+        *,
+        limit: int,
+        sort_by_priority: bool = False,
+        heading_level: str = '###',
+    ) -> None:
+        '''
+        Append one survey ticket bucket to the markdown summary as a table.
+        '''
+        lines.append(f'{heading_level} {heading} ({len(tickets)})')
+        if not tickets:
+            lines.extend(['- None', ''])
+            return
+
+        ordered_tickets = list(tickets)
+        if sort_by_priority:
+            ordered_tickets = sorted(
+                ordered_tickets,
+                key=lambda item: (
+                    cls._release_survey_priority_rank(
+                        str(item.get('priority') or '')
+                    ),
+                    -int(item.get('age_days') or 0),
+                    str(item.get('key') or ''),
+                ),
+            )
+
+        lines.extend([
+            '| Ticket | Summary | Product Family | Status | Assignee | Manager | Priority | Updated |',
+            '| --- | --- | --- | --- | --- | --- | --- | --- |',
+        ])
+
+        for ticket in ordered_tickets[:limit]:
+            key = str(ticket.get('key') or '')
+            ticket_url = str(ticket.get('url') or f'{JIRA_BASE_URL}/browse/{key}')
+            key_text = f'[{key}]({ticket_url})' if key else ticket_url
+            summary = cls._escape_release_survey_table_cell(ticket.get('summary'))
+            product_family = cls._escape_release_survey_table_cell(
+                ticket.get('product_family_csv') or 'Unspecified'
+            )
+            status = cls._escape_release_survey_table_cell(ticket.get('status'))
+            assignee = str(ticket.get('assignee') or 'Unassigned')
+            assignee_text = cls._escape_release_survey_table_cell(assignee)
+            manager_name = cls._lookup_release_survey_manager_name(assignee)
+            manager_text = cls._escape_release_survey_table_cell(manager_name)
+            priority = cls._escape_release_survey_table_cell(
+                ticket.get('priority') or 'Unspecified'
+            )
+            updated = cls._escape_release_survey_table_cell(
+                str(ticket.get('updated') or '')[:10]
+            )
+            lines.append(
+                f'| {key_text} | {summary} | {product_family} | {status} | '
+                f'{assignee_text} | {manager_text} | {priority} | {updated} |'
+            )
+
+        if len(ordered_tickets) > limit:
+            lines.append(f'- ...and {len(ordered_tickets) - limit} more')
+
+        lines.append('')
+
+    @classmethod
+    def _append_release_survey_epic_analysis(
+        cls,
+        lines: List[str],
+        family_name: str,
+        analysis_entries: List[Dict[str, Any]],
+        *,
+        limit: int,
+        heading_level: str = '###',
+    ) -> None:
+        '''
+        Append open-child analysis for unfinished epics in one product family.
+        '''
+        lines.append(
+            f'{heading_level} {family_name} Open Epic Child Analysis '
+            f'({len(analysis_entries)})'
+        )
+        if not analysis_entries:
+            lines.extend(['- None', ''])
+            return
+
+        for entry in analysis_entries:
+            epic = dict(entry.get('epic') or {})
+            epic_key = str(epic.get('key') or '')
+            epic_url = str(epic.get('url') or f'{JIRA_BASE_URL}/browse/{epic_key}')
+            epic_key_text = f'[{epic_key}]({epic_url})' if epic_key else epic_url
+            epic_summary = cls._escape_release_survey_table_cell(epic.get('summary'))
+            epic_status = cls._escape_release_survey_table_cell(epic.get('status'))
+            lines.append(f'##### {epic_key_text}: {epic_summary}')
+            lines.append(
+                f'- Epic status: {epic_status or "Unknown"}; '
+                f'open descendants: {int(entry.get("open_child_count") or 0)} of '
+                f'{int(entry.get("total_descendant_count") or 0)} '
+                f'non-bug descendants'
+            )
+
+            open_by_type = dict(entry.get('open_by_type') or {})
+            if open_by_type:
+                type_line = ', '.join(
+                    f'{issue_type}={count}'
+                    for issue_type, count in sorted(open_by_type.items())
+                )
+                lines.append(f'- Open type mix: {type_line}')
+
+            error_text = str(entry.get('error') or '').strip()
+            if error_text:
+                lines.append(f'- Hierarchy lookup failed: {error_text}')
+                lines.append('')
+                continue
+
+            open_children = list(entry.get('open_children') or [])
+            if not open_children:
+                lines.extend([
+                    '- No open non-bug descendants found. This epic may be ready to close.',
+                    '',
+                ])
+                continue
+
+            lines.append('')
+            lines.extend([
+                '| Depth | Ticket | Type | Summary | Status | Assignee | Manager | Priority | Fix Versions |',
+                '| --- | --- | --- | --- | --- | --- | --- | --- | --- |',
+            ])
+            for child in open_children[:limit]:
+                child_key = str(child.get('key') or '')
+                child_url = str(child.get('url') or f'{JIRA_BASE_URL}/browse/{child_key}')
+                child_key_text = (
+                    f'[{child_key}]({child_url})' if child_key else child_url
+                )
+                child_type = cls._escape_release_survey_table_cell(
+                    child.get('issue_type') or 'Unknown'
+                )
+                child_summary = cls._escape_release_survey_table_cell(
+                    child.get('summary') or ''
+                )
+                child_status = cls._escape_release_survey_table_cell(
+                    child.get('status') or ''
+                )
+                child_assignee = str(child.get('assignee') or 'Unassigned')
+                child_assignee_text = cls._escape_release_survey_table_cell(
+                    child_assignee
+                )
+                child_manager = cls._escape_release_survey_table_cell(
+                    cls._lookup_release_survey_manager_name(child_assignee)
+                )
+                child_priority = cls._escape_release_survey_table_cell(
+                    child.get('priority') or 'Unspecified'
+                )
+                child_fix_versions = cls._escape_release_survey_table_cell(
+                    child.get('fix_version_csv') or 'Unspecified'
+                )
+                lines.append(
+                    f'| {int(child.get("depth") or 0)} | {child_key_text} | '
+                    f'{child_type} | {child_summary} | {child_status} | '
+                    f'{child_assignee_text} | {child_manager} | {child_priority} | '
+                    f'{child_fix_versions} |'
+                )
+
+            if len(open_children) > limit:
+                lines.append(
+                    f'- ...and {len(open_children) - limit} more open descendants'
+                )
+
+            lines.append('')

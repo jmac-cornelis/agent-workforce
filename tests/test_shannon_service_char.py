@@ -162,6 +162,67 @@ def test_process_gantt_message_posts_snapshot_reply(tmp_path, monkeypatch):
     assert card['body'][0]['text'] == 'Gantt Planning Snapshot — STL'
 
 
+def test_process_gantt_release_survey_posts_reply(tmp_path, monkeypatch):
+    service, poster = _service(tmp_path)
+    gantt_registration = service.registry.get_agent('gantt')
+    assert gantt_registration is not None
+
+    def _fake_call(registration, method, path, params=None, json_body=None):
+        assert registration.agent_id == 'gantt'
+        assert method == 'POST'
+        assert path == '/v1/release-survey/run'
+        assert params is None
+        assert json_body == {
+            'project_key': 'STL',
+            'releases': '12.2.0.x',
+            'scope_label': 'CN6000',
+        }
+        return {
+            'ok': True,
+            'data': {
+                'survey': {
+                    'project_key': 'STL',
+                    'created_at': '2026-03-25T12:00:00+00:00',
+                    'releases_surveyed': ['12.2.0.x'],
+                    'total_tickets': 10,
+                    'done_count': 4,
+                    'in_progress_count': 3,
+                    'remaining_count': 2,
+                    'blocked_count': 1,
+                    'release_summaries': [
+                        {
+                            'release': '12.2.0.x',
+                            'done_count': 4,
+                            'in_progress_count': 3,
+                            'remaining_count': 2,
+                            'blocked_count': 1,
+                        }
+                    ],
+                }
+            },
+        }
+
+    monkeypatch.setattr(service, '_call_agent_api', _fake_call)
+
+    activity = _agent_message_activity(
+        'agent-gantt',
+        '<at>Shannon</at> /release-survey project_key STL releases 12.2.0.x scope_label CN6000',
+    )
+    activity['channelData']['team']['id'] = gantt_registration.team_id
+
+    result = service.process_teams_activity(activity)
+
+    assert result['ok'] is True
+    assert result['agent_id'] == 'gantt'
+    assert result['command'] == '/release-survey'
+    assert poster.sent[-1]['kind'] == 'reply'
+    assert 'STL: 4 done, 3 in progress, 2 remaining, 1 blocked' in (
+        poster.sent[-1]['activity']['text']
+    )
+    card = poster.sent[-1]['activity']['attachments'][0]['content']
+    assert card['body'][0]['text'] == 'Gantt Release Survey — STL'
+
+
 def test_process_drucker_issue_check_posts_reply(tmp_path, monkeypatch):
     service, poster = _service(tmp_path)
     drucker_registration = service.registry.get_agent('drucker')

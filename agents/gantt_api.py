@@ -14,18 +14,21 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from agents.gantt_agent import GanttProjectPlannerAgent
-from agents.gantt_models import PlanningRequest, ReleaseMonitorRequest
+from agents.gantt_models import PlanningRequest, ReleaseMonitorRequest, ReleaseSurveyRequest
 from agents.pm_runtime import normalize_csv_list
 from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+from state.gantt_release_survey_store import GanttReleaseSurveyStore
 from state.gantt_snapshot_store import GanttSnapshotStore
 
 log = logging.getLogger(os.path.basename(sys.argv[0]))
 
 snapshot_store = GanttSnapshotStore()
 release_monitor_store = GanttReleaseMonitorStore()
+release_survey_store = GanttReleaseSurveyStore()
 
 _planning_run_count = 0
 _release_monitor_run_count = 0
+_release_survey_run_count = 0
 _last_run_at = ''
 
 
@@ -57,6 +60,7 @@ class GanttPollerTickRequest(BaseModel):
     project_key: str
     run_planning: bool = True
     run_release_monitor: bool = False
+    run_release_survey: bool = False
     planning_horizon_days: int = 90
     limit: int = 200
     include_done: bool = False
@@ -71,9 +75,20 @@ class GanttPollerTickRequest(BaseModel):
     include_readiness: bool = True
     compare_to_previous: bool = True
     output_file: Optional[str] = None
+    survey_output_file: Optional[str] = None
+    survey_mode: str = 'feature_dev'
     persist: bool = True
     notify_shannon: bool = False
     shannon_base_url: Optional[str] = None
+
+
+class ReleaseSurveyRunRequest(BaseModel):
+    project_key: str = 'STL'
+    releases: Optional[List[str] | str] = None
+    scope_label: Optional[str] = None
+    survey_mode: str = 'feature_dev'
+    output_file: Optional[str] = None
+    persist: bool = True
 
 
 def create_app() -> FastAPI:
@@ -87,18 +102,26 @@ def create_app() -> FastAPI:
     def status_stats() -> Dict[str, Any]:
         snapshots = snapshot_store.list_snapshots(limit=200)
         reports = release_monitor_store.list_reports(limit=200)
+        surveys = release_survey_store.list_surveys(limit=200)
         return {
             'ok': True,
             'data': {
                 'planning_snapshots_generated': len(snapshots),
                 'release_reports_generated': len(reports),
-                'runs_this_session': _planning_run_count + _release_monitor_run_count,
+                'release_surveys_generated': len(surveys),
+                'runs_this_session': (
+                    _planning_run_count
+                    + _release_monitor_run_count
+                    + _release_survey_run_count
+                ),
             },
         }
 
     @app.get('/v1/status/load')
     def status_load() -> Dict[str, Any]:
-        run_count = _planning_run_count + _release_monitor_run_count
+        run_count = (
+            _planning_run_count + _release_monitor_run_count + _release_survey_run_count
+        )
         state = 'idle' if run_count == 0 else 'working'
         return {
             'ok': True,
@@ -106,6 +129,7 @@ def create_app() -> FastAPI:
                 'state': state,
                 'planning_runs_this_session': _planning_run_count,
                 'release_runs_this_session': _release_monitor_run_count,
+                'release_surveys_this_session': _release_survey_run_count,
                 'last_run_at': _last_run_at or 'none',
             },
         }
@@ -115,6 +139,7 @@ def create_app() -> FastAPI:
         today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
         snapshots = snapshot_store.list_snapshots(limit=200)
         reports = release_monitor_store.list_reports(limit=200)
+        surveys = release_survey_store.list_surveys(limit=200)
         today_snapshots = [
             item for item in snapshots
             if str(item.get('created_at') or '').startswith(today)
@@ -123,11 +148,16 @@ def create_app() -> FastAPI:
             item for item in reports
             if str(item.get('created_at') or '').startswith(today)
         ]
+        today_surveys = [
+            item for item in surveys
+            if str(item.get('created_at') or '').startswith(today)
+        ]
         return {
             'ok': True,
             'data': {
                 'planning_snapshots_today': len(today_snapshots),
                 'release_reports_today': len(today_reports),
+                'release_surveys_today': len(today_surveys),
                 'last_run_at': _last_run_at or 'none',
             },
         }
@@ -142,7 +172,8 @@ def create_app() -> FastAPI:
                 'token_usage_cumulative': 0,
                 'notes': (
                     'Gantt is deterministic-first. Planning snapshots and release monitoring '
-                    'are deterministic; roadmap gap analysis may use an LLM when enabled.'
+                    'are deterministic; roadmap gap analysis may use an LLM when enabled. '
+                    'Release surveys are also deterministic.'
                 ),
             },
         }
@@ -169,6 +200,14 @@ def create_app() -> FastAPI:
                 'created_at': item.get('created_at', ''),
             })
 
+        for item in release_survey_store.list_surveys(limit=limit):
+            decisions.append({
+                'record_id': item.get('survey_id', ''),
+                'record_type': 'release_survey',
+                'project_key': item.get('project_key', ''),
+                'created_at': item.get('created_at', ''),
+            })
+
         decisions.sort(
             key=lambda item: str(item.get('created_at') or ''),
             reverse=True,
@@ -180,6 +219,7 @@ def create_app() -> FastAPI:
         for loader_name, loader in (
             ('planning_snapshot', snapshot_store.get_snapshot),
             ('release_monitor', release_monitor_store.get_report),
+            ('release_survey', release_survey_store.get_survey),
         ):
             result = loader(record_id)
             if result is not None:
@@ -284,15 +324,49 @@ def create_app() -> FastAPI:
         _last_run_at = datetime.now(timezone.utc).isoformat()
         return {'ok': True, 'data': result}
 
+    @app.post('/v1/release-survey/run')
+    def release_survey_run(body: ReleaseSurveyRunRequest) -> Dict[str, Any]:
+        global _release_survey_run_count, _last_run_at
+
+        agent = GanttProjectPlannerAgent(project_key=body.project_key)
+        request = ReleaseSurveyRequest(
+            project_key=body.project_key,
+            releases=normalize_csv_list(body.releases) or None,
+            scope_label=body.scope_label,
+            survey_mode=body.survey_mode,
+            output_file=body.output_file or f'{body.project_key}_release_survey.xlsx',
+        )
+
+        try:
+            survey = agent.create_release_survey(request)
+        except Exception as e:
+            log.error(f'Gantt release survey failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+        result: Dict[str, Any] = {
+            'survey': survey.to_dict(),
+        }
+        if body.persist:
+            result['stored'] = release_survey_store.save_survey(
+                survey,
+                summary_markdown=survey.summary_markdown,
+            )
+
+        _release_survey_run_count += 1
+        _last_run_at = datetime.now(timezone.utc).isoformat()
+        return {'ok': True, 'data': result}
+
     @app.post('/v1/poller/tick')
     def poller_tick(body: GanttPollerTickRequest) -> Dict[str, Any]:
-        global _planning_run_count, _release_monitor_run_count, _last_run_at
+        global _planning_run_count, _release_monitor_run_count
+        global _release_survey_run_count, _last_run_at
 
         agent = GanttProjectPlannerAgent(project_key=body.project_key)
         result = agent.tick({
             'project_key': body.project_key,
             'run_planning': body.run_planning,
             'run_release_monitor': body.run_release_monitor,
+            'run_release_survey': body.run_release_survey,
             'planning_horizon_days': body.planning_horizon_days,
             'limit': body.limit,
             'include_done': body.include_done,
@@ -307,6 +381,8 @@ def create_app() -> FastAPI:
             'include_readiness': body.include_readiness,
             'compare_to_previous': body.compare_to_previous,
             'output_file': body.output_file,
+            'survey_output_file': body.survey_output_file,
+            'survey_mode': body.survey_mode,
             'persist': body.persist,
             'notify_shannon': body.notify_shannon,
             'shannon_base_url': body.shannon_base_url,
@@ -317,6 +393,8 @@ def create_app() -> FastAPI:
                 _planning_run_count += 1
             elif task.get('task_type') == 'release_monitor':
                 _release_monitor_run_count += 1
+            elif task.get('task_type') == 'release_survey':
+                _release_survey_run_count += 1
 
         _last_run_at = datetime.now(timezone.utc).isoformat()
         return {'ok': result.get('ok', False), 'data': result}
@@ -339,6 +417,26 @@ def create_app() -> FastAPI:
         return {
             'ok': True,
             'data': release_monitor_store.list_reports(project_key=project_key, limit=limit),
+        }
+
+    @app.get('/v1/release-survey/report/{survey_id}')
+    def release_survey_get(
+        survey_id: str,
+        project_key: Optional[str] = Query(default=None),
+    ) -> Dict[str, Any]:
+        result = release_survey_store.get_survey(survey_id, project_key=project_key)
+        if result is None:
+            raise HTTPException(status_code=404, detail=f'Survey {survey_id} not found')
+        return {'ok': True, 'data': result}
+
+    @app.get('/v1/release-survey/reports')
+    def release_survey_list(
+        project_key: Optional[str] = Query(default=None),
+        limit: int = Query(default=20, ge=1, le=100),
+    ) -> Dict[str, Any]:
+        return {
+            'ok': True,
+            'data': release_survey_store.list_surveys(project_key=project_key, limit=limit),
         }
 
     return app

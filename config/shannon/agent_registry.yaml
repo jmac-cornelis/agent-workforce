@@ -96,6 +96,10 @@ agents:
         description: Create a release monitor report
         api_method: POST
         api_path: /v1/release-monitor/run
+      - command: /release-survey
+        description: Create a release execution survey
+        api_method: POST
+        api_path: /v1/release-survey/run
       - command: /release-report
         description: Get a stored release monitor report
         api_method: GET
@@ -104,4 +108,12 @@ agents:
         description: List stored release monitor reports
         api_method: GET
         api_path: /v1/release-monitor/reports
+      - command: /release-survey-report
+        description: Get a stored release survey
+        api_method: GET
+        api_path: /v1/release-survey/report
+      - command: /release-survey-reports
+        description: List stored release surveys
+        api_method: GET
+        api_path: /v1/release-survey/reports
     timeout_seconds: 30

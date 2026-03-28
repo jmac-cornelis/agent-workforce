@@ -214,6 +214,44 @@ def build_gantt_release_monitor_card(payload: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
+def build_gantt_release_survey_card(payload: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a Gantt release-survey response.
+    '''
+    survey = payload.get('survey', payload)
+    releases = survey.get('releases_surveyed', [])
+    facts = {
+        'Project': survey.get('project_key', ''),
+        'Mode': str(survey.get('survey_mode', 'feature_dev')).replace('_', ' ').title(),
+        'Releases': len(releases),
+        'Total': survey.get('total_tickets', 0),
+        'Done': survey.get('done_count', 0),
+        'In Progress': survey.get('in_progress_count', 0),
+        'Remaining': survey.get('remaining_count', 0),
+        'Blocked': survey.get('blocked_count', 0),
+    }
+
+    body_lines: list[str] = []
+    for summary in (survey.get('release_summaries') or [])[:5]:
+        body_lines.append(
+            f'• {summary.get("release", "")}: '
+            f'{summary.get("done_count", 0)} done, '
+            f'{summary.get("in_progress_count", 0)} in progress, '
+            f'{summary.get("remaining_count", 0)} remaining, '
+            f'{summary.get("blocked_count", 0)} blocked'
+        )
+
+    if not body_lines:
+        body_lines.append('No release-survey details were returned.')
+
+    return build_fact_card(
+        title=f'Gantt Release Survey — {survey.get("project_key", "")}',
+        subtitle=str(survey.get('created_at', '') or '').strip() or None,
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
 def build_bug_activity_card(data: Dict[str, Any]) -> Dict[str, Any]:
     project = data.get('project', '')
     target_date = data.get('date', '')

@@ -12,6 +12,7 @@ from agents.gantt_models import (
     PlanningRequest,
     PlanningSnapshot,
     ReleaseMonitorReport,
+    ReleaseSurveyRequest,
 )
 from tools.base import ToolResult
 
@@ -474,6 +475,697 @@ def test_gantt_agent_create_release_monitor_uses_previous_report_history(
     assert 'New since last' in report.summary_markdown
 
 
+def test_gantt_agent_create_release_survey_buckets_done_active_and_remaining(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from agents.gantt_agent import GanttProjectPlannerAgent
+
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'gantt prompt'),
+    )
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_query_release_tickets',
+        lambda self, release, scope_label=None: [
+            {
+                'key': 'STL-401',
+                'summary': 'Completed work',
+                'status': 'Closed',
+                'priority': 'P2-High',
+                'issuetype': 'Story',
+                'assignee': 'Jane Dev',
+                'reporter': 'PM',
+                'components': ['Fabric'],
+                'product_family': [{'value': 'CN6000'}],
+                'labels': ['CN6000'],
+                'created': '2026-03-10T08:00:00+00:00',
+                'updated': '2026-03-20T08:00:00+00:00',
+                'resolutiondate': '2026-03-21T08:00:00+00:00',
+                'url': 'https://example.test/browse/STL-401',
+            },
+            {
+                'key': 'STL-402',
+                'summary': 'Active feature work',
+                'status': 'In Progress',
+                'priority': 'P1-Critical',
+                'issuetype': 'Task',
+                'assignee': 'Jane Dev',
+                'reporter': 'PM',
+                'components': ['Fabric'],
+                'product_family': [{'value': 'CN5000'}, {'value': 'CN6000'}],
+                'labels': ['CN6000'],
+                'created': '2026-03-12T08:00:00+00:00',
+                'updated': '2026-03-25T08:00:00+00:00',
+                'resolutiondate': '',
+                'url': 'https://example.test/browse/STL-402',
+            },
+            {
+                'key': 'STL-403',
+                'summary': 'Blocked work',
+                'status': 'Blocked',
+                'priority': 'P0-Stopper',
+                'issuetype': 'Task',
+                'assignee': 'Unassigned',
+                'reporter': 'PM',
+                'components': ['Platform'],
+                'product_family': ['CN6000'],
+                'labels': ['CN6000'],
+                'created': '2026-03-11T08:00:00+00:00',
+                'updated': '2026-03-15T08:00:00+00:00',
+                'resolutiondate': '',
+                'url': 'https://example.test/browse/STL-403',
+            },
+            {
+                'key': 'STL-404',
+                'summary': 'Not started work',
+                'status': 'Open',
+                'priority': 'P3-Medium',
+                'issuetype': 'Story',
+                'assignee': 'Unassigned',
+                'reporter': 'PM',
+                'components': [],
+                'product_family': ['CN5000'],
+                'labels': ['CN6000'],
+                'created': '2026-03-09T08:00:00+00:00',
+                'updated': '2026-02-10T08:00:00+00:00',
+                'resolutiondate': '',
+                'url': 'https://example.test/browse/STL-404',
+            },
+            {
+                'key': 'STL-405',
+                'summary': 'Bug should stay out of feature survey',
+                'status': 'Open',
+                'priority': 'P1-Critical',
+                'issuetype': 'Bug',
+                'assignee': 'Jane Dev',
+                'reporter': 'PM',
+                'components': ['Fabric'],
+                'labels': ['CN6000'],
+                'created': '2026-03-08T08:00:00+00:00',
+                'updated': '2026-03-25T08:00:00+00:00',
+                'resolutiondate': '',
+                'url': 'https://example.test/browse/STL-405',
+            },
+        ],
+    )
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_utc_now',
+        staticmethod(lambda: datetime(2026, 3, 25, tzinfo=timezone.utc)),
+    )
+
+    report = GanttProjectPlannerAgent(project_key='STL').create_release_survey(
+        ReleaseSurveyRequest(
+            project_key='STL',
+            releases=['12.2.0.x'],
+            scope_label='CN6000',
+        )
+    )
+
+    assert report.total_tickets == 4
+    assert report.done_count == 1
+    assert report.in_progress_count == 1
+    assert report.remaining_count == 1
+    assert report.blocked_count == 1
+    assert report.stale_count == 1
+    assert report.unassigned_count == 2
+    assert report.survey_mode == 'feature_dev'
+
+    release_summary = report.release_summaries[0]
+    assert release_summary.release == '12.2.0.x'
+    assert release_summary.done_tickets[0]['key'] == 'STL-401'
+    assert release_summary.in_progress_tickets[0]['key'] == 'STL-402'
+    assert release_summary.blocked_tickets[0]['key'] == 'STL-403'
+    assert release_summary.remaining_tickets[0]['key'] == 'STL-404'
+    assert release_summary.in_progress_tickets[0]['product_family_csv'] == 'CN5000, CN6000'
+    assert release_summary.remaining_tickets[0]['product_family_csv'] == 'CN5000'
+    assert release_summary.component_breakdown['Fabric'] == 2
+    assert release_summary.component_breakdown['Platform'] == 1
+    assert release_summary.component_breakdown['Unspecified'] == 1
+    assert '## 12.2.0.x' in report.summary_markdown
+    assert '### In Progress (1)' in report.summary_markdown
+    assert '### Done (1)' in report.summary_markdown
+    assert 'Feature Dev' in report.summary_markdown
+    assert '[STL-402](https://example.test/browse/STL-402)' in report.summary_markdown
+    assert '[STL-401](https://example.test/browse/STL-401)' in report.summary_markdown
+
+
+def test_gantt_agent_create_release_survey_bug_mode_only_includes_bugs(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from agents.gantt_agent import GanttProjectPlannerAgent
+
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'gantt prompt'),
+    )
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_query_release_tickets',
+        lambda self, release, scope_label=None: [
+            {
+                'key': 'STL-501',
+                'summary': 'Closed bug',
+                'status': 'Closed',
+                'priority': 'P1-High',
+                'issuetype': 'Bug',
+                'assignee': 'Owner',
+                'reporter': 'QA',
+                'components': ['Fabric'],
+                'labels': ['CN6000'],
+                'created': '2026-03-10T08:00:00+00:00',
+                'updated': '2026-03-21T08:00:00+00:00',
+                'resolutiondate': '2026-03-21T08:00:00+00:00',
+                'url': 'https://example.test/browse/STL-501',
+            },
+            {
+                'key': 'STL-502',
+                'summary': 'Active bug',
+                'status': 'In Progress',
+                'priority': 'P0-Stopper',
+                'issuetype': 'Bug',
+                'assignee': 'Owner',
+                'reporter': 'QA',
+                'components': ['Platform'],
+                'labels': ['CN6000'],
+                'created': '2026-03-11T08:00:00+00:00',
+                'updated': '2026-03-24T08:00:00+00:00',
+                'resolutiondate': '',
+                'url': 'https://example.test/browse/STL-502',
+            },
+            {
+                'key': 'STL-503',
+                'summary': 'Story should stay out of bug survey',
+                'status': 'Open',
+                'priority': 'P2-Medium',
+                'issuetype': 'Story',
+                'assignee': 'Owner',
+                'reporter': 'PM',
+                'components': ['Platform'],
+                'labels': ['CN6000'],
+                'created': '2026-03-12T08:00:00+00:00',
+                'updated': '2026-03-22T08:00:00+00:00',
+                'resolutiondate': '',
+                'url': 'https://example.test/browse/STL-503',
+            },
+        ],
+    )
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_utc_now',
+        staticmethod(lambda: datetime(2026, 3, 25, tzinfo=timezone.utc)),
+    )
+
+    report = GanttProjectPlannerAgent(project_key='STL').create_release_survey(
+        ReleaseSurveyRequest(
+            project_key='STL',
+            releases=['12.2.0.x'],
+            scope_label='CN6000',
+            survey_mode='bug',
+        )
+    )
+
+    assert report.survey_mode == 'bug'
+    assert report.total_tickets == 2
+    assert report.done_count == 1
+    assert report.in_progress_count == 1
+    assert report.remaining_count == 0
+    assert report.blocked_count == 0
+    assert report.release_summaries[0].issue_type_breakdown == {'Bug': 2}
+
+
+def test_gantt_release_survey_markdown_sorts_in_progress_and_remaining_by_priority():
+    from agents.gantt_agent import GanttProjectPlannerAgent
+    from agents.gantt_models import ReleaseSurveyReport, ReleaseSurveyReleaseSummary
+
+    manager_names = {
+        'Owner': 'Manager One',
+    }
+
+    original_lookup = GanttProjectPlannerAgent._lookup_release_survey_manager_name
+    GanttProjectPlannerAgent._lookup_release_survey_manager_name = (
+        lambda assignee, manager_lookup=None: manager_names.get(
+            str(assignee or ''),
+            'Manager Not Found',
+        )
+    )
+
+    try:
+        report = ReleaseSurveyReport(
+            project_key='STL',
+            created_at='2026-03-25T12:00:00+00:00',
+            releases_surveyed=['12.2.0.x'],
+            release_summaries=[
+                ReleaseSurveyReleaseSummary(
+                    release='12.2.0.x',
+                    total_tickets=4,
+                    in_progress_tickets=[
+                        {
+                            'key': 'STL-9102',
+                            'summary': 'Lower priority progress item',
+                            'product_family_csv': 'CN6000',
+                            'status': 'In Progress',
+                            'assignee': 'Owner',
+                            'priority': 'P3-Medium',
+                            'updated': '2026-03-20T00:00:00+00:00',
+                            'url': 'https://example.test/browse/STL-9102',
+                            'age_days': 1,
+                        },
+                        {
+                            'key': 'STL-9101',
+                            'summary': 'Higher priority progress item',
+                            'product_family_csv': 'CN5000, CN6000',
+                            'status': 'In Progress',
+                            'assignee': 'Owner',
+                            'priority': 'P1-Critical',
+                            'updated': '2026-03-19T00:00:00+00:00',
+                            'url': 'https://example.test/browse/STL-9101',
+                            'age_days': 3,
+                        },
+                    ],
+                    remaining_tickets=[
+                        {
+                            'key': 'STL-9202',
+                            'summary': 'Lower priority remaining item',
+                            'product_family_csv': 'CN5000',
+                            'status': 'Open',
+                            'assignee': 'Owner',
+                            'priority': 'P4-Low',
+                            'updated': '2026-03-18T00:00:00+00:00',
+                            'url': 'https://example.test/browse/STL-9202',
+                            'age_days': 2,
+                        },
+                        {
+                            'key': 'STL-9201',
+                            'summary': 'Higher priority remaining item',
+                            'product_family_csv': 'CN6000',
+                            'status': 'Open',
+                            'assignee': 'Owner',
+                            'priority': 'P0-Stopper',
+                            'updated': '2026-03-17T00:00:00+00:00',
+                            'url': 'https://example.test/browse/STL-9201',
+                            'age_days': 5,
+                        },
+                    ],
+                )
+            ],
+        )
+
+        summary_markdown = GanttProjectPlannerAgent._format_release_survey_summary(
+            report
+        )
+    finally:
+        GanttProjectPlannerAgent._lookup_release_survey_manager_name = original_lookup
+
+    assert summary_markdown.index('[STL-9101]') < summary_markdown.index('[STL-9102]')
+    assert summary_markdown.index('[STL-9201]') < summary_markdown.index('[STL-9202]')
+    assert '| Ticket | Summary | Product Family | Status | Assignee | Manager | Priority | Updated |' in summary_markdown
+    assert '| [STL-9101](https://example.test/browse/STL-9101) | Higher priority progress item | CN5000, CN6000 | In Progress | Owner | Manager One | P1-Critical | 2026-03-19 |' in summary_markdown
+
+
+def test_gantt_release_survey_manager_lookup_normalizes_jira_assignee_names():
+    from agents.gantt_agent import GanttProjectPlannerAgent
+
+    manager_lookup = {
+        'denny dalessandro': 'Heqing Zhu',
+        'nick child': 'Heqing Zhu',
+        'samuel cook': 'Eugene Novak',
+    }
+
+    assert (
+        GanttProjectPlannerAgent._lookup_release_survey_manager_name(
+            'Child, Nicholas',
+            manager_lookup=manager_lookup,
+        )
+        == 'Heqing Zhu'
+    )
+    assert (
+        GanttProjectPlannerAgent._lookup_release_survey_manager_name(
+            'Cook, Sam',
+            manager_lookup=manager_lookup,
+        )
+        == 'Eugene Novak'
+    )
+    assert (
+        GanttProjectPlannerAgent._lookup_release_survey_manager_name(
+            'Dalessandro, Dennis',
+            manager_lookup=manager_lookup,
+        )
+        == 'Heqing Zhu'
+    )
+    assert (
+        GanttProjectPlannerAgent._lookup_release_survey_manager_name(
+            'Unknown Person',
+            manager_lookup=manager_lookup,
+        )
+        == 'Manager Not Found'
+    )
+
+
+def test_gantt_release_survey_builds_family_breakouts_and_open_epic_analysis(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from agents.gantt_agent import GanttProjectPlannerAgent
+    from agents import gantt_agent as gantt_agent_module
+
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'gantt prompt'),
+    )
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_query_release_tickets',
+        lambda self, release, scope_label=None: [
+            {
+                'key': 'STL-5000',
+                'summary': 'CN5000 platform epic',
+                'status': 'Open',
+                'priority': 'P2-High',
+                'issuetype': 'Epic',
+                'assignee': 'Owner',
+                'reporter': 'PM',
+                'components': ['Platform'],
+                'product_family': ['CN5000'],
+                'labels': ['CN5000'],
+                'created': '2026-03-01T08:00:00+00:00',
+                'updated': '2026-03-25T08:00:00+00:00',
+                'resolutiondate': '',
+                'url': 'https://example.test/browse/STL-5000',
+            },
+            {
+                'key': 'STL-6000',
+                'summary': 'CN6000 service epic',
+                'status': 'In Progress',
+                'priority': 'P1-Critical',
+                'issuetype': 'Epic',
+                'assignee': 'Owner',
+                'reporter': 'PM',
+                'components': ['Services'],
+                'product_family': ['CN6000'],
+                'labels': ['CN6000'],
+                'created': '2026-03-02T08:00:00+00:00',
+                'updated': '2026-03-25T08:00:00+00:00',
+                'resolutiondate': '',
+                'url': 'https://example.test/browse/STL-6000',
+            },
+            {
+                'key': 'STL-7000',
+                'summary': 'Shared integration work',
+                'status': 'In Progress',
+                'priority': 'P3-Medium',
+                'issuetype': 'Story',
+                'assignee': 'Owner',
+                'reporter': 'PM',
+                'components': ['Integration'],
+                'product_family': ['CN5000', 'CN6000'],
+                'labels': ['CN5000', 'CN6000'],
+                'created': '2026-03-03T08:00:00+00:00',
+                'updated': '2026-03-24T08:00:00+00:00',
+                'resolutiondate': '',
+                'url': 'https://example.test/browse/STL-7000',
+            },
+        ],
+    )
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_utc_now',
+        staticmethod(lambda: datetime(2026, 3, 25, tzinfo=timezone.utc)),
+    )
+
+    def _fake_hierarchy(root_key, limit=500):
+        if root_key == 'STL-5000':
+            return ToolResult.success([
+                {
+                    'key': 'STL-5000',
+                    'summary': 'CN5000 platform epic',
+                    'type': 'Epic',
+                    'status': 'Open',
+                    'priority': 'P2-High',
+                    'assignee': 'Owner',
+                    'fix_versions': ['12.2.0.x'],
+                    'components': ['Platform'],
+                    'labels': ['CN5000'],
+                    'url': 'https://example.test/browse/STL-5000',
+                    'depth': 0,
+                },
+                {
+                    'key': 'STL-5100',
+                    'summary': 'Open CN5000 story',
+                    'type': 'Story',
+                    'status': 'In Progress',
+                    'priority': 'P2-High',
+                    'assignee': 'Owner',
+                    'fix_versions': ['12.2.0.x'],
+                    'components': ['Platform'],
+                    'labels': ['CN5000'],
+                    'url': 'https://example.test/browse/STL-5100',
+                    'depth': 1,
+                },
+                {
+                    'key': 'STL-5101',
+                    'summary': 'Closed CN5000 task',
+                    'type': 'Task',
+                    'status': 'Closed',
+                    'priority': 'P3-Medium',
+                    'assignee': 'Owner',
+                    'fix_versions': ['12.2.0.x'],
+                    'components': ['Platform'],
+                    'labels': ['CN5000'],
+                    'url': 'https://example.test/browse/STL-5101',
+                    'depth': 1,
+                },
+                {
+                    'key': 'STL-5102',
+                    'summary': 'Bug child should not appear in feature mode',
+                    'type': 'Bug',
+                    'status': 'Open',
+                    'priority': 'P1-Critical',
+                    'assignee': 'Owner',
+                    'fix_versions': ['12.2.0.x'],
+                    'components': ['Platform'],
+                    'labels': ['CN5000'],
+                    'url': 'https://example.test/browse/STL-5102',
+                    'depth': 1,
+                },
+            ])
+
+        return ToolResult.success([
+            {
+                'key': 'STL-6000',
+                'summary': 'CN6000 service epic',
+                'type': 'Epic',
+                'status': 'In Progress',
+                'priority': 'P1-Critical',
+                'assignee': 'Owner',
+                'fix_versions': ['12.2.0.x'],
+                'components': ['Services'],
+                'labels': ['CN6000'],
+                'url': 'https://example.test/browse/STL-6000',
+                'depth': 0,
+            },
+            {
+                'key': 'STL-6100',
+                'summary': 'Open CN6000 task',
+                'type': 'Task',
+                'status': 'Open',
+                'priority': 'P2-High',
+                'assignee': 'Owner',
+                'fix_versions': ['12.2.0.x'],
+                'components': ['Services'],
+                'labels': ['CN6000'],
+                'url': 'https://example.test/browse/STL-6100',
+                'depth': 1,
+            },
+        ])
+
+    monkeypatch.setattr(gantt_agent_module, 'get_children_hierarchy', _fake_hierarchy)
+
+    report = GanttProjectPlannerAgent(project_key='STL').create_release_survey(
+        ReleaseSurveyRequest(
+            project_key='STL',
+            releases=['12.2.0.x'],
+            scope_label='CN5000,CN6000',
+            survey_mode='feature_dev',
+        )
+    )
+
+    release_summary = report.release_summaries[0]
+    assert release_summary.family_breakdowns['CN5000']['in_progress_tickets'][0]['key'] == 'STL-7000'
+    assert release_summary.family_breakdowns['CN6000']['in_progress_tickets'][0]['key'] == 'STL-6000'
+    assert release_summary.family_breakdowns['CN5000']['epics'][0]['key'] == 'STL-5000'
+    assert release_summary.family_epic_analysis['CN5000'][0]['open_child_count'] == 1
+    assert release_summary.family_epic_analysis['CN5000'][0]['open_children'][0]['key'] == 'STL-5100'
+    assert release_summary.family_epic_analysis['CN6000'][0]['open_children'][0]['key'] == 'STL-6100'
+    assert '#### CN5000 In Progress (1)' in report.summary_markdown
+    assert '#### CN6000 Epics (1)' in report.summary_markdown
+    assert '#### CN5000 Open Epic Child Analysis (1)' in report.summary_markdown
+    assert '- Open type mix: Story=1\n\n| Depth | Ticket | Type | Summary | Status | Assignee | Manager | Priority | Fix Versions |' in report.summary_markdown
+    assert '| 1 | [STL-5100](https://example.test/browse/STL-5100) | Story | Open CN5000 story | In Progress | Owner | Manager Not Found | P2-High | 12.2.0.x |' in report.summary_markdown
+
+
+def test_gantt_agent_query_release_tickets_uses_product_family_scope_clause(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from agents.gantt_agent import GanttProjectPlannerAgent
+    from tools.base import ToolResult
+    from agents import gantt_agent as gantt_agent_module
+
+    captured = {}
+
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'gantt prompt'),
+    )
+
+    def _fake_search_tickets(*, jql, limit=500):
+        captured['jql'] = jql
+        captured['limit'] = limit
+        return ToolResult.success([])
+
+    monkeypatch.setattr(gantt_agent_module, 'search_tickets', _fake_search_tickets)
+
+    agent = GanttProjectPlannerAgent(project_key='STL')
+    tickets = agent._query_release_tickets('12.2.0.x', 'CN6000')
+
+    assert tickets == []
+    assert captured['limit'] == 500
+    assert 'fixVersion = "12.2.0.x"' in captured['jql']
+    assert '(labels = "CN6000" OR "product family" = "CN6000")' in captured['jql']
+
+
+def test_gantt_release_survey_confluence_markdown_uses_live_jira_macros():
+    from agents.gantt_agent import GanttProjectPlannerAgent
+    from agents.gantt_models import ReleaseSurveyReport, ReleaseSurveyReleaseSummary
+
+    report = ReleaseSurveyReport(
+        project_key='STL',
+        created_at='2026-03-25T12:00:00+00:00',
+        scope_label='CN5000,CN6000',
+        survey_mode='feature_dev',
+        releases_surveyed=['12.2.0.x'],
+        release_summaries=[
+            ReleaseSurveyReleaseSummary(
+                release='12.2.0.x',
+                total_tickets=5,
+                status_breakdown={
+                    'Closed': 1,
+                    'In Progress': 2,
+                    'Open': 2,
+                },
+                done_tickets=[
+                    {
+                        'key': 'STL-9001',
+                        'summary': 'Done work',
+                        'status': 'Closed',
+                        'assignee': 'Owner',
+                        'priority': 'P3-Medium',
+                        'updated': '2026-03-22T00:00:00+00:00',
+                        'url': 'https://example.test/browse/STL-9001',
+                        'product_family_csv': 'CN5000',
+                    }
+                ],
+                in_progress_tickets=[
+                    {
+                        'key': 'STL-9002',
+                        'summary': 'Active work',
+                        'status': 'In Progress',
+                        'assignee': 'Owner',
+                        'priority': 'P1-Critical',
+                        'updated': '2026-03-23T00:00:00+00:00',
+                        'url': 'https://example.test/browse/STL-9002',
+                        'product_family_csv': 'CN5000',
+                    }
+                ],
+                remaining_tickets=[
+                    {
+                        'key': 'STL-9003',
+                        'summary': 'Queued work',
+                        'status': 'Open',
+                        'assignee': 'Owner',
+                        'priority': 'P2-High',
+                        'updated': '2026-03-24T00:00:00+00:00',
+                        'url': 'https://example.test/browse/STL-9003',
+                        'product_family_csv': 'CN6000',
+                    }
+                ],
+                family_breakdowns={
+                    'CN5000': {
+                        'in_progress_tickets': [
+                            {
+                                'key': 'STL-9002',
+                                'status': 'In Progress',
+                            }
+                        ],
+                        'remaining_tickets': [],
+                        'epics': [
+                            {
+                                'key': 'STL-9004',
+                                'status': 'Open',
+                            }
+                        ],
+                    },
+                    'CN6000': {
+                        'in_progress_tickets': [],
+                        'remaining_tickets': [
+                            {
+                                'key': 'STL-9003',
+                                'status': 'Open',
+                            }
+                        ],
+                        'epics': [],
+                    },
+                },
+                family_epic_analysis={
+                    'CN5000': [
+                        {
+                            'epic': {
+                                'key': 'STL-9004',
+                                'summary': 'CN5000 epic',
+                                'status': 'Open',
+                                'url': 'https://example.test/browse/STL-9004',
+                            },
+                            'open_child_count': 1,
+                            'total_descendant_count': 2,
+                            'open_by_type': {'Story': 1},
+                            'open_children': [
+                                {
+                                    'key': 'STL-9005',
+                                    'summary': 'Epic child',
+                                    'issue_type': 'Story',
+                                    'status': 'Open',
+                                    'assignee': 'Owner',
+                                    'priority': 'P2-High',
+                                    'depth': 1,
+                                    'fix_version_csv': '12.2.0.x',
+                                    'url': 'https://example.test/browse/STL-9005',
+                                }
+                            ],
+                        }
+                    ]
+                },
+            )
+        ],
+    )
+
+    markdown = GanttProjectPlannerAgent._format_release_survey_confluence_markdown(
+        report
+    )
+
+    assert '<ac:structured-macro ac:name="jira" ac:schema-version="1" data-layout="full-width">' in markdown
+    assert '<ac:parameter ac:name="server">System Jira</ac:parameter>' in markdown
+    assert '<ac:parameter ac:name="serverId">332fe428-27be-3c06-ad09-b2cd4d269bee</ac:parameter>' in markdown
+    assert '<ac:parameter ac:name="jqlQuery">project = STL AND fixVersion = &quot;12.2.0.x&quot;' in markdown
+    assert 'issuetype != Bug' in markdown
+    assert '#### CN5000 Epics' in markdown
+    assert '#### CN5000 Open Epic Child Analysis (1)' in markdown
+    assert 'Snapshot count at publish time: 1. This Jira table stays live after publication.' in markdown
+
+
 def test_workflow_gantt_poll_runs_poller(monkeypatch: pytest.MonkeyPatch):
     import pm_agent
     from agents import gantt_agent as gantt_agent_module
@@ -485,6 +1177,8 @@ def test_workflow_gantt_poll_runs_poller(monkeypatch: pytest.MonkeyPatch):
         def run_poller(self, spec):
             assert spec['project_key'] == 'STL'
             assert spec['run_release_monitor'] is True
+            assert spec['run_release_survey'] is False
+            assert spec['survey_mode'] == 'feature-dev'
             assert spec['notify_shannon'] is True
             assert spec['max_cycles'] == 2
             return {
@@ -537,6 +1231,8 @@ def test_workflow_gantt_poll_runs_poller(monkeypatch: pytest.MonkeyPatch):
         include_readiness=True,
         compare_to_previous=True,
         run_release_monitor=True,
+        run_release_survey=False,
+        survey_mode='feature-dev',
         notify_shannon=True,
         shannon_url='http://shannon.test',
         poll_interval=60,
@@ -880,6 +1576,60 @@ def test_gantt_release_monitor_store_get_latest_compatible_report(tmp_path):
     assert record['report']['report_id'] == 'rep-101'
 
 
+def test_gantt_release_survey_store_save_load_and_list(tmp_path):
+    from state.gantt_release_survey_store import GanttReleaseSurveyStore
+
+    store = GanttReleaseSurveyStore(storage_dir=str(tmp_path / 'surveys'))
+
+    first_summary = store.save_survey(
+        {
+            'survey_id': 'sur-001',
+            'project_key': 'STL',
+            'created_at': '2026-03-25T12:00:00+00:00',
+            'scope_label': 'CN6000',
+            'releases_surveyed': ['12.2.0.x'],
+            'release_summaries': [],
+            'total_tickets': 12,
+            'done_count': 5,
+            'in_progress_count': 3,
+            'remaining_count': 3,
+            'blocked_count': 1,
+            'stale_count': 2,
+            'unassigned_count': 1,
+        },
+        summary_markdown='# Survey 1',
+    )
+    store.save_survey(
+        {
+            'survey_id': 'sur-002',
+            'project_key': 'STL',
+            'created_at': '2026-03-26T12:00:00+00:00',
+            'scope_label': 'CN6000',
+            'releases_surveyed': ['12.2.0.x'],
+            'release_summaries': [],
+            'total_tickets': 8,
+            'done_count': 6,
+            'in_progress_count': 1,
+            'remaining_count': 1,
+            'blocked_count': 0,
+            'stale_count': 0,
+            'unassigned_count': 0,
+        },
+        summary_markdown='# Survey 2',
+    )
+
+    record = store.get_survey('sur-001')
+    assert record is not None
+    assert record['survey']['project_key'] == 'STL'
+    assert record['summary_markdown'] == '# Survey 1'
+    assert first_summary['storage_dir'].endswith('STL/sur-001')
+
+    listed = store.list_surveys(project_key='STL')
+    assert [item['survey_id'] for item in listed] == ['sur-002', 'sur-001']
+    assert listed[0]['done_count'] == 6
+    assert listed[1]['blocked_count'] == 1
+
+
 def test_workflow_gantt_snapshot_get_and_list(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
@@ -950,3 +1700,155 @@ def test_workflow_gantt_snapshot_get_and_list(
     assert list_exit_code == 0
     assert any('snap-010' in message for message in list_messages)
     assert any('snap-011' in message for message in list_messages)
+
+
+def test_workflow_gantt_release_survey_writes_json_and_markdown(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    import pm_agent
+    from agents import gantt_agent
+    from agents.gantt_models import ReleaseSurveyReport, ReleaseSurveyReleaseSummary
+
+    class _FakeGanttAgent:
+        def __init__(self, project_key=None, **kwargs):
+            self.project_key = project_key
+
+        def create_release_survey(self, request):
+            assert request.releases == ['12.2.0.x']
+            assert request.survey_mode == 'feature-dev'
+            survey = ReleaseSurveyReport(
+                project_key=request.project_key,
+                created_at='2026-03-25T12:00:00+00:00',
+                scope_label=request.scope_label or '',
+                survey_mode='feature_dev',
+                releases_surveyed=request.releases or [],
+                release_summaries=[
+                    ReleaseSurveyReleaseSummary(
+                        release='12.2.0.x',
+                        total_tickets=4,
+                        done_tickets=[{'key': 'STL-1'}],
+                        in_progress_tickets=[{'key': 'STL-2'}],
+                        remaining_tickets=[{'key': 'STL-3'}],
+                        blocked_tickets=[{'key': 'STL-4'}],
+                    )
+                ],
+                summary_markdown='# Release Survey\n\nSummary',
+                output_file=str(tmp_path / 'survey.xlsx'),
+            )
+            survey.survey_id = 'sur-101'
+            return survey
+
+    monkeypatch.setattr(gantt_agent, 'GanttProjectPlannerAgent', _FakeGanttAgent)
+    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
+    monkeypatch.setenv('GANTT_RELEASE_SURVEY_DIR', str(tmp_path / 'store'))
+
+    output_path = tmp_path / 'release_survey.json'
+    args = SimpleNamespace(
+        project='STL',
+        releases='12.2.0.x',
+        scope_label='CN6000',
+        survey_mode='feature-dev',
+        output=str(output_path),
+    )
+
+    exit_code = pm_agent._workflow_gantt_release_survey(args)
+
+    assert exit_code == 0
+    assert output_path.exists()
+    assert (tmp_path / 'release_survey.md').exists()
+
+    survey_data = json.loads(output_path.read_text(encoding='utf-8'))
+    assert survey_data['project_key'] == 'STL'
+    assert survey_data['done_count'] == 1
+    assert '# Release Survey' in (tmp_path / 'release_survey.md').read_text(
+        encoding='utf-8'
+    )
+    assert (tmp_path / 'store' / 'STL' / 'sur-101' / 'survey.json').exists()
+    assert (tmp_path / 'store' / 'STL' / 'sur-101' / 'summary.md').exists()
+
+
+def test_workflow_gantt_release_survey_get_and_list(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path,
+):
+    import pm_agent
+    from state.gantt_release_survey_store import GanttReleaseSurveyStore
+
+    store = GanttReleaseSurveyStore(storage_dir=str(tmp_path / 'store'))
+    store.save_survey(
+        {
+            'survey_id': 'sur-010',
+            'project_key': 'STL',
+            'created_at': '2026-03-25T12:00:00+00:00',
+            'scope_label': 'CN6000',
+            'releases_surveyed': ['12.2.0.x'],
+            'release_summaries': [],
+            'summary_markdown': '# Stored Survey\n\nBody',
+            'total_tickets': 10,
+            'done_count': 3,
+            'in_progress_count': 4,
+            'remaining_count': 2,
+            'blocked_count': 1,
+            'stale_count': 0,
+            'unassigned_count': 0,
+        },
+        summary_markdown='# Stored Survey\n\nBody',
+    )
+    store.save_survey(
+        {
+            'survey_id': 'sur-011',
+            'project_key': 'STL',
+            'created_at': '2026-03-24T12:00:00+00:00',
+            'scope_label': 'CN6000',
+            'releases_surveyed': ['12.2.0.x'],
+            'release_summaries': [],
+            'total_tickets': 8,
+            'done_count': 6,
+            'in_progress_count': 1,
+            'remaining_count': 1,
+            'blocked_count': 0,
+            'stale_count': 0,
+            'unassigned_count': 0,
+        },
+        summary_markdown='# Older Survey',
+    )
+
+    monkeypatch.setenv('GANTT_RELEASE_SURVEY_DIR', str(tmp_path / 'store'))
+
+    get_messages = []
+    monkeypatch.setattr(
+        pm_agent,
+        'output',
+        lambda message='', **_kwargs: get_messages.append(str(message)),
+    )
+
+    export_path = tmp_path / 'exported_survey.json'
+    get_args = SimpleNamespace(
+        survey_id='sur-010',
+        project='STL',
+        output=str(export_path),
+    )
+
+    get_exit_code = pm_agent._workflow_gantt_release_survey_get(get_args)
+
+    assert get_exit_code == 0
+    assert export_path.exists()
+    assert (tmp_path / 'exported_survey.md').exists()
+    exported = json.loads(export_path.read_text(encoding='utf-8'))
+    assert exported['survey_id'] == 'sur-010'
+    assert any('Stored in:' in message for message in get_messages)
+
+    list_messages = []
+    monkeypatch.setattr(
+        pm_agent,
+        'output',
+        lambda message='', **_kwargs: list_messages.append(str(message)),
+    )
+
+    list_args = SimpleNamespace(project='STL', limit=10)
+    list_exit_code = pm_agent._workflow_gantt_release_survey_list(list_args)
+
+    assert list_exit_code == 0
+    assert any('sur-010' in message for message in list_messages)
+    assert any('sur-011' in message for message in list_messages)

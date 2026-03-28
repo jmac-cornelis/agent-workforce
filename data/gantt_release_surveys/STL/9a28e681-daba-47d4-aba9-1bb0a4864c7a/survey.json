@@ -1,0 +1,42 @@
+{
+  "project_key": "STL",
+  "created_at": "2026-03-25T14:17:21.264990+00:00",
+  "survey_id": "9a28e681-daba-47d4-aba9-1bb0a4864c7a",
+  "scope_label": "CN6000",
+  "releases_surveyed": [
+    "12.2.0.x"
+  ],
+  "release_summaries": [
+    {
+      "release": "12.2.0.x",
+      "total_tickets": 0,
+      "status_breakdown": {},
+      "priority_breakdown": {},
+      "issue_type_breakdown": {},
+      "component_breakdown": {},
+      "done_count": 0,
+      "in_progress_count": 0,
+      "remaining_count": 0,
+      "blocked_count": 0,
+      "stale_count": 0,
+      "unassigned_count": 0,
+      "completion_pct": 0.0,
+      "done_tickets": [],
+      "in_progress_tickets": [],
+      "remaining_tickets": [],
+      "blocked_tickets": [],
+      "stale_tickets": [],
+      "unassigned_tickets": []
+    }
+  ],
+  "summary_markdown": "# Release Survey: STL\n\n**Survey ID**: 9a28e681-daba-47d4-aba9-1bb0a4864c7a\n**Created**: 2026-03-25T14:17:21.264990+00:00\n**Survey Mode**: Feature Dev\n**Releases Surveyed**: 12.2.0.x\n**Scope Label**: CN6000\n\n## Overall\n\n- Total tickets: 0\n- Done: 0 (0.0%)\n- In progress: 0\n- Remaining: 0\n- Blocked: 0\n- Stale: 0\n- Unassigned: 0\n\n## 12.2.0.x\n\n- Total tickets: 0\n- Done: 0 (0.0%)\n- In progress: 0\n- Remaining: 0\n- Blocked: 0\n- Stale: 0\n- Unassigned: 0\n\n### In Progress (0)\n- None\n\n### Blocked (0)\n- None\n\n### Remaining (0)\n- None\n\n### Done (0)\n- None\n",
+  "output_file": "/tmp/cn6000_1220x_release_survey.xlsx",
+  "total_tickets": 0,
+  "done_count": 0,
+  "in_progress_count": 0,
+  "remaining_count": 0,
+  "blocked_count": 0,
+  "stale_count": 0,
+  "unassigned_count": 0,
+  "completion_pct": 0.0
+}

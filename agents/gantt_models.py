@@ -606,3 +606,156 @@ class ReleaseMonitorReport:
             "total_p0": self.total_p0,
             "total_p1": self.total_p1,
         }
+
+
+@dataclass
+class ReleaseSurveyRequest:
+    '''Request parameters for a release execution survey.'''
+    project_key: str = 'STL'
+    releases: Optional[List[str]] = None
+    scope_label: Optional[str] = None
+    survey_mode: str = 'feature_dev'
+    output_file: Optional[str] = None
+
+
+@dataclass
+class ReleaseSurveyReleaseSummary:
+    '''Per-release execution survey summary.'''
+    release: str = ''
+    total_tickets: int = 0
+    status_breakdown: Dict[str, int] = field(default_factory=dict)
+    priority_breakdown: Dict[str, int] = field(default_factory=dict)
+    issue_type_breakdown: Dict[str, int] = field(default_factory=dict)
+    component_breakdown: Dict[str, int] = field(default_factory=dict)
+    family_breakdowns: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    family_epic_analysis: Dict[str, List[Dict[str, Any]]] = field(default_factory=dict)
+    done_tickets: List[Dict[str, Any]] = field(default_factory=list)
+    in_progress_tickets: List[Dict[str, Any]] = field(default_factory=list)
+    remaining_tickets: List[Dict[str, Any]] = field(default_factory=list)
+    blocked_tickets: List[Dict[str, Any]] = field(default_factory=list)
+    stale_tickets: List[str] = field(default_factory=list)
+    unassigned_tickets: List[str] = field(default_factory=list)
+
+    @property
+    def done_count(self) -> int:
+        return len(self.done_tickets)
+
+    @property
+    def in_progress_count(self) -> int:
+        return len(self.in_progress_tickets)
+
+    @property
+    def remaining_count(self) -> int:
+        return len(self.remaining_tickets)
+
+    @property
+    def blocked_count(self) -> int:
+        return len(self.blocked_tickets)
+
+    @property
+    def stale_count(self) -> int:
+        return len(self.stale_tickets)
+
+    @property
+    def unassigned_count(self) -> int:
+        return len(self.unassigned_tickets)
+
+    @property
+    def completion_pct(self) -> float:
+        if self.total_tickets <= 0:
+            return 0.0
+        return (self.done_count / float(self.total_tickets)) * 100.0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'release': self.release,
+            'total_tickets': self.total_tickets,
+            'status_breakdown': self.status_breakdown,
+            'priority_breakdown': self.priority_breakdown,
+            'issue_type_breakdown': self.issue_type_breakdown,
+            'component_breakdown': self.component_breakdown,
+            'family_breakdowns': self.family_breakdowns,
+            'family_epic_analysis': self.family_epic_analysis,
+            'done_count': self.done_count,
+            'in_progress_count': self.in_progress_count,
+            'remaining_count': self.remaining_count,
+            'blocked_count': self.blocked_count,
+            'stale_count': self.stale_count,
+            'unassigned_count': self.unassigned_count,
+            'completion_pct': self.completion_pct,
+            'done_tickets': self.done_tickets,
+            'in_progress_tickets': self.in_progress_tickets,
+            'remaining_tickets': self.remaining_tickets,
+            'blocked_tickets': self.blocked_tickets,
+            'stale_tickets': self.stale_tickets,
+            'unassigned_tickets': self.unassigned_tickets,
+        }
+
+
+@dataclass
+class ReleaseSurveyReport:
+    '''Complete release execution survey report.'''
+    project_key: str = ''
+    created_at: str = ''
+    survey_id: str = field(default_factory=lambda: str(uuid.uuid4()))
+    scope_label: str = ''
+    survey_mode: str = 'feature_dev'
+    releases_surveyed: List[str] = field(default_factory=list)
+    release_summaries: List[ReleaseSurveyReleaseSummary] = field(default_factory=list)
+    summary_markdown: str = ''
+    output_file: str = ''
+
+    @property
+    def total_tickets(self) -> int:
+        return sum(item.total_tickets for item in self.release_summaries)
+
+    @property
+    def done_count(self) -> int:
+        return sum(item.done_count for item in self.release_summaries)
+
+    @property
+    def in_progress_count(self) -> int:
+        return sum(item.in_progress_count for item in self.release_summaries)
+
+    @property
+    def remaining_count(self) -> int:
+        return sum(item.remaining_count for item in self.release_summaries)
+
+    @property
+    def blocked_count(self) -> int:
+        return sum(item.blocked_count for item in self.release_summaries)
+
+    @property
+    def stale_count(self) -> int:
+        return sum(item.stale_count for item in self.release_summaries)
+
+    @property
+    def unassigned_count(self) -> int:
+        return sum(item.unassigned_count for item in self.release_summaries)
+
+    @property
+    def completion_pct(self) -> float:
+        if self.total_tickets <= 0:
+            return 0.0
+        return (self.done_count / float(self.total_tickets)) * 100.0
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            'project_key': self.project_key,
+            'created_at': self.created_at,
+            'survey_id': self.survey_id,
+            'scope_label': self.scope_label,
+            'survey_mode': self.survey_mode,
+            'releases_surveyed': self.releases_surveyed,
+            'release_summaries': [item.to_dict() for item in self.release_summaries],
+            'summary_markdown': self.summary_markdown,
+            'output_file': self.output_file,
+            'total_tickets': self.total_tickets,
+            'done_count': self.done_count,
+            'in_progress_count': self.in_progress_count,
+            'remaining_count': self.remaining_count,
+            'blocked_count': self.blocked_count,
+            'stale_count': self.stale_count,
+            'unassigned_count': self.unassigned_count,
+            'completion_pct': self.completion_pct,
+        }
