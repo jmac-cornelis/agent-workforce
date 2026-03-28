@@ -310,6 +310,180 @@ def build_bug_activity_card(data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
+def build_pr_hygiene_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a GitHub PR hygiene scan result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    stale_prs = data.get('stale_prs', [])
+    missing_reviews = data.get('missing_reviews', [])
+    total_open = data.get('total_open_prs', 0)
+    total_findings = data.get('total_findings', 0)
+
+    facts = {
+        'Repository': repo,
+        'Open PRs': total_open,
+        'Total Findings': total_findings,
+        'Stale PRs': len(stale_prs),
+        'Missing Reviews': len(missing_reviews),
+    }
+
+    body_lines: list[str] = []
+
+    if stale_prs:
+        body_lines.append('**Stale PRs:**')
+        for item in stale_prs[:5]:
+            pr = item.get('pr', {})
+            days = item.get('days_stale', 0)
+            severity = item.get('severity', 'medium')
+            body_lines.append(
+                f'• [{severity.upper()}] #{pr.get("number", "")} '
+                f'{pr.get("title", "")} — {days}d stale '
+                f'({pr.get("author", "")})'
+            )
+        if len(stale_prs) > 5:
+            body_lines.append(f'  ...and {len(stale_prs) - 5} more')
+
+    if missing_reviews:
+        body_lines.append('**Missing Reviews:**')
+        for item in missing_reviews[:5]:
+            pr = item.get('pr', {})
+            reason = item.get('reason', '')
+            label = 'no reviewers' if reason == 'no_reviewers' else 'pending reviews'
+            body_lines.append(
+                f'• #{pr.get("number", "")} '
+                f'{pr.get("title", "")} — {label} '
+                f'({pr.get("author", "")})'
+            )
+        if len(missing_reviews) > 5:
+            body_lines.append(f'  ...and {len(missing_reviews) - 5} more')
+
+    if not body_lines:
+        body_lines.append('No hygiene issues found.')
+
+    return build_fact_card(
+        title=f'PR Hygiene — {repo}',
+        subtitle=data.get('scan_time', ''),
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_pr_stale_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a stale PR scan result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    stale_prs = data.get('stale_prs', [])
+    stale_days = data.get('stale_days', 5)
+
+    facts = {
+        'Repository': repo,
+        'Threshold': f'{stale_days} days',
+        'Stale PRs': len(stale_prs),
+    }
+
+    body_lines: list[str] = []
+    for item in stale_prs[:8]:
+        pr = item.get('pr', {})
+        days = item.get('days_stale', 0)
+        severity = item.get('severity', 'medium')
+        body_lines.append(
+            f'• [{severity.upper()}] #{pr.get("number", "")} '
+            f'{pr.get("title", "")} — {days}d stale '
+            f'({pr.get("author", "")})'
+        )
+    if len(stale_prs) > 8:
+        body_lines.append(f'  ...and {len(stale_prs) - 8} more')
+
+    if not body_lines:
+        body_lines.append('No stale PRs found.')
+
+    return build_fact_card(
+        title=f'Stale PRs — {repo}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_pr_reviews_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a missing reviews scan result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    findings = data.get('missing_reviews', [])
+
+    no_reviewers = [f for f in findings if f.get('reason') == 'no_reviewers']
+    pending = [f for f in findings if f.get('reason') == 'pending_reviews']
+
+    facts = {
+        'Repository': repo,
+        'Total Findings': len(findings),
+        'No Reviewers': len(no_reviewers),
+        'Pending Reviews': len(pending),
+    }
+
+    body_lines: list[str] = []
+    for item in findings[:8]:
+        pr = item.get('pr', {})
+        reason = item.get('reason', '')
+        label = 'no reviewers' if reason == 'no_reviewers' else 'pending reviews'
+        body_lines.append(
+            f'• #{pr.get("number", "")} '
+            f'{pr.get("title", "")} — {label} '
+            f'({pr.get("author", "")})'
+        )
+    if len(findings) > 8:
+        body_lines.append(f'  ...and {len(findings) - 8} more')
+
+    if not body_lines:
+        body_lines.append('All PRs have active reviews.')
+
+    return build_fact_card(
+        title=f'Missing Reviews — {repo}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_pr_list_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a PR listing result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    prs = data.get('prs', [])
+    state = data.get('state', 'open')
+
+    facts = {
+        'Repository': repo,
+        'State': state,
+        'Count': len(prs),
+    }
+
+    body_lines: list[str] = []
+    for pr in prs[:10]:
+        draft = ' [DRAFT]' if pr.get('draft', False) else ''
+        reviews = pr.get('review_count', 0)
+        approved = ' ✓' if pr.get('approved', False) else ''
+        body_lines.append(
+            f'• #{pr.get("number", "")} '
+            f'{pr.get("title", "")}{draft} '
+            f'({pr.get("author", "")}) '
+            f'[{reviews} review(s){approved}]'
+        )
+    if len(prs) > 10:
+        body_lines.append(f'  ...and {len(prs) - 10} more')
+
+    if not body_lines:
+        body_lines.append(f'No {state} PRs found.')
+
+    return build_fact_card(
+        title=f'Pull Requests — {repo}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
 def build_drucker_summary_card(summary: Dict[str, Any]) -> Dict[str, Any]:
     '''
     Build a simple Adaptive Card for Drucker /stats response.
