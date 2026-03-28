@@ -3,10 +3,11 @@
 #
 # Module: mcp_server.py
 #
-# Description: Cornelis Jira MCP Server.
-#              Exposes Jira tools via the Model Context Protocol (MCP) so that
-#              AI assistants (Claude Desktop, Cursor, Windsurf, etc.) can interact
-#              with Jira through a standardised tool-calling interface.
+# Description: Cornelis Jira & GitHub MCP Server.
+#              Exposes Jira and GitHub tools via the Model Context Protocol (MCP)
+#              so that AI assistants (Claude Desktop, Cursor, Windsurf, etc.) can
+#              interact with Jira and GitHub through a standardised tool-calling
+#              interface.
 #
 #              Transport: stdio (JSON-RPC 2.0 over stdin/stdout).
 #
@@ -70,6 +71,7 @@ except ImportError:
 # ---------------------------------------------------------------------------
 import jira_utils
 import confluence_utils
+import github_utils
 from agents.drucker_agent import DruckerCoordinatorAgent
 from agents.drucker_models import DruckerRequest
 from agents.gantt_agent import GanttProjectPlannerAgent
@@ -88,6 +90,7 @@ from state.hypatia_record_store import HypatiaRecordStore
 # would corrupt the transport.
 jira_utils._quiet_mode = True
 confluence_utils._quiet_mode = True
+github_utils._quiet_mode = True
 
 # ---------------------------------------------------------------------------
 # MCP Server instance
@@ -2300,6 +2303,235 @@ async def delete_automation(rule_uuid: str) -> list[Any]:
         return _json_result({'rule_uuid': rule_uuid, 'deleted': True})
     except Exception as e:
         log.error(f'delete_automation failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 26: list_github_repos — List GitHub repositories
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def list_github_repos(org: Optional[str] = None, limit: int = 50) -> list[Any]:
+    '''List GitHub repositories, optionally filtered by organization.
+
+    Args:
+        org: GitHub organization name (optional; lists authenticated user repos if omitted).
+        limit: Maximum number of repos to return (default: 50).
+    '''
+    try:
+        github_utils.get_connection()
+        repos = github_utils.list_repos(org=org, limit=limit)
+        return _json_result(repos)
+    except Exception as e:
+        log.error(f'list_github_repos failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 27: get_github_repo — Get detailed info for a GitHub repository
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def get_github_repo(repo_full_name: str) -> list[Any]:
+    '''Get detailed information for a GitHub repository.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+    '''
+    try:
+        github_utils.get_connection()
+        info = github_utils.get_repo_info(repo_full_name)
+        return _json_result(info)
+    except Exception as e:
+        log.error(f'get_github_repo failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 28: validate_github_repo — Validate a GitHub repository exists
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def validate_github_repo(repo_full_name: str) -> list[Any]:
+    '''Validate that a GitHub repository exists and is accessible.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+    '''
+    try:
+        github_utils.get_connection()
+        result = github_utils.validate_repo(repo_full_name)
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'validate_github_repo failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 29: list_github_pull_requests — List PRs for a repository
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def list_github_pull_requests(repo_full_name: str, state: str = 'open', sort: str = 'created', direction: str = 'desc', limit: int = 50) -> list[Any]:
+    '''List pull requests for a GitHub repository.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        state: PR state filter — 'open', 'closed', or 'all' (default: 'open').
+        sort: Sort field — 'created', 'updated', or 'popularity' (default: 'created').
+        direction: Sort direction — 'asc' or 'desc' (default: 'desc').
+        limit: Maximum number of PRs to return (default: 50).
+    '''
+    try:
+        github_utils.get_connection()
+        prs = github_utils.list_pull_requests(repo_full_name, state=state, sort=sort, direction=direction, limit=limit)
+        return _json_result(prs)
+    except Exception as e:
+        log.error(f'list_github_pull_requests failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 30: get_github_pull_request — Get details for a single PR
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def get_github_pull_request(repo_full_name: str, pr_number: int) -> list[Any]:
+    '''Get detailed information for a single GitHub pull request.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        pr_number: Pull request number.
+    '''
+    try:
+        github_utils.get_connection()
+        pr = github_utils.get_pull_request(repo_full_name, pr_number)
+        return _json_result(pr)
+    except Exception as e:
+        log.error(f'get_github_pull_request failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 31: get_github_pr_reviews — Get reviews for a PR
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def get_github_pr_reviews(repo_full_name: str, pr_number: int) -> list[Any]:
+    '''Get reviews for a GitHub pull request.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        pr_number: Pull request number.
+    '''
+    try:
+        github_utils.get_connection()
+        reviews = github_utils.get_pr_reviews(repo_full_name, pr_number)
+        return _json_result(reviews)
+    except Exception as e:
+        log.error(f'get_github_pr_reviews failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 32: get_github_pr_review_requests — Get pending review requests
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def get_github_pr_review_requests(repo_full_name: str, pr_number: int) -> list[Any]:
+    '''Get pending review requests for a GitHub pull request.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        pr_number: Pull request number.
+    '''
+    try:
+        github_utils.get_connection()
+        requests = github_utils.get_pr_review_requests(repo_full_name, pr_number)
+        return _json_result(requests)
+    except Exception as e:
+        log.error(f'get_github_pr_review_requests failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 33: find_stale_github_prs — Find stale pull requests
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def find_stale_github_prs(repo_full_name: str, stale_days: int = 5) -> list[Any]:
+    '''Find stale pull requests in a GitHub repository.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        stale_days: Number of days without activity to consider a PR stale (default: 5).
+    '''
+    try:
+        github_utils.get_connection()
+        stale = github_utils.analyze_pr_staleness(repo_full_name, stale_days=stale_days)
+        return _json_result(stale)
+    except Exception as e:
+        log.error(f'find_stale_github_prs failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 34: find_github_prs_missing_reviews — Find PRs missing reviews
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def find_github_prs_missing_reviews(repo_full_name: str) -> list[Any]:
+    '''Find pull requests missing reviews in a GitHub repository.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+    '''
+    try:
+        github_utils.get_connection()
+        missing = github_utils.analyze_missing_reviews(repo_full_name)
+        return _json_result(missing)
+    except Exception as e:
+        log.error(f'find_github_prs_missing_reviews failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 35: analyze_github_pr_hygiene — Full PR hygiene analysis
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def analyze_github_pr_hygiene(repo_full_name: str, stale_days: int = 5) -> list[Any]:
+    '''Run a full PR hygiene analysis on a GitHub repository.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        stale_days: Number of days without activity to consider a PR stale (default: 5).
+    '''
+    try:
+        github_utils.get_connection()
+        hygiene = github_utils.analyze_repo_pr_hygiene(repo_full_name, stale_days=stale_days)
+        return _json_result(hygiene)
+    except Exception as e:
+        log.error(f'analyze_github_pr_hygiene failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 36: get_github_rate_limit — Check GitHub API rate limit status
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def get_github_rate_limit() -> list[Any]:
+    '''Check the current GitHub API rate limit status.
+
+    Args:
+        (none)
+    '''
+    try:
+        rate = github_utils.get_rate_limit()
+        return _json_result(rate)
+    except Exception as e:
+        log.error(f'get_github_rate_limit failed: {e}')
         return _error_result(str(e))
 
 

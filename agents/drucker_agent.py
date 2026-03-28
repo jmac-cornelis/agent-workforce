@@ -474,6 +474,64 @@ class DruckerCoordinatorAgent(BaseAgent):
             job_id = str(
                 job_spec.get('job_id') or f'drucker-job-{index}'
             ).strip()
+            scan_type = str(job_spec.get('scan_type', 'jira')).strip()
+
+            notify_enabled = bool(job_spec.get('notify_shannon', False))
+            shannon_base_url = job_spec.get('shannon_base_url')
+
+            # ── GitHub PR hygiene scan ──────────────────────────────
+            if scan_type == 'github':
+                github_repos = job_spec.get('github_repos') or []
+                if isinstance(github_repos, str):
+                    github_repos = [github_repos]
+                github_stale_days = int(
+                    job_spec.get('github_stale_days', 5)
+                )
+
+                for repo in github_repos:
+                    try:
+                        import github_utils
+                        report = github_utils.analyze_repo_pr_hygiene(
+                            repo, stale_days=github_stale_days,
+                        )
+                        tasks.append({
+                            'ok': True,
+                            'task_type': 'github_pr_hygiene',
+                            'job_id': job_id,
+                            'repo': repo,
+                            'report': report,
+                        })
+                        if notify_enabled:
+                            finding_count = len(
+                                report.get('findings', [])
+                            )
+                            stale_count = report.get('stale_count', 0)
+                            missing_count = report.get(
+                                'missing_review_count', 0
+                            )
+                            notifications.append(
+                                notify_shannon(
+                                    agent_id='drucker',
+                                    shannon_base_url=shannon_base_url,
+                                    title=f'GitHub PR Hygiene: {repo}',
+                                    text=(
+                                        f'{finding_count} finding(s) '
+                                        f'in {repo}'
+                                    ),
+                                    body_lines=[
+                                        f'Stale PRs (>{github_stale_days} '
+                                        f'days): {stale_count}',
+                                        f'Missing reviews: {missing_count}',
+                                        f'Total open PRs: '
+                                        f'{report.get("open_pr_count", 0)}',
+                                    ],
+                                )
+                            )
+                    except Exception as exc:
+                        errors.append(f'{job_id}:{repo}: {exc}')
+                continue
+
+            # ── Jira hygiene scan (default) ─────────────────────────
             project_key = str(
                 job_spec.get('project_key') or self.project_key or ''
             ).strip()
@@ -485,8 +543,6 @@ class DruckerCoordinatorAgent(BaseAgent):
             self.project_key = project_key
 
             persist = bool(job_spec.get('persist', True))
-            notify_enabled = bool(job_spec.get('notify_shannon', False))
-            shannon_base_url = job_spec.get('shannon_base_url')
 
             try:
                 request = DruckerRequest(

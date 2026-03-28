@@ -2501,6 +2501,9 @@ def _workflow_drucker_poll(args):
         f'{"continuous" if args.max_cycles == 0 else args.max_cycles}'
     )
     output(f'Notify Shannon: {"yes" if args.notify_shannon else "no"}')
+    if getattr(args, 'github_repos', None):
+        output(f'GitHub repos: {", ".join(args.github_repos)}')
+        output(f'GitHub stale threshold: {args.github_stale_days} days')
     output('')
     output('Running scheduled Drucker poller...')
 
@@ -2528,6 +2531,10 @@ def _workflow_drucker_poll(args):
             'since': args.since,
             'recent_only': args.recent_only,
         })
+
+    if getattr(args, 'github_repos', None):
+        poller_spec['github_repos'] = args.github_repos
+        poller_spec['github_stale_days'] = getattr(args, 'github_stale_days', 5)
 
     result = agent.run_poller(poller_spec)
 
@@ -2559,6 +2566,12 @@ def _workflow_drucker_poll(args):
                 '    Latest intake report: '
                 f'{stored.get("report_id") or task.get("report", {}).get("report_id", "")}'
             )
+        if task.get('task_type') == 'github_pr_hygiene':
+            repo = task.get('repo', '')
+            report = task.get('report', {})
+            output(f'    GitHub PR hygiene ({repo}): '
+                   f'{report.get("stale_count", 0)} stale, '
+                   f'{report.get("missing_review_count", 0)} missing reviews')
 
     return 0 if result.get('ok', False) else 1
 
@@ -3242,6 +3255,15 @@ Examples:
                        help='Base URL for the Shannon service when using '
                             '--notify-shannon (default: SHANNON_API_BASE_URL or '
                             'http://localhost:8200).')
+    parser.add_argument('--github-repos', nargs='*', default=None, metavar='REPO',
+                       dest='github_repos',
+                       help='GitHub repos for PR hygiene polling (format: owner/repo). '
+                            'If provided, enables GitHub PR hygiene scanning in '
+                            '--workflow drucker-poll.')
+    parser.add_argument('--github-stale-days', type=int, default=5, metavar='DAYS',
+                       dest='github_stale_days',
+                       help='Stale PR threshold in days for GitHub PR hygiene '
+                            'polling (default: 5).')
     parser.add_argument('--evidence', nargs='*', default=None, metavar='FILE',
                        help='Evidence files (JSON, YAML, Markdown, text) for workflows '
                             'that can consume build/test/release/meeting context such as '
