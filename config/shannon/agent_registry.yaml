@@ -52,14 +52,17 @@ agents:
         description: Run intake validation for one Jira ticket
         api_method: POST
         api_path: /v1/hygiene/issue
+        mutation: false
       - command: /intake-report
         description: Run a recent-ticket intake report
         api_method: POST
         api_path: /v1/hygiene/intake
+        mutation: false
       - command: /hygiene-run
         description: Run hygiene analysis
         api_method: POST
         api_path: /v1/hygiene/run
+        mutation: false
       - command: /hygiene-report
         description: Get a stored report
         api_method: GET
@@ -77,14 +80,17 @@ agents:
         description: Full PR hygiene scan — stale PRs and missing reviews
         api_method: POST
         api_path: /v1/github/pr-hygiene
+        mutation: false
       - command: /pr-stale
         description: Find stale PRs with no activity
         api_method: POST
         api_path: /v1/github/pr-stale
+        mutation: false
       - command: /pr-reviews
         description: Find PRs missing code review
         api_method: POST
         api_path: /v1/github/pr-reviews
+        mutation: false
       - command: /pr-list
         description: List open PRs for a repository
         api_method: GET
@@ -106,6 +112,7 @@ agents:
         description: Create a planning snapshot
         api_method: POST
         api_path: /v1/planning/snapshot
+        mutation: false
       - command: /planning-snapshots
         description: List stored planning snapshots
         api_method: GET
@@ -114,10 +121,12 @@ agents:
         description: Create a release monitor report
         api_method: POST
         api_path: /v1/release-monitor/run
+        mutation: false
       - command: /release-survey
         description: Create a release execution survey
         api_method: POST
         api_path: /v1/release-survey/run
+        mutation: false
       - command: /release-report
         description: Get a stored release monitor report
         api_method: GET

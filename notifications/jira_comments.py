@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
+from config.env_loader import resolve_dry_run
 from notifications.base import NotificationBackend
 
 
@@ -110,7 +111,7 @@ class JiraCommentNotifier(NotificationBackend):
         message: str,
         level: str = 'flag',
         context: Optional[Dict[str, Any]] = None,
-        dry_run: bool = True,
+        dry_run: Optional[bool] = None,
     ) -> Any:
         ctx = context or {}
         field = ctx.get('field')
@@ -118,7 +119,7 @@ class JiraCommentNotifier(NotificationBackend):
         title = self._LEVEL_TITLES[self._normalize_level(level)]
         body = f'{self.MARKER} {title}\n\n{message}'
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             has_existing = self.has_existing_comment(ticket_key, field=field)
             return {
                 'dry_run': True,

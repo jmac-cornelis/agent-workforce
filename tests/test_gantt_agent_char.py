@@ -182,6 +182,7 @@ def test_gantt_agent_tick_persists_results_and_posts_notifications(
     )
     monkeypatch.setenv('GANTT_SNAPSHOT_DIR', str(tmp_path / 'snapshots'))
     monkeypatch.setenv('GANTT_RELEASE_MONITOR_DIR', str(tmp_path / 'reports'))
+    monkeypatch.setenv('DRY_RUN', 'false')
     monkeypatch.setattr(
         pm_runtime.requests,
         'post',

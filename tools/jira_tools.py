@@ -17,6 +17,7 @@ from typing import Any, Dict, List, Optional
 from dotenv import load_dotenv
 
 from tools.base import BaseTool, ToolResult, tool
+from config.env_loader import resolve_dry_run
 from core.tickets import issue_to_dict
 from core.utils import extract_text_from_adf
 
@@ -588,7 +589,7 @@ def transition_ticket(
     to_status: str,
     comment: Optional[str] = None,
     fields: Optional[Dict[str, Any]] = None,
-    dry_run: bool = True,
+    dry_run: Optional[bool] = None,
 ) -> ToolResult:
     '''
     Transition a Jira ticket to a new status.
@@ -622,8 +623,7 @@ def transition_ticket(
                 f'Cannot transition to "{to_status}". Available transitions: {available}'
             )
 
-        # Dry-run: preview only, no mutation
-        if dry_run:
+        if resolve_dry_run(dry_run):
             preview = {
                 'dry_run': True,
                 'ticket_key': ticket_key,
@@ -656,7 +656,7 @@ def transition_ticket(
 @tool(
     description='Add a comment to a Jira ticket'
 )
-def add_ticket_comment(ticket_key: str, body: str, dry_run: bool = True) -> ToolResult:
+def add_ticket_comment(ticket_key: str, body: str, dry_run: Optional[bool] = None) -> ToolResult:
     '''
     Add a comment to a Jira ticket.
 
@@ -670,7 +670,7 @@ def add_ticket_comment(ticket_key: str, body: str, dry_run: bool = True) -> Tool
     try:
         jira = get_jira()
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return ToolResult.success({
                 'dry_run': True,
                 'ticket_key': ticket_key,
@@ -705,7 +705,7 @@ def create_ticket(
     parent_key: Optional[str] = None,
     product_family: Optional[List[str]] = None,
     custom_fields: Optional[Dict[str, Any]] = None,
-    dry_run: bool = True,
+    dry_run: Optional[bool] = None,
 ) -> ToolResult:
     '''
     Create a new Jira ticket.
@@ -802,7 +802,7 @@ def create_ticket(
         if custom_fields:
             fields.update(custom_fields)
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return ToolResult.success({
                 'dry_run': True,
                 'project_key': project_key,
@@ -904,7 +904,7 @@ def update_ticket(
     components: Optional[List[str]] = None,
     labels: Optional[List[str]] = None,
     custom_fields: Optional[Dict[str, Any]] = None,
-    dry_run: bool = True,
+    dry_run: Optional[bool] = None,
 ) -> ToolResult:
     '''
     Update an existing Jira ticket.
@@ -968,7 +968,7 @@ def update_ticket(
         if custom_fields:
             fields.update(custom_fields)
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return ToolResult.success({
                 'dry_run': True,
                 'ticket_key': ticket_key,
@@ -1009,7 +1009,7 @@ def create_release(
     description: Optional[str] = None,
     start_date: Optional[str] = None,
     release_date: Optional[str] = None,
-    dry_run: bool = True,
+    dry_run: Optional[bool] = None,
 ) -> ToolResult:
     '''
     Create a new release/version.
@@ -1030,7 +1030,7 @@ def create_release(
     try:
         jira = get_jira()
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return ToolResult.success({
                 'dry_run': True,
                 'project_key': project_key,
@@ -1071,7 +1071,7 @@ def link_tickets(
     from_key: str,
     to_key: str,
     link_type: str = 'Relates',
-    dry_run: bool = True,
+    dry_run: Optional[bool] = None,
 ) -> ToolResult:
     '''
     Create a link between two tickets.
@@ -1088,7 +1088,7 @@ def link_tickets(
     log.debug(f'link_tickets(from={from_key}, to={to_key}, type={link_type}, dry_run={dry_run})')
 
     try:
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return ToolResult.success({
                 'dry_run': True,
                 'from': from_key,
@@ -1155,7 +1155,7 @@ def get_components(project_key: str) -> ToolResult:
 @tool(
     description='Assign a ticket to a user'
 )
-def assign_ticket(ticket_key: str, assignee: str, dry_run: bool = True) -> ToolResult:
+def assign_ticket(ticket_key: str, assignee: str, dry_run: Optional[bool] = None) -> ToolResult:
     '''
     Assign a ticket to a user.
 
@@ -1170,7 +1170,7 @@ def assign_ticket(ticket_key: str, assignee: str, dry_run: bool = True) -> ToolR
     log.debug(f'assign_ticket(ticket_key={ticket_key}, assignee={assignee}, dry_run={dry_run})')
 
     try:
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return ToolResult.success({
                 'dry_run': True,
                 'ticket': ticket_key,
@@ -1712,7 +1712,7 @@ def get_dashboard(dashboard_id: str) -> ToolResult:
     name='create_dashboard',
     description='Create a new Jira dashboard'
 )
-def create_dashboard(name: str, description: str = '', dry_run: bool = True) -> ToolResult:
+def create_dashboard(name: str, description: str = '', dry_run: Optional[bool] = None) -> ToolResult:
     '''
     Create a new Jira dashboard.
 
@@ -1729,7 +1729,7 @@ def create_dashboard(name: str, description: str = '', dry_run: bool = True) -> 
     try:
         jira = get_jira()
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return ToolResult.success({
                 'dry_run': True,
                 'name': name,
@@ -1904,7 +1904,7 @@ def get_automation(rule_uuid: str) -> ToolResult:
     name='create_automation',
     description='Create a Jira automation rule from a JSON definition'
 )
-def create_automation(rule_json: str, project_key: Optional[str] = None, dry_run: bool = True) -> ToolResult:
+def create_automation(rule_json: str, project_key: Optional[str] = None, dry_run: Optional[bool] = None) -> ToolResult:
     '''
     Create a Jira automation rule from a JSON definition string.
 
@@ -1927,7 +1927,7 @@ def create_automation(rule_json: str, project_key: Optional[str] = None, dry_run
         except json.JSONDecodeError as je:
             return ToolResult.failure(f'Invalid JSON: {je}')
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return ToolResult.success({
                 'dry_run': True,
                 'rule_name': payload.get('name', '<unnamed>'),
@@ -1970,7 +1970,7 @@ def create_automation(rule_json: str, project_key: Optional[str] = None, dry_run
     name='enable_automation',
     description='Enable a Jira automation rule'
 )
-def enable_automation(rule_uuid: str, dry_run: bool = True) -> ToolResult:
+def enable_automation(rule_uuid: str, dry_run: Optional[bool] = None) -> ToolResult:
     '''
     Enable a Jira automation rule.
 
@@ -1986,7 +1986,7 @@ def enable_automation(rule_uuid: str, dry_run: bool = True) -> ToolResult:
     try:
         jira = get_jira()
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return ToolResult.success({
                 'dry_run': True,
                 'rule_uuid': rule_uuid,
@@ -2023,7 +2023,7 @@ def enable_automation(rule_uuid: str, dry_run: bool = True) -> ToolResult:
     name='disable_automation',
     description='Disable a Jira automation rule'
 )
-def disable_automation(rule_uuid: str, dry_run: bool = True) -> ToolResult:
+def disable_automation(rule_uuid: str, dry_run: Optional[bool] = None) -> ToolResult:
     '''
     Disable a Jira automation rule.
 
@@ -2039,7 +2039,7 @@ def disable_automation(rule_uuid: str, dry_run: bool = True) -> ToolResult:
     try:
         jira = get_jira()
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return ToolResult.success({
                 'dry_run': True,
                 'rule_uuid': rule_uuid,
@@ -2076,7 +2076,7 @@ def disable_automation(rule_uuid: str, dry_run: bool = True) -> ToolResult:
     name='delete_automation',
     description='Delete a Jira automation rule'
 )
-def delete_automation(rule_uuid: str, dry_run: bool = True) -> ToolResult:
+def delete_automation(rule_uuid: str, dry_run: Optional[bool] = None) -> ToolResult:
     '''
     Delete a Jira automation rule.
 
@@ -2092,7 +2092,7 @@ def delete_automation(rule_uuid: str, dry_run: bool = True) -> ToolResult:
     try:
         jira = get_jira()
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return ToolResult.success({
                 'dry_run': True,
                 'rule_uuid': rule_uuid,
@@ -2132,7 +2132,7 @@ def bulk_update_tickets(
     input_file: str,
     set_release: Optional[str] = None,
     set_labels: Optional[str] = None,
-    dry_run: bool = True,
+    dry_run: Optional[bool] = None,
 ) -> ToolResult:
     '''
     Bulk update tickets loaded from a CSV file.
@@ -2154,19 +2154,21 @@ def bulk_update_tickets(
         if not os.path.isfile(input_file):
             return ToolResult.failure(f'Input file not found: {input_file}')
 
+        effective_dry_run = resolve_dry_run(dry_run)
+
         _ju_bulk_update_tickets(
             jira,
             input_file,
             set_release=set_release,
-            dry_run=dry_run,
+            dry_run=effective_dry_run,
         )
 
         result = {
-            'dry_run': dry_run,
+            'dry_run': effective_dry_run,
             'input_file': input_file,
             'set_release': set_release,
             'set_labels': set_labels,
-            'status': 'preview' if dry_run else 'completed',
+            'status': 'preview' if effective_dry_run else 'completed',
         }
 
         return ToolResult.success(result)

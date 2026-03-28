@@ -36,6 +36,8 @@ from typing import Any, Optional, cast
 
 from dotenv import load_dotenv
 
+from config.env_loader import resolve_dry_run
+
 # Load environment variables before importing jira_utils
 load_dotenv()
 
@@ -477,7 +479,7 @@ async def transition_ticket(
     to_status: str,
     comment: Optional[str] = None,
     fields: Optional[dict[str, Any]] = None,
-    dry_run: bool = True,
+    dry_run: Optional[bool] = None,
 ) -> list[Any]:
     """Transition a Jira ticket to a new status.
 
@@ -499,7 +501,7 @@ async def transition_ticket(
                 f'Cannot transition to "{to_status}". Available transitions: {available}'
             )
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             current_status = str(getattr(issue.fields, 'status', ''))
             return _json_result({
                 'dry_run': True,
@@ -530,7 +532,7 @@ async def transition_ticket(
 
 
 @_tool_decorator()
-async def add_ticket_comment(ticket_key: str, body: str, dry_run: bool = True) -> list[Any]:
+async def add_ticket_comment(ticket_key: str, body: str, dry_run: Optional[bool] = None) -> list[Any]:
     """Add a comment to a Jira ticket.
 
     Args:
@@ -539,7 +541,7 @@ async def add_ticket_comment(ticket_key: str, body: str, dry_run: bool = True) -
         dry_run: Preview only — do not post the comment.
     """
     try:
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return _json_result({
                 'dry_run': True,
                 'ticket_key': ticket_key,
@@ -1385,7 +1387,7 @@ async def create_ticket(
     fix_version: Optional[str] = None,
     labels: Optional[str] = None,
     parent_key: Optional[str] = None,
-    dry_run: bool = True,
+    dry_run: Optional[bool] = None,
 ) -> list[Any]:
     """Create a new Jira ticket.
 
@@ -1405,7 +1407,7 @@ async def create_ticket(
         labels_list = [l.strip() for l in labels.split(',')] if labels else None
         fix_versions_list = [fix_version] if fix_version else None
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return _json_result({
                 'dry_run': True,
                 'project_key': project_key,
@@ -1462,7 +1464,7 @@ async def update_ticket(
     fix_version: Optional[str] = None,
     labels: Optional[str] = None,
     description: Optional[str] = None,
-    dry_run: bool = True,
+    dry_run: Optional[bool] = None,
 ) -> list[Any]:
     """Update fields on an existing Jira ticket.
 
@@ -1494,7 +1496,7 @@ async def update_ticket(
         if description is not None:
             update_fields['description'] = description
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return _json_result({
                 'dry_run': True,
                 'ticket_key': ticket_key,
@@ -1862,7 +1864,7 @@ async def get_components(project_key: str) -> list[Any]:
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def assign_ticket(ticket_key: str, assignee: str, dry_run: bool = True) -> list[Any]:
+async def assign_ticket(ticket_key: str, assignee: str, dry_run: Optional[bool] = None) -> list[Any]:
     """Assign a Jira ticket to a user.
 
     Args:
@@ -1873,7 +1875,7 @@ async def assign_ticket(ticket_key: str, assignee: str, dry_run: bool = True) ->
         dry_run: Preview only — do not change the assignee.
     """
     try:
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return _json_result({
                 'dry_run': True,
                 'ticket_key': ticket_key,
@@ -1912,7 +1914,7 @@ async def assign_ticket(ticket_key: str, assignee: str, dry_run: bool = True) ->
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def link_tickets(from_key: str, to_key: str, link_type: str = 'Relates', dry_run: bool = True) -> list[Any]:
+async def link_tickets(from_key: str, to_key: str, link_type: str = 'Relates', dry_run: Optional[bool] = None) -> list[Any]:
     """Create a link between two Jira tickets.
 
     Args:
@@ -1923,7 +1925,7 @@ async def link_tickets(from_key: str, to_key: str, link_type: str = 'Relates', d
         dry_run: Preview only — do not create the link.
     """
     try:
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return _json_result({
                 'dry_run': True,
                 'from_key': from_key,
@@ -2230,7 +2232,7 @@ async def get_automation(rule_uuid: str) -> list[Any]:
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def create_automation(rule_json: str, project_key: str = '', dry_run: bool = True) -> list[Any]:
+async def create_automation(rule_json: str, project_key: str = '', dry_run: Optional[bool] = None) -> list[Any]:
     """Create a new Jira automation rule from a JSON payload.
 
     Args:
@@ -2245,7 +2247,7 @@ async def create_automation(rule_json: str, project_key: str = '', dry_run: bool
         return _error_result(f'Invalid JSON payload: {e}')
 
     try:
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return _json_result({
                 'dry_run': True,
                 'rule_name': payload.get('name', ''),
@@ -2279,7 +2281,7 @@ async def create_automation(rule_json: str, project_key: str = '', dry_run: bool
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def enable_automation(rule_uuid: str, dry_run: bool = True) -> list[Any]:
+async def enable_automation(rule_uuid: str, dry_run: Optional[bool] = None) -> list[Any]:
     """Enable a Jira automation rule.
 
     Args:
@@ -2287,7 +2289,7 @@ async def enable_automation(rule_uuid: str, dry_run: bool = True) -> list[Any]:
         dry_run: Preview only — do not change the rule state.
     """
     try:
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return _json_result({
                 'dry_run': True,
                 'rule_uuid': rule_uuid,
@@ -2320,7 +2322,7 @@ async def enable_automation(rule_uuid: str, dry_run: bool = True) -> list[Any]:
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def disable_automation(rule_uuid: str, dry_run: bool = True) -> list[Any]:
+async def disable_automation(rule_uuid: str, dry_run: Optional[bool] = None) -> list[Any]:
     """Disable a Jira automation rule.
 
     Args:
@@ -2328,7 +2330,7 @@ async def disable_automation(rule_uuid: str, dry_run: bool = True) -> list[Any]:
         dry_run: Preview only — do not change the rule state.
     """
     try:
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return _json_result({
                 'dry_run': True,
                 'rule_uuid': rule_uuid,
@@ -2361,7 +2363,7 @@ async def disable_automation(rule_uuid: str, dry_run: bool = True) -> list[Any]:
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def delete_automation(rule_uuid: str, dry_run: bool = True) -> list[Any]:
+async def delete_automation(rule_uuid: str, dry_run: Optional[bool] = None) -> list[Any]:
     """Delete a Jira automation rule.
 
     Args:
@@ -2369,7 +2371,7 @@ async def delete_automation(rule_uuid: str, dry_run: bool = True) -> list[Any]:
         dry_run: Preview only — do not delete the rule.
     """
     try:
-        if dry_run:
+        if resolve_dry_run(dry_run):
             return _json_result({
                 'dry_run': True,
                 'rule_uuid': rule_uuid,

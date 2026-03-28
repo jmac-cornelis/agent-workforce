@@ -525,7 +525,6 @@ class DruckerCoordinatorAgent(BaseAgent):
                                         f'Total open PRs: '
                                         f'{report.get("open_pr_count", 0)}',
                                     ],
-                                    dry_run=False,
                                 )
                             )
                     except Exception as exc:
@@ -567,7 +566,6 @@ class DruckerCoordinatorAgent(BaseAgent):
                         notify_shannon(
                             agent_id='drucker',
                             shannon_base_url=shannon_base_url,
-                            dry_run=False,
                             **self._build_hygiene_notification_payload(result),
                         )
                     )

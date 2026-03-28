@@ -559,6 +559,7 @@ def test_drucker_agent_tick_persists_results_and_posts_notifications(
         staticmethod(lambda: 'drucker prompt'),
     )
     monkeypatch.setenv('DRUCKER_REPORT_DIR', str(tmp_path / 'reports'))
+    monkeypatch.setenv('DRY_RUN', 'false')
     monkeypatch.setattr(
         pm_runtime.requests,
         'post',

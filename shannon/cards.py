@@ -484,6 +484,103 @@ def build_pr_list_card(data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
+def build_dry_run_preview_card(
+    agent_id: str,
+    command: str,
+    data: Dict[str, Any],
+) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card previewing a dry-run result.
+
+    Shows what WOULD happen if the user confirms execution.
+    The user re-sends the same command with "execute" appended to proceed.
+    '''
+    preview_facts: Dict[str, Any] = {}
+    body_lines: list[str] = []
+
+    for key, value in data.items():
+        if key == 'dry_run':
+            continue
+        if isinstance(value, (dict, list)):
+            if isinstance(value, list):
+                body_lines.append(f'**{key}** ({len(value)} items):')
+                for item in value[:5]:
+                    if isinstance(item, dict):
+                        label = (
+                            item.get('ticket_key')
+                            or item.get('summary')
+                            or item.get('name')
+                            or item.get('title')
+                            or str(item)
+                        )
+                        body_lines.append(f'  • {label}')
+                    else:
+                        body_lines.append(f'  • {item}')
+                if len(value) > 5:
+                    body_lines.append(f'  ...and {len(value) - 5} more')
+            else:
+                body_lines.append(f'**{key}**: {len(value)} entries')
+        else:
+            preview_facts[str(key)] = value
+
+    execute_hint = (
+        f'This is a **dry-run preview**. To execute, re-send:\n\n'
+        f'`@Shannon {command} ... execute`'
+    )
+
+    card_body: list[dict[str, Any]] = [
+        {
+            'type': 'TextBlock',
+            'size': 'Large',
+            'weight': 'Bolder',
+            'text': f'⏸ Dry Run — {agent_id.title()} {command}',
+            'wrap': True,
+        },
+        {
+            'type': 'TextBlock',
+            'text': 'No changes were made. Review the preview below.',
+            'wrap': True,
+            'spacing': 'Small',
+            'isSubtle': True,
+        },
+    ]
+
+    fact_items = _fact_entries(preview_facts)
+    if fact_items:
+        card_body.append({
+            'type': 'FactSet',
+            'facts': fact_items,
+        })
+
+    for line in body_lines:
+        if str(line).strip():
+            card_body.append({
+                'type': 'TextBlock',
+                'text': str(line),
+                'wrap': True,
+            })
+
+    card_body.append({
+        'type': 'TextBlock',
+        'text': '---',
+        'spacing': 'Medium',
+    })
+    card_body.append({
+        'type': 'TextBlock',
+        'text': execute_hint,
+        'wrap': True,
+        'weight': 'Bolder',
+        'color': 'Accent',
+    })
+
+    return {
+        '$schema': 'http://adaptivecards.io/schemas/adaptive-card.json',
+        'type': 'AdaptiveCard',
+        'version': '1.5',
+        'body': card_body,
+    }
+
+
 def build_drucker_summary_card(summary: Dict[str, Any]) -> Dict[str, Any]:
     '''
     Build a simple Adaptive Card for Drucker /stats response.
