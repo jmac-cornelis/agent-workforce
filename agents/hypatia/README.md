@@ -48,7 +48,7 @@ Hypatia draws from multiple agents to build documentation:
 
 ### Standalone CLI (`hypatia-agent`)
 
-Hypatia has its own standalone CLI for direct access without going through `pm_agent.py`:
+Hypatia has its own standalone CLI for direct access without going through `agent-cli`:
 
 ```bash
 hypatia-agent <command> [options]
@@ -91,12 +91,12 @@ hypatia-agent get --doc-id abc123 --output exported_record.json
 hypatia-agent generate --doc-title "Guide" --docs README.md --env /path/to/prod.env
 ```
 
-### Workflow (via `pm_agent.py`)
+### Via `agent-cli` (unified CLI)
 
-The same functionality is also available through `pm_agent.py`:
+The same functionality is also available through `agent-cli`:
 
 ```bash
-python pm_agent.py --workflow hypatia-generate --doc-title "CN5000 Build Guide" --docs src/build.md
+agent-cli hypatia generate --doc-title "CN5000 Build Guide" --docs src/build.md
 ```
 
 #### Options Reference

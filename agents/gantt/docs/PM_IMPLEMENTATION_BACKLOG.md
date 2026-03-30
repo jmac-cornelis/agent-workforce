@@ -19,7 +19,7 @@ The governing decisions are:
    - `polling`: always-on service mode that periodically evaluates work and emits durable artifacts or notifications
 4. The human-facing UI for each agent must be:
    - `Shannon` for Teams/channel operation
-   - `pm_agent` for CLI operation
+   - `agent-cli` for CLI operation
 5. API, tool, MCP, Shannon, and CLI surfaces should stay aligned. No PM capability should exist in only one surface.
 
 ---
@@ -76,8 +76,8 @@ This keeps polling and one-shot behavior aligned and avoids separate code paths.
 | `state/monitor_state.py` | new `state/drucker_monitor_state.py` | Rename around Drucker ownership |
 | `state/learning.py` intake-learning pieces | new `state/drucker_learning_store.py` | Split from Gantt release monitoring state |
 | `notifications/jira_comments.py` | `notifications/jira_comments.py` | Keep, but route through Drucker policy gates |
-| `ticket_monitor_cli.py` | `pm_agent.py` workflows | No separate top-level CLI |
-| `release_tracker_cli.py` | `pm_agent.py` workflows | No separate top-level CLI |
+| `ticket_monitor_cli.py` | `agent-cli.py` workflows | No separate top-level CLI |
+| `release_tracker_cli.py` | `agent-cli.py` workflows | No separate top-level CLI |
 
 ---
 
@@ -88,17 +88,17 @@ This keeps polling and one-shot behavior aligned and avoids separate code paths.
 | ID | Story | SP | Depends On | Write Scope | AC |
 |---|---|---:|---|---|---|
 | PM-1 | Define a shared PM agent execution contract for one-shot and polling modes. | 3 | — | `docs/workforce/GANTT_PROJECT_PLANNER_PLAN.md`, `docs/workforce/DRUCKER_JIRA_COORDINATOR_PLAN.md`, `docs/workforce/GANTT_DRUCKER_PM_IMPLEMENTATION_BACKLOG.md` | Both plans describe `run_once`, `tick`, and `run_poller`; one-shot and polling are explicitly supported for both agents |
-| PM-2 | Add common CLI semantics for PM one-shot and polling-oriented workflows. | 5 | PM-1 | `pm_agent.py`, `README.md`, `docs/workflows.md` | `pm_agent` documents explicit one-shot workflows for Gantt and Drucker; operator-facing flags are consistent across both agents |
+| PM-2 | Add common CLI semantics for PM one-shot and polling-oriented workflows. | 5 | PM-1 | `agent-cli.py`, `README.md`, `docs/workflows.md` | `agent-cli` documents explicit one-shot workflows for Gantt and Drucker; operator-facing flags are consistent across both agents |
 | PM-3 | Define Shannon command and notification conventions for PM agents. | 3 | PM-1 | `config/shannon/agent_registry.yaml`, `shannon/service.py`, `shannon/cards.py`, `docs/shannon-teams-setup.md` | Both agents have dedicated command families and proactive notification conventions documented and routable through Shannon |
 
 ### Epic: GAN-1 — Gantt Service Grade API
 
 | ID | Story | SP | Depends On | Write Scope | AC |
 |---|---|---:|---|---|---|
-| GAN-1 | Create a dedicated Gantt API service instead of relying only on direct calls from tools and `pm_agent`. | 5 | PM-1 | new `agents/gantt_api.py`, `README.md`, `docs/workflows.md` | FastAPI service exists with planning and release-monitor endpoints; OpenAPI available; service can be run independently |
+| GAN-1 | Create a dedicated Gantt API service instead of relying only on direct calls from tools and `agent-cli`. | 5 | PM-1 | new `agents/gantt_api.py`, `README.md`, `docs/workflows.md` | FastAPI service exists with planning and release-monitor endpoints; OpenAPI available; service can be run independently |
 | GAN-2 | Expose release monitoring as a first-class Gantt tool and MCP surface. | 3 | GAN-1 | `tools/gantt_tools.py`, `tools/__init__.py`, `mcp_server.py`, `tests/test_mcp_server_gantt_char.py` | `create_release_monitor` is exported through tools and MCP and covered by characterization tests |
 | GAN-3 | Separate Gantt release-monitor persistence from roadmap snapshot storage. | 5 | GAN-1 | new `state/gantt_release_monitor_store.py`, `tools/gantt_tools.py`, `agents/gantt_api.py`, `tests/test_gantt_tools_char.py` | Release-monitor artifacts are stored in a Gantt-specific store; no roadmap store reuse remains |
-| GAN-4 | Add `pm_agent` workflows for release monitoring and report retrieval/listing. | 5 | GAN-2 | `pm_agent.py`, `README.md`, `docs/workflows.md` | CLI supports `gantt-release-monitor`, `gantt-release-monitor-get`, and `gantt-release-monitor-list` with output and persist options |
+| GAN-4 | Add `agent-cli` workflows for release monitoring and report retrieval/listing. | 5 | GAN-2 | `agent-cli.py`, `README.md`, `docs/workflows.md` | CLI supports `gantt-release-monitor`, `gantt-release-monitor-get`, and `gantt-release-monitor-list` with output and persist options |
 
 ### Epic: GAN-2 — Gantt Release Monitoring Harvest
 
@@ -106,7 +106,7 @@ This keeps polling and one-shot behavior aligned and avoids separate code paths.
 |---|---|---:|---|---|---|
 | GAN-5 | Harvest prior-snapshot delta comparison and historical release snapshot loading from the PM branch. | 5 | GAN-3 | `agents/gantt_agent.py`, `core/release_tracking.py`, new `state/gantt_release_monitor_store.py`, `tests/test_gantt_agent_char.py`, `tests/test_release_tracking.py` | Gantt release monitor compares against persisted prior snapshots for the same release scope and reports meaningful deltas |
 | GAN-6 | Harvest cycle-time and readiness-support logic without preserving a generic PM learning store. | 8 | GAN-5 | `agents/gantt_agent.py`, `core/release_tracking.py`, new `state/gantt_release_monitor_store.py`, `tests/test_release_tracking.py` | Gantt readiness reports can consume stored cycle-time stats and produce richer readiness outputs than the current empty-cycle-time path |
-| GAN-7 | Preserve export/report formatting from the release tracker where it improves operator usability. | 3 | GAN-5 | `agents/gantt_agent.py`, `tools/gantt_tools.py`, `pm_agent.py`, `tests/test_gantt_agent_char.py` | Gantt can return readable summary, JSON, and file-based report outputs without reviving a separate release-tracker CLI |
+| GAN-7 | Preserve export/report formatting from the release tracker where it improves operator usability. | 3 | GAN-5 | `agents/gantt_agent.py`, `tools/gantt_tools.py`, `agent-cli.py`, `tests/test_gantt_agent_char.py` | Gantt can return readable summary, JSON, and file-based report outputs without reviving a separate release-tracker CLI |
 
 ### Epic: GAN-3 — Gantt Polling + Shannon UI
 
@@ -125,8 +125,8 @@ This keeps polling and one-shot behavior aligned and avoids separate code paths.
 |---|---|---:|---|---|---|
 | DRU-1 | Harvest deterministic field-validation rules and action recommendation logic from the PM branch. | 5 | PM-1 | new `core/monitoring.py`, `agents/drucker_agent.py`, `tests/test_drucker_agent_char.py`, new `tests/test_monitoring.py` | Drucker can evaluate individual issues for required/warn fields using deterministic policy rules |
 | DRU-2 | Split PM-branch monitoring state into Drucker-owned persistent stores. | 5 | DRU-1 | new `state/drucker_monitor_state.py`, new `state/drucker_learning_store.py`, `agents/drucker_agent.py`, `tests/test_monitor_state.py`, `tests/test_learning.py` | Drucker stores checkpoints, validation history, and learning records in Drucker-specific state modules |
-| DRU-3 | Add issue-level one-shot evaluation to Drucker API and CLI. | 5 | DRU-1 | `agents/drucker_api.py`, `agents/drucker_agent.py`, `pm_agent.py`, `docs/workflows.md` | Operators can run one-shot issue evaluation from API, Shannon, and `pm_agent` without invoking a project-wide hygiene report |
-| DRU-4 | Fold daily/report modes into Drucker instead of preserving `ticket_monitor_cli.py`. | 5 | DRU-1 | `agents/drucker_agent.py`, `agents/drucker_api.py`, `pm_agent.py`, `shannon/cards.py`, `tests/test_drucker_agent_char.py` | Drucker exposes bug activity, intake report, and hygiene-report outputs as first-class Drucker capabilities |
+| DRU-3 | Add issue-level one-shot evaluation to Drucker API and CLI. | 5 | DRU-1 | `agents/drucker_api.py`, `agents/drucker_agent.py`, `agent-cli.py`, `docs/workflows.md` | Operators can run one-shot issue evaluation from API, Shannon, and `agent-cli` without invoking a project-wide hygiene report |
+| DRU-4 | Fold daily/report modes into Drucker instead of preserving `ticket_monitor_cli.py`. | 5 | DRU-1 | `agents/drucker_agent.py`, `agents/drucker_api.py`, `agent-cli.py`, `shannon/cards.py`, `tests/test_drucker_agent_char.py` | Drucker exposes bug activity, intake report, and hygiene-report outputs as first-class Drucker capabilities |
 
 ### Epic: DRU-2 — Review-Gated Jira Writeback Policy
 
@@ -178,7 +178,7 @@ This backlog is complete when all of the following are true:
 
 - Gantt and Drucker are the only public PM agent identities for this slice
 - both agents support one-shot and polling execution modes
-- both agents are operable from Shannon and `pm_agent`
+- both agents are operable from Shannon and `agent-cli`
 - both agents have aligned API, tool, and MCP surfaces
 - both agents persist durable outputs and polling history
 - review-gated write-back remains explicit for non-trivial Jira mutations

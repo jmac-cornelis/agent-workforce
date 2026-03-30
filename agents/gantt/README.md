@@ -23,7 +23,7 @@ uvicorn agents.gantt.api:app --host 0.0.0.0 --port 8202
 
 To run the polling worker:
 ```bash
-python pm_agent.py --workflow gantt-poll --poll-interval 300
+agent-cli gantt poll --poll-interval 300
 ```
 
 ## Shannon Commands
@@ -57,7 +57,7 @@ Like all agents, Gantt also supports the standard operational commands: `/stats`
 
 ### Standalone CLI (`gantt-agent`)
 
-Gantt has its own standalone CLI for direct access without going through `pm_agent.py`:
+Gantt has its own standalone CLI for direct access without going through `agent-cli`:
 
 ```bash
 gantt-agent <command> [options]
@@ -102,22 +102,22 @@ gantt-agent snapshot-list --project STL --limit 10
 gantt-agent snapshot --project STL --env /path/to/production.env
 ```
 
-### Workflows (via `pm_agent.py`)
+### Via `agent-cli` (unified CLI)
 
-The same functionality is also available through `pm_agent.py`:
+The same functionality is also available through `agent-cli`:
 
-| Workflow | Example |
-|----------|---------|
-| `gantt-snapshot` | `python pm_agent.py --workflow gantt-snapshot -p STL` |
-| `gantt-snapshot-get` | `python pm_agent.py --workflow gantt-snapshot-get --snapshot-id abc123` |
-| `gantt-snapshot-list` | `python pm_agent.py --workflow gantt-snapshot-list -p STL` |
-| `gantt-release-monitor` | `python pm_agent.py --workflow gantt-release-monitor -p STL --releases v2.4.0` |
-| `gantt-release-monitor-get` | `python pm_agent.py --workflow gantt-release-monitor-get --report-id abc123` |
-| `gantt-release-monitor-list` | `python pm_agent.py --workflow gantt-release-monitor-list -p STL` |
-| `gantt-release-survey` | `python pm_agent.py --workflow gantt-release-survey -p STL --releases v2.4.0` |
-| `gantt-release-survey-get` | `python pm_agent.py --workflow gantt-release-survey-get --survey-id abc123` |
-| `gantt-release-survey-list` | `python pm_agent.py --workflow gantt-release-survey-list -p STL` |
-| `gantt-poll` | `python pm_agent.py --workflow gantt-poll -p STL --poll-interval 300` |
+| Subcommand | Example |
+|------------|---------|
+| `snapshot` | `agent-cli gantt snapshot -p STL` |
+| `snapshot-get` | `agent-cli gantt snapshot-get --snapshot-id abc123` |
+| `snapshot-list` | `agent-cli gantt snapshot-list -p STL` |
+| `release-monitor` | `agent-cli gantt release-monitor -p STL --releases v2.4.0` |
+| `release-monitor-get` | `agent-cli gantt release-monitor-get --report-id abc123` |
+| `release-monitor-list` | `agent-cli gantt release-monitor-list -p STL` |
+| `release-survey` | `agent-cli gantt release-survey -p STL --releases v2.4.0` |
+| `release-survey-get` | `agent-cli gantt release-survey-get --survey-id abc123` |
+| `release-survey-list` | `agent-cli gantt release-survey-list -p STL` |
+| `poll` | `agent-cli gantt poll -p STL --poll-interval 300` |
 
 #### Options Reference
 

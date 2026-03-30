@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 ##########################################################################################
 #
-# Script name: pm_agent.py
+# Script name: agent_cli.py
 #
-# Description: CLI entry point for Cornelis Agent Pipeline.
-#              Provides commands for release planning workflow.
+# Description: Unified CLI entry point for the Cornelis Agent Workforce.
+#              Thin subcommand router that mounts per-agent CLIs and
+#              houses unique cross-agent orchestration workflows.
 #
 # Author: Cornelis Networks
 #
 # Usage:
-#   python pm_agent.py --help
-#   python pm_agent.py --plan --project PROJ --roadmap slides.pptx
-#   python pm_agent.py --analyze --project PROJ
-#   python pm_agent.py --resume --session abc123
+#   agent-cli drucker hygiene -p STL
+#   agent-cli gantt snapshot -p STL
+#   agent-cli bug-report -p STL --filter-name "My Filter"
+#   agent-cli llm --prompt "Analyze this" --attachments report.pdf
 #
 ##########################################################################################
 
@@ -1204,20 +1205,20 @@ def handle_args():
     global _quiet_mode
 
     parser = argparse.ArgumentParser(
-        prog='pm-agent',
-        description='Cornelis Agent Pipeline CLI',
+        prog='agent-cli',
+        description='Cornelis Agent Workforce — Unified CLI',
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog='''
 Agent subcommands:
-  pm-agent drucker hygiene --project STL
-  pm-agent gantt snapshot --project STL --planning-horizon 120
-  pm-agent hypatia generate --doc-title "Build Notes" --docs README.md
+  agent-cli drucker hygiene --project STL
+  agent-cli gantt snapshot --project STL --planning-horizon 120
+  agent-cli hypatia generate --doc-title "Build Notes" --docs README.md
 
 Unique workflows:
-  pm-agent bug-report --filter "CN5000 Bug Filter" --project STL
-  pm-agent feature-plan --project STL --feature "Add PQC device support"
-  pm-agent llm prompt.md --attachments data.csv
-  pm-agent excel-map STL-74071 --hierarchy 2
+  agent-cli bug-report --filter "CN5000 Bug Filter" --project STL
+  agent-cli feature-plan --project STL --feature "Add PQC device support"
+  agent-cli llm prompt.md --attachments data.csv
+  agent-cli excel-map STL-74071 --hierarchy 2
         '''
     )
 

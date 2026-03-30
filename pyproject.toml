@@ -14,7 +14,7 @@ authors = [
 ]
 
 # Runtime dependencies — only what the CLI utilities need.
-# The agent pipeline (pm_agent.py, agents/, llm/, tools/) has heavier deps
+# The agent pipeline (agent_cli.py, agents/, llm/, tools/) has heavier deps
 # that are NOT required for the standalone CLIs.
 dependencies = [
     "jira>=3.5.0",
@@ -51,7 +51,7 @@ github-utils = "github_utils:main"
 confluence-utils = "confluence_utils:main"
 jira-mcp-server = "mcp_server:run"
 drawio-utils = "drawio_utilities:main"
-pm-agent = "pm_agent:main"
+agent-cli = "agent_cli:main"
 drucker-agent = "agents.drucker.cli:main"
 gantt-agent = "agents.gantt.cli:main"
 hypatia-agent = "agents.hypatia.cli:main"
@@ -59,7 +59,7 @@ excel-utils = "excel_utils:main"
 
 [tool.setuptools]
 # Include top-level .py modules (not packages)
-py-modules = ["jira_utils", "github_utils", "confluence_utils", "drawio_utilities", "excel_utils", "pm_agent", "mcp_server"]
+py-modules = ["jira_utils", "github_utils", "confluence_utils", "drawio_utilities", "excel_utils", "agent_cli", "mcp_server"]
 
 [tool.setuptools.package-data]
 # Include template files so --create-ticket can reference them

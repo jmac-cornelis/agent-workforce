@@ -40,7 +40,7 @@ def _write_record_files(
 ) -> tuple:
     '''
     Write Hypatia record JSON + Markdown + review-session JSON + patch drafts.
-    Mirrors _write_hypatia_record_files() from pm_agent.py so the CLI is
+    Mirrors _write_hypatia_record_files() from agent_cli.py so the CLI is
     self-contained.
     '''
     output_root, output_ext = os.path.splitext(output_base)
@@ -89,7 +89,7 @@ def _write_publication_file(
 ) -> str:
     '''
     Write Hypatia publication results JSON and return its path.
-    Mirrors _write_hypatia_publication_file() from pm_agent.py.
+    Mirrors _write_hypatia_publication_file() from agent_cli.py.
     '''
     output_root, output_ext = os.path.splitext(output_base)
     if output_ext.lower() not in ('.json', '.md'):
@@ -115,7 +115,7 @@ def _write_publication_file(
 def cmd_generate(args: argparse.Namespace) -> None:
     '''
     Generate source-grounded documentation via HypatiaDocumentationAgent.
-    Mirrors _workflow_hypatia_generate() from pm_agent.py as a standalone CLI.
+    Mirrors _workflow_hypatia_generate() from agent_cli.py as a standalone CLI.
     '''
     from dotenv import load_dotenv
     load_dotenv(args.env if hasattr(args, 'env') and args.env else None)

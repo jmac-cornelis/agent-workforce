@@ -2389,7 +2389,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
         if created_csv_path:
             lines.extend(['', f'Cleanup CSV: {created_csv_path}',
                            '  To undo all created tickets:',
-                           f'  python pm_agent.py --cleanup {created_csv_path} --execute'])
+                           f'  python agent_cli.py --cleanup {created_csv_path} --execute'])
 
         return AgentResponse.success_response(
             content=content,

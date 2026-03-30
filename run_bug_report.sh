@@ -80,7 +80,7 @@ cd "$SCRIPT_DIR"
 
 # Verify key source files exist
 require_file "jira_utils.py"
-require_file "pm_agent.py"
+require_file "agent_cli.py"
 require_file "excel_utils.py"
 require_file "$PROMPT"
 
@@ -184,7 +184,7 @@ hr
 # ---------------------------------------------------------------------------
 log "Step 3/4: Invoking LLM agent (timeout=${LLM_TIMEOUT}s) ..."
 
-python3 pm_agent.py \
+python3 agent_cli.py \
     --invoke-llm "$PROMPT" \
     --attachments "${DUMP_FILE}.json" \
     --timeout "$LLM_TIMEOUT" \

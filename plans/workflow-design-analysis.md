@@ -17,8 +17,8 @@ The project has a working bash script ([`run_bug_report.sh`](run_bug_report.sh))
 
 The question is whether to:
 
-- **Option A** — Add a native `--workflow bug-report` command to [`pm_agent.py`](pm_agent.py) that runs the same 4 steps in Python
-- **Option B** — Keep bash scripts as the orchestration layer, chaining CLI calls to [`jira_utils.py`](jira_utils.py), [`pm_agent.py`](pm_agent.py), and [`excel_utils.py`](excel_utils.py)
+- **Option A** — Add a native `--workflow bug-report` command to [`agent_cli.py`](agent_cli.py) that runs the same 4 steps in Python
+- **Option B** — Keep bash scripts as the orchestration layer, chaining CLI calls to [`jira_utils.py`](jira_utils.py), [`agent_cli.py`](agent_cli.py), and [`excel_utils.py`](excel_utils.py)
 
 ---
 
@@ -29,7 +29,7 @@ The question is whether to:
 | Tool | Entry Point | Lines | Role |
 |------|-------------|-------|------|
 | [`jira_utils.py`](jira_utils.py) | `jira-utils` | ~6166 | Standalone Jira CLI with [`handle_args()`](jira_utils.py) / [`main()`](jira_utils.py) |
-| [`pm_agent.py`](pm_agent.py) | `pm-agent` | ~1261 | Agent pipeline CLI: `--plan`, `--analyze`, `--invoke-llm`, `--build-excel-map`, etc. |
+| [`agent_cli.py`](agent_cli.py) | `agent-cli` | ~1261 | Agent pipeline CLI: `--plan`, `--analyze`, `--invoke-llm`, `--build-excel-map`, etc. |
 | [`excel_utils.py`](excel_utils.py) | `excel-utils` | ~1291 | Standalone Excel CLI: `--concat`, `--convert-from-csv`, `--diff` |
 | [`agents/orchestrator.py`](agents/orchestrator.py) | (library) | ~426 | Release planning orchestrator using sub-agents |
 
@@ -39,8 +39,8 @@ All three CLIs are installable via `pipx` as separate console entry points defin
 
 The codebase already has a precedent for native Python orchestration:
 
-- [`cmd_build_excel_map()`](pm_agent.py:280) in `pm_agent.py` directly imports and calls [`jira_utils`](jira_utils.py) functions ([`connect_to_jira()`](jira_utils.py:408), [`_get_related_data()`](jira_utils.py:1598), [`_get_children_data()`](jira_utils.py:1389), [`dump_tickets_to_file()`](jira_utils.py:3125)) — no subprocess calls.
-- [`cmd_invoke_llm()`](pm_agent.py:682) handles prompt loading, attachment classification, vision API, token tracking, and file extraction — all inline.
+- [`cmd_build_excel_map()`](agent_cli.py:280) in `agent_cli.py` directly imports and calls [`jira_utils`](jira_utils.py) functions ([`connect_to_jira()`](jira_utils.py:408), [`_get_related_data()`](jira_utils.py:1598), [`_get_children_data()`](jira_utils.py:1389), [`dump_tickets_to_file()`](jira_utils.py:3125)) — no subprocess calls.
+- [`cmd_invoke_llm()`](agent_cli.py:682) handles prompt loading, attachment classification, vision API, token tracking, and file extraction — all inline.
 - The [`ReleasePlanningOrchestrator`](agents/orchestrator.py:106) coordinates multiple sub-agents through a [`WorkflowState`](agents/orchestrator.py:67) dataclass.
 
 ### 2.3 What the Bash Script Does
@@ -50,7 +50,7 @@ The codebase already has a precedent for native Python orchestration:
 ```
 Step 1: python3 jira_utils.py --list-filters --favourite  → parse stdout for filter ID
 Step 2: python3 jira_utils.py --run-filter $ID --dump-file $NAME --get-comments latest
-Step 3: python3 pm_agent.py --invoke-llm $PROMPT --attachments $JSON --timeout 800
+Step 3: python3 agent_cli.py --invoke-llm $PROMPT --attachments $JSON --timeout 800
 Step 4: python3 excel_utils.py --convert-from-csv cn_bug_report.csv
 ```
 
@@ -78,7 +78,7 @@ The script includes ~100 lines of boilerplate: pre-flight checks, stdout parsing
 |-----------|-------------------------------|------------------------|
 | Error propagation | Python exceptions with full stack traces | Exit codes only; `set -euo pipefail` stops on first failure |
 | Partial failure recovery | Can catch per-step exceptions, retry, or skip | Script aborts; must re-run from scratch |
-| Logging | Unified [`cornelis_agent.log`](pm_agent.py:42) with function/line context | Separate log per tool + bash `log()` helper |
+| Logging | Unified [`cornelis_agent.log`](agent_cli.py:42) with function/line context | Separate log per tool + bash `log()` helper |
 | Debugging | Single Python debugger session; `--debug` flag | Must debug each subprocess independently |
 | Intermediate state | Can persist [`WorkflowState`](agents/orchestrator.py:67) between steps | Files on disk only |
 
@@ -91,16 +91,16 @@ The script includes ~100 lines of boilerplate: pre-flight checks, stdout parsing
 | Creating new workflows | Compose existing Python functions; optionally define in YAML | Copy-paste bash script, modify commands |
 | Sharing steps between workflows | Import functions directly | No sharing; each script is standalone |
 | Parameterization | Python argparse with type checking, defaults, validation | Bash positional args with manual validation |
-| Workflow discovery | `pm-agent --workflow --list` shows all available workflows | `ls *.sh` |
+| Workflow discovery | `agent-cli --workflow --list` shows all available workflows | `ls *.sh` |
 
-**Verdict: Option A wins.** The existing [`cmd_build_excel_map()`](pm_agent.py:280) already demonstrates the pattern: import [`jira_utils`](jira_utils.py) functions, call them in sequence, handle errors. New workflows would follow the same pattern. With bash, each new pipeline requires re-implementing boilerplate, stdout parsing, and error handling.
+**Verdict: Option A wins.** The existing [`cmd_build_excel_map()`](agent_cli.py:280) already demonstrates the pattern: import [`jira_utils`](jira_utils.py) functions, call them in sequence, handle errors. New workflows would follow the same pattern. With bash, each new pipeline requires re-implementing boilerplate, stdout parsing, and error handling.
 
 ### 3.4 User Experience
 
 | Criterion | Option A: Native `--workflow` | Option B: Bash Scripts |
 |-----------|-------------------------------|------------------------|
-| Invocation | `pm-agent --workflow bug-report --filter "SW 12.1.1 P0/P1 Bugs"` | `./run_bug_report.sh "SW 12.1.1 P0/P1 Bugs"` |
-| Help text | `pm-agent --workflow --help` with argparse descriptions | `./run_bug_report.sh` (manual usage block) |
+| Invocation | `agent-cli --workflow bug-report --filter "SW 12.1.1 P0/P1 Bugs"` | `./run_bug_report.sh "SW 12.1.1 P0/P1 Bugs"` |
+| Help text | `agent-cli --workflow --help` with argparse descriptions | `./run_bug_report.sh` (manual usage block) |
 | Progress reporting | Structured step-by-step output with consistent formatting | `log()` helper with timestamps |
 | Installation | Comes with `pipx install .` — no extra setup | Must be in PATH or invoked with `./`; needs `chmod +x` |
 | Shell compatibility | Works on any OS with Python | Bash-only (macOS/Linux); won't work on Windows |
@@ -122,10 +122,10 @@ The script includes ~100 lines of boilerplate: pre-flight checks, stdout parsing
 
 The codebase already follows the pattern of native Python orchestration:
 
-- [`cmd_build_excel_map()`](pm_agent.py:280) — imports [`jira_utils`](jira_utils.py) functions directly, orchestrates a multi-step pipeline
+- [`cmd_build_excel_map()`](agent_cli.py:280) — imports [`jira_utils`](jira_utils.py) functions directly, orchestrates a multi-step pipeline
 - [`ReleasePlanningOrchestrator`](agents/orchestrator.py:106) — coordinates sub-agents through a state machine
-- [`cmd_invoke_llm()`](pm_agent.py:682) — handles the full LLM invocation lifecycle inline
-- The dispatch table in [`main()`](pm_agent.py:1219) already maps command names to handler functions
+- [`cmd_invoke_llm()`](agent_cli.py:682) — handles the full LLM invocation lifecycle inline
+- The dispatch table in [`main()`](agent_cli.py:1219) already maps command names to handler functions
 
 Adding `--workflow` follows the established pattern. Bash scripts are an outlier in this architecture.
 
@@ -172,7 +172,7 @@ Adding `--workflow` follows the established pattern. Bash scripts are an outlier
 
 ## 5. Recommendation
 
-**Option A: Native `--workflow` command in `pm_agent.py`** is the clear winner across all dimensions.
+**Option A: Native `--workflow` command in `agent_cli.py`** is the clear winner across all dimensions.
 
 ### Why Not Bash?
 
@@ -180,7 +180,7 @@ The bash script approach has exactly one advantage: **it already exists and work
 
 ### Why Native Python?
 
-The codebase already demonstrates this pattern successfully with [`cmd_build_excel_map()`](pm_agent.py:280), which imports [`jira_utils`](jira_utils.py) functions directly and orchestrates a multi-step pipeline. The `--workflow` command would follow the exact same pattern, and the existing functions ([`list_filters()`](jira_utils.py:4004), [`run_filter()`](jira_utils.py:4227), [`convert_from_csv()`](excel_utils.py:690)) are already importable.
+The codebase already demonstrates this pattern successfully with [`cmd_build_excel_map()`](agent_cli.py:280), which imports [`jira_utils`](jira_utils.py) functions directly and orchestrates a multi-step pipeline. The `--workflow` command would follow the exact same pattern, and the existing functions ([`list_filters()`](jira_utils.py:4004), [`run_filter()`](jira_utils.py:4227), [`convert_from_csv()`](excel_utils.py:690)) are already importable.
 
 ---
 
@@ -189,16 +189,16 @@ The codebase already demonstrates this pattern successfully with [`cmd_build_exc
 ### 6.1 CLI Interface
 
 ```
-pm-agent --workflow bug-report --filter "SW 12.1.1 P0/P1 Bugs" [options]
-pm-agent --workflow bug-report --filter-id 12345 [options]
-pm-agent --workflow --list
+agent-cli --workflow bug-report --filter "SW 12.1.1 P0/P1 Bugs" [options]
+agent-cli --workflow bug-report --filter-id 12345 [options]
+agent-cli --workflow --list
 ```
 
 ### 6.2 Architecture
 
 ```mermaid
 flowchart TD
-    A[CLI: pm-agent --workflow bug-report --filter NAME] --> B[cmd_workflow]
+    A[CLI: agent-cli --workflow bug-report --filter NAME] --> B[cmd_workflow]
     B --> C[Load workflow definition]
     C --> D[Step 1: jira_utils.list_filters - get filter ID by name]
     D --> E[Step 2: jira_utils.run_filter - pull tickets to JSON]
@@ -218,7 +218,7 @@ Two approaches for defining workflows, not mutually exclusive:
 
 #### Option 1: Hardcoded Python Functions (Recommended for v1)
 
-Each workflow is a `cmd_workflow_*()` function in [`pm_agent.py`](pm_agent.py), following the existing [`cmd_build_excel_map()`](pm_agent.py:280) pattern:
+Each workflow is a `cmd_workflow_*()` function in [`agent_cli.py`](agent_cli.py), following the existing [`cmd_build_excel_map()`](agent_cli.py:280) pattern:
 
 ```python
 def cmd_workflow_bug_report(args):
@@ -307,8 +307,8 @@ This follows the same refactoring pattern already applied for [`_get_related_dat
 
 1. Refactor [`list_filters()`](jira_utils.py:4004) to return structured data (list of filter dicts) in addition to printing
 2. Refactor [`run_filter()`](jira_utils.py:4227) to return issues list and dump file path
-3. Extract shared LLM invocation logic from [`cmd_invoke_llm()`](pm_agent.py:682) into a reusable `_invoke_llm()` function
-4. Add `--workflow` argument group to [`handle_args()`](pm_agent.py) in `pm_agent.py`
+3. Extract shared LLM invocation logic from [`cmd_invoke_llm()`](agent_cli.py:682) into a reusable `_invoke_llm()` function
+4. Add `--workflow` argument group to [`handle_args()`](agent_cli.py) in `agent_cli.py`
 5. Add `cmd_workflow()` dispatcher that routes to workflow-specific handlers
 6. Implement `cmd_workflow_bug_report()` as the first native workflow
 
@@ -335,7 +335,7 @@ This follows the same refactoring pattern already applied for [`_get_related_dat
 |------|------------|
 | Refactoring [`list_filters()`](jira_utils.py:4004) / [`run_filter()`](jira_utils.py:4227) breaks existing CLI behavior | Add return values without changing print behavior; existing CLI callers are unaffected |
 | Scope creep into full workflow engine | Phase 1 uses simple Python functions; YAML engine is Phase 3 and optional |
-| LLM invocation logic is complex to extract | [`cmd_invoke_llm()`](pm_agent.py:682) is ~250 lines but well-structured; extract the core into `_invoke_llm()` and have both `cmd_invoke_llm()` and workflows call it |
+| LLM invocation logic is complex to extract | [`cmd_invoke_llm()`](agent_cli.py:682) is ~250 lines but well-structured; extract the core into `_invoke_llm()` and have both `cmd_invoke_llm()` and workflows call it |
 | Existing bash script users disrupted | Keep [`run_bug_report.sh`](run_bug_report.sh) working during transition; add deprecation notice |
 
 ---
@@ -356,6 +356,6 @@ The bash script does have some good practices worth preserving in the native imp
 
 **Recommendation: Implement Option A (native `--workflow` command) using hardcoded Python functions for Phase 1.**
 
-The codebase already demonstrates this pattern with [`cmd_build_excel_map()`](pm_agent.py:280). The required refactoring is minimal (add return values to 3 functions). The result will be more maintainable, more testable, more reliable, and consistent with the existing architecture. The YAML workflow engine can be added later if the number of workflows grows beyond 3-4.
+The codebase already demonstrates this pattern with [`cmd_build_excel_map()`](agent_cli.py:280). The required refactoring is minimal (add return values to 3 functions). The result will be more maintainable, more testable, more reliable, and consistent with the existing architecture. The YAML workflow engine can be added later if the number of workflows grows beyond 3-4.
 
 Keep [`run_bug_report.sh`](run_bug_report.sh) as a reference during implementation, then deprecate it once the native workflow is validated.

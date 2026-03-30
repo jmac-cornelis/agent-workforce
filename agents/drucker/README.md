@@ -186,13 +186,13 @@ drucker-agent <subcommand> [options]
 | `github-hygiene` | GitHub PR hygiene scan | `drucker-agent github-hygiene cornelisnetworks/ifs-all` |
 | `poll` | Scheduled hygiene polling loop | `drucker-agent poll -p STL --max-cycles 0` |
 
-### Via `pm-agent` (unified CLI)
+### Via `agent-cli` (unified CLI)
 
 All Drucker subcommands are also available through the unified agent CLI:
 
 ```bash
-pm-agent drucker hygiene -p STL
-pm-agent drucker poll -p STL --poll-interval 300 --max-cycles 0
+agent-cli drucker hygiene -p STL
+agent-cli drucker poll -p STL --poll-interval 300 --max-cycles 0
 ```
 
 ### Drucker CLI Options
