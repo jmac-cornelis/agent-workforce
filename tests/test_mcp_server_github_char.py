@@ -406,3 +406,207 @@ def _raise_not_found(name: str) -> None:
 
 def _raise_connection_error() -> None:
     raise Exception('GITHUB_TOKEN not set or invalid GitHub token')
+
+
+# ---------------------------------------------------------------------------
+# Tool 37: check_naming_compliance
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_check_naming_compliance_returns_findings(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
+    '''check_naming_compliance returns naming compliance report.'''
+    report = {
+        'repo': 'cornelisnetworks/ifs-all',
+        'scan_time': '2026-03-28T12:00:00Z',
+        'ticket_patterns': [r'(STL|STLSW)-\d+'],
+        'pr_findings': [{'number': 42, 'title': 'quick fix', 'reason': 'no_ticket_reference'}],
+        'branch_findings': [{'branch': 'fix-stuff', 'reason': 'no_ticket_reference'}],
+        'total_findings': 2,
+        'summary': '2 naming violations found',
+    }
+
+    monkeypatch.setattr(import_mcp_server.github_utils, 'get_connection', lambda: None)
+    monkeypatch.setattr(import_mcp_server.github_utils, 'analyze_naming_compliance',
+                        lambda repo, ticket_patterns=None: report)
+
+    result = await import_mcp_server.check_naming_compliance('cornelisnetworks/ifs-all')
+    data = _parse_result(result)
+
+    assert data['repo'] == 'cornelisnetworks/ifs-all'
+    assert data['total_findings'] == 2
+    assert len(data['pr_findings']) == 1
+
+
+@pytest.mark.asyncio
+async def test_check_naming_compliance_with_custom_patterns(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
+    '''check_naming_compliance passes custom ticket patterns through.'''
+    captured = {}
+
+    def _capture(repo, ticket_patterns=None):
+        captured['patterns'] = ticket_patterns
+        return {'repo': repo, 'total_findings': 0, 'pr_findings': [], 'branch_findings': [], 'summary': 'ok'}
+
+    monkeypatch.setattr(import_mcp_server.github_utils, 'get_connection', lambda: None)
+    monkeypatch.setattr(import_mcp_server.github_utils, 'analyze_naming_compliance', _capture)
+
+    await import_mcp_server.check_naming_compliance('cornelisnetworks/ifs-all', ticket_patterns='FOO-\\d+, BAR-\\d+')
+
+    assert captured['patterns'] == ['FOO-\\d+', 'BAR-\\d+']
+
+
+@pytest.mark.asyncio
+async def test_check_naming_compliance_error(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
+    '''check_naming_compliance returns error on failure.'''
+    monkeypatch.setattr(import_mcp_server.github_utils, 'get_connection', _raise_connection_error)
+
+    result = await import_mcp_server.check_naming_compliance('cornelisnetworks/ifs-all')
+    data = _parse_result(result)
+    assert 'error' in data
+
+
+# ---------------------------------------------------------------------------
+# Tool 38: check_merge_conflicts
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_check_merge_conflicts_returns_conflicts(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
+    '''check_merge_conflicts returns merge conflict report.'''
+    report = {
+        'repo': 'cornelisnetworks/ifs-all',
+        'conflicts': [{'number': 10, 'title': 'stale PR', 'mergeable': False}],
+        'total_open_prs': 50,
+        'total_conflicts': 1,
+        'summary': '1 PR with merge conflicts',
+    }
+
+    monkeypatch.setattr(import_mcp_server.github_utils, 'get_connection', lambda: None)
+    monkeypatch.setattr(import_mcp_server.github_utils, 'analyze_merge_conflicts',
+                        lambda repo, _prefetched_prs=None: report)
+
+    result = await import_mcp_server.check_merge_conflicts('cornelisnetworks/ifs-all')
+    data = _parse_result(result)
+
+    assert data['total_conflicts'] == 1
+    assert len(data['conflicts']) == 1
+
+
+@pytest.mark.asyncio
+async def test_check_merge_conflicts_error(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
+    '''check_merge_conflicts returns error on failure.'''
+    monkeypatch.setattr(import_mcp_server.github_utils, 'get_connection', _raise_connection_error)
+
+    result = await import_mcp_server.check_merge_conflicts('cornelisnetworks/ifs-all')
+    data = _parse_result(result)
+    assert 'error' in data
+
+
+# ---------------------------------------------------------------------------
+# Tool 39: check_ci_failures
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_check_ci_failures_returns_failures(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
+    '''check_ci_failures returns CI failure report.'''
+    report = {
+        'repo': 'cornelisnetworks/ifs-all',
+        'failures': [{'number': 5, 'title': 'broken build', 'ci_state': 'FAILURE'}],
+        'total_open_prs': 50,
+        'total_failures': 1,
+        'summary': '1 PR with CI failures',
+    }
+
+    monkeypatch.setattr(import_mcp_server.github_utils, 'get_connection', lambda: None)
+    monkeypatch.setattr(import_mcp_server.github_utils, 'analyze_ci_failures',
+                        lambda repo, _prefetched_prs=None: report)
+
+    result = await import_mcp_server.check_ci_failures('cornelisnetworks/ifs-all')
+    data = _parse_result(result)
+
+    assert data['total_failures'] == 1
+    assert data['failures'][0]['ci_state'] == 'FAILURE'
+
+
+@pytest.mark.asyncio
+async def test_check_ci_failures_error(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
+    '''check_ci_failures returns error on failure.'''
+    monkeypatch.setattr(import_mcp_server.github_utils, 'get_connection', _raise_connection_error)
+
+    result = await import_mcp_server.check_ci_failures('cornelisnetworks/ifs-all')
+    data = _parse_result(result)
+    assert 'error' in data
+
+
+# ---------------------------------------------------------------------------
+# Tool 40: check_stale_branches
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_check_stale_branches_returns_branches(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
+    '''check_stale_branches returns stale branch report.'''
+    report = {
+        'repo': 'cornelisnetworks/ifs-all',
+        'stale_days_threshold': 30,
+        'stale_branches': [{'branch': 'old-feature', 'days_stale': 90, 'severity': 'medium'}],
+        'total_findings': 1,
+        'summary': '1 stale branch found',
+    }
+
+    monkeypatch.setattr(import_mcp_server.github_utils, 'get_connection', lambda: None)
+    monkeypatch.setattr(import_mcp_server.github_utils, 'analyze_stale_branches',
+                        lambda repo, stale_days=30, exclude_protected=True: report)
+
+    result = await import_mcp_server.check_stale_branches('cornelisnetworks/ifs-all', stale_days=60)
+    data = _parse_result(result)
+
+    assert data['total_findings'] == 1
+    assert data['stale_branches'][0]['days_stale'] == 90
+
+
+@pytest.mark.asyncio
+async def test_check_stale_branches_error(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
+    '''check_stale_branches returns error on failure.'''
+    monkeypatch.setattr(import_mcp_server.github_utils, 'get_connection', _raise_connection_error)
+
+    result = await import_mcp_server.check_stale_branches('cornelisnetworks/ifs-all')
+    data = _parse_result(result)
+    assert 'error' in data
+
+
+# ---------------------------------------------------------------------------
+# Tool 41: analyze_extended_hygiene
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_analyze_extended_hygiene_returns_combined(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
+    '''analyze_extended_hygiene returns combined hygiene report.'''
+    report = {
+        'repo': 'cornelisnetworks/ifs-all',
+        'stale_prs': {'findings': [], 'total': 0},
+        'missing_reviews': {'findings': [], 'total': 0},
+        'naming_compliance': {'total_findings': 1},
+        'merge_conflicts': {'total_conflicts': 0},
+        'ci_failures': {'total_failures': 2},
+        'stale_branches': {'total_findings': 3},
+        'total_findings': 6,
+        'summary': '6 findings across all scans',
+    }
+
+    monkeypatch.setattr(import_mcp_server.github_utils, 'get_connection', lambda: None)
+    monkeypatch.setattr(import_mcp_server.github_utils, 'analyze_extended_hygiene',
+                        lambda repo, stale_days=5, branch_stale_days=30, ticket_patterns=None: report)
+
+    result = await import_mcp_server.analyze_extended_hygiene('cornelisnetworks/ifs-all', stale_days=7, branch_stale_days=60)
+    data = _parse_result(result)
+
+    assert data['total_findings'] == 6
+    assert data['ci_failures']['total_failures'] == 2
+
+
+@pytest.mark.asyncio
+async def test_analyze_extended_hygiene_error(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
+    '''analyze_extended_hygiene returns error on failure.'''
+    monkeypatch.setattr(import_mcp_server.github_utils, 'get_connection', _raise_connection_error)
+
+    result = await import_mcp_server.analyze_extended_hygiene('cornelisnetworks/ifs-all')
+    data = _parse_result(result)
+    assert 'error' in data
