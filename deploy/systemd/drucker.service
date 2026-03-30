@@ -1,0 +1,34 @@
+[Unit]
+Description=Drucker Engineering Hygiene Agent
+Documentation=https://github.com/jmac-cornelis/agent-workforce
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=60
+
+ExecStartPre=-/usr/bin/podman stop -t 10 drucker
+ExecStartPre=-/usr/bin/podman rm -f drucker
+
+ExecStart=/usr/bin/podman run \
+    --name drucker \
+    --rm \
+    -p 8201:8201 \
+    --env-file %h/agent-workforce/deploy/env/shared.env \
+    --env-file %h/agent-workforce/deploy/env/jira.env \
+    --env-file %h/agent-workforce/deploy/env/github.env \
+    -v %h/agent-workforce/config:/app/config:ro,Z \
+    -v %h/agent-workforce/data/drucker:/data/state:Z \
+    localhost/cornelis/agent-workforce:latest \
+    uvicorn agents.drucker.api:app --host 0.0.0.0 --port 8201
+
+ExecStop=/usr/bin/podman stop -t 10 drucker
+
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Install]
+WantedBy=default.target

@@ -44,6 +44,20 @@ class ShannonAgentRegistry:
         payload = yaml.safe_load(self.registry_path.read_text(encoding='utf-8')) or {}
         agents = payload.get('agents') or []
         self._agents = [AgentChannelRegistration.from_dict(item) for item in agents]
+
+        # Allow environment variables to override api_base_url per agent.
+        # Pattern: {AGENT_ID}_API_URL  (e.g. DRUCKER_API_URL=http://cn-ai-03:8201)
+        # This enables multi-host deployment without editing the YAML.
+        for agent in self._agents:
+            env_key = f'{agent.agent_id.upper()}_API_URL'
+            env_val = os.environ.get(env_key, '').strip()
+            if env_val:
+                log.info(
+                    f'Registry override: {agent.agent_id} api_base_url '
+                    f'{agent.api_base_url!r} -> {env_val!r} (from {env_key})'
+                )
+                agent.api_base_url = env_val
+
         log.info(
             f'Loaded Shannon agent registry from {self.registry_path} '
             f'with {len(self._agents)} entries'
