@@ -16,7 +16,7 @@ ExecStartPre=-/usr/bin/podman rm -f drucker
 ExecStart=/usr/bin/podman run \
     --name drucker \
     --rm \
-    -p 8201:8201 \
+    --network host \
     --env-file %h/agent-workforce/deploy/env/shared.env \
     --env-file %h/agent-workforce/deploy/env/jira.env \
     --env-file %h/agent-workforce/deploy/env/github.env \

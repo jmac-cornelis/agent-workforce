@@ -34,7 +34,7 @@ ExecStartPre=-/usr/bin/podman rm -f shannon
 ExecStart=/usr/bin/podman run \
     --name shannon \
     --rm \
-    -p 8200:8200 \
+    --network host \
     --env-file %h/agent-workforce/deploy/env/shared.env \
     --env-file %h/agent-workforce/deploy/env/teams.env \
     -v %h/agent-workforce/config:/app/config:ro,Z \
