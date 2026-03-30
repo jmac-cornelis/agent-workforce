@@ -1,6 +1,6 @@
 import pytest
 
-from tools.drucker_tools import (
+from agents.drucker.tools import (
     DruckerTools,
     create_drucker_bug_activity_report,
     create_drucker_issue_check,
@@ -15,8 +15,8 @@ def test_create_drucker_hygiene_report_tool_persists_report(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents import drucker_agent as drucker_agent_module
-    from agents.drucker_models import DruckerHygieneReport
+    from agents.drucker import agent as drucker_agent_module
+    from agents.drucker.models import DruckerHygieneReport
     from agents.review_agent import ReviewItem, ReviewSession
 
     class _FakeDruckerAgent:
@@ -53,8 +53,8 @@ def test_create_drucker_issue_check_tool_persists_report(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents import drucker_agent as drucker_agent_module
-    from agents.drucker_models import DruckerHygieneReport
+    from agents.drucker import agent as drucker_agent_module
+    from agents.drucker.models import DruckerHygieneReport
     from agents.review_agent import ReviewItem, ReviewSession
 
     class _FakeDruckerAgent:
@@ -97,8 +97,8 @@ def test_create_drucker_intake_report_tool_persists_report(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents import drucker_agent as drucker_agent_module
-    from agents.drucker_models import DruckerHygieneReport
+    from agents.drucker import agent as drucker_agent_module
+    from agents.drucker.models import DruckerHygieneReport
     from agents.review_agent import ReviewItem, ReviewSession
 
     class _FakeDruckerAgent:
@@ -145,7 +145,7 @@ def test_create_drucker_intake_report_tool_persists_report(
 def test_create_drucker_bug_activity_report_tool_returns_activity(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    from agents import drucker_agent as drucker_agent_module
+    from agents.drucker import agent as drucker_agent_module
 
     class _FakeDruckerAgent:
         def __init__(self, project_key=None, **_kwargs):
@@ -173,7 +173,7 @@ def test_create_drucker_bug_activity_report_tool_returns_activity(
 
 
 def test_get_and_list_drucker_reports_tools(monkeypatch: pytest.MonkeyPatch, tmp_path):
-    from state.drucker_report_store import DruckerReportStore
+    from agents.drucker.state.report_store import DruckerReportStore
 
     store = DruckerReportStore(storage_dir=str(tmp_path / 'store'))
     store.save_report({

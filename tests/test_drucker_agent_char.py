@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import pytest
 
 from agents.base import AgentResponse
-from agents.drucker_models import DruckerAction, DruckerFinding, DruckerHygieneReport, DruckerRequest
+from agents.drucker.models import DruckerAction, DruckerFinding, DruckerHygieneReport, DruckerRequest
 from tools.base import ToolResult
 
 
@@ -16,8 +16,8 @@ class _FixedDateTime(datetime):
 
 
 def test_drucker_agent_builds_hygiene_report_and_actions(monkeypatch: pytest.MonkeyPatch):
-    from agents import drucker_agent as drucker_agent_module
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker import agent as drucker_agent_module
+    from agents.drucker.agent import DruckerCoordinatorAgent
 
     monkeypatch.setattr(
         DruckerCoordinatorAgent,
@@ -103,8 +103,8 @@ def test_drucker_agent_builds_hygiene_report_and_actions(monkeypatch: pytest.Mon
 def test_drucker_agent_issue_check_builds_policy_findings_and_actions(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    from agents import drucker_agent as drucker_agent_module
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker import agent as drucker_agent_module
+    from agents.drucker.agent import DruckerCoordinatorAgent
 
     monkeypatch.setattr(
         DruckerCoordinatorAgent,
@@ -171,8 +171,8 @@ def test_drucker_agent_issue_check_promotes_learning_based_suggestions_to_review
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents import drucker_agent as drucker_agent_module
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker import agent as drucker_agent_module
+    from agents.drucker.agent import DruckerCoordinatorAgent
 
     monkeypatch.setattr(
         DruckerCoordinatorAgent,
@@ -269,7 +269,7 @@ def test_drucker_agent_issue_check_promotes_learning_based_suggestions_to_review
 
 
 def test_drucker_report_store_save_load_and_list(tmp_path):
-    from state.drucker_report_store import DruckerReportStore
+    from agents.drucker.state.report_store import DruckerReportStore
 
     store = DruckerReportStore(storage_dir=str(tmp_path / 'drucker'))
 
@@ -317,7 +317,7 @@ def test_drucker_report_store_save_load_and_list(tmp_path):
 def test_drucker_agent_creates_review_session_and_executes_approved_actions(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
     from agents.review_agent import ReviewAgent
     from tools import jira_tools as jira_tools_module
 
@@ -408,8 +408,8 @@ def test_drucker_agent_recent_ticket_intake_uses_checkpoint_and_processed_state(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents import drucker_agent as drucker_agent_module
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker import agent as drucker_agent_module
+    from agents.drucker.agent import DruckerCoordinatorAgent
 
     search_calls = []
 
@@ -492,8 +492,8 @@ def test_drucker_agent_recent_ticket_intake_uses_checkpoint_and_processed_state(
 
 
 def test_drucker_agent_analyzes_bug_activity(monkeypatch: pytest.MonkeyPatch):
-    from agents import drucker_agent as drucker_agent_module
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker import agent as drucker_agent_module
+    from agents.drucker.agent import DruckerCoordinatorAgent
 
     monkeypatch.setattr(
         DruckerCoordinatorAgent,
@@ -542,7 +542,7 @@ def test_drucker_agent_tick_persists_results_and_posts_notifications(
     tmp_path,
 ):
     from agents import pm_runtime
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
 
     class _FakeResponse:
         def raise_for_status(self):
@@ -614,7 +614,7 @@ def test_drucker_agent_tick_recent_only_persists_recent_intake_report(
     tmp_path,
 ):
     from agents import pm_runtime
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
 
     class _FakeResponse:
         def raise_for_status(self):
@@ -673,7 +673,7 @@ def test_drucker_agent_tick_uses_configured_polling_jobs(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
 
     monkeypatch.setattr(
         DruckerCoordinatorAgent,
@@ -745,7 +745,7 @@ def test_workflow_drucker_hygiene_writes_report_files(
     tmp_path,
 ):
     import pm_agent
-    from agents import drucker_agent as drucker_agent_module
+    from agents.drucker import agent as drucker_agent_module
 
     class _FakeDruckerAgent:
         def __init__(self, project_key=None, **kwargs):
@@ -811,7 +811,7 @@ def test_workflow_drucker_intake_report_writes_report_files(
     tmp_path,
 ):
     import pm_agent
-    from agents import drucker_agent as drucker_agent_module
+    from agents.drucker import agent as drucker_agent_module
 
     class _FakeDruckerAgent:
         def __init__(self, project_key=None, **kwargs):
@@ -873,7 +873,7 @@ def test_workflow_drucker_issue_check_writes_report_files(
     tmp_path,
 ):
     import pm_agent
-    from agents import drucker_agent as drucker_agent_module
+    from agents.drucker import agent as drucker_agent_module
 
     class _FakeDruckerAgent:
         def __init__(self, project_key=None, **kwargs):
@@ -932,7 +932,7 @@ def test_workflow_drucker_bug_activity_writes_report_files(
     tmp_path,
 ):
     import pm_agent
-    from agents import drucker_agent as drucker_agent_module
+    from agents.drucker import agent as drucker_agent_module
 
     class _FakeDruckerAgent:
         def __init__(self, project_key=None, **kwargs):
@@ -979,7 +979,7 @@ def test_workflow_drucker_bug_activity_writes_report_files(
 
 def test_workflow_drucker_poll_runs_poller(monkeypatch: pytest.MonkeyPatch):
     import pm_agent
-    from agents import drucker_agent as drucker_agent_module
+    from agents.drucker import agent as drucker_agent_module
 
     class _FakeDruckerAgent:
         def __init__(self, project_key=None, **_kwargs):
@@ -1048,7 +1048,7 @@ def test_workflow_drucker_poll_passes_recent_only_options(
     monkeypatch: pytest.MonkeyPatch,
 ):
     import pm_agent
-    from agents import drucker_agent as drucker_agent_module
+    from agents.drucker import agent as drucker_agent_module
 
     class _FakeDruckerAgent:
         def __init__(self, project_key=None, **_kwargs):
@@ -1109,14 +1109,14 @@ def test_workflow_drucker_poll_passes_configured_job_options(
     monkeypatch: pytest.MonkeyPatch,
 ):
     import pm_agent
-    from agents import drucker_agent as drucker_agent_module
+    from agents.drucker import agent as drucker_agent_module
 
     class _FakeDruckerAgent:
         def __init__(self, project_key=None, **_kwargs):
             self.project_key = project_key
 
         def run_poller(self, spec):
-            assert spec['config_path'] == 'config/drucker_polling.yaml'
+            assert spec['config_path'] == 'agents/drucker/config/polling.yaml'
             assert spec['job_name'] == 'recent-ticket-intake'
             assert spec['project_key'] == 'STL'
             assert spec['notify_shannon'] is False
@@ -1155,7 +1155,7 @@ def test_workflow_drucker_poll_passes_configured_job_options(
         limit=50,
         include_done=False,
         stale_days=21,
-        poll_config='config/drucker_polling.yaml',
+        poll_config='agents/drucker/config/polling.yaml',
         poll_job='recent-ticket-intake',
         notify_shannon=False,
         shannon_url=None,

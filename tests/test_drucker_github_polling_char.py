@@ -31,7 +31,7 @@ def _make_github_report(repo, open_pr_count=3, stale_count=1,
 
 
 def _stub_agent_init(monkeypatch):
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
     monkeypatch.setattr(
         DruckerCoordinatorAgent,
         '_load_prompt_file',
@@ -56,10 +56,10 @@ def test_tick_github_single_repo_success(monkeypatch):
 
     _inject_github_utils(monkeypatch, _analyze)
 
-    from agents import drucker_agent as mod
+    from agents.drucker import agent as mod
     monkeypatch.setattr(mod, 'notify_shannon', lambda **kw: {'ok': True})
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
     agent = DruckerCoordinatorAgent(project_key='STL')
 
     result = agent.tick({
@@ -86,10 +86,10 @@ def test_tick_github_multiple_repos(monkeypatch):
 
     _inject_github_utils(monkeypatch, _analyze)
 
-    from agents import drucker_agent as mod
+    from agents.drucker import agent as mod
     monkeypatch.setattr(mod, 'notify_shannon', lambda **kw: {'ok': True})
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
     agent = DruckerCoordinatorAgent(project_key='STL')
 
     repos = ['cornelis/fabric', 'cornelis/opa-psm2', 'cornelis/libfabric']
@@ -114,10 +114,10 @@ def test_tick_github_repo_exception_captured(monkeypatch):
 
     _inject_github_utils(monkeypatch, _analyze)
 
-    from agents import drucker_agent as mod
+    from agents.drucker import agent as mod
     monkeypatch.setattr(mod, 'notify_shannon', lambda **kw: {'ok': True})
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
     agent = DruckerCoordinatorAgent(project_key='STL')
 
     result = agent.tick({
@@ -144,10 +144,10 @@ def test_tick_github_empty_repos_list(monkeypatch):
 
     _inject_github_utils(monkeypatch, _analyze)
 
-    from agents import drucker_agent as mod
+    from agents.drucker import agent as mod
     monkeypatch.setattr(mod, 'notify_shannon', lambda **kw: {'ok': True})
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
     agent = DruckerCoordinatorAgent(project_key='STL')
 
     result = agent.tick({
@@ -172,10 +172,10 @@ def test_tick_github_string_repos_coerced_to_list(monkeypatch):
 
     _inject_github_utils(monkeypatch, _analyze)
 
-    from agents import drucker_agent as mod
+    from agents.drucker import agent as mod
     monkeypatch.setattr(mod, 'notify_shannon', lambda **kw: {'ok': True})
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
     agent = DruckerCoordinatorAgent(project_key='STL')
 
     result = agent.tick({
@@ -208,14 +208,14 @@ def test_tick_github_notify_shannon_enabled(monkeypatch):
 
     notification_calls = []
 
-    from agents import drucker_agent as mod
+    from agents.drucker import agent as mod
     monkeypatch.setattr(
         mod,
         'notify_shannon',
         lambda **kw: (notification_calls.append(kw) or {'ok': True}),
     )
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
     agent = DruckerCoordinatorAgent(project_key='STL')
 
     result = agent.tick({
@@ -251,14 +251,14 @@ def test_tick_github_notify_shannon_disabled(monkeypatch):
 
     notification_calls = []
 
-    from agents import drucker_agent as mod
+    from agents.drucker import agent as mod
     monkeypatch.setattr(
         mod,
         'notify_shannon',
         lambda **kw: (notification_calls.append(kw) or {'ok': True}),
     )
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
     agent = DruckerCoordinatorAgent(project_key='STL')
 
     result = agent.tick({
@@ -306,7 +306,7 @@ def test_tick_mixed_jira_and_github_jobs(monkeypatch, tmp_path):
 
     jira_calls = []
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
 
     def _fake_run_once(self, request, persist=True):
         jira_calls.append({
@@ -324,7 +324,7 @@ def test_tick_mixed_jira_and_github_jobs(monkeypatch, tmp_path):
 
     monkeypatch.setattr(DruckerCoordinatorAgent, 'run_once', _fake_run_once)
 
-    from agents import drucker_agent as mod
+    from agents.drucker import agent as mod
     monkeypatch.setattr(mod, 'notify_shannon', lambda **kw: {'ok': True})
 
     agent = DruckerCoordinatorAgent(project_key='STL')
@@ -356,10 +356,10 @@ def test_tick_github_stale_days_parameter_passthrough(monkeypatch):
 
     _inject_github_utils(monkeypatch, _analyze)
 
-    from agents import drucker_agent as mod
+    from agents.drucker import agent as mod
     monkeypatch.setattr(mod, 'notify_shannon', lambda **kw: {'ok': True})
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
     agent = DruckerCoordinatorAgent(project_key='STL')
 
     result = agent.tick({
@@ -383,10 +383,10 @@ def test_tick_github_default_stale_days(monkeypatch):
 
     _inject_github_utils(monkeypatch, _analyze)
 
-    from agents import drucker_agent as mod
+    from agents.drucker import agent as mod
     monkeypatch.setattr(mod, 'notify_shannon', lambda **kw: {'ok': True})
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
     agent = DruckerCoordinatorAgent(project_key='STL')
 
     result = agent.tick({
@@ -409,10 +409,10 @@ def test_tick_github_none_repos_treated_as_empty(monkeypatch):
 
     _inject_github_utils(monkeypatch, _analyze)
 
-    from agents import drucker_agent as mod
+    from agents.drucker import agent as mod
     monkeypatch.setattr(mod, 'notify_shannon', lambda **kw: {'ok': True})
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
     agent = DruckerCoordinatorAgent(project_key='STL')
 
     result = agent.tick({

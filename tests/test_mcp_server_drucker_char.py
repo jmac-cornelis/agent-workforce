@@ -12,7 +12,7 @@ def _payload(result):
 
 @pytest.mark.asyncio
 async def test_create_drucker_hygiene_report_tool(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
-    from agents.drucker_models import DruckerHygieneReport
+    from agents.drucker.models import DruckerHygieneReport
     from agents.review_agent import ReviewItem, ReviewSession
 
     class _FakeDruckerAgent:
@@ -54,7 +54,7 @@ async def test_create_drucker_hygiene_report_tool(import_mcp_server, monkeypatch
 
 @pytest.mark.asyncio
 async def test_create_drucker_issue_check_tool(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
-    from agents.drucker_models import DruckerHygieneReport
+    from agents.drucker.models import DruckerHygieneReport
     from agents.review_agent import ReviewItem, ReviewSession
 
     class _FakeDruckerAgent:
@@ -97,7 +97,7 @@ async def test_create_drucker_issue_check_tool(import_mcp_server, monkeypatch: p
 
 @pytest.mark.asyncio
 async def test_create_drucker_intake_report_tool(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
-    from agents.drucker_models import DruckerHygieneReport
+    from agents.drucker.models import DruckerHygieneReport
     from agents.review_agent import ReviewItem, ReviewSession
 
     class _FakeDruckerAgent:

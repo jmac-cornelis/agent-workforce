@@ -16,7 +16,7 @@ from shannon.service import ShannonService
 
 
 def _make_service(mock_poster=None, registry_agents=None):
-    from state.shannon_state_store import ShannonStateStore
+    from agents.shannon.state_store import ShannonStateStore
     from shannon.registry import ShannonAgentRegistry
 
     with patch.object(ShannonAgentRegistry, '__init__', lambda self, **kw: None):

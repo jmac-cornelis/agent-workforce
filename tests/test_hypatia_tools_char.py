@@ -1,6 +1,6 @@
 import pytest
 
-from tools.hypatia_tools import (
+from agents.hypatia.tools import (
     HypatiaTools,
     generate_hypatia_documentation,
     get_hypatia_record,
@@ -12,8 +12,8 @@ def test_generate_hypatia_documentation_tool_persists_record(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents import hypatia_agent as hypatia_agent_module
-    from agents.hypatia_models import DocumentationPatch, DocumentationRecord
+    from agents.hypatia import agent as hypatia_agent_module
+    from agents.hypatia.models import DocumentationPatch, DocumentationRecord
     from agents.review_agent import ReviewItem, ReviewSession
 
     class _FakeHypatiaAgent:
@@ -70,7 +70,7 @@ def test_generate_hypatia_documentation_tool_persists_record(
 
 
 def test_get_and_list_hypatia_records_tools(monkeypatch: pytest.MonkeyPatch, tmp_path):
-    from state.hypatia_record_store import HypatiaRecordStore
+    from agents.hypatia.state.record_store import HypatiaRecordStore
 
     store = HypatiaRecordStore(storage_dir=str(tmp_path / 'store'))
     store.save_record({

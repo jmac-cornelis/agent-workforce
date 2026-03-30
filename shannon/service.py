@@ -39,7 +39,7 @@ from shannon.cards import (
 from shannon.models import AuditRecord, ConversationReference, ShannonResponse, normalize_command_text
 from shannon.poster import BasePoster, build_poster_from_env
 from shannon.registry import ShannonAgentRegistry
-from state.shannon_state_store import ShannonStateStore
+from agents.shannon.state_store import ShannonStateStore
 
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))

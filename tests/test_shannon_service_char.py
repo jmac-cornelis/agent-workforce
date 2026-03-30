@@ -10,7 +10,7 @@ from shannon.outgoing_webhook import extract_hmac_signature
 from shannon.poster import MemoryPoster
 from shannon.registry import ShannonAgentRegistry
 from shannon.service import ShannonService
-from state.shannon_state_store import ShannonStateStore
+from agents.shannon.state_store import ShannonStateStore
 
 
 def _message_activity(text: str = '<at>Shannon</at> /stats') -> dict:

@@ -29,7 +29,7 @@ def client(mock_github_utils):
     '''Create a TestClient with mocked github_utils already in place.'''
     # Import AFTER the mock is registered so lazy imports inside endpoints
     # resolve to our mock.
-    from agents.drucker_api import create_app
+    from agents.drucker.api import create_app
     from fastapi.testclient import TestClient
 
     app = create_app()

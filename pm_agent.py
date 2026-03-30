@@ -1451,8 +1451,8 @@ def _workflow_gantt_snapshot(args):
         f'include_done={args.include_done})'
     )
 
-    from agents.gantt_agent import GanttProjectPlannerAgent
-    from state.gantt_snapshot_store import GanttSnapshotStore
+    from agents.gantt.agent import GanttProjectPlannerAgent
+    from agents.gantt.state.snapshot_store import GanttSnapshotStore
 
     output('')
     output('=' * 60)
@@ -1522,7 +1522,7 @@ def _workflow_gantt_snapshot_get(args):
         f'project={args.project})'
     )
 
-    from state.gantt_snapshot_store import GanttSnapshotStore
+    from agents.gantt.state.snapshot_store import GanttSnapshotStore
 
     output('')
     output('=' * 60)
@@ -1587,7 +1587,7 @@ def _workflow_gantt_snapshot_list(args):
         f'Entering _workflow_gantt_snapshot_list(project={args.project}, limit={args.limit})'
     )
 
-    from state.gantt_snapshot_store import GanttSnapshotStore
+    from agents.gantt.state.snapshot_store import GanttSnapshotStore
 
     output('')
     output('=' * 60)
@@ -1642,9 +1642,9 @@ def _workflow_gantt_release_monitor(args):
         f'releases={args.releases}, scope_label={args.scope_label})'
     )
 
-    from agents.gantt_agent import GanttProjectPlannerAgent
-    from agents.gantt_models import ReleaseMonitorRequest
-    from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+    from agents.gantt.agent import GanttProjectPlannerAgent
+    from agents.gantt.models import ReleaseMonitorRequest
+    from agents.gantt.state.release_monitor_store import GanttReleaseMonitorStore
 
     output('')
     output('=' * 60)
@@ -1735,7 +1735,7 @@ def _workflow_gantt_release_monitor_get(args):
         f'project={args.project})'
     )
 
-    from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+    from agents.gantt.state.release_monitor_store import GanttReleaseMonitorStore
 
     output('')
     output('=' * 60)
@@ -1802,7 +1802,7 @@ def _workflow_gantt_release_monitor_list(args):
         f'limit={args.limit})'
     )
 
-    from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+    from agents.gantt.state.release_monitor_store import GanttReleaseMonitorStore
 
     output('')
     output('=' * 60)
@@ -1858,9 +1858,9 @@ def _workflow_gantt_release_survey(args):
         f'survey_mode={args.survey_mode})'
     )
 
-    from agents.gantt_agent import GanttProjectPlannerAgent
-    from agents.gantt_models import ReleaseSurveyRequest
-    from state.gantt_release_survey_store import GanttReleaseSurveyStore
+    from agents.gantt.agent import GanttProjectPlannerAgent
+    from agents.gantt.models import ReleaseSurveyRequest
+    from agents.gantt.state.release_survey_store import GanttReleaseSurveyStore
 
     output('')
     output('=' * 60)
@@ -1947,7 +1947,7 @@ def _workflow_gantt_release_survey_get(args):
         f'project={args.project})'
     )
 
-    from state.gantt_release_survey_store import GanttReleaseSurveyStore
+    from agents.gantt.state.release_survey_store import GanttReleaseSurveyStore
 
     output('')
     output('=' * 60)
@@ -2016,7 +2016,7 @@ def _workflow_gantt_release_survey_list(args):
         f'limit={args.limit})'
     )
 
-    from state.gantt_release_survey_store import GanttReleaseSurveyStore
+    from agents.gantt.state.release_survey_store import GanttReleaseSurveyStore
 
     output('')
     output('=' * 60)
@@ -2073,8 +2073,8 @@ def _workflow_drucker_hygiene(args):
         f'limit={args.limit}, include_done={args.include_done}, stale_days={args.stale_days})'
     )
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
-    from state.drucker_report_store import DruckerReportStore
+    from agents.drucker.agent import DruckerCoordinatorAgent
+    from agents.drucker.state.report_store import DruckerReportStore
 
     output('')
     output('=' * 60)
@@ -2152,8 +2152,8 @@ def _workflow_drucker_issue_check(args):
         f'ticket_key={args.ticket_key}, stale_days={args.stale_days})'
     )
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
-    from state.drucker_report_store import DruckerReportStore
+    from agents.drucker.agent import DruckerCoordinatorAgent
+    from agents.drucker.state.report_store import DruckerReportStore
 
     output('')
     output('=' * 60)
@@ -2236,8 +2236,8 @@ def _workflow_drucker_intake_report(args):
         f'limit={args.limit}, stale_days={args.stale_days}, since={args.since})'
     )
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
-    from state.drucker_report_store import DruckerReportStore
+    from agents.drucker.agent import DruckerCoordinatorAgent
+    from agents.drucker.state.report_store import DruckerReportStore
 
     output('')
     output('=' * 60)
@@ -2320,7 +2320,7 @@ def _workflow_drucker_bug_activity(args):
         f'target_date={args.target_date})'
     )
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
 
     output('')
     output('=' * 60)
@@ -2380,7 +2380,7 @@ def _workflow_gantt_poll(args):
         f'max_cycles={args.max_cycles}, poll_interval={args.poll_interval})'
     )
 
-    from agents.gantt_agent import GanttProjectPlannerAgent
+    from agents.gantt.agent import GanttProjectPlannerAgent
 
     output('')
     output('=' * 60)
@@ -2478,7 +2478,7 @@ def _workflow_drucker_poll(args):
         f'max_cycles={args.max_cycles}, poll_interval={args.poll_interval})'
     )
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
 
     output('')
     output('=' * 60)
@@ -2586,8 +2586,8 @@ def _workflow_hypatia_generate(args):
         f'doc_title={args.doc_title}, doc_type={args.doc_type}, execute={args.execute})'
     )
 
-    from agents.hypatia_agent import HypatiaDocumentationAgent
-    from state.hypatia_record_store import HypatiaRecordStore
+    from agents.hypatia.agent import HypatiaDocumentationAgent
+    from agents.hypatia.state.record_store import HypatiaRecordStore
 
     output('')
     output('=' * 60)
@@ -3019,7 +3019,7 @@ Examples:
   %(prog)s --workflow drucker-hygiene --project STL --stale-days 21 --output stl_hygiene.json
   %(prog)s --workflow drucker-intake-report --project STL --since "2026-03-24 00:00"
   %(prog)s --workflow drucker-issue-check --project STL --ticket-key STL-12345
-  %(prog)s --workflow drucker-poll --poll-config config/drucker_polling.yaml --project STL --max-cycles 2
+  %(prog)s --workflow drucker-poll --poll-config agents/drucker/config/polling.yaml --project STL --max-cycles 2
   %(prog)s --workflow drucker-poll --project STL --max-cycles 2 --poll-interval 300 --notify-shannon
   %(prog)s --workflow drucker-poll --project STL --recent-only --max-cycles 2 --poll-interval 300
   %(prog)s --workflow hypatia-generate --doc-title "STL Build Notes" --docs README.md AGENTS.md

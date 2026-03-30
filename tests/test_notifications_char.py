@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 
 def test_jira_comment_notifier_builds_hygiene_comment_with_suggestions():
-    from agents.drucker_models import DruckerFinding
+    from agents.drucker.models import DruckerFinding
     from notifications.jira_comments import JiraCommentNotifier
 
     comment = JiraCommentNotifier.build_hygiene_comment(

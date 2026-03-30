@@ -52,7 +52,7 @@ from tools.confluence_tools import (
     export_confluence_page,
     ConfluenceTools,
 )
-from tools.gantt_tools import (
+from agents.gantt.tools import (
     create_gantt_snapshot,
     create_release_monitor,
     create_release_survey,
@@ -66,7 +66,7 @@ from tools.gantt_tools import (
     list_gantt_dependency_reviews,
     GanttTools,
 )
-from tools.drucker_tools import (
+from agents.drucker.tools import (
     create_drucker_bug_activity_report,
     create_drucker_issue_check,
     create_drucker_hygiene_report,
@@ -75,7 +75,7 @@ from tools.drucker_tools import (
     list_drucker_reports,
     DruckerTools,
 )
-from tools.hypatia_tools import (
+from agents.hypatia.tools import (
     generate_hypatia_documentation,
     get_hypatia_record,
     list_hypatia_records,

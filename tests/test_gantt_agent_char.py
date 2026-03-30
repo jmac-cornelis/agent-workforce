@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from agents.base import AgentResponse
-from agents.gantt_models import (
+from agents.gantt.models import (
     BugSummary,
     DependencyGraph,
     PlanningRequest,
@@ -21,8 +21,8 @@ def test_gantt_agent_create_snapshot_builds_milestones_dependencies_and_risks(
     monkeypatch: pytest.MonkeyPatch,
     fake_issue_resource_factory,
 ):
-    from agents.gantt_agent import GanttProjectPlannerAgent
-    from agents import gantt_agent
+    from agents.gantt.agent import GanttProjectPlannerAgent
+    from agents.gantt import agent as gantt_agent
 
     monkeypatch.setattr(
         GanttProjectPlannerAgent,
@@ -134,7 +134,7 @@ def test_gantt_agent_create_snapshot_builds_milestones_dependencies_and_risks(
 
 
 def test_gantt_agent_run_returns_snapshot_metadata(monkeypatch: pytest.MonkeyPatch):
-    from agents.gantt_agent import GanttProjectPlannerAgent
+    from agents.gantt.agent import GanttProjectPlannerAgent
 
     monkeypatch.setattr(
         GanttProjectPlannerAgent,
@@ -164,7 +164,7 @@ def test_gantt_agent_tick_persists_results_and_posts_notifications(
     tmp_path,
 ):
     from agents import pm_runtime
-    from agents.gantt_agent import GanttProjectPlannerAgent
+    from agents.gantt.agent import GanttProjectPlannerAgent
 
     class _FakeResponse:
         def raise_for_status(self):
@@ -247,12 +247,12 @@ def test_gantt_agent_create_release_monitor_uses_previous_report_history(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents import gantt_agent as gantt_agent_module
-    from agents.gantt_agent import GanttProjectPlannerAgent
-    from agents.gantt_models import ReleaseMonitorRequest
+    from agents.gantt import agent as gantt_agent_module
+    from agents.gantt.agent import GanttProjectPlannerAgent
+    from agents.gantt.models import ReleaseMonitorRequest
     from core import release_tracking as release_tracking_module
     from core.release_tracking import ReleaseSnapshot
-    from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+    from agents.gantt.state.release_monitor_store import GanttReleaseMonitorStore
 
     class _FixedReadinessDateTime(datetime):
         @classmethod
@@ -479,7 +479,7 @@ def test_gantt_agent_create_release_monitor_uses_previous_report_history(
 def test_gantt_agent_create_release_survey_buckets_done_active_and_remaining(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    from agents.gantt_agent import GanttProjectPlannerAgent
+    from agents.gantt.agent import GanttProjectPlannerAgent
 
     monkeypatch.setattr(
         GanttProjectPlannerAgent,
@@ -616,7 +616,7 @@ def test_gantt_agent_create_release_survey_buckets_done_active_and_remaining(
 def test_gantt_agent_create_release_survey_bug_mode_only_includes_bugs(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    from agents.gantt_agent import GanttProjectPlannerAgent
+    from agents.gantt.agent import GanttProjectPlannerAgent
 
     monkeypatch.setattr(
         GanttProjectPlannerAgent,
@@ -699,8 +699,8 @@ def test_gantt_agent_create_release_survey_bug_mode_only_includes_bugs(
 
 
 def test_gantt_release_survey_markdown_sorts_in_progress_and_remaining_by_priority():
-    from agents.gantt_agent import GanttProjectPlannerAgent
-    from agents.gantt_models import ReleaseSurveyReport, ReleaseSurveyReleaseSummary
+    from agents.gantt.agent import GanttProjectPlannerAgent
+    from agents.gantt.models import ReleaseSurveyReport, ReleaseSurveyReleaseSummary
 
     manager_names = {
         'Owner': 'Manager One',
@@ -788,7 +788,7 @@ def test_gantt_release_survey_markdown_sorts_in_progress_and_remaining_by_priori
 
 
 def test_gantt_release_survey_manager_lookup_normalizes_jira_assignee_names():
-    from agents.gantt_agent import GanttProjectPlannerAgent
+    from agents.gantt.agent import GanttProjectPlannerAgent
 
     manager_lookup = {
         'denny dalessandro': 'Heqing Zhu',
@@ -829,8 +829,8 @@ def test_gantt_release_survey_manager_lookup_normalizes_jira_assignee_names():
 def test_gantt_release_survey_builds_family_breakouts_and_open_epic_analysis(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    from agents.gantt_agent import GanttProjectPlannerAgent
-    from agents import gantt_agent as gantt_agent_module
+    from agents.gantt.agent import GanttProjectPlannerAgent
+    from agents.gantt import agent as gantt_agent_module
 
     monkeypatch.setattr(
         GanttProjectPlannerAgent,
@@ -1011,9 +1011,9 @@ def test_gantt_release_survey_builds_family_breakouts_and_open_epic_analysis(
 def test_gantt_agent_query_release_tickets_uses_product_family_scope_clause(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    from agents.gantt_agent import GanttProjectPlannerAgent
+    from agents.gantt.agent import GanttProjectPlannerAgent
     from tools.base import ToolResult
-    from agents import gantt_agent as gantt_agent_module
+    from agents.gantt import agent as gantt_agent_module
 
     captured = {}
 
@@ -1040,8 +1040,8 @@ def test_gantt_agent_query_release_tickets_uses_product_family_scope_clause(
 
 
 def test_gantt_release_survey_confluence_markdown_uses_live_jira_macros():
-    from agents.gantt_agent import GanttProjectPlannerAgent
-    from agents.gantt_models import ReleaseSurveyReport, ReleaseSurveyReleaseSummary
+    from agents.gantt.agent import GanttProjectPlannerAgent
+    from agents.gantt.models import ReleaseSurveyReport, ReleaseSurveyReleaseSummary
 
     report = ReleaseSurveyReport(
         project_key='STL',
@@ -1169,7 +1169,7 @@ def test_gantt_release_survey_confluence_markdown_uses_live_jira_macros():
 
 def test_workflow_gantt_poll_runs_poller(monkeypatch: pytest.MonkeyPatch):
     import pm_agent
-    from agents import gantt_agent as gantt_agent_module
+    from agents.gantt import agent as gantt_agent_module
 
     class _FakeGanttAgent:
         def __init__(self, project_key=None, **_kwargs):
@@ -1244,7 +1244,7 @@ def test_workflow_gantt_poll_runs_poller(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_gantt_agent_loads_evidence_bundle(monkeypatch: pytest.MonkeyPatch, tmp_path):
-    from agents.gantt_agent import GanttProjectPlannerAgent
+    from agents.gantt.agent import GanttProjectPlannerAgent
 
     evidence_path = tmp_path / 'build.json'
     evidence_path.write_text(
@@ -1310,9 +1310,9 @@ def test_gantt_agent_applies_dependency_review_store(
     tmp_path,
     fake_issue_resource_factory,
 ):
-    from agents.gantt_agent import GanttProjectPlannerAgent
-    from agents import gantt_agent
-    from state.gantt_dependency_review_store import GanttDependencyReviewStore
+    from agents.gantt.agent import GanttProjectPlannerAgent
+    from agents.gantt import agent as gantt_agent
+    from agents.gantt.state.dependency_review_store import GanttDependencyReviewStore
 
     monkeypatch.setattr(
         GanttProjectPlannerAgent,
@@ -1411,7 +1411,7 @@ def test_workflow_gantt_snapshot_writes_json_and_markdown(
     tmp_path,
 ):
     import pm_agent
-    from agents import gantt_agent
+    from agents.gantt import agent as gantt_agent
 
     class _FakeGanttAgent:
         def __init__(self, project_key=None, **kwargs):
@@ -1461,7 +1461,7 @@ def test_workflow_gantt_snapshot_writes_json_and_markdown(
 
 
 def test_gantt_snapshot_store_save_load_and_list(tmp_path):
-    from state.gantt_snapshot_store import GanttSnapshotStore
+    from agents.gantt.state.snapshot_store import GanttSnapshotStore
 
     store = GanttSnapshotStore(storage_dir=str(tmp_path / 'snapshots'))
 
@@ -1526,7 +1526,7 @@ def test_gantt_snapshot_store_save_load_and_list(tmp_path):
 
 
 def test_gantt_release_monitor_store_get_latest_compatible_report(tmp_path):
-    from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+    from agents.gantt.state.release_monitor_store import GanttReleaseMonitorStore
 
     store = GanttReleaseMonitorStore(storage_dir=str(tmp_path / 'reports'))
 
@@ -1578,7 +1578,7 @@ def test_gantt_release_monitor_store_get_latest_compatible_report(tmp_path):
 
 
 def test_gantt_release_survey_store_save_load_and_list(tmp_path):
-    from state.gantt_release_survey_store import GanttReleaseSurveyStore
+    from agents.gantt.state.release_survey_store import GanttReleaseSurveyStore
 
     store = GanttReleaseSurveyStore(storage_dir=str(tmp_path / 'surveys'))
 
@@ -1636,7 +1636,7 @@ def test_workflow_gantt_snapshot_get_and_list(
     tmp_path,
 ):
     import pm_agent
-    from state.gantt_snapshot_store import GanttSnapshotStore
+    from agents.gantt.state.snapshot_store import GanttSnapshotStore
 
     store = GanttSnapshotStore(storage_dir=str(tmp_path / 'store'))
     store.save_snapshot(
@@ -1708,8 +1708,8 @@ def test_workflow_gantt_release_survey_writes_json_and_markdown(
     tmp_path,
 ):
     import pm_agent
-    from agents import gantt_agent
-    from agents.gantt_models import ReleaseSurveyReport, ReleaseSurveyReleaseSummary
+    from agents.gantt import agent as gantt_agent
+    from agents.gantt.models import ReleaseSurveyReport, ReleaseSurveyReleaseSummary
 
     class _FakeGanttAgent:
         def __init__(self, project_key=None, **kwargs):
@@ -1774,7 +1774,7 @@ def test_workflow_gantt_release_survey_get_and_list(
     tmp_path,
 ):
     import pm_agent
-    from state.gantt_release_survey_store import GanttReleaseSurveyStore
+    from agents.gantt.state.release_survey_store import GanttReleaseSurveyStore
 
     store = GanttReleaseSurveyStore(storage_dir=str(tmp_path / 'store'))
     store.save_survey(

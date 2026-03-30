@@ -122,4 +122,4 @@ HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
 
 # Default entrypoint: Drucker agent on port 8201.
 # Each docker-compose service overrides this CMD with its own agent + port.
-CMD ["uvicorn", "agents.drucker_api:app", "--host", "0.0.0.0", "--port", "8201"]
+CMD ["uvicorn", "agents.drucker.api:app", "--host", "0.0.0.0", "--port", "8201"]

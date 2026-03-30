@@ -61,7 +61,7 @@ def _body_texts(card: dict) -> list[str]:
 
 def _stub_agent_init(monkeypatch):
     '''Patch DruckerCoordinatorAgent._load_prompt_file to avoid file I/O.'''
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
     monkeypatch.setattr(
         DruckerCoordinatorAgent,
         '_load_prompt_file',
@@ -562,7 +562,7 @@ def mock_github_utils(monkeypatch):
 @pytest.fixture
 def client(mock_github_utils):
     '''Create a TestClient with mocked github_utils already in place.'''
-    from agents.drucker_api import create_app
+    from agents.drucker.api import create_app
     from fastapi.testclient import TestClient
 
     app = create_app()
@@ -709,10 +709,10 @@ def test_github_extended_tick_single_repo(monkeypatch):
 
     _inject_github_utils(monkeypatch, analyze_extended_hygiene=_analyze)
 
-    from agents import drucker_agent as mod
+    from agents.drucker import agent as mod
     monkeypatch.setattr(mod, 'notify_shannon', lambda **kw: {'ok': True})
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
     agent = DruckerCoordinatorAgent(project_key='STL')
 
     result = agent.tick({
@@ -742,10 +742,10 @@ def test_github_extended_tick_multi_repo(monkeypatch):
 
     _inject_github_utils(monkeypatch, analyze_extended_hygiene=_analyze)
 
-    from agents import drucker_agent as mod
+    from agents.drucker import agent as mod
     monkeypatch.setattr(mod, 'notify_shannon', lambda **kw: {'ok': True})
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
     agent = DruckerCoordinatorAgent(project_key='STL')
 
     repos = ['cornelis/fabric', 'cornelis/opa-psm2']
@@ -781,14 +781,14 @@ def test_github_extended_tick_notify_shannon(monkeypatch):
 
     notification_calls = []
 
-    from agents import drucker_agent as mod
+    from agents.drucker import agent as mod
     monkeypatch.setattr(
         mod,
         'notify_shannon',
         lambda **kw: (notification_calls.append(kw) or {'ok': True}),
     )
 
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
     agent = DruckerCoordinatorAgent(project_key='STL')
 
     result = agent.tick({

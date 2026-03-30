@@ -151,7 +151,7 @@ services:
   drucker:
     <<: *agent-base
     container_name: drucker
-    command: ["uvicorn", "agents.drucker_api:app", "--host", "0.0.0.0", "--port", "8201"]
+    command: ["uvicorn", "agents.drucker.api:app", "--host", "0.0.0.0", "--port", "8201"]
     ports:
       - "8201:8201"
     environment:
@@ -166,7 +166,7 @@ services:
   gantt:
     <<: *agent-base
     container_name: gantt
-    command: ["uvicorn", "agents.gantt_api:app", "--host", "0.0.0.0", "--port", "8202"]
+    command: ["uvicorn", "agents.gantt.api:app", "--host", "0.0.0.0", "--port", "8202"]
     ports:
       - "8202:8202"
     environment:

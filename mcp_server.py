@@ -74,18 +74,18 @@ except ImportError:
 import jira_utils
 import confluence_utils
 import github_utils
-from agents.drucker_agent import DruckerCoordinatorAgent
-from agents.drucker_models import DruckerRequest
-from agents.gantt_agent import GanttProjectPlannerAgent
-from agents.gantt_models import PlanningRequest, ReleaseMonitorRequest, ReleaseSurveyRequest
-from agents.hypatia_agent import HypatiaDocumentationAgent
-from agents.hypatia_models import DocumentationRequest
-from state.drucker_report_store import DruckerReportStore
-from state.gantt_dependency_review_store import GanttDependencyReviewStore
-from state.gantt_release_monitor_store import GanttReleaseMonitorStore
-from state.gantt_release_survey_store import GanttReleaseSurveyStore
-from state.gantt_snapshot_store import GanttSnapshotStore
-from state.hypatia_record_store import HypatiaRecordStore
+from agents.drucker.agent import DruckerCoordinatorAgent
+from agents.drucker.models import DruckerRequest
+from agents.gantt.agent import GanttProjectPlannerAgent
+from agents.gantt.models import PlanningRequest, ReleaseMonitorRequest, ReleaseSurveyRequest
+from agents.hypatia.agent import HypatiaDocumentationAgent
+from agents.hypatia.models import DocumentationRequest
+from agents.drucker.state.report_store import DruckerReportStore
+from agents.gantt.state.dependency_review_store import GanttDependencyReviewStore
+from agents.gantt.state.release_monitor_store import GanttReleaseMonitorStore
+from agents.gantt.state.release_survey_store import GanttReleaseSurveyStore
+from agents.gantt.state.snapshot_store import GanttSnapshotStore
+from agents.hypatia.state.record_store import HypatiaRecordStore
 
 # CRITICAL: Suppress all stdout output from jira_utils.  The MCP protocol
 # uses stdout exclusively for JSON-RPC 2.0 messages; any stray print()
