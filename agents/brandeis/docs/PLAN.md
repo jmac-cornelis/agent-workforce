@@ -4,9 +4,11 @@ space: ~712020daf767ace9e14880b27724add0de7116
 page_id: '670498836'
 ---
 
+
 ---
 
 **Zone:** Execution Spine   |   **Status:** Wave 5   |   **Sprint:** S8–S9
+
 
 ## Overview
 
@@ -15,6 +17,7 @@ Brandeis is the legal compliance and code scanning agent for the platform. Named
 Its v1 job is to orchestrate software composition analysis scans (BlackDuck / Synopsys), interpret results for license compliance and known vulnerabilities, maintain a software bill of materials (SBOM), and produce structured compliance evidence that Hedy can consume as a release gate input.
 
 Brandeis is not a generic security scanner or a vulnerability-only tool. It focuses on the legal and regulatory compliance surface: license compatibility, export control, FIPS/FedRAMP requirements, and SBOM accuracy. Humans remain the approval authority for license exceptions and regulatory waivers.
+
 
 ## Components
 
@@ -49,6 +52,17 @@ Tracks remediation status for flagged findings, coordinates Jira work items via 
 **ComplianceReporter**
 
 Produces structured compliance evidence records for release gating and audit
+
+
+## Use Case Diagram
+
+The following use case diagram illustrates the primary Build-Triggered Compliance Scan workflow, showing how Brandeis interacts with upstream build agents, external scanning tools, and downstream consumers of compliance evidence.
+
+
+## Message Sequence Diagram
+
+The sequence diagram below shows the step-by-step message flow for a build-triggered compliance scan, from the initial build artifact manifest through scan execution, license evaluation, SBOM generation, Jira finding creation, compliance reporting, traceability recording, and alert notification.
+
 
 ## Interfaces
 
@@ -111,6 +125,7 @@ Compliance alerts, scan summaries, and status updates to Teams channels
 **Audit Database**
 
 Full scan history, finding history, remediation history, and compliance decision records
+
 
 ## Events
 
@@ -194,6 +209,7 @@ Brandeis
 
 PR introduces dependency changes requiring license evaluation
 
+
 ## API
 
 Endpoint
@@ -262,6 +278,7 @@ GET
 
 Get remediation status and linked Jira tickets
 
+
 ## Contracts
 
 jsonComplianceRecord
@@ -269,6 +286,7 @@ jsonComplianceRecord
 jsonScanRequest
 
 jsonWaiverRequest
+
 
 ## Use Cases
 
@@ -283,6 +301,7 @@ textSequence: PR Dependency Change Review
 ### License Exception Workflow
 
 textSequence: License Exception Workflow
+
 
 ## Security
 
@@ -309,6 +328,7 @@ BlackDuck API credentials stored in vault, never in agent config or logs
 **Audit trail**
 
 Every scan, finding, waiver, and remediation action is logged with actor, timestamp, and rationale
+
 
 ## Decision Logging & Audit Trail
 
@@ -337,6 +357,7 @@ Finding details, justification, approver, expiry, conditions
 **Remediation tracking**
 
 Finding, Jira ticket, status transitions, resolution evidence
+
 
 ## Tool Use & Token Efficiency
 
@@ -380,6 +401,7 @@ LLM — when a license is not in the known database, LLM analyzes license text f
 
 All LLM calls log: model, input tokens, output tokens, cost, and the specific task (e.g., “unknown license analysis for component X”). Token budgets are enforced per scan cycle.
 
+
 ## Standard Commands
 
 Command
@@ -422,6 +444,7 @@ Compliance summary for a specific build
 
 SBOM summary for a specific build
 
+
 ## Teams Channel Interface
 
 Channel: #agent-brandeis in the Agent Workforce team, managed by Shannon.
@@ -453,6 +476,7 @@ ComplianceRecord produced and available for release gating
 **Remediation update**
 
 Status change on a tracked remediation item
+
 
 ## Implementation Phases
 
@@ -501,11 +525,3 @@ P5
 ---
 
 *Brandeis — Legal Compliance & Code Scanning Agent — AI Agent Workforce — Cornelis Networks*
-
-## Use Case Diagram
-
-The following use case diagram illustrates the primary Build-Triggered Compliance Scan workflow, showing how Brandeis interacts with upstream build agents, external scanning tools, and downstream consumers of compliance evidence.
-
-## Message Sequence Diagram
-
-The sequence diagram below shows the step-by-step message flow for a build-triggered compliance scan, from the initial build artifact manifest through scan execution, license evaluation, SBOM generation, Jira finding creation, compliance reporting, traceability recording, and alert notification.

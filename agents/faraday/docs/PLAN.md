@@ -5,6 +5,7 @@ Faraday should be the test-execution agent for the platform. Its job is to take 
 
 In v1, Faraday should wrap the existing Fuze Test execution path rather than replacing the ATF executive or Product Test Adapter layers.
 
+
 ## Product definition
 ### Goal
 - consume a concrete `TestPlan`
@@ -27,10 +28,12 @@ In v1, Faraday should wrap the existing Fuze Test execution path rather than rep
 - Tesla owns environment reservation truth
 - Fuze Test executes the actual test cycle
 
+
 ## Triggering model
 - Faraday should run as an always-on execution control plane backed by queued workers.
 - Normal work should start from accepted test-run submissions once the required Tesla reservation is ready.
 - Humans should be able to submit, cancel, retry, and inspect runs through controlled APIs.
+
 
 ## Architecture
 ### Execution model
@@ -78,169 +81,6 @@ The executor should not duplicate:
 - DUT program/reboot/restore logic
 - result file generation that already exists in ATF
 
-## Execution topology
-### Where it runs
-- run execution on dedicated test workers, never in the API process
-- use separate worker classes for:
-  - `mock-test-worker`
-  - `hil-test-worker`
-- ensure workers have access to:
-  - ATF source or packaged ATF runtime
-  - required package artifacts under test
-  - lab network access where needed
-  - result publication endpoints
-
-### Workspace model
-- create an isolated ephemeral workspace per test run
-- materialize:
-  - ATF runtime
-  - generated suite list or runtime overrides
-  - build artifacts or packages under test
-  - secret-backed local runtime config where required
-- remove ephemeral state after teardown verification
-
-### Execution path
-1. accept a `TestRunRequest`
-2. validate Tesla reservation and environment requirements
-3. stage ATF runtime and build artifacts
-4. invoke Fuze Test with explicit runtime arguments
-5. stream structured status events during execution
-6. collect logs, results, and attachments
-7. normalize results into execution records
-8. release or conclude reservation usage and clean workspace
-
-## Queueing and scheduling
-- use an explicit queue between API and executor workers
-- route by worker class and environment requirements
-- persist run state independently of queue state
-- require an active reservation before dispatch to scarce HIL workers
-- use one active HIL run per reserved environment unless policy explicitly allows parallelism
-- use leases and worker heartbeats to detect stuck or lost runs
-
-Retry policy:
-- auto-retry only for transient infrastructure failures before Fuze Test execution starts
-- do not auto-retry deterministic test failures
-- do not auto-retry mid-run HIL failures unless the failure class is explicitly marked retry-safe
-
-## Public API and contracts
-### API surface
-- `POST /v1/test-runs`
-  - input: `build_id`, `test_plan_id`, execution context overrides allowed by policy
-  - output: `test_run_id`, status, submitted time
-- `POST /v1/test-runs/{test_run_id}/cancel`
-  - cancels queued or running execution
-- `GET /v1/test-runs/{test_run_id}`
-  - returns run state, current stage, worker, environment, and summary
-- `GET /v1/test-runs/{test_run_id}/events`
-  - returns stage-level execution events
-- `GET /v1/test-runs/{test_run_id}/results`
-  - returns normalized result record and artifact links
-
-### Internal contracts
-- `TestRunRequest`
-- `EnvironmentReservation`
-- `ExecutionContext`
-- `TestExecutionRecord`
-- `TestFailureRecord`
-- `ResultArtifactSet`
-
-### Execution stages
-The executor should expose stable stages:
-- `accepted`
-- `waiting_for_environment`
-- `environment_reserved`
-- `staging_runtime`
-- `invoking_fuze_test`
-- `running`
-- `collecting_results`
-- `publishing_results`
-- `completed`
-- `failed`
-- `cancelled`
-
-## Observability and operations
-### Structured events
-Emit:
-- `test.execution_accepted`
-- `test.execution_started`
-- `test.execution_stage_changed`
-- `test.execution_completed`
-- `test.execution_failed`
-- `test.execution_cancelled`
-
-### Metrics
-Collect:
-- queue age
-- reservation wait time
-- staging time
-- execution duration
-- publish duration
-- success/failure/cancel rates
-- timeout rate
-- lab utilization by location and DUT class
-
-### Logs and artifacts
-- keep raw ATF stdout/stderr and log files
-- keep result JSON and any Fuze Test-generated attachments
-- keep normalized execution summary keyed by build ID and test run ID
-- record the exact invocation context used to launch ATF
-
-### Failure handling
-Classify failures into:
-- bad request or invalid plan
-- missing artifacts or missing runtime inputs
-- reservation failure
-- ATF configuration failure
-- PTA failure
-- DUT or environment failure
-- timeout
-- infrastructure loss
-
-## Security and access
-- do not place raw lab credentials or reporting credentials in test run requests
-- resolve secrets on workers only
-- isolate per-run secret files and runtime config
-- keep repo/package access separate from lab-control access
-- redact secrets and sensitive endpoints from logs and surfaced failures
-- require stronger policy gates for workers that can power-cycle, program, or otherwise mutate real hardware
-
-## Fuze Test changes required
-Faraday can work with Fuze Test as it exists, but the following changes would materially improve reliability and integration quality.
-
-### 1. Machine-readable execution state
-Expose machine-readable run-state transitions for:
-- environment preparation
-- PTA configuration
-- suite start and completion
-- test case start and completion
-- close/publish phase
-
-### 2. Stable result envelope
-Ensure Fuze Test emits a stable result object that includes:
-- build ID
-- test run ID
-- session or execution IDs
-- suite IDs
-- test case IDs
-- location
-- DUT identities used
-- pass/fail/skipped/unavailable results
-- raw artifact references
-
-### 3. Structured failure classes
-Surface explicit failure categories instead of requiring the executor to infer everything from logs or return codes.
-
-### 4. Cancellation support
-Add a supported cancellation path so Faraday can stop a running test cycle cleanly rather than relying only on process termination.
-
-### 5. Dry-run validation
-Add a validation mode that confirms:
-- inputs are structurally valid
-- required ATF assets exist
-- required suites can be resolved
-- reservation prerequisites are met
-
-without executing the real test cycle.
 
 ## Diagrams
 
@@ -288,6 +128,177 @@ sequenceDiagram
     FW->>FW: Teardown workspace
 ```
 
+
+## Execution topology
+### Where it runs
+- run execution on dedicated test workers, never in the API process
+- use separate worker classes for:
+  - `mock-test-worker`
+  - `hil-test-worker`
+- ensure workers have access to:
+  - ATF source or packaged ATF runtime
+  - required package artifacts under test
+  - lab network access where needed
+  - result publication endpoints
+
+### Workspace model
+- create an isolated ephemeral workspace per test run
+- materialize:
+  - ATF runtime
+  - generated suite list or runtime overrides
+  - build artifacts or packages under test
+  - secret-backed local runtime config where required
+- remove ephemeral state after teardown verification
+
+### Execution path
+1. accept a `TestRunRequest`
+2. validate Tesla reservation and environment requirements
+3. stage ATF runtime and build artifacts
+4. invoke Fuze Test with explicit runtime arguments
+5. stream structured status events during execution
+6. collect logs, results, and attachments
+7. normalize results into execution records
+8. release or conclude reservation usage and clean workspace
+
+
+## Queueing and scheduling
+- use an explicit queue between API and executor workers
+- route by worker class and environment requirements
+- persist run state independently of queue state
+- require an active reservation before dispatch to scarce HIL workers
+- use one active HIL run per reserved environment unless policy explicitly allows parallelism
+- use leases and worker heartbeats to detect stuck or lost runs
+
+Retry policy:
+- auto-retry only for transient infrastructure failures before Fuze Test execution starts
+- do not auto-retry deterministic test failures
+- do not auto-retry mid-run HIL failures unless the failure class is explicitly marked retry-safe
+
+
+## Public API and contracts
+### API surface
+- `POST /v1/test-runs`
+  - input: `build_id`, `test_plan_id`, execution context overrides allowed by policy
+  - output: `test_run_id`, status, submitted time
+- `POST /v1/test-runs/{test_run_id}/cancel`
+  - cancels queued or running execution
+- `GET /v1/test-runs/{test_run_id}`
+  - returns run state, current stage, worker, environment, and summary
+- `GET /v1/test-runs/{test_run_id}/events`
+  - returns stage-level execution events
+- `GET /v1/test-runs/{test_run_id}/results`
+  - returns normalized result record and artifact links
+
+### Internal contracts
+- `TestRunRequest`
+- `EnvironmentReservation`
+- `ExecutionContext`
+- `TestExecutionRecord`
+- `TestFailureRecord`
+- `ResultArtifactSet`
+
+### Execution stages
+The executor should expose stable stages:
+- `accepted`
+- `waiting_for_environment`
+- `environment_reserved`
+- `staging_runtime`
+- `invoking_fuze_test`
+- `running`
+- `collecting_results`
+- `publishing_results`
+- `completed`
+- `failed`
+- `cancelled`
+
+
+## Observability and operations
+### Structured events
+Emit:
+- `test.execution_accepted`
+- `test.execution_started`
+- `test.execution_stage_changed`
+- `test.execution_completed`
+- `test.execution_failed`
+- `test.execution_cancelled`
+
+### Metrics
+Collect:
+- queue age
+- reservation wait time
+- staging time
+- execution duration
+- publish duration
+- success/failure/cancel rates
+- timeout rate
+- lab utilization by location and DUT class
+
+### Logs and artifacts
+- keep raw ATF stdout/stderr and log files
+- keep result JSON and any Fuze Test-generated attachments
+- keep normalized execution summary keyed by build ID and test run ID
+- record the exact invocation context used to launch ATF
+
+### Failure handling
+Classify failures into:
+- bad request or invalid plan
+- missing artifacts or missing runtime inputs
+- reservation failure
+- ATF configuration failure
+- PTA failure
+- DUT or environment failure
+- timeout
+- infrastructure loss
+
+
+## Security and access
+- do not place raw lab credentials or reporting credentials in test run requests
+- resolve secrets on workers only
+- isolate per-run secret files and runtime config
+- keep repo/package access separate from lab-control access
+- redact secrets and sensitive endpoints from logs and surfaced failures
+- require stronger policy gates for workers that can power-cycle, program, or otherwise mutate real hardware
+
+
+## Fuze Test changes required
+Faraday can work with Fuze Test as it exists, but the following changes would materially improve reliability and integration quality.
+
+### 1. Machine-readable execution state
+Expose machine-readable run-state transitions for:
+- environment preparation
+- PTA configuration
+- suite start and completion
+- test case start and completion
+- close/publish phase
+
+### 2. Stable result envelope
+Ensure Fuze Test emits a stable result object that includes:
+- build ID
+- test run ID
+- session or execution IDs
+- suite IDs
+- test case IDs
+- location
+- DUT identities used
+- pass/fail/skipped/unavailable results
+- raw artifact references
+
+### 3. Structured failure classes
+Surface explicit failure categories instead of requiring the executor to infer everything from logs or return codes.
+
+### 4. Cancellation support
+Add a supported cancellation path so Faraday can stop a running test cycle cleanly rather than relying only on process termination.
+
+### 5. Dry-run validation
+Add a validation mode that confirms:
+- inputs are structurally valid
+- required ATF assets exist
+- required suites can be resolved
+- reservation prerequisites are met
+
+without executing the real test cycle.
+
+
 ## Decision Logging & Audit Trail
 
 Every action this agent takes is logged with full context. For decisions, the complete decision tree is recorded — what options were considered, what data was evaluated, and why the chosen path was selected.
@@ -299,6 +310,7 @@ Every action this agent takes is logged with full context. For decisions, the co
 | **Rejection log** | When an action is rejected or blocked — what was attempted, what rule prevented it, what the agent did instead. | `decision=promote_release, attempted=sit_to_qa, blocked_by=failing_test_TES-456, action=hold_and_notify` |
 
 All logs are stored in PostgreSQL (audit table) and streamed to Grafana/Loki. Decision logs are queryable by correlation_id, agent_id, decision type, and time range.
+
 
 ## Tool Use & Token Efficiency
 
@@ -321,6 +333,7 @@ All token usage is logged to PostgreSQL and accumulates per agent, per day, per 
 | **Cumulative totals** | total_input_tokens, total_output_tokens, total_cost_usd | agent_id, date range, operation type |
 | **Efficiency ratio** | deterministic_actions / total_actions (target: >80%) | agent_id, date range |
 
+
 ## Standard Commands
 
 Every agent responds to these standard commands in its Teams channel and via REST API.
@@ -336,6 +349,7 @@ Every agent responds to these standard commands in its Teams channel and via RES
 
 All commands also work via the agent's REST API (e.g., `GET /v1/status/tokens`, `GET /v1/status/decisions`, `GET /v1/status/stats`).
 
+
 ## Teams Channel Interface
 
 This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the "Agent Workforce" team. This is the primary human interface. This channel is managed by **[Shannon](SHANNON_COMMUNICATIONS_AGENT_PLAN.md)**, the communications service agent.
@@ -348,6 +362,7 @@ This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the 
 | **Input requests** | When the agent needs information it cannot determine automatically, it posts a structured request. Engineers reply in-thread. |
 | **Error alerts** | Failures and anomalies posted with severity and suggested actions. Critical alerts @mention the relevant team. |
 | **Status queries** | Engineers can ask for status by posting in the channel. The agent responds in-thread. |
+
 
 ## Phased roadmap
 ### Phase 1. Basic wrapper execution
@@ -390,6 +405,7 @@ Exit criteria:
 - cancellation works predictably
 - result parsing is not dependent on fragile log scraping
 
+
 ## Test and acceptance plan
 ### Happy-path execution
 - run a mock-path test plan successfully through Faraday
@@ -414,6 +430,7 @@ Exit criteria:
 - result record contains build ID, run ID, suites, and outcome summary
 - raw ATF artifacts remain linked from normalized execution records
 - repeated queries return stable state
+
 
 ## Assumptions
 - Fuze Test remains the execution substrate for v1

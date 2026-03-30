@@ -17,6 +17,7 @@ Shannon has its own operational channel (`#agent-shannon`) where operators monit
 
 > **Full technical specification:** [docs/reference/TEAMS_BOT_FRAMEWORK.md](../docs/reference/TEAMS_BOT_FRAMEWORK.md)
 
+
 ## Product definition
 
 ### Goal
@@ -40,11 +41,13 @@ Shannon has its own operational channel (`#agent-shannon`) where operators monit
 - PostgreSQL: conversation state, approval records, audit log.
 - Redis: rate limiting, session cache, message deduplication.
 
+
 ## Triggering model
 - Shannon runs as an always-on service.
 - Inbound triggers: Teams webhook events (user messages, card actions, form submissions).
 - Inbound triggers: Agent API calls (notifications, approval requests, input requests, alerts).
 - Shannon does not poll — it reacts to webhooks and API calls.
+
 
 ## Architecture
 
@@ -67,6 +70,7 @@ Shannon has its own operational channel (`#agent-shannon`) where operators monit
 - The Bot API is accessible on the internal network only (no TLS required for agent-to-bot calls).
 - PostgreSQL and Redis are co-located on `cn-ai-01`.
 
+
 ## Interfaces
 
 ### Inputs
@@ -83,6 +87,7 @@ Shannon has its own operational channel (`#agent-shannon`) where operators monit
 | Microsoft Teams | Outgoing messages | Adaptive Cards, threaded replies, approval cards, error alerts |
 | All 15 domain agents | Routed API calls | Standard commands forwarded to agent `/v1/status/*` endpoints, custom commands to agent-specific endpoints, approval/input responses to agent callback endpoints |
 | PostgreSQL | Direct writes | Conversation state, approval records, audit log |
+
 
 ## API
 
@@ -109,6 +114,7 @@ Shannon exposes two API surfaces:
 | `/v1/status/decisions` | GET | Shannon's own routing and escalation decisions |
 | `/v1/status/work-summary` | GET | Today's message volume, approvals processed, errors handled |
 
+
 ## Events
 
 | Event | Direction | Description |
@@ -121,6 +127,7 @@ Shannon exposes two API surfaces:
 | `message.failed` | Emitted | Command routing failed (agent unreachable, timeout, error) |
 | `input.requested` | Consumed | Agent requests structured human input via Bot API |
 | `input.received` | Emitted | Human submitted input response |
+
 
 ## Standard Commands
 
@@ -139,6 +146,7 @@ Additionally, Shannon routes all standard commands posted in any agent channel t
 
 All commands also work via Shannon's REST API (e.g., `GET /v1/status/tokens`, `GET /v1/status/stats`).
 
+
 ## Decision Logging & Audit Trail
 
 Every action Shannon takes is logged with full context. For decisions (routing, escalation, timeout handling), the complete decision tree is recorded — what options were considered, what data was evaluated, and why the chosen path was selected.
@@ -150,6 +158,7 @@ Every action Shannon takes is logged with full context. For decisions (routing, 
 | **Rejection log** | When a message is rejected — rate limited, unknown channel, malformed command. | `decision=reject_message, channel=#unknown, reason="channel not registered in agent registry"` |
 
 All logs are stored in PostgreSQL (audit table) and streamed to Grafana/Loki. Decision logs are queryable by correlation_id, agent_id, decision type, and time range.
+
 
 ## Tool Use & Token Efficiency
 
@@ -173,6 +182,7 @@ All token usage is logged to PostgreSQL and accumulates per agent, per day, per 
 | **Cumulative totals** | total_input_tokens, total_output_tokens, total_cost_usd | agent_id, date range, operation type |
 | **Efficiency ratio** | deterministic_actions / total_actions (target: >95%) | agent_id, date range |
 
+
 ## Teams Channel Interface
 
 Shannon IS the Teams channel interface. It is the single bot service that manages all 15 agent channels plus its own operational channel.
@@ -184,6 +194,7 @@ Shannon's own ops channel is `#agent-shannon`, where operators:
 - Review escalation and timeout decisions
 
 For all other channels (`#agent-josephine`, `#agent-ada`, etc.), Shannon acts as the message broker — receiving user commands, routing them to the correct agent, and posting formatted responses back.
+
 
 ## Phased roadmap
 
@@ -254,6 +265,7 @@ Exit criteria:
 
 > **Full technical specification:** [docs/reference/TEAMS_BOT_FRAMEWORK.md](../docs/reference/TEAMS_BOT_FRAMEWORK.md)
 
+
 ## Test and acceptance plan
 
 ### Command routing
@@ -285,6 +297,7 @@ Exit criteria:
 - Agent-to-bot calls require valid service principal token
 - Approval responses verify user identity and team membership
 - All interactions are audit-logged
+
 
 ## Assumptions
 - Shannon is internal-only — the bot serves the "Agent Workforce" team in Microsoft Teams.

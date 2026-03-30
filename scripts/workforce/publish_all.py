@@ -166,24 +166,13 @@ def md_to_storage(plan_path, agent):
 </ac:structured-macro>
 '''
 
-    section_order = ['preamble'] + list(sections.keys())
-    seen = set()
-
     for key in sections:
-        if key in seen:
-            continue
-        seen.add(key)
-
         if key == 'preamble':
             if sections.get(key):
                 html += f'\n<h2>Overview</h2>\n{md_section_to_html(sections[key])}'
             continue
 
-        heading = key
-        if 'diagram' in key.lower() or 'use case' in key.lower():
-            continue
-
-        html += f'\n<h2>{heading}</h2>\n{md_section_to_html(sections[key])}'
+        html += f'\n<h2>{key}</h2>\n{md_section_to_html(sections[key])}'
 
     if tab_names:
         html += '\n<h2>Use Case Diagrams</h2>\n'
@@ -234,8 +223,8 @@ def publish_agent(c, agent, screenshot_func=None):
         page = resp.json()
         page_id = page['id']
         print(f"  Created page {page_id}")
-    elif resp.status_code == 409:
-        print(f"  Page already exists, searching...")
+    elif resp.status_code in (400, 409):
+        print(f"  Page already exists, updating...")
         search_resp = c.session.get(f'{c.base_url}/api/v2/pages', params={
             'spaceId': SPACE_ID, 'title': agent['title'], 'status': 'current'
         })

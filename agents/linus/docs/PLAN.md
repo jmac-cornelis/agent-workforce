@@ -5,6 +5,7 @@ Linus should be the code-review agent for the platform. Its v1 job is to evaluat
 
 Linus should not become a style bot or a generic lint wrapper. It should focus on high-signal review findings tied to correctness, maintainability, and policy.
 
+
 ## Product definition
 ### Goal
 - consume GitHub pull request events and diff context
@@ -27,10 +28,12 @@ Linus should not become a style bot or a generic lint wrapper. It should focus o
 - Hypatia may consume documentation-impact signals
 - humans remain the approval authority for consequential merges
 
+
 ## Triggering model
 - Linus should run as an always-on review service attached to GitHub PR flow.
 - Normal work should start from pull request open, update, sync, and review-request events.
 - Humans should be able to re-run reviews and apply justified suppressions or overrides under policy.
+
 
 ## Architecture
 ### Core design
@@ -56,152 +59,6 @@ Linus should be grounded in the review types already defined in the shared spec:
 
 V1 should also respect repository-local conventions and file ownership boundaries where they exist rather than imposing one global standard.
 
-## Review model
-### Inputs
-- GitHub PR opened, updated, synchronized, and review-requested events
-- repository, branch, commit, and diff metadata
-- policy profile selection inputs
-- optional prior review history on the PR
-- optional build/test/doc context from Josephine, Ada, or Hypatia for re-review enrichment
-
-### Outputs
-Linus should produce:
-- structured review findings
-- inline comments
-- summarized review verdicts
-- policy-failure signals
-- documentation-impact signals
-- test/build concern signals
-
-### Review categories
-V1 should explicitly support:
-- `correctness_risk`
-- `safety_risk`
-- `concurrency_risk`
-- `maintainability_risk`
-- `policy_violation`
-- `documentation_impact`
-- `test_attention_needed`
-
-### Review rules
-- findings should prioritize likely bugs, regressions, and dangerous assumptions over style
-- every finding should cite the code location, rule or reasoning, and severity
-- uncertain findings should be marked as low-confidence, not stated as fact
-- review output should be path-aware and language-aware
-- low-signal bulk commenting should be suppressed
-- documentation-impact findings should be emitted separately so Hypatia can consume them cleanly
-
-## Public API and contracts
-### API surface
-- `POST /v1/reviews/pr`
-  - input: repo, PR number, policy profile or auto-select
-  - output: `ReviewSummary`
-- `GET /v1/reviews/pr/{repo}/{pr_number}`
-  - return current review summary and structured findings
-- `GET /v1/reviews/pr/{repo}/{pr_number}/findings`
-  - return detailed findings and inline comment payloads
-- `POST /v1/reviews/pr/{repo}/{pr_number}/publish`
-  - publish review comments or summary status to GitHub under policy
-
-### Internal contracts
-- `ReviewRequest`
-- `ReviewFinding`
-- `ReviewSummary`
-- `PolicyProfile`
-- `ReviewImpactRecord`
-
-## Policy profiles
-### Initial policy set
-- `kernel_profile`
-  - kernel coding style
-  - upstream compatibility concerns
-  - API misuse or unsafe patterns
-- `embedded_cpp_profile`
-  - memory-safety concerns
-  - concurrency and state-management risks
-  - error-handling and boundary-condition issues
-- `python_utility_profile`
-  - script correctness
-  - failure handling
-  - maintainability and unsafe scripting patterns
-
-### Policy behavior
-- profiles should be composable by path or component
-- repositories should be able to tune severity and suppressions
-- suppressions must remain explicit and auditable
-
-## GitHub integration stance
-Linus should integrate directly with PR review flow.
-
-Allowed v1 write-backs:
-- inline review comments
-- PR review summaries
-- advisory status checks
-
-Not v1 write-backs:
-- force-merge or auto-merge on Linus output alone
-- silent closure of findings
-- mutation of branch protection rules
-
-## Observability and operations
-### Structured events
-Emit:
-- `review.started`
-- `review.completed`
-- `review.policy_failed`
-- `review.documentation_impact_detected`
-- `review.test_attention_detected`
-
-### Metrics
-Collect:
-- review latency by repo and profile
-- finding count by severity and category
-- finding acceptance or dismissal rate
-- repeat finding rate by repository area
-- percentage of PRs with documentation-impact or test-attention signals
-
-### Operator controls
-- re-run a review for a PR or commit range
-- suppress a finding with justification
-- adjust profile selection for a repository scope
-- inspect rule and evidence backing any finding
-
-## Security and approvals
-- read access to repository contents, diffs, and PR metadata is required
-- write-back to GitHub should be limited to review comments and status signals
-- suppressions and overrides must be attributable
-- no auto-approval for sensitive repos or protected branches without explicit policy
-- review records and finding history should remain auditable
-
-## Platform changes required
-Linus will be stronger if the platform exposes cleaner review inputs and outputs.
-
-### 1. Canonical PR event schema
-Normalize:
-- repo
-- PR number
-- base and head commit SHAs
-- changed files
-- author
-- requested reviewers
-
-### 2. Shared source-reference model
-Use a common record shape for file path, line, commit, and PR references so Linus, Hypatia, and Linnaeus speak the same language.
-
-### 3. Review-result schema
-Publish machine-readable review findings with:
-- severity
-- category
-- file and line
-- confidence
-- explanation
-- recommended follow-up
-
-### 4. Review-to-agent handoff events
-Emit explicit downstream signals for:
-- documentation impact to Hypatia
-- test attention to Ada
-- build-risk hints to Josephine when the PR touches build-critical areas
 
 ## Diagrams
 
@@ -246,6 +103,161 @@ sequenceDiagram
     EB->>J: Receive signal
 ```
 
+
+## Review model
+### Inputs
+- GitHub PR opened, updated, synchronized, and review-requested events
+- repository, branch, commit, and diff metadata
+- policy profile selection inputs
+- optional prior review history on the PR
+- optional build/test/doc context from Josephine, Ada, or Hypatia for re-review enrichment
+
+### Outputs
+Linus should produce:
+- structured review findings
+- inline comments
+- summarized review verdicts
+- policy-failure signals
+- documentation-impact signals
+- test/build concern signals
+
+### Review categories
+V1 should explicitly support:
+- `correctness_risk`
+- `safety_risk`
+- `concurrency_risk`
+- `maintainability_risk`
+- `policy_violation`
+- `documentation_impact`
+- `test_attention_needed`
+
+### Review rules
+- findings should prioritize likely bugs, regressions, and dangerous assumptions over style
+- every finding should cite the code location, rule or reasoning, and severity
+- uncertain findings should be marked as low-confidence, not stated as fact
+- review output should be path-aware and language-aware
+- low-signal bulk commenting should be suppressed
+- documentation-impact findings should be emitted separately so Hypatia can consume them cleanly
+
+
+## Public API and contracts
+### API surface
+- `POST /v1/reviews/pr`
+  - input: repo, PR number, policy profile or auto-select
+  - output: `ReviewSummary`
+- `GET /v1/reviews/pr/{repo}/{pr_number}`
+  - return current review summary and structured findings
+- `GET /v1/reviews/pr/{repo}/{pr_number}/findings`
+  - return detailed findings and inline comment payloads
+- `POST /v1/reviews/pr/{repo}/{pr_number}/publish`
+  - publish review comments or summary status to GitHub under policy
+
+### Internal contracts
+- `ReviewRequest`
+- `ReviewFinding`
+- `ReviewSummary`
+- `PolicyProfile`
+- `ReviewImpactRecord`
+
+
+## Policy profiles
+### Initial policy set
+- `kernel_profile`
+  - kernel coding style
+  - upstream compatibility concerns
+  - API misuse or unsafe patterns
+- `embedded_cpp_profile`
+  - memory-safety concerns
+  - concurrency and state-management risks
+  - error-handling and boundary-condition issues
+- `python_utility_profile`
+  - script correctness
+  - failure handling
+  - maintainability and unsafe scripting patterns
+
+### Policy behavior
+- profiles should be composable by path or component
+- repositories should be able to tune severity and suppressions
+- suppressions must remain explicit and auditable
+
+
+## GitHub integration stance
+Linus should integrate directly with PR review flow.
+
+Allowed v1 write-backs:
+- inline review comments
+- PR review summaries
+- advisory status checks
+
+Not v1 write-backs:
+- force-merge or auto-merge on Linus output alone
+- silent closure of findings
+- mutation of branch protection rules
+
+
+## Observability and operations
+### Structured events
+Emit:
+- `review.started`
+- `review.completed`
+- `review.policy_failed`
+- `review.documentation_impact_detected`
+- `review.test_attention_detected`
+
+### Metrics
+Collect:
+- review latency by repo and profile
+- finding count by severity and category
+- finding acceptance or dismissal rate
+- repeat finding rate by repository area
+- percentage of PRs with documentation-impact or test-attention signals
+
+### Operator controls
+- re-run a review for a PR or commit range
+- suppress a finding with justification
+- adjust profile selection for a repository scope
+- inspect rule and evidence backing any finding
+
+
+## Security and approvals
+- read access to repository contents, diffs, and PR metadata is required
+- write-back to GitHub should be limited to review comments and status signals
+- suppressions and overrides must be attributable
+- no auto-approval for sensitive repos or protected branches without explicit policy
+- review records and finding history should remain auditable
+
+
+## Platform changes required
+Linus will be stronger if the platform exposes cleaner review inputs and outputs.
+
+### 1. Canonical PR event schema
+Normalize:
+- repo
+- PR number
+- base and head commit SHAs
+- changed files
+- author
+- requested reviewers
+
+### 2. Shared source-reference model
+Use a common record shape for file path, line, commit, and PR references so Linus, Hypatia, and Linnaeus speak the same language.
+
+### 3. Review-result schema
+Publish machine-readable review findings with:
+- severity
+- category
+- file and line
+- confidence
+- explanation
+- recommended follow-up
+
+### 4. Review-to-agent handoff events
+Emit explicit downstream signals for:
+- documentation impact to Hypatia
+- test attention to Ada
+- build-risk hints to Josephine when the PR touches build-critical areas
+
+
 ## Decision Logging & Audit Trail
 
 Every action this agent takes is logged with full context. For decisions, the complete decision tree is recorded — what options were considered, what data was evaluated, and why the chosen path was selected.
@@ -257,6 +269,7 @@ Every action this agent takes is logged with full context. For decisions, the co
 | **Rejection log** | When an action is rejected or blocked — what was attempted, what rule prevented it, what the agent did instead. | `decision=promote_release, attempted=sit_to_qa, blocked_by=failing_test_TES-456, action=hold_and_notify` |
 
 All logs are stored in PostgreSQL (audit table) and streamed to Grafana/Loki. Decision logs are queryable by correlation_id, agent_id, decision type, and time range.
+
 
 ## Tool Use & Token Efficiency
 
@@ -279,6 +292,7 @@ All token usage is logged to PostgreSQL and accumulates per agent, per day, per 
 | **Cumulative totals** | total_input_tokens, total_output_tokens, total_cost_usd | agent_id, date range, operation type |
 | **Efficiency ratio** | deterministic_actions / total_actions (target: >80%) | agent_id, date range |
 
+
 ## Standard Commands
 
 Every agent responds to these standard commands in its Teams channel and via REST API.
@@ -294,6 +308,7 @@ Every agent responds to these standard commands in its Teams channel and via RES
 
 All commands also work via the agent's REST API (e.g., `GET /v1/status/tokens`, `GET /v1/status/decisions`, `GET /v1/status/stats`).
 
+
 ## Teams Channel Interface
 
 This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the "Agent Workforce" team. This is the primary human interface. This channel is managed by **[Shannon](SHANNON_COMMUNICATIONS_AGENT_PLAN.md)**, the communications service agent.
@@ -306,6 +321,7 @@ This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the 
 | **Input requests** | When the agent needs information it cannot determine automatically, it posts a structured request. Engineers reply in-thread. |
 | **Error alerts** | Failures and anomalies posted with severity and suggested actions. Critical alerts @mention the relevant team. |
 | **Status queries** | Engineers can ask for status by posting in the channel. The agent responds in-thread. |
+
 
 ## Phased roadmap
 ### Phase 1. Structured PR review
@@ -341,6 +357,7 @@ Exit criteria:
 - high-value findings remain prominent
 - repeated false positives are controlled without losing auditability
 
+
 ## Test and acceptance plan
 ### Review behavior
 - PR with clear correctness risk produces a finding
@@ -361,6 +378,7 @@ Exit criteria:
 - suppression remains auditable
 - re-runs are stable for unchanged inputs
 - review history remains queryable by PR and commit
+
 
 ## Assumptions
 - GitHub remains the authoritative PR and review system

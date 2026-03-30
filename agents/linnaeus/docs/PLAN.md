@@ -5,6 +5,7 @@ Linnaeus should be the traceability agent for the platform. Its v1 job is to mai
 
 Linnaeus should not become a vague reporting layer. It should be the system that establishes and serves relationship facts.
 
+
 ## Product definition
 ### Goal
 - consume identity-bearing events from Jira, GitHub, Josephine, Faraday, Hedy, Babbage, and project artifacts
@@ -28,10 +29,12 @@ Linnaeus should not become a vague reporting layer. It should be the system that
 - Drucker coordinates Jira workflow hygiene
 - Linnaeus establishes the authoritative relationship graph across those records
 
+
 ## Triggering model
 - Linnaeus should run as an always-on traceability service.
 - Normal work should start from Jira, GitHub, build, test, release, and version events.
 - Humans should be able to assert, correct, or suppress specific relationship records with audit trail.
+
 
 ## Architecture
 ### Core design
@@ -66,6 +69,45 @@ Rules:
 - explicit links beat inferred links
 - inferred links should remain visible as inferred, never silently upgraded to fact
 - missing identities should produce coverage-gap records, not fabricated links
+
+
+## Diagrams
+
+### Build-Test Traceability
+
+```mermaid
+sequenceDiagram
+    participant J as Josephine
+    participant EB as Event Bus
+    participant L as Linnaeus
+    participant F as Faraday
+    participant JI as Jira
+    J->>EB: build.completed
+    EB->>L: Receive build event
+    L->>L: Assert issue_affects_build
+    F->>EB: test.execution_completed
+    EB->>L: Receive test event
+    L->>L: Assert build_validated_by_test_run
+    L->>JI: Push trace comment
+```
+
+### Coverage Gap Detection
+
+```mermaid
+sequenceDiagram
+    participant E as Engineer
+    participant L as Linnaeus API
+    participant TS as TraceStore
+    participant CGD as CoverageGapDetector
+    participant JI as Jira
+    E->>L: Query trace view
+    L->>TS: Resolve full graph
+    TS-->>L: Relationship graph
+    L->>CGD: Check requirement coverage
+    CGD-->>L: Unverified requirement found
+    L->>JI: Flag missing-build on issue
+```
+
 
 ## Traceability model
 ### Inputs
@@ -106,6 +148,7 @@ V1 should explicitly support:
 - version mapping should come from Babbage, not be recomputed by Linnaeus
 - requirement links should be explicit unless there is a narrow approved inference rule
 
+
 ## Public API and contracts
 ### API surface
 - `POST /v1/trace/assert`
@@ -129,6 +172,7 @@ V1 should explicitly support:
 - `CoverageGapRecord`
 - `TraceAssertion`
 
+
 ## Query model
 ### Key user questions Linnaeus must answer
 - starting from a Jira bug, which exact build or builds are affected?
@@ -145,6 +189,7 @@ Linnaeus should support:
 - requirement-centric view
 - gap-centric view for missing links
 
+
 ## Jira integration stance
 Linnaeus should write back into Jira carefully.
 
@@ -160,6 +205,7 @@ Not v1 write-backs:
 - release-state changes
 
 That boundary keeps Linnaeus focused on relationship truth while Drucker handles workflow hygiene and Hedy handles release-state orchestration.
+
 
 ## Observability and operations
 ### Structured events
@@ -184,12 +230,14 @@ Collect:
 - re-run trace resolution for a record scope
 - inspect edge evidence for any stored relationship
 
+
 ## Security and approvals
 - read access is required across Jira, build records, test records, release records, and version mappings
 - write-back to Jira should be limited and auditable
 - manual relationship corrections should be permissioned and recorded
 - no hidden merges of conflicting identities
 - sensitive trace views should respect product and customer scoping rules
+
 
 ## Fuze and platform changes required
 Linnaeus depends on cleaner identity and event surfaces than the current system provides.
@@ -215,42 +263,6 @@ The shared Jira adapter should support:
 - label or metadata updates for gap flags
 - idempotent write-back behavior
 
-## Diagrams
-
-### Build-Test Traceability
-
-```mermaid
-sequenceDiagram
-    participant J as Josephine
-    participant EB as Event Bus
-    participant L as Linnaeus
-    participant F as Faraday
-    participant JI as Jira
-    J->>EB: build.completed
-    EB->>L: Receive build event
-    L->>L: Assert issue_affects_build
-    F->>EB: test.execution_completed
-    EB->>L: Receive test event
-    L->>L: Assert build_validated_by_test_run
-    L->>JI: Push trace comment
-```
-
-### Coverage Gap Detection
-
-```mermaid
-sequenceDiagram
-    participant E as Engineer
-    participant L as Linnaeus API
-    participant TS as TraceStore
-    participant CGD as CoverageGapDetector
-    participant JI as Jira
-    E->>L: Query trace view
-    L->>TS: Resolve full graph
-    TS-->>L: Relationship graph
-    L->>CGD: Check requirement coverage
-    CGD-->>L: Unverified requirement found
-    L->>JI: Flag missing-build on issue
-```
 
 ## Decision Logging & Audit Trail
 
@@ -263,6 +275,7 @@ Every action this agent takes is logged with full context. For decisions, the co
 | **Rejection log** | When an action is rejected or blocked — what was attempted, what rule prevented it, what the agent did instead. | `decision=promote_release, attempted=sit_to_qa, blocked_by=failing_test_TES-456, action=hold_and_notify` |
 
 All logs are stored in PostgreSQL (audit table) and streamed to Grafana/Loki. Decision logs are queryable by correlation_id, agent_id, decision type, and time range.
+
 
 ## Tool Use & Token Efficiency
 
@@ -285,6 +298,7 @@ All token usage is logged to PostgreSQL and accumulates per agent, per day, per 
 | **Cumulative totals** | total_input_tokens, total_output_tokens, total_cost_usd | agent_id, date range, operation type |
 | **Efficiency ratio** | deterministic_actions / total_actions (target: >80%) | agent_id, date range |
 
+
 ## Standard Commands
 
 Every agent responds to these standard commands in its Teams channel and via REST API.
@@ -300,6 +314,7 @@ Every agent responds to these standard commands in its Teams channel and via RES
 
 All commands also work via the agent's REST API (e.g., `GET /v1/status/tokens`, `GET /v1/status/decisions`, `GET /v1/status/stats`).
 
+
 ## Teams Channel Interface
 
 This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the "Agent Workforce" team. This is the primary human interface. This channel is managed by **[Shannon](SHANNON_COMMUNICATIONS_AGENT_PLAN.md)**, the communications service agent.
@@ -312,6 +327,7 @@ This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the 
 | **Input requests** | When the agent needs information it cannot determine automatically, it posts a structured request. Engineers reply in-thread. |
 | **Error alerts** | Failures and anomalies posted with severity and suggested actions. Critical alerts @mention the relevant team. |
 | **Status queries** | Engineers can ask for status by posting in the channel. The agent responds in-thread. |
+
 
 ## Phased roadmap
 ### Phase 1. Build and issue linkage
@@ -346,6 +362,7 @@ Exit criteria:
 - Jira users can reach trace evidence without leaving their normal workflow blind
 - write-backs remain idempotent and auditable
 
+
 ## Test and acceptance plan
 ### Linking behavior
 - exact issue-to-build link is stored from explicit evidence
@@ -366,6 +383,7 @@ Exit criteria:
 - repeated event processing is idempotent
 - manual corrections remain auditable
 - Jira write-backs do not duplicate comments or links
+
 
 ## Assumptions
 - Fuze-generated internal build IDs remain the primary technical identity anchor

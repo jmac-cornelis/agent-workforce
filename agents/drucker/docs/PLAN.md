@@ -5,6 +5,7 @@ Drucker should be the engineering hygiene agent for both Jira workflow coordinat
 
 Drucker should not replace Jira or GitHub as systems of record. It should make both cleaner, more current, and more trustworthy.
 
+
 ## Product definition
 ### Goal
 - consume Jira issue events and scheduled hygiene checks
@@ -36,11 +37,13 @@ Drucker should not replace Jira or GitHub as systems of record. It should make b
 - Drucker keeps issue workflow, assignment, and field hygiene aligned with those signals
 - The branch/PR naming enforcement proposal (plans/branch-pr-naming-proposal.md) is a future Drucker scan type
 
+
 ## Triggering model
 - Drucker should run as an always-on Jira coordination service.
 - Normal work should start from Jira issue events, direct issue-evaluation requests, scheduled Jira hygiene scans, and scheduled GitHub PR hygiene scans for stale or incomplete PRs.
 - GitHub scans run on a configurable schedule (default: daily) independent of Jira polling frequency.
 - Humans should be able to approve, apply, or suppress workflow actions and write-backs under policy.
+
 
 ## Architecture
 ### Core design
@@ -81,150 +84,6 @@ Drucker's GitHub PR scanning builds on the existing adapter skeleton:
 
 The scan architecture follows the same polling pattern as Jira scans: config → tick dispatch → adapter → findings → Shannon notification.
 
-## Coordination model
-### Inputs
-- Jira issue create/update events
-- stale-issue scan triggers
-- assignee, component, priority, and release-field changes
-- traceability context from Linnaeus
-- build/package evidence from Josephine
-- test execution evidence from Faraday
-- release-state evidence from Hedy
-- version context from Babbage
-- optional action-item candidates from Herodotus
-- GitHub PR state from configured repositories (open PRs, review status, age, labels)
-- GitHub PR metadata: author, reviewers, branch names, mergeable state
-
-### Outputs
-Drucker should produce:
-- metadata-completeness flags
-- triage comments
-- routing recommendations
-- safe workflow-transition recommendations
-- assignment or queue recommendations
-- issue hygiene summaries
-- GitHub PR hygiene findings (stale PRs, missing reviews)
-- GitHub PR lifecycle notifications delivered through Shannon
-
-### Coordination rules
-- every recommendation must cite the rule or evidence that caused it
-- write-backs should prefer comments, labels, links, and bounded field updates in v1
-- any transition that changes customer-visible or release-critical state should require explicit policy support or approval
-- unresolved missing build/test context should be visible quickly on defects
-- stale ownership and stale workflow state should be surfaced before they silently age out
-- Drucker may coordinate, but it must not overwrite Linnaeus traceability facts or Hedy release state
-- GitHub findings should be delivered through Shannon, not written as GitHub PR comments or status checks
-- repeat notifications for the same PR should be suppressed within a configurable window
-- GitHub scan results should be stored alongside Jira hygiene reports in the report store
-
-## Public API and contracts
-### API surface
-- `POST /v1/jira/issues/evaluate`
-  - input: `issue_key`, evaluation scope, policy profile
-  - output: `IssueCoordinationRecord`
-- `POST /v1/jira/issues/{issue_key}/recommend`
-  - generate workflow and routing recommendations without applying them
-- `POST /v1/jira/issues/{issue_key}/apply`
-  - apply approved comments, labels, links, or safe field changes
-- `GET /v1/jira/issues/{issue_key}/coordination`
-  - return current coordination record, evidence, and applied actions
-- `GET /v1/jira/projects/{project_key}/hygiene`
-  - return stale issues, missing metadata, and routing anomalies
-- `GET /v1/github/repos/{owner}/{repo}/hygiene`
-  - return PR hygiene findings for a repo
-- `POST /v1/github/scan`
-  - trigger an on-demand GitHub PR hygiene scan
-
-### Internal contracts
-- `IssueCoordinationRequest`
-- `IssueCoordinationRecord`
-- `WorkflowRecommendation`
-- `RoutingDecision`
-- `IssueAuditRecord`
-- `PRHygieneFinding`
-- `PRHygieneAction`
-- `PRHygieneReport`
-
-## Workflow scope
-### What Drucker should own
-- new-bug intake hygiene
-- missing metadata detection
-- stale issue and stale owner detection
-- routing to components, queues, or assignees under policy
-- status nudges when technical evidence contradicts issue state
-- summarized Jira hygiene reports for humans
-- GitHub PR staleness detection and notification
-- GitHub PR review coverage monitoring
-- GitHub PR lifecycle hygiene (future: naming compliance, merge conflicts, CI failure follow-up)
-
-### What Drucker should not own
-- release ticket creation and release stage transitions already anchored in Hedy and existing `fuze` release automation
-- build-to-issue linkage truth already anchored in Linnaeus
-- milestone planning already anchored in Gantt
-- delivery health interpretation already anchored in Brooks
-- code review quality assessment already anchored in Linus
-- GitHub Actions CI/CD pipeline configuration
-- direct GitHub PR comments or status check writes
-
-## Observability and operations
-### Structured events
-Emit:
-- `jira.issue_evaluated`
-- `jira.metadata_gap_detected`
-- `jira.routing_recommended`
-- `jira.workflow_nudge_recommended`
-- `jira.writeback_applied`
-- `github.pr_scan_completed`
-- `github.stale_pr_detected`
-- `github.missing_review_detected`
-- `github.pr_hygiene_report_generated`
-
-### Metrics
-Collect:
-- missing-metadata rate by project
-- stale-issue count by workflow state
-- routing-correction count
-- recommendation acceptance rate
-- issue-to-build evidence coverage
-- stale PR count by repo
-- missing-review PR count by repo
-- GitHub scan frequency and duration
-- notification delivery rate for GitHub findings
-
-### Operator controls
-- approve or reject a proposed write-back
-- suppress a rule for a defined issue or project scope
-- re-run evaluation for an issue or project
-- inspect the exact evidence behind a recommendation
-
-## Security and approvals
-- read access to Jira issues, fields, and workflow metadata is required
-- write access should be scoped to comments, links, labels, and approved field updates in v1
-- permission to transition issues across sensitive workflow boundaries should be separated from read and comment permissions
-- all write-backs must be audited with before/after state and policy reason
-- no hidden bulk transitions
-
-## Fuze and platform changes required
-Drucker can build on the existing Jira substrate, but the following changes would improve the overall platform.
-
-### 1. Shared Jira adapter layer
-Promote the existing Jira adapter into a reusable service/library abstraction with:
-- paginated search helpers
-- typed issue reads
-- comment, link, label, and field-update helpers
-- transition introspection and policy validation
-
-### 2. Structured Jira event model
-Create a canonical issue event schema so Linnaeus, Hedy, Brooks, Gantt, and Drucker all react to the same normalized Jira signals.
-
-### 3. Rule-aware write-back mode
-Add a dry-run capability that shows:
-- which fields would change
-- which comments or links would be written
-- which policy rule triggered the action
-
-### 4. Separation from `fuze` release plugin side effects
-Keep `fuze` release Jira automation available, but expose its release-ticket and version-linking outcomes as structured events so Drucker can observe them instead of scraping or duplicating them.
 
 ## Diagrams
 
@@ -288,6 +147,158 @@ sequenceDiagram
     D->>D: Store report
 ```
 
+
+## Coordination model
+### Inputs
+- Jira issue create/update events
+- stale-issue scan triggers
+- assignee, component, priority, and release-field changes
+- traceability context from Linnaeus
+- build/package evidence from Josephine
+- test execution evidence from Faraday
+- release-state evidence from Hedy
+- version context from Babbage
+- optional action-item candidates from Herodotus
+- GitHub PR state from configured repositories (open PRs, review status, age, labels)
+- GitHub PR metadata: author, reviewers, branch names, mergeable state
+
+### Outputs
+Drucker should produce:
+- metadata-completeness flags
+- triage comments
+- routing recommendations
+- safe workflow-transition recommendations
+- assignment or queue recommendations
+- issue hygiene summaries
+- GitHub PR hygiene findings (stale PRs, missing reviews)
+- GitHub PR lifecycle notifications delivered through Shannon
+
+### Coordination rules
+- every recommendation must cite the rule or evidence that caused it
+- write-backs should prefer comments, labels, links, and bounded field updates in v1
+- any transition that changes customer-visible or release-critical state should require explicit policy support or approval
+- unresolved missing build/test context should be visible quickly on defects
+- stale ownership and stale workflow state should be surfaced before they silently age out
+- Drucker may coordinate, but it must not overwrite Linnaeus traceability facts or Hedy release state
+- GitHub findings should be delivered through Shannon, not written as GitHub PR comments or status checks
+- repeat notifications for the same PR should be suppressed within a configurable window
+- GitHub scan results should be stored alongside Jira hygiene reports in the report store
+
+
+## Public API and contracts
+### API surface
+- `POST /v1/jira/issues/evaluate`
+  - input: `issue_key`, evaluation scope, policy profile
+  - output: `IssueCoordinationRecord`
+- `POST /v1/jira/issues/{issue_key}/recommend`
+  - generate workflow and routing recommendations without applying them
+- `POST /v1/jira/issues/{issue_key}/apply`
+  - apply approved comments, labels, links, or safe field changes
+- `GET /v1/jira/issues/{issue_key}/coordination`
+  - return current coordination record, evidence, and applied actions
+- `GET /v1/jira/projects/{project_key}/hygiene`
+  - return stale issues, missing metadata, and routing anomalies
+- `GET /v1/github/repos/{owner}/{repo}/hygiene`
+  - return PR hygiene findings for a repo
+- `POST /v1/github/scan`
+  - trigger an on-demand GitHub PR hygiene scan
+
+### Internal contracts
+- `IssueCoordinationRequest`
+- `IssueCoordinationRecord`
+- `WorkflowRecommendation`
+- `RoutingDecision`
+- `IssueAuditRecord`
+- `PRHygieneFinding`
+- `PRHygieneAction`
+- `PRHygieneReport`
+
+
+## Workflow scope
+### What Drucker should own
+- new-bug intake hygiene
+- missing metadata detection
+- stale issue and stale owner detection
+- routing to components, queues, or assignees under policy
+- status nudges when technical evidence contradicts issue state
+- summarized Jira hygiene reports for humans
+- GitHub PR staleness detection and notification
+- GitHub PR review coverage monitoring
+- GitHub PR lifecycle hygiene (future: naming compliance, merge conflicts, CI failure follow-up)
+
+### What Drucker should not own
+- release ticket creation and release stage transitions already anchored in Hedy and existing `fuze` release automation
+- build-to-issue linkage truth already anchored in Linnaeus
+- milestone planning already anchored in Gantt
+- delivery health interpretation already anchored in Brooks
+- code review quality assessment already anchored in Linus
+- GitHub Actions CI/CD pipeline configuration
+- direct GitHub PR comments or status check writes
+
+
+## Observability and operations
+### Structured events
+Emit:
+- `jira.issue_evaluated`
+- `jira.metadata_gap_detected`
+- `jira.routing_recommended`
+- `jira.workflow_nudge_recommended`
+- `jira.writeback_applied`
+- `github.pr_scan_completed`
+- `github.stale_pr_detected`
+- `github.missing_review_detected`
+- `github.pr_hygiene_report_generated`
+
+### Metrics
+Collect:
+- missing-metadata rate by project
+- stale-issue count by workflow state
+- routing-correction count
+- recommendation acceptance rate
+- issue-to-build evidence coverage
+- stale PR count by repo
+- missing-review PR count by repo
+- GitHub scan frequency and duration
+- notification delivery rate for GitHub findings
+
+### Operator controls
+- approve or reject a proposed write-back
+- suppress a rule for a defined issue or project scope
+- re-run evaluation for an issue or project
+- inspect the exact evidence behind a recommendation
+
+
+## Security and approvals
+- read access to Jira issues, fields, and workflow metadata is required
+- write access should be scoped to comments, links, labels, and approved field updates in v1
+- permission to transition issues across sensitive workflow boundaries should be separated from read and comment permissions
+- all write-backs must be audited with before/after state and policy reason
+- no hidden bulk transitions
+
+
+## Fuze and platform changes required
+Drucker can build on the existing Jira substrate, but the following changes would improve the overall platform.
+
+### 1. Shared Jira adapter layer
+Promote the existing Jira adapter into a reusable service/library abstraction with:
+- paginated search helpers
+- typed issue reads
+- comment, link, label, and field-update helpers
+- transition introspection and policy validation
+
+### 2. Structured Jira event model
+Create a canonical issue event schema so Linnaeus, Hedy, Brooks, Gantt, and Drucker all react to the same normalized Jira signals.
+
+### 3. Rule-aware write-back mode
+Add a dry-run capability that shows:
+- which fields would change
+- which comments or links would be written
+- which policy rule triggered the action
+
+### 4. Separation from `fuze` release plugin side effects
+Keep `fuze` release Jira automation available, but expose its release-ticket and version-linking outcomes as structured events so Drucker can observe them instead of scraping or duplicating them.
+
+
 ## Decision Logging & Audit Trail
 
 Every action this agent takes is logged with full context. For decisions, the complete decision tree is recorded — what options were considered, what data was evaluated, and why the chosen path was selected.
@@ -299,6 +310,7 @@ Every action this agent takes is logged with full context. For decisions, the co
 | **Rejection log** | When an action is rejected or blocked — what was attempted, what rule prevented it, what the agent did instead. | `decision=promote_release, attempted=sit_to_qa, blocked_by=failing_test_TES-456, action=hold_and_notify` |
 
 All logs are stored in PostgreSQL (audit table) and streamed to Grafana/Loki. Decision logs are queryable by correlation_id, agent_id, decision type, and time range.
+
 
 ## Tool Use & Token Efficiency
 
@@ -321,6 +333,7 @@ All token usage is logged to PostgreSQL and accumulates per agent, per day, per 
 | **Cumulative totals** | total_input_tokens, total_output_tokens, total_cost_usd | agent_id, date range, operation type |
 | **Efficiency ratio** | deterministic_actions / total_actions (target: >80%) | agent_id, date range |
 
+
 ## Standard Commands
 
 Every agent responds to these standard commands in its Teams channel and via REST API.
@@ -336,6 +349,7 @@ Every agent responds to these standard commands in its Teams channel and via RES
 
 All commands also work via the agent's REST API (e.g., `GET /v1/status/tokens`, `GET /v1/status/decisions`, `GET /v1/status/stats`).
 
+
 ## Teams Channel Interface
 
 This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the "Agent Workforce" team. This is the primary human interface. This channel is managed by **[Shannon](SHANNON_COMMUNICATIONS_AGENT_PLAN.md)**, the communications service agent.
@@ -348,6 +362,7 @@ This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the 
 | **Input requests** | When the agent needs information it cannot determine automatically, it posts a structured request. Engineers reply in-thread. |
 | **Error alerts** | Failures and anomalies posted with severity and suggested actions. Critical alerts @mention the relevant team. |
 | **Status queries** | Engineers can ask for status by posting in the channel. The agent responds in-thread. |
+
 
 ## Phased roadmap
 ### Phase 1. Issue hygiene
@@ -392,6 +407,7 @@ Exit criteria:
 Exit criteria:
 - 4+ GitHub scan types operational; evaluate extraction to dedicated agent
 
+
 ## Test and acceptance plan
 ### Intake behavior
 - new bug missing build context is flagged
@@ -420,6 +436,7 @@ Exit criteria:
 - Shannon notification includes PR author, number, title, and age
 - scan results are stored in report store
 - repeat notifications for same PR are suppressed within configured window
+
 
 ## Assumptions
 - Jira remains the source of truth for issue workflow

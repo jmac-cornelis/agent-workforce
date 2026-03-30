@@ -11,6 +11,7 @@ In practical terms:
 
 Curie should not invent a new low-level execution model. It should target the Fuze Test model that already exists.
 
+
 ## Product definition
 ### Goal
 - consume a normalized `TestPlan`
@@ -30,10 +31,12 @@ Curie should not invent a new low-level execution model. It should target the Fu
 - Faraday runs the resulting inputs
 - Tesla constrains generation when environment shape matters
 
+
 ## Triggering model
 - Curie should normally run as an always-on generation service with light persistent state.
 - Normal work should start from Ada-produced test plans or direct generation requests from other internal services.
 - Humans should be able to request regeneration for debugging, inspection, or exceptional workflows.
+
 
 ## Architecture
 ### Core design
@@ -62,108 +65,6 @@ V1 generation strategy:
 - preserve ATF naming and directory conventions
 - record every generated input as an ephemeral, auditable artifact
 
-## Generation model
-### Inputs
-- `test_plan_id`
-- `build_id`
-- trigger class
-- suite selection intent
-- module, project, module version
-- runtype
-- location and test setup
-- environment constraints from Tesla
-- coverage context
-- policy profile
-
-### Outputs
-A `GeneratedTestInput` should minimally contain:
-- generated input ID
-- linked `test_plan_id`
-- linked `build_id`
-- explicit suite file list or suite manifest
-- generated runtime overlays if any
-- resolved include/exclude DUT filters if any
-- generation explanation summary
-
-### Generation rules
-- if Ada provides explicit suite intent, materialize that as explicit suite input
-- if the environment shape changes executable scope, reflect that in generated filters or overlays
-- if existing ATF auto-selection is sufficient and auditable, Curie may emit a minimal generation record instead of over-specifying inputs
-- generated inputs must be deterministic for the same planning inputs and policy version
-
-## Execution topology
-### Where it runs
-- run Curie on normal internal service infrastructure or on planning-capable workers
-- generation does not require HIL access
-- generation may require access to build artifacts, ATF content, and metadata
-
-### Artifact model
-Curie should produce ephemeral artifacts such as:
-- explicit suite list files
-- generated tests config files
-- runtime overlay directories or archives
-- generation manifests
-
-These artifacts should:
-- be versioned by `build_id` and `test_plan_id`
-- be available to Faraday at execution time
-- not be committed back into ATF source control
-
-## Public API and contracts
-### API surface
-- `POST /v1/test-inputs/generate`
-  - input: `test_plan_id`, optional policy-approved overrides
-  - output: `generated_input_id`, summary, artifact references
-- `GET /v1/test-inputs/{generated_input_id}`
-  - returns generated suite inputs, overlays, and explanation
-- `GET /v1/test-inputs/{generated_input_id}/artifacts`
-  - returns links to generated runtime artifacts
-
-### Internal contracts
-- `GeneratedTestInput`
-- `SuiteResolutionRecord`
-- `GenerationDecisionRecord`
-
-## Observability and operations
-### Structured events
-Emit:
-- `test.input_generation_started`
-- `test.input_generated`
-- `test.input_generation_failed`
-- `test.input_generation_explained`
-
-### Metrics
-Collect:
-- generation latency
-- generated input count by trigger class
-- overlay generation rate
-- reuse of existing ATF auto-selection vs explicit materialization
-
-### Operator controls
-- inspect generated inputs before execution
-- regenerate inputs when plan policy changes
-- invalidate generated inputs when source assumptions change
-
-## Security and access
-- generated inputs must not contain long-lived secrets
-- any runtime config generated from secrets should be created only in execution-adjacent storage with tight access controls
-- generation artifacts should be readable by Faraday but not broadly writable across the system
-
-## Fuze Test changes required
-Curie can work with Fuze Test as it exists, but the following changes would improve generation quality.
-
-### 1. Dry-run suite resolution
-Expose a mode that resolves suite selection without executing a test cycle.
-
-### 2. Stable suite-resolution output
-Return machine-readable data for:
-- selected suite files
-- excluded suite files and reasons
-- applied scope filters
-- overlay sources used
-
-### 3. First-class generated-input support
-Support generated suite manifests, generated tests configs, and runtime overlays as official ATF inputs.
 
 ## Diagrams
 
@@ -202,6 +103,116 @@ sequenceDiagram
     Note right of DB: Versioned by build_id + plan_id
 ```
 
+
+## Generation model
+### Inputs
+- `test_plan_id`
+- `build_id`
+- trigger class
+- suite selection intent
+- module, project, module version
+- runtype
+- location and test setup
+- environment constraints from Tesla
+- coverage context
+- policy profile
+
+### Outputs
+A `GeneratedTestInput` should minimally contain:
+- generated input ID
+- linked `test_plan_id`
+- linked `build_id`
+- explicit suite file list or suite manifest
+- generated runtime overlays if any
+- resolved include/exclude DUT filters if any
+- generation explanation summary
+
+### Generation rules
+- if Ada provides explicit suite intent, materialize that as explicit suite input
+- if the environment shape changes executable scope, reflect that in generated filters or overlays
+- if existing ATF auto-selection is sufficient and auditable, Curie may emit a minimal generation record instead of over-specifying inputs
+- generated inputs must be deterministic for the same planning inputs and policy version
+
+
+## Execution topology
+### Where it runs
+- run Curie on normal internal service infrastructure or on planning-capable workers
+- generation does not require HIL access
+- generation may require access to build artifacts, ATF content, and metadata
+
+### Artifact model
+Curie should produce ephemeral artifacts such as:
+- explicit suite list files
+- generated tests config files
+- runtime overlay directories or archives
+- generation manifests
+
+These artifacts should:
+- be versioned by `build_id` and `test_plan_id`
+- be available to Faraday at execution time
+- not be committed back into ATF source control
+
+
+## Public API and contracts
+### API surface
+- `POST /v1/test-inputs/generate`
+  - input: `test_plan_id`, optional policy-approved overrides
+  - output: `generated_input_id`, summary, artifact references
+- `GET /v1/test-inputs/{generated_input_id}`
+  - returns generated suite inputs, overlays, and explanation
+- `GET /v1/test-inputs/{generated_input_id}/artifacts`
+  - returns links to generated runtime artifacts
+
+### Internal contracts
+- `GeneratedTestInput`
+- `SuiteResolutionRecord`
+- `GenerationDecisionRecord`
+
+
+## Observability and operations
+### Structured events
+Emit:
+- `test.input_generation_started`
+- `test.input_generated`
+- `test.input_generation_failed`
+- `test.input_generation_explained`
+
+### Metrics
+Collect:
+- generation latency
+- generated input count by trigger class
+- overlay generation rate
+- reuse of existing ATF auto-selection vs explicit materialization
+
+### Operator controls
+- inspect generated inputs before execution
+- regenerate inputs when plan policy changes
+- invalidate generated inputs when source assumptions change
+
+
+## Security and access
+- generated inputs must not contain long-lived secrets
+- any runtime config generated from secrets should be created only in execution-adjacent storage with tight access controls
+- generation artifacts should be readable by Faraday but not broadly writable across the system
+
+
+## Fuze Test changes required
+Curie can work with Fuze Test as it exists, but the following changes would improve generation quality.
+
+### 1. Dry-run suite resolution
+Expose a mode that resolves suite selection without executing a test cycle.
+
+### 2. Stable suite-resolution output
+Return machine-readable data for:
+- selected suite files
+- excluded suite files and reasons
+- applied scope filters
+- overlay sources used
+
+### 3. First-class generated-input support
+Support generated suite manifests, generated tests configs, and runtime overlays as official ATF inputs.
+
+
 ## Decision Logging & Audit Trail
 
 Every action this agent takes is logged with full context. For decisions, the complete decision tree is recorded — what options were considered, what data was evaluated, and why the chosen path was selected.
@@ -213,6 +224,7 @@ Every action this agent takes is logged with full context. For decisions, the co
 | **Rejection log** | When an action is rejected or blocked — what was attempted, what rule prevented it, what the agent did instead. | `decision=promote_release, attempted=sit_to_qa, blocked_by=failing_test_TES-456, action=hold_and_notify` |
 
 All logs are stored in PostgreSQL (audit table) and streamed to Grafana/Loki. Decision logs are queryable by correlation_id, agent_id, decision type, and time range.
+
 
 ## Tool Use & Token Efficiency
 
@@ -235,6 +247,7 @@ All token usage is logged to PostgreSQL and accumulates per agent, per day, per 
 | **Cumulative totals** | total_input_tokens, total_output_tokens, total_cost_usd | agent_id, date range, operation type |
 | **Efficiency ratio** | deterministic_actions / total_actions (target: >80%) | agent_id, date range |
 
+
 ## Standard Commands
 
 Every agent responds to these standard commands in its Teams channel and via REST API.
@@ -250,6 +263,7 @@ Every agent responds to these standard commands in its Teams channel and via RES
 
 All commands also work via the agent's REST API (e.g., `GET /v1/status/tokens`, `GET /v1/status/decisions`, `GET /v1/status/stats`).
 
+
 ## Teams Channel Interface
 
 This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the "Agent Workforce" team. This is the primary human interface. This channel is managed by **[Shannon](SHANNON_COMMUNICATIONS_AGENT_PLAN.md)**, the communications service agent.
@@ -262,6 +276,7 @@ This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the 
 | **Input requests** | When the agent needs information it cannot determine automatically, it posts a structured request. Engineers reply in-thread. |
 | **Error alerts** | Failures and anomalies posted with severity and suggested actions. Critical alerts @mention the relevant team. |
 | **Status queries** | Engineers can ask for status by posting in the channel. The agent responds in-thread. |
+
 
 ## Phased roadmap
 ### Phase 1. Deterministic materialization
@@ -286,6 +301,7 @@ Exit criteria:
 - generation decisions can explain why suites or overlays changed
 - repeated generation for identical inputs stays deterministic
 
+
 ## Test and acceptance plan
 ### Generation behavior
 - explicit suite list generation from a PR plan
@@ -301,6 +317,7 @@ Exit criteria:
 - regenerate on policy change
 - invalidate on stale input assumptions
 - stable artifact retrieval for repeated queries
+
 
 ## Assumptions
 - Curie is a distinct test-generation agent

@@ -5,6 +5,7 @@ Hedy should be the release-management agent for the platform. Its v1 job is to t
 
 Hedy should use `fuze`'s existing release model as the underlying release engine where possible. In v1, Hedy should not replace `fuze` release mechanics; it should orchestrate and govern them.
 
+
 ## Product definition
 ### Goal
 - evaluate release readiness for a build across branch, hardware, customer, and policy context
@@ -27,10 +28,12 @@ Hedy should use `fuze`'s existing release model as the underlying release engine
 - Linnaeus provides issue, requirement, build, and test traceability
 - Hedy decides whether a build should become a release candidate, advance stage, pause, or be blocked
 
+
 ## Triggering model
 - Hedy should run as an always-on release control-plane service.
 - Normal work should start from build completion events, release-evaluation requests, and promotion or block requests.
 - Humans should remain the trigger source for approvals, final promotions, blocking decisions, and deprecation actions where policy requires it.
+
 
 ## Architecture
 ### Core design
@@ -92,143 +95,6 @@ Hedy should create a `ReleaseCandidate` that contains:
 - readiness summary
 - approval status
 
-## Decision model
-### Inputs
-- `build_id`
-- branch and commit context
-- build artifacts and package manifest
-- Babbage version mapping
-- test execution evidence
-- traceability and defect state
-- release branch policy
-- customer and hardware matrix policy
-- human approval status where required
-
-### Decision outputs
-Hedy should produce:
-- `candidate_created`
-- `promotion_requested`
-- `promotion_approved`
-- `promotion_blocked`
-- `promotion_completed`
-- `deprecated`
-
-### Decision rules
-- only builds with release-eligible package state may advance
-- local or non-shareable build identities must not become release candidates
-- release readiness must account for:
-  - build success and artifact availability
-  - required test evidence
-  - known blocking defects
-  - version mapping availability
-  - branch and release-policy compliance
-- production or customer-visible promotion must require explicit approval
-- blocked releases must record exact reasons and linked evidence
-
-## Execution topology
-### Where Hedy runs
-- run Hedy on standard internal service infrastructure
-- Hedy is a control-plane service, not a build or test worker
-- Hedy may trigger downstream work, but should not execute builds or tests directly
-
-### How release flow happens
-1. Josephine emits build completion
-2. Babbage maps version context
-3. test agents attach validation evidence
-4. Linnaeus attaches traceability and defect context
-5. Hedy evaluates release readiness
-6. Hedy creates a release candidate or blocks it
-7. when approved, Hedy promotes the release through Fuze-compatible release operations
-8. Hedy emits release records and downstream notifications
-
-## Public API and contracts
-### API surface
-- `POST /v1/releases/evaluate`
-  - input: `build_id`, release context, target matrix, policy profile
-  - output: `ReleaseDecision` and optional `ReleaseCandidate`
-- `POST /v1/releases`
-  - input: `build_id`, desired stage, release scope, version reference, approval context
-  - output: `release_id`, status, candidate summary
-- `POST /v1/releases/{release_id}/promote`
-  - advance to next allowed stage if policy and approval allow
-- `POST /v1/releases/{release_id}/block`
-  - block a release with explicit reason
-- `POST /v1/releases/{release_id}/deprecate`
-  - deprecate a release where policy allows
-- `GET /v1/releases/{release_id}`
-  - return current release state and linked evidence
-- `GET /v1/releases/{release_id}/summary`
-  - return readiness summary and approval history
-
-### Internal contracts
-- `ReleaseEvaluationRequest`
-- `ReleaseCandidate`
-- `ReleaseDecision`
-- `ReleasePromotionRequest`
-- `ReleaseReadinessSummary`
-
-## Queueing and workflow
-- use asynchronous workflow for evaluation and promotion side effects
-- persist release state independently from queued work
-- keep promotion idempotent so repeated requests do not double-promote
-- serialize conflicting promotions for the same release target
-- require approval gates before irreversible stage transitions
-
-## Observability and operations
-### Structured events
-Emit:
-- `release.candidate_created`
-- `release.approval_requested`
-- `release.promoted`
-- `release.blocked`
-- `release.deprecated`
-
-### Metrics
-Collect:
-- release candidate count by branch and product
-- approval wait time
-- promotion success/failure rate by stage
-- blocked release count and reason class
-- release throughput by hardware and customer target
-
-### Operator controls
-- approve promotion
-- reject promotion
-- block release with reason
-- deprecate release
-- inspect exact evidence linked to a release decision
-
-## Security and approvals
-- require explicit approval for production or customer-visible promotion
-- separate evaluation privileges from promotion privileges
-- use service principals for automated release actions
-- audit every approval, rejection, block, promotion, and deprecation action
-- never allow hidden policy overrides
-
-## Fuze changes required
-Hedy can reuse `fuze` release capabilities, but the following changes would make it a stronger release substrate.
-
-### 1. Non-interactive release API
-Expose release operations as a library or service-friendly interface that does not require interactive prompts for version or stage confirmation.
-
-### 2. Machine-readable release evaluation
-Add a dry-run release-evaluation mode that returns:
-- whether the FuzeID is release-eligible
-- package eligibility
-- allowed next stages
-- reasons a promotion would fail
-
-### 3. Stable release-state output
-Return machine-readable release records with:
-- `build_id` / FuzeID
-- release stage
-- version
-- tag name
-- previous stage history
-- approval and automation status
-
-### 4. Explicit automation hooks
-Separate release-state persistence from optional automations such as Jira and test triggering so Hedy can call them intentionally and observe their results independently.
 
 ## Diagrams
 
@@ -270,6 +136,152 @@ sequenceDiagram
     H->>L: Record trace
 ```
 
+
+## Decision model
+### Inputs
+- `build_id`
+- branch and commit context
+- build artifacts and package manifest
+- Babbage version mapping
+- test execution evidence
+- traceability and defect state
+- release branch policy
+- customer and hardware matrix policy
+- human approval status where required
+
+### Decision outputs
+Hedy should produce:
+- `candidate_created`
+- `promotion_requested`
+- `promotion_approved`
+- `promotion_blocked`
+- `promotion_completed`
+- `deprecated`
+
+### Decision rules
+- only builds with release-eligible package state may advance
+- local or non-shareable build identities must not become release candidates
+- release readiness must account for:
+  - build success and artifact availability
+  - required test evidence
+  - known blocking defects
+  - version mapping availability
+  - branch and release-policy compliance
+- production or customer-visible promotion must require explicit approval
+- blocked releases must record exact reasons and linked evidence
+
+
+## Execution topology
+### Where Hedy runs
+- run Hedy on standard internal service infrastructure
+- Hedy is a control-plane service, not a build or test worker
+- Hedy may trigger downstream work, but should not execute builds or tests directly
+
+### How release flow happens
+1. Josephine emits build completion
+2. Babbage maps version context
+3. test agents attach validation evidence
+4. Linnaeus attaches traceability and defect context
+5. Hedy evaluates release readiness
+6. Hedy creates a release candidate or blocks it
+7. when approved, Hedy promotes the release through Fuze-compatible release operations
+8. Hedy emits release records and downstream notifications
+
+
+## Public API and contracts
+### API surface
+- `POST /v1/releases/evaluate`
+  - input: `build_id`, release context, target matrix, policy profile
+  - output: `ReleaseDecision` and optional `ReleaseCandidate`
+- `POST /v1/releases`
+  - input: `build_id`, desired stage, release scope, version reference, approval context
+  - output: `release_id`, status, candidate summary
+- `POST /v1/releases/{release_id}/promote`
+  - advance to next allowed stage if policy and approval allow
+- `POST /v1/releases/{release_id}/block`
+  - block a release with explicit reason
+- `POST /v1/releases/{release_id}/deprecate`
+  - deprecate a release where policy allows
+- `GET /v1/releases/{release_id}`
+  - return current release state and linked evidence
+- `GET /v1/releases/{release_id}/summary`
+  - return readiness summary and approval history
+
+### Internal contracts
+- `ReleaseEvaluationRequest`
+- `ReleaseCandidate`
+- `ReleaseDecision`
+- `ReleasePromotionRequest`
+- `ReleaseReadinessSummary`
+
+
+## Queueing and workflow
+- use asynchronous workflow for evaluation and promotion side effects
+- persist release state independently from queued work
+- keep promotion idempotent so repeated requests do not double-promote
+- serialize conflicting promotions for the same release target
+- require approval gates before irreversible stage transitions
+
+
+## Observability and operations
+### Structured events
+Emit:
+- `release.candidate_created`
+- `release.approval_requested`
+- `release.promoted`
+- `release.blocked`
+- `release.deprecated`
+
+### Metrics
+Collect:
+- release candidate count by branch and product
+- approval wait time
+- promotion success/failure rate by stage
+- blocked release count and reason class
+- release throughput by hardware and customer target
+
+### Operator controls
+- approve promotion
+- reject promotion
+- block release with reason
+- deprecate release
+- inspect exact evidence linked to a release decision
+
+
+## Security and approvals
+- require explicit approval for production or customer-visible promotion
+- separate evaluation privileges from promotion privileges
+- use service principals for automated release actions
+- audit every approval, rejection, block, promotion, and deprecation action
+- never allow hidden policy overrides
+
+
+## Fuze changes required
+Hedy can reuse `fuze` release capabilities, but the following changes would make it a stronger release substrate.
+
+### 1. Non-interactive release API
+Expose release operations as a library or service-friendly interface that does not require interactive prompts for version or stage confirmation.
+
+### 2. Machine-readable release evaluation
+Add a dry-run release-evaluation mode that returns:
+- whether the FuzeID is release-eligible
+- package eligibility
+- allowed next stages
+- reasons a promotion would fail
+
+### 3. Stable release-state output
+Return machine-readable release records with:
+- `build_id` / FuzeID
+- release stage
+- version
+- tag name
+- previous stage history
+- approval and automation status
+
+### 4. Explicit automation hooks
+Separate release-state persistence from optional automations such as Jira and test triggering so Hedy can call them intentionally and observe their results independently.
+
+
 ## Decision Logging & Audit Trail
 
 Every action this agent takes is logged with full context. For decisions, the complete decision tree is recorded — what options were considered, what data was evaluated, and why the chosen path was selected.
@@ -281,6 +293,7 @@ Every action this agent takes is logged with full context. For decisions, the co
 | **Rejection log** | When an action is rejected or blocked — what was attempted, what rule prevented it, what the agent did instead. | `decision=promote_release, attempted=sit_to_qa, blocked_by=failing_test_TES-456, action=hold_and_notify` |
 
 All logs are stored in PostgreSQL (audit table) and streamed to Grafana/Loki. Decision logs are queryable by correlation_id, agent_id, decision type, and time range.
+
 
 ## Tool Use & Token Efficiency
 
@@ -303,6 +316,7 @@ All token usage is logged to PostgreSQL and accumulates per agent, per day, per 
 | **Cumulative totals** | total_input_tokens, total_output_tokens, total_cost_usd | agent_id, date range, operation type |
 | **Efficiency ratio** | deterministic_actions / total_actions (target: >80%) | agent_id, date range |
 
+
 ## Standard Commands
 
 Every agent responds to these standard commands in its Teams channel and via REST API.
@@ -318,6 +332,7 @@ Every agent responds to these standard commands in its Teams channel and via RES
 
 All commands also work via the agent's REST API (e.g., `GET /v1/status/tokens`, `GET /v1/status/decisions`, `GET /v1/status/stats`).
 
+
 ## Teams Channel Interface
 
 This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the "Agent Workforce" team. This is the primary human interface. This channel is managed by **[Shannon](SHANNON_COMMUNICATIONS_AGENT_PLAN.md)**, the communications service agent.
@@ -330,6 +345,7 @@ This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the 
 | **Input requests** | When the agent needs information it cannot determine automatically, it posts a structured request. Engineers reply in-thread. |
 | **Error alerts** | Failures and anomalies posted with severity and suggested actions. Critical alerts @mention the relevant team. |
 | **Status queries** | Engineers can ask for status by posting in the channel. The agent responds in-thread. |
+
 
 ## Phased roadmap
 ### Phase 1. Release evaluation
@@ -365,6 +381,7 @@ Exit criteria:
 - automation side effects are observable and recoverable
 - release flow is operable without manual log inspection
 
+
 ## Test and acceptance plan
 ### Evaluation behavior
 - eligible build with required packages becomes release candidate
@@ -387,6 +404,7 @@ Exit criteria:
 - approval gate enforced
 - blocked release reason visible
 - failed automation side effect does not silently corrupt release state
+
 
 ## Assumptions
 - `fuze` remains the release-state engine in v1

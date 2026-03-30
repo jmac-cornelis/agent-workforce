@@ -5,6 +5,7 @@ Nightingale should be the bug-investigation agent for the platform. Its v1 job i
 
 Nightingale should not replace Jira workflow ownership, release decisions, or traceability ownership. It should turn vague bug reports into actionable technical evidence.
 
+
 ## Product definition
 ### Goal
 - react quickly to new or updated Jira bug reports
@@ -28,10 +29,12 @@ Nightingale should not replace Jira workflow ownership, release decisions, or tr
 - Hedy consumes bug investigation outcomes when release risk is affected
 - Nightingale owns the investigation loop from intake through reproduction evidence
 
+
 ## Triggering model
 - Nightingale should run as an always-on investigation service.
 - Normal work should start from new bug reports, relevant Jira updates, reopen events, or explicit reproduction requests.
 - Humans should be able to escalate a bug for deeper analysis, approve costly reproduction work, and close or redirect an investigation when policy requires it.
+
 
 ## Architecture
 ### Core design
@@ -50,125 +53,6 @@ Required internal objects:
 - `ReproductionAttempt`
 - `InvestigationSummary`
 
-## Investigation model
-### Inputs
-- Jira bug create, update, and reopen events
-- issue fields, comments, attachments, and reproduction notes
-- traceability context from Linnaeus
-- build and artifact context from Josephine
-- prior test execution evidence from Faraday
-- release and version context from Hedy and Babbage
-- workflow hygiene context from Drucker
-
-### Outputs
-Nightingale should produce:
-- investigation status records
-- missing-information requests
-- reproduction-attempt requests
-- failure signature and clustering hints
-- release-risk and test-gap signals
-- human-readable investigation summaries
-
-### Investigation rules
-- never claim reproduction without a durable reproduction record
-- separate observed facts, inferred hypotheses, and recommended next steps
-- prefer exact build/test context over generic “latest build” assumptions
-- ask for missing information explicitly rather than silently guessing
-- record when a bug is not yet reproducible versus disproven
-- keep reproduction evidence linked to exact builds, environments, and runs
-
-## Integration boundaries
-### With Drucker
-- Drucker owns Jira workflow state, routing, and hygiene
-- Nightingale can recommend or request Jira updates, but should not own general ticket workflow
-
-### With Linnaeus
-- Linnaeus owns relationship truth
-- Nightingale consumes those relationships and may propose new evidence links when an investigation produces them
-
-### With Ada, Curie, Faraday, and Tesla
-- Ada selects targeted repro test plans
-- Curie materializes repro inputs
-- Tesla provides the right environment reservation
-- Faraday executes the repro run
-- Nightingale coordinates and interprets that loop rather than replacing it
-
-### With Hedy
-- Hedy consumes validated bug impact when release risk is affected
-- Nightingale does not decide release policy, but it should provide evidence Hedy can act on
-
-## Public API and contracts
-### API surface
-- `POST /v1/bugs/investigate`
-  - input: Jira key, investigation scope, policy profile
-  - output: `BugInvestigationRecord`
-- `GET /v1/bugs/{jira_key}`
-  - return current investigation status, missing data, and linked evidence
-- `POST /v1/bugs/{jira_key}/reproduce`
-  - request or re-request a targeted reproduction attempt
-- `GET /v1/bugs/{jira_key}/attempts`
-  - return reproduction attempts and outcomes
-- `POST /v1/bugs/{jira_key}/summarize`
-  - produce an investigation summary for humans
-
-### Internal contracts
-- `BugInvestigationRequest`
-- `BugInvestigationRecord`
-- `FailureSignatureRecord`
-- `ReproductionAttempt`
-- `InvestigationSummary`
-
-## Observability and operations
-### Structured events
-Emit:
-- `bug.investigation_started`
-- `bug.missing_data_detected`
-- `bug.reproduction_requested`
-- `bug.reproduced`
-- `bug.investigation_summarized`
-
-### Metrics
-Collect:
-- time from Jira report to first technical triage
-- percent of bugs with sufficient reproduction data
-- reproduction success rate
-- mean time to first reproduction attempt
-- percent of investigations blocked on missing information
-
-### Operator controls
-- escalate investigation priority
-- approve expensive or scarce-environment reproduction attempts
-- mark a finding as accepted, rejected, or inconclusive
-- suppress duplicate investigations where clustering is strong
-
-## Security and approvals
-- Nightingale needs read access to Jira issue content, attached evidence, build records, test records, and traceability records
-- write-back to Jira should be limited to investigation comments, missing-data requests, and evidence links in v1
-- costly or customer-sensitive reproduction attempts should require explicit approval where policy requires it
-- all investigation actions and summaries must be auditable
-
-## Platform changes required
-Nightingale will be stronger if the platform exposes cleaner investigation inputs.
-
-### 1. Stable bug event schema
-Normalize Jira bug events so Nightingale can react to:
-- new bug creation
-- major field changes
-- reopen events
-- new evidence attachments
-
-### 2. Investigation-friendly trace queries
-Linnaeus should provide fast lookups from Jira bug to:
-- exact builds
-- prior test runs
-- release context
-- version mappings
-
-### 3. Reproduction request handoff
-Provide an explicit handoff path from Nightingale into Ada and Faraday so reproduction work is first-class rather than improvised.
-
-### 4. Failure signature model
-Create a reusable failure-signature record so similar bugs can be clustered without overwriting individual issue truth.
 
 ## Diagrams
 
@@ -213,6 +97,133 @@ sequenceDiagram
     N->>JI: Post summary to bug
 ```
 
+
+## Investigation model
+### Inputs
+- Jira bug create, update, and reopen events
+- issue fields, comments, attachments, and reproduction notes
+- traceability context from Linnaeus
+- build and artifact context from Josephine
+- prior test execution evidence from Faraday
+- release and version context from Hedy and Babbage
+- workflow hygiene context from Drucker
+
+### Outputs
+Nightingale should produce:
+- investigation status records
+- missing-information requests
+- reproduction-attempt requests
+- failure signature and clustering hints
+- release-risk and test-gap signals
+- human-readable investigation summaries
+
+### Investigation rules
+- never claim reproduction without a durable reproduction record
+- separate observed facts, inferred hypotheses, and recommended next steps
+- prefer exact build/test context over generic “latest build” assumptions
+- ask for missing information explicitly rather than silently guessing
+- record when a bug is not yet reproducible versus disproven
+- keep reproduction evidence linked to exact builds, environments, and runs
+
+
+## Integration boundaries
+### With Drucker
+- Drucker owns Jira workflow state, routing, and hygiene
+- Nightingale can recommend or request Jira updates, but should not own general ticket workflow
+
+### With Linnaeus
+- Linnaeus owns relationship truth
+- Nightingale consumes those relationships and may propose new evidence links when an investigation produces them
+
+### With Ada, Curie, Faraday, and Tesla
+- Ada selects targeted repro test plans
+- Curie materializes repro inputs
+- Tesla provides the right environment reservation
+- Faraday executes the repro run
+- Nightingale coordinates and interprets that loop rather than replacing it
+
+### With Hedy
+- Hedy consumes validated bug impact when release risk is affected
+- Nightingale does not decide release policy, but it should provide evidence Hedy can act on
+
+
+## Public API and contracts
+### API surface
+- `POST /v1/bugs/investigate`
+  - input: Jira key, investigation scope, policy profile
+  - output: `BugInvestigationRecord`
+- `GET /v1/bugs/{jira_key}`
+  - return current investigation status, missing data, and linked evidence
+- `POST /v1/bugs/{jira_key}/reproduce`
+  - request or re-request a targeted reproduction attempt
+- `GET /v1/bugs/{jira_key}/attempts`
+  - return reproduction attempts and outcomes
+- `POST /v1/bugs/{jira_key}/summarize`
+  - produce an investigation summary for humans
+
+### Internal contracts
+- `BugInvestigationRequest`
+- `BugInvestigationRecord`
+- `FailureSignatureRecord`
+- `ReproductionAttempt`
+- `InvestigationSummary`
+
+
+## Observability and operations
+### Structured events
+Emit:
+- `bug.investigation_started`
+- `bug.missing_data_detected`
+- `bug.reproduction_requested`
+- `bug.reproduced`
+- `bug.investigation_summarized`
+
+### Metrics
+Collect:
+- time from Jira report to first technical triage
+- percent of bugs with sufficient reproduction data
+- reproduction success rate
+- mean time to first reproduction attempt
+- percent of investigations blocked on missing information
+
+### Operator controls
+- escalate investigation priority
+- approve expensive or scarce-environment reproduction attempts
+- mark a finding as accepted, rejected, or inconclusive
+- suppress duplicate investigations where clustering is strong
+
+
+## Security and approvals
+- Nightingale needs read access to Jira issue content, attached evidence, build records, test records, and traceability records
+- write-back to Jira should be limited to investigation comments, missing-data requests, and evidence links in v1
+- costly or customer-sensitive reproduction attempts should require explicit approval where policy requires it
+- all investigation actions and summaries must be auditable
+
+
+## Platform changes required
+Nightingale will be stronger if the platform exposes cleaner investigation inputs.
+
+### 1. Stable bug event schema
+Normalize Jira bug events so Nightingale can react to:
+- new bug creation
+- major field changes
+- reopen events
+- new evidence attachments
+
+### 2. Investigation-friendly trace queries
+Linnaeus should provide fast lookups from Jira bug to:
+- exact builds
+- prior test runs
+- release context
+- version mappings
+
+### 3. Reproduction request handoff
+Provide an explicit handoff path from Nightingale into Ada and Faraday so reproduction work is first-class rather than improvised.
+
+### 4. Failure signature model
+Create a reusable failure-signature record so similar bugs can be clustered without overwriting individual issue truth.
+
+
 ## Decision Logging & Audit Trail
 
 Every action this agent takes is logged with full context. For decisions, the complete decision tree is recorded — what options were considered, what data was evaluated, and why the chosen path was selected.
@@ -224,6 +235,7 @@ Every action this agent takes is logged with full context. For decisions, the co
 | **Rejection log** | When an action is rejected or blocked — what was attempted, what rule prevented it, what the agent did instead. | `decision=promote_release, attempted=sit_to_qa, blocked_by=failing_test_TES-456, action=hold_and_notify` |
 
 All logs are stored in PostgreSQL (audit table) and streamed to Grafana/Loki. Decision logs are queryable by correlation_id, agent_id, decision type, and time range.
+
 
 ## Tool Use & Token Efficiency
 
@@ -246,6 +258,7 @@ All token usage is logged to PostgreSQL and accumulates per agent, per day, per 
 | **Cumulative totals** | total_input_tokens, total_output_tokens, total_cost_usd | agent_id, date range, operation type |
 | **Efficiency ratio** | deterministic_actions / total_actions (target: >80%) | agent_id, date range |
 
+
 ## Standard Commands
 
 Every agent responds to these standard commands in its Teams channel and via REST API.
@@ -261,6 +274,7 @@ Every agent responds to these standard commands in its Teams channel and via RES
 
 All commands also work via the agent's REST API (e.g., `GET /v1/status/tokens`, `GET /v1/status/decisions`, `GET /v1/status/stats`).
 
+
 ## Teams Channel Interface
 
 This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the "Agent Workforce" team. This is the primary human interface. This channel is managed by **[Shannon](SHANNON_COMMUNICATIONS_AGENT_PLAN.md)**, the communications service agent.
@@ -273,6 +287,7 @@ This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the 
 | **Input requests** | When the agent needs information it cannot determine automatically, it posts a structured request. Engineers reply in-thread. |
 | **Error alerts** | Failures and anomalies posted with severity and suggested actions. Critical alerts @mention the relevant team. |
 | **Status queries** | Engineers can ask for status by posting in the channel. The agent responds in-thread. |
+
 
 ## Phased roadmap
 ### Phase 1. Intake and context assembly
@@ -308,6 +323,7 @@ Exit criteria:
 - investigation summaries are actionable
 - downstream agents can consume bug evidence without scraping Jira comments
 
+
 ## Test and acceptance plan
 ### Intake behavior
 - new Jira bug starts an investigation record
@@ -323,6 +339,7 @@ Exit criteria:
 - investigation summaries stay linked to exact evidence
 - repeated bug updates do not fork duplicate investigations unnecessarily
 - approvals and escalations remain auditable
+
 
 ## Assumptions
 - Jira remains the authoritative bug workflow system

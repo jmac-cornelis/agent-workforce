@@ -11,6 +11,7 @@ In practical terms:
 
 Ada should use Fuze Test in [atf](/Users/johnmacdonald/code/cornelis/atf) as the planning vocabulary and downstream execution substrate, but Ada itself should not own low-level execution or reservation logic.
 
+
 ## Product definition
 ### Goal
 - consume build completion events from Josephine
@@ -31,10 +32,12 @@ Ada should use Fuze Test in [atf](/Users/johnmacdonald/code/cornelis/atf) as the
 - `ada-worker`: resolves planning inputs into normalized `TestPlan` outputs
 - Fuze Test in [atf/executive](/Users/johnmacdonald/code/cornelis/atf/executive) remains the execution vocabulary that Curie and Faraday target
 
+
 ## Triggering model
 - Ada should run as an always-on planning service.
 - Normal work should start from build completion events, PR/merge/nightly trigger classes, direct planning requests, and release-validation requests.
 - Humans should be able to preview plans and apply bounded policy overrides when needed.
+
 
 ## Architecture
 ### Core design
@@ -77,122 +80,6 @@ V1 integration strategy:
 - use existing project/module/runtype/location conventions as the first planning vocabulary
 - use Fuze build IDs from Josephine as the primary key that links build, test plan, and test results
 
-## Planning topology
-### Where Ada runs
-- run `ada-api` on normal internal service infrastructure
-- planning does not require lab-resident worker hosts
-- Ada should run close to the event and metadata systems it consumes
-
-### How planning happens
-- Ada receives a build event or direct planning request
-- Ada resolves trigger class, scope, and coverage intent
-- Ada selects a `TestPlan`
-- Ada emits a durable planning record for Curie, Faraday, Tesla, and downstream traceability consumers
-
-## Planning model
-### Plan inputs
-- `build_id`
-- `repo`
-- `commit_sha`
-- `branch`
-- `trigger_type`
-- `module`
-- `project`
-- `module_version`
-- `hardware_profile`
-- `location`
-- `test_setup`
-- `environment_state`
-- `coverage_context`
-- `policy_profile`
-
-### Plan outputs
-A `TestPlan` should minimally contain:
-- plan ID
-- build ID
-- trigger class
-- suite selection intent
-- environment class required
-- execution mode intent: mock or HIL
-- timeout budget
-- result retention class
-- coverage intent summary
-
-### Planning rules
-- PR plans must optimize for fast signal and low lab contention
-- merge plans must increase realism and coverage without collapsing throughput
-- nightly plans should expand breadth and artifact richness
-- release validation plans must be explicit, auditable, and policy-gated
-- when environment constraints prevent a requested HIL path, Ada should either:
-  - degrade to an approved fallback plan, or
-  - fail planning with an explicit reason
-
-## Queueing and planning lifecycle
-- put an explicit queue between Ada API and planning workers when planning load warrants it
-- persist plan state independently of execution state
-- planning should complete before reservation and execution begin
-- do not couple plan generation to worker availability
-
-## Public API and contracts
-### API surface
-- `POST /v1/test-plans/select`
-  - input: build and trigger context
-  - output: selected `TestPlan`
-- `GET /v1/test-plans/{test_plan_id}`
-  - returns normalized plan state, trigger context, and linked build ID
-- `GET /v1/test-plans/{test_plan_id}/events`
-  - returns planning events only
-
-### Internal contracts
-- `TestPlanRequest`
-- `TestPlan`
-- `CoverageSummary`
-- `PlanningPolicyDecision`
-
-## Observability and operations
-### Structured events
-Emit:
-- `test.plan_selected`
-- `test.coverage_gap_detected`
-- `test.plan_invalidated`
-
-### Metrics
-Collect:
-- planning latency
-- plan count by trigger class
-- fallback rate
-- environment-class demand by plan type
-
-### Operator controls
-- replan a build
-- invalidate a plan when source assumptions change
-- review fallback decisions and policy overrides
-
-## Fuze Test changes required
-Ada should use Fuze Test as it exists, but the following changes would make it a much better planning substrate.
-
-### 1. Add a dry-run planning mode
-Add a Fuze Test mode that resolves:
-- selected test suites
-- scope filtering decisions
-- required environment class
-- runtime configuration summary
-
-without actually executing the test cycle.
-
-### 2. Add machine-readable plan output
-Expose stable JSON output that includes:
-- selected suite files
-- excluded suite files and reasons
-- selected DUT filters
-- resolved module/project/runtype/location context
-- packaged test-content overlays used
-
-### 3. Add explicit generated-plan inputs
-Add a supported way for Curie and Faraday to pass generated inputs without editing repo-tracked ATF config. Accept one or more of:
-- explicit suite list file
-- explicit generated tests config file
-- explicit runtime overlay directory or archive
 
 ## Diagrams
 
@@ -232,6 +119,130 @@ sequenceDiagram
     A->>A: Update plan for next run
 ```
 
+
+## Planning topology
+### Where Ada runs
+- run `ada-api` on normal internal service infrastructure
+- planning does not require lab-resident worker hosts
+- Ada should run close to the event and metadata systems it consumes
+
+### How planning happens
+- Ada receives a build event or direct planning request
+- Ada resolves trigger class, scope, and coverage intent
+- Ada selects a `TestPlan`
+- Ada emits a durable planning record for Curie, Faraday, Tesla, and downstream traceability consumers
+
+
+## Planning model
+### Plan inputs
+- `build_id`
+- `repo`
+- `commit_sha`
+- `branch`
+- `trigger_type`
+- `module`
+- `project`
+- `module_version`
+- `hardware_profile`
+- `location`
+- `test_setup`
+- `environment_state`
+- `coverage_context`
+- `policy_profile`
+
+### Plan outputs
+A `TestPlan` should minimally contain:
+- plan ID
+- build ID
+- trigger class
+- suite selection intent
+- environment class required
+- execution mode intent: mock or HIL
+- timeout budget
+- result retention class
+- coverage intent summary
+
+### Planning rules
+- PR plans must optimize for fast signal and low lab contention
+- merge plans must increase realism and coverage without collapsing throughput
+- nightly plans should expand breadth and artifact richness
+- release validation plans must be explicit, auditable, and policy-gated
+- when environment constraints prevent a requested HIL path, Ada should either:
+  - degrade to an approved fallback plan, or
+  - fail planning with an explicit reason
+
+
+## Queueing and planning lifecycle
+- put an explicit queue between Ada API and planning workers when planning load warrants it
+- persist plan state independently of execution state
+- planning should complete before reservation and execution begin
+- do not couple plan generation to worker availability
+
+
+## Public API and contracts
+### API surface
+- `POST /v1/test-plans/select`
+  - input: build and trigger context
+  - output: selected `TestPlan`
+- `GET /v1/test-plans/{test_plan_id}`
+  - returns normalized plan state, trigger context, and linked build ID
+- `GET /v1/test-plans/{test_plan_id}/events`
+  - returns planning events only
+
+### Internal contracts
+- `TestPlanRequest`
+- `TestPlan`
+- `CoverageSummary`
+- `PlanningPolicyDecision`
+
+
+## Observability and operations
+### Structured events
+Emit:
+- `test.plan_selected`
+- `test.coverage_gap_detected`
+- `test.plan_invalidated`
+
+### Metrics
+Collect:
+- planning latency
+- plan count by trigger class
+- fallback rate
+- environment-class demand by plan type
+
+### Operator controls
+- replan a build
+- invalidate a plan when source assumptions change
+- review fallback decisions and policy overrides
+
+
+## Fuze Test changes required
+Ada should use Fuze Test as it exists, but the following changes would make it a much better planning substrate.
+
+### 1. Add a dry-run planning mode
+Add a Fuze Test mode that resolves:
+- selected test suites
+- scope filtering decisions
+- required environment class
+- runtime configuration summary
+
+without actually executing the test cycle.
+
+### 2. Add machine-readable plan output
+Expose stable JSON output that includes:
+- selected suite files
+- excluded suite files and reasons
+- selected DUT filters
+- resolved module/project/runtype/location context
+- packaged test-content overlays used
+
+### 3. Add explicit generated-plan inputs
+Add a supported way for Curie and Faraday to pass generated inputs without editing repo-tracked ATF config. Accept one or more of:
+- explicit suite list file
+- explicit generated tests config file
+- explicit runtime overlay directory or archive
+
+
 ## Decision Logging & Audit Trail
 
 Every action this agent takes is logged with full context. For decisions, the complete decision tree is recorded — what options were considered, what data was evaluated, and why the chosen path was selected.
@@ -243,6 +254,7 @@ Every action this agent takes is logged with full context. For decisions, the co
 | **Rejection log** | When an action is rejected or blocked — what was attempted, what rule prevented it, what the agent did instead. | `decision=promote_release, attempted=sit_to_qa, blocked_by=failing_test_TES-456, action=hold_and_notify` |
 
 All logs are stored in PostgreSQL (audit table) and streamed to Grafana/Loki. Decision logs are queryable by correlation_id, agent_id, decision type, and time range.
+
 
 ## Tool Use & Token Efficiency
 
@@ -265,6 +277,7 @@ All token usage is logged to PostgreSQL and accumulates per agent, per day, per 
 | **Cumulative totals** | total_input_tokens, total_output_tokens, total_cost_usd | agent_id, date range, operation type |
 | **Efficiency ratio** | deterministic_actions / total_actions (target: >80%) | agent_id, date range |
 
+
 ## Standard Commands
 
 Every agent responds to these standard commands in its Teams channel and via REST API.
@@ -280,6 +293,7 @@ Every agent responds to these standard commands in its Teams channel and via RES
 
 All commands also work via the agent's REST API (e.g., `GET /v1/status/tokens`, `GET /v1/status/decisions`, `GET /v1/status/stats`).
 
+
 ## Teams Channel Interface
 
 This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the "Agent Workforce" team. This is the primary human interface. This channel is managed by **[Shannon](SHANNON_COMMUNICATIONS_AGENT_PLAN.md)**, the communications service agent.
@@ -292,6 +306,7 @@ This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the 
 | **Input requests** | When the agent needs information it cannot determine automatically, it posts a structured request. Engineers reply in-thread. |
 | **Error alerts** | Failures and anomalies posted with severity and suggested actions. Critical alerts @mention the relevant team. |
 | **Status queries** | Engineers can ask for status by posting in the channel. The agent responds in-thread. |
+
 
 ## Phased roadmap
 ### Phase 1. Build the planning compatibility layer
@@ -332,6 +347,7 @@ Exit criteria:
 - coverage summaries are available by build ID
 - gap signals are queryable
 
+
 ## Test and acceptance plan
 ### Planning behavior
 - PR trigger selects fast plan
@@ -350,6 +366,7 @@ Exit criteria:
 ### Operational behavior
 - plan invalidation when source assumptions change
 - structured failure on bad planning inputs or missing policy context
+
 
 ## Assumptions
 - Fuze Test in [atf](/Users/johnmacdonald/code/cornelis/atf) is the execution substrate downstream of Ada planning

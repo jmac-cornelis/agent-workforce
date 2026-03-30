@@ -10,6 +10,7 @@ In practical terms:
 
 Babbage should not replace `fuze`'s internal identity model. It should build a controlled mapping layer on top of it.
 
+
 ## Product definition
 ### Goal
 - map internal Fuze build identities to external release versions
@@ -30,10 +31,12 @@ Babbage should not replace `fuze`'s internal identity model. It should build a c
 - Babbage owns version mapping and version lineage
 - Linnaeus consumes version mappings as part of the traceability graph
 
+
 ## Triggering model
 - Babbage should run as an always-on version-mapping service.
 - Normal work should start from build, release, and mapping requests or events.
 - Humans should be able to confirm, correct, or approve mappings where policy or ambiguity requires it.
+
 
 ## Architecture
 ### Identity model
@@ -69,124 +72,6 @@ Required internal objects:
 - `VersionConflict`
 - `CompatibilityRecord`
 
-## Mapping model
-### Inputs
-- `build_id` / FuzeID
-- product or release name
-- release context from Hedy
-- branch or release-branch context
-- policy profile
-- optional marketing or customer-facing version rules
-- existing release records and prior mappings
-
-### Outputs
-Babbage should produce:
-- external version proposal
-- accepted version mapping record
-- version lineage record
-- conflict signal when mapping cannot proceed safely
-
-### Mapping rules
-- one internal build ID may map to one or more scoped external versions only if policy explicitly allows target-specific variation
-- an external version must resolve back to exact internal build identity or defined release scope
-- a released external version must not silently re-point to a different internal build
-- replacement and supersession must be explicit
-- local or meaningless FuzeIDs must never receive customer-facing external versions
-
-### Reverse lookup requirements
-Babbage must support:
-- `build_id -> external version(s)`
-- `external version -> build_id(s)`
-- `external version -> replacement/supersession history`
-
-## Public API and contracts
-### API surface
-- `POST /v1/version-mappings`
-  - input: `build_id`, release context, policy profile, optional external-version hints
-  - output: proposed or accepted mapping
-- `GET /v1/version-mappings/{mapping_id}`
-  - returns exact mapping record and lineage
-- `GET /v1/version-mappings/by-build/{build_id}`
-  - returns external version mappings for a build
-- `GET /v1/version-mappings/by-external/{external_version}`
-  - returns internal builds and lineage for an external version
-- `POST /v1/version-mappings/{mapping_id}/confirm`
-  - confirms a proposed mapping when required by policy
-
-### Internal contracts
-- `VersionMappingRequest`
-- `VersionMappingRecord`
-- `VersionLineageRecord`
-- `VersionConflict`
-- `CompatibilityRecord`
-
-## Decision and conflict model
-### Conflict types
-- external version already assigned to different build
-- build already mapped to incompatible external version
-- release scope mismatch
-- non-release-eligible build attempting to receive external version
-- ambiguous version hint from upstream systems
-
-### Conflict policy
-- never auto-resolve a conflicting external version by overwriting history
-- emit `version.mapping_conflict_detected`
-- require explicit resolution when ambiguity affects customer-visible versioning
-- preserve both the attempted mapping and the rejection reason for auditability
-
-## Integration with other agents
-### Josephine
-- supplies FuzeID and build metadata
-- may supply build-map `release_version` as a hint, not as final truth
-
-### Hedy
-- supplies release context and target scope
-- consumes Babbage mappings when creating release candidates and promotions
-
-### Linnaeus
-- consumes accepted mappings to join internal builds, releases, tests, and defects
-
-### Hypatia
-- may consume mappings for release notes, as-built docs, and version tables
-
-## Observability and operations
-### Structured events
-Emit:
-- `version.mapped`
-- `version.mapping_proposed`
-- `version.mapping_confirmed`
-- `version.mapping_conflict_detected`
-
-### Metrics
-Collect:
-- mapping count by product and branch
-- conflict rate by policy profile
-- lookup volume by direction
-- supersession or replacement rate
-
-### Operator controls
-- inspect mapping lineage
-- confirm or reject proposed mappings
-- mark a mapping as superseded under policy
-- inspect conflicts and resolution history
-
-## Security and auditability
-- use service principals for automatic mapping actions
-- separate read access from conflict-resolution or confirmation privileges
-- audit every mapping creation, confirmation, rejection, and supersession
-- do not allow silent mutation of historical version records
-
-## Fuze changes required
-Babbage can work alongside `fuze` as-is, but the following improvements would make mapping cleaner.
-
-### 1. Stable machine-readable release-version extraction
-Expose build-map and package-level release-version hints in a cleaner service-facing form.
-
-### 2. Stable release record lookup
-Provide a clearer API for querying released version state by FuzeID and by external version.
-
-### 3. Explicit replacement metadata
-Improve structured representation of replaced or superseded releases so Babbage does not need to infer lineage from loosely structured release history fields.
 
 ## Diagrams
 
@@ -232,6 +117,133 @@ sequenceDiagram
     end
 ```
 
+
+## Mapping model
+### Inputs
+- `build_id` / FuzeID
+- product or release name
+- release context from Hedy
+- branch or release-branch context
+- policy profile
+- optional marketing or customer-facing version rules
+- existing release records and prior mappings
+
+### Outputs
+Babbage should produce:
+- external version proposal
+- accepted version mapping record
+- version lineage record
+- conflict signal when mapping cannot proceed safely
+
+### Mapping rules
+- one internal build ID may map to one or more scoped external versions only if policy explicitly allows target-specific variation
+- an external version must resolve back to exact internal build identity or defined release scope
+- a released external version must not silently re-point to a different internal build
+- replacement and supersession must be explicit
+- local or meaningless FuzeIDs must never receive customer-facing external versions
+
+### Reverse lookup requirements
+Babbage must support:
+- `build_id -> external version(s)`
+- `external version -> build_id(s)`
+- `external version -> replacement/supersession history`
+
+
+## Public API and contracts
+### API surface
+- `POST /v1/version-mappings`
+  - input: `build_id`, release context, policy profile, optional external-version hints
+  - output: proposed or accepted mapping
+- `GET /v1/version-mappings/{mapping_id}`
+  - returns exact mapping record and lineage
+- `GET /v1/version-mappings/by-build/{build_id}`
+  - returns external version mappings for a build
+- `GET /v1/version-mappings/by-external/{external_version}`
+  - returns internal builds and lineage for an external version
+- `POST /v1/version-mappings/{mapping_id}/confirm`
+  - confirms a proposed mapping when required by policy
+
+### Internal contracts
+- `VersionMappingRequest`
+- `VersionMappingRecord`
+- `VersionLineageRecord`
+- `VersionConflict`
+- `CompatibilityRecord`
+
+
+## Decision and conflict model
+### Conflict types
+- external version already assigned to different build
+- build already mapped to incompatible external version
+- release scope mismatch
+- non-release-eligible build attempting to receive external version
+- ambiguous version hint from upstream systems
+
+### Conflict policy
+- never auto-resolve a conflicting external version by overwriting history
+- emit `version.mapping_conflict_detected`
+- require explicit resolution when ambiguity affects customer-visible versioning
+- preserve both the attempted mapping and the rejection reason for auditability
+
+
+## Integration with other agents
+### Josephine
+- supplies FuzeID and build metadata
+- may supply build-map `release_version` as a hint, not as final truth
+
+### Hedy
+- supplies release context and target scope
+- consumes Babbage mappings when creating release candidates and promotions
+
+### Linnaeus
+- consumes accepted mappings to join internal builds, releases, tests, and defects
+
+### Hypatia
+- may consume mappings for release notes, as-built docs, and version tables
+
+
+## Observability and operations
+### Structured events
+Emit:
+- `version.mapped`
+- `version.mapping_proposed`
+- `version.mapping_confirmed`
+- `version.mapping_conflict_detected`
+
+### Metrics
+Collect:
+- mapping count by product and branch
+- conflict rate by policy profile
+- lookup volume by direction
+- supersession or replacement rate
+
+### Operator controls
+- inspect mapping lineage
+- confirm or reject proposed mappings
+- mark a mapping as superseded under policy
+- inspect conflicts and resolution history
+
+
+## Security and auditability
+- use service principals for automatic mapping actions
+- separate read access from conflict-resolution or confirmation privileges
+- audit every mapping creation, confirmation, rejection, and supersession
+- do not allow silent mutation of historical version records
+
+
+## Fuze changes required
+Babbage can work alongside `fuze` as-is, but the following improvements would make mapping cleaner.
+
+### 1. Stable machine-readable release-version extraction
+Expose build-map and package-level release-version hints in a cleaner service-facing form.
+
+### 2. Stable release record lookup
+Provide a clearer API for querying released version state by FuzeID and by external version.
+
+### 3. Explicit replacement metadata
+Improve structured representation of replaced or superseded releases so Babbage does not need to infer lineage from loosely structured release history fields.
+
+
 ## Decision Logging & Audit Trail
 
 Every action this agent takes is logged with full context. For decisions, the complete decision tree is recorded — what options were considered, what data was evaluated, and why the chosen path was selected.
@@ -243,6 +255,7 @@ Every action this agent takes is logged with full context. For decisions, the co
 | **Rejection log** | When an action is rejected or blocked — what was attempted, what rule prevented it, what the agent did instead. | `decision=promote_release, attempted=sit_to_qa, blocked_by=failing_test_TES-456, action=hold_and_notify` |
 
 All logs are stored in PostgreSQL (audit table) and streamed to Grafana/Loki. Decision logs are queryable by correlation_id, agent_id, decision type, and time range.
+
 
 ## Tool Use & Token Efficiency
 
@@ -265,6 +278,7 @@ All token usage is logged to PostgreSQL and accumulates per agent, per day, per 
 | **Cumulative totals** | total_input_tokens, total_output_tokens, total_cost_usd | agent_id, date range, operation type |
 | **Efficiency ratio** | deterministic_actions / total_actions (target: >80%) | agent_id, date range |
 
+
 ## Standard Commands
 
 Every agent responds to these standard commands in its Teams channel and via REST API.
@@ -280,6 +294,7 @@ Every agent responds to these standard commands in its Teams channel and via RES
 
 All commands also work via the agent's REST API (e.g., `GET /v1/status/tokens`, `GET /v1/status/decisions`, `GET /v1/status/stats`).
 
+
 ## Teams Channel Interface
 
 This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the "Agent Workforce" team. This is the primary human interface. This channel is managed by **[Shannon](SHANNON_COMMUNICATIONS_AGENT_PLAN.md)**, the communications service agent.
@@ -292,6 +307,7 @@ This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the 
 | **Input requests** | When the agent needs information it cannot determine automatically, it posts a structured request. Engineers reply in-thread. |
 | **Error alerts** | Failures and anomalies posted with severity and suggested actions. Critical alerts @mention the relevant team. |
 | **Status queries** | Engineers can ask for status by posting in the channel. The agent responds in-thread. |
+
 
 ## Phased roadmap
 ### Phase 1. Basic mapping records
@@ -326,6 +342,7 @@ Exit criteria:
 - Hedy can consume version mappings without ambiguity
 - Linnaeus and Hypatia can read mappings as stable system records
 
+
 ## Test and acceptance plan
 ### Mapping behavior
 - map eligible build to external version
@@ -344,6 +361,7 @@ Exit criteria:
 ### Operational behavior
 - proposed mapping can be confirmed or rejected
 - audit record exists for every state change
+
 
 ## Assumptions
 - FuzeID remains the internal identity source of truth

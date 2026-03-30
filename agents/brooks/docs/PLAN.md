@@ -5,6 +5,7 @@ Brooks should be the delivery-management agent for the platform. Its v1 job is t
 
 Brooks should not own project planning itself. Gantt plans; Brooks watches delivery reality and flags drift, blockage, and risk.
 
+
 ## Product definition
 ### Goal
 - monitor work-in-flight against milestones and release targets
@@ -24,10 +25,12 @@ Brooks should not own project planning itself. Gantt plans; Brooks watches deliv
 - Josephine, Faraday, Hedy, Babbage, and Linnaeus provide the technical evidence
 - Herodotus provides decisions and action-item context
 
+
 ## Triggering model
 - Brooks should primarily run as an on-demand and scheduled reporting service rather than a heavy continuous event processor in v1.
 - Normal work should start from delivery-snapshot requests and optional recurring summary jobs.
 - Humans should request status views, acknowledge or dismiss risks, and decide whether escalations change plans or commitments.
+
 
 ## Architecture
 ### Core design
@@ -45,77 +48,6 @@ Required internal objects:
 - `StatusSummary`
 - `EscalationRecord`
 
-## Monitoring model
-### Inputs
-- planning snapshots from Gantt
-- Jira issue and workflow state
-- build status from Josephine
-- test execution status from Faraday
-- release status from Hedy
-- version state from Babbage
-- traceability gaps from Linnaeus
-- meeting actions from Herodotus
-
-### Outputs
-Brooks should produce:
-- delivery status summaries
-- risk classifications
-- forecast confidence
-- blocked-handoff reports
-- escalation prompts
-
-### Monitoring rules
-- status claims should always be tied to observable evidence
-- “on track” should require both work-state and technical-state support
-- missing build/test evidence for release-critical work should lower confidence
-- repeated failed handoffs should be surfaced as coordination risk, not buried in local statuses
-- approval gaps should be explicit when they gate release or customer commitments
-
-## Public API and contracts
-### API surface
-- `POST /v1/delivery/snapshot`
-  - input: project scope, milestone scope, time horizon
-  - output: `DeliverySnapshot`
-- `GET /v1/delivery/snapshots/{snapshot_id}`
-  - returns current delivery summary, risk, and forecast
-- `GET /v1/delivery/projects/{project_key}/status`
-  - returns current status summary and confidence
-- `GET /v1/delivery/projects/{project_key}/risks`
-  - returns active delivery risks and escalations
-
-### Internal contracts
-- `DeliverySnapshot`
-- `DeliveryRiskRecord`
-- `ForecastRecord`
-- `StatusSummary`
-- `EscalationRecord`
-
-## Observability and operations
-### Structured events
-Emit:
-- `delivery.snapshot_created`
-- `delivery.risk_detected`
-- `delivery.forecast_changed`
-- `delivery.escalation_requested`
-
-### Metrics
-Collect:
-- blocked-handoff count
-- status confidence by milestone
-- approval-wait count
-- stale action-item count
-- delivery slip rate against planned milestones
-
-### Operator controls
-- acknowledge or dismiss a risk
-- request refresh of delivery snapshot
-- mark an escalation as accepted, deferred, or resolved
-
-## Security and approvals
-- read access to Jira, planning snapshots, and technical records is required
-- v1 write-back should be limited to comments, summaries, and approved escalation markers
-- changes to milestone ownership or target dates should remain human-controlled
-- audit all escalations, dismissals, and summary publications
 
 ## Diagrams
 
@@ -157,6 +89,83 @@ sequenceDiagram
     DL-->>EC: Acknowledged
 ```
 
+
+## Monitoring model
+### Inputs
+- planning snapshots from Gantt
+- Jira issue and workflow state
+- build status from Josephine
+- test execution status from Faraday
+- release status from Hedy
+- version state from Babbage
+- traceability gaps from Linnaeus
+- meeting actions from Herodotus
+
+### Outputs
+Brooks should produce:
+- delivery status summaries
+- risk classifications
+- forecast confidence
+- blocked-handoff reports
+- escalation prompts
+
+### Monitoring rules
+- status claims should always be tied to observable evidence
+- “on track” should require both work-state and technical-state support
+- missing build/test evidence for release-critical work should lower confidence
+- repeated failed handoffs should be surfaced as coordination risk, not buried in local statuses
+- approval gaps should be explicit when they gate release or customer commitments
+
+
+## Public API and contracts
+### API surface
+- `POST /v1/delivery/snapshot`
+  - input: project scope, milestone scope, time horizon
+  - output: `DeliverySnapshot`
+- `GET /v1/delivery/snapshots/{snapshot_id}`
+  - returns current delivery summary, risk, and forecast
+- `GET /v1/delivery/projects/{project_key}/status`
+  - returns current status summary and confidence
+- `GET /v1/delivery/projects/{project_key}/risks`
+  - returns active delivery risks and escalations
+
+### Internal contracts
+- `DeliverySnapshot`
+- `DeliveryRiskRecord`
+- `ForecastRecord`
+- `StatusSummary`
+- `EscalationRecord`
+
+
+## Observability and operations
+### Structured events
+Emit:
+- `delivery.snapshot_created`
+- `delivery.risk_detected`
+- `delivery.forecast_changed`
+- `delivery.escalation_requested`
+
+### Metrics
+Collect:
+- blocked-handoff count
+- status confidence by milestone
+- approval-wait count
+- stale action-item count
+- delivery slip rate against planned milestones
+
+### Operator controls
+- acknowledge or dismiss a risk
+- request refresh of delivery snapshot
+- mark an escalation as accepted, deferred, or resolved
+
+
+## Security and approvals
+- read access to Jira, planning snapshots, and technical records is required
+- v1 write-back should be limited to comments, summaries, and approved escalation markers
+- changes to milestone ownership or target dates should remain human-controlled
+- audit all escalations, dismissals, and summary publications
+
+
 ## Decision Logging & Audit Trail
 
 Every action this agent takes is logged with full context. For decisions, the complete decision tree is recorded — what options were considered, what data was evaluated, and why the chosen path was selected.
@@ -168,6 +177,7 @@ Every action this agent takes is logged with full context. For decisions, the co
 | **Rejection log** | When an action is rejected or blocked — what was attempted, what rule prevented it, what the agent did instead. | `decision=promote_release, attempted=sit_to_qa, blocked_by=failing_test_TES-456, action=hold_and_notify` |
 
 All logs are stored in PostgreSQL (audit table) and streamed to Grafana/Loki. Decision logs are queryable by correlation_id, agent_id, decision type, and time range.
+
 
 ## Tool Use & Token Efficiency
 
@@ -190,6 +200,7 @@ All token usage is logged to PostgreSQL and accumulates per agent, per day, per 
 | **Cumulative totals** | total_input_tokens, total_output_tokens, total_cost_usd | agent_id, date range, operation type |
 | **Efficiency ratio** | deterministic_actions / total_actions (target: >80%) | agent_id, date range |
 
+
 ## Standard Commands
 
 Every agent responds to these standard commands in its Teams channel and via REST API.
@@ -205,6 +216,7 @@ Every agent responds to these standard commands in its Teams channel and via RES
 
 All commands also work via the agent's REST API (e.g., `GET /v1/status/tokens`, `GET /v1/status/decisions`, `GET /v1/status/stats`).
 
+
 ## Teams Channel Interface
 
 This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the "Agent Workforce" team. This is the primary human interface. This channel is managed by **[Shannon](SHANNON_COMMUNICATIONS_AGENT_PLAN.md)**, the communications service agent.
@@ -217,6 +229,7 @@ This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the 
 | **Input requests** | When the agent needs information it cannot determine automatically, it posts a structured request. Engineers reply in-thread. |
 | **Error alerts** | Failures and anomalies posted with severity and suggested actions. Critical alerts @mention the relevant team. |
 | **Status queries** | Engineers can ask for status by posting in the channel. The agent responds in-thread. |
+
 
 ## Phased roadmap
 ### Phase 1. Delivery snapshots
@@ -250,6 +263,7 @@ Exit criteria:
 - humans can consume Brooks outputs without digging through raw systems
 - summary publication remains auditable
 
+
 ## Test and acceptance plan
 ### Snapshot behavior
 - builds combined status from Jira plus technical evidence
@@ -269,6 +283,7 @@ Exit criteria:
 - repeated snapshot generation is stable
 - risks and escalations remain auditable
 - dismissed risks remain historically visible
+
 
 ## Assumptions
 - Brooks is advisory in v1

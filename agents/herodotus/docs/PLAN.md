@@ -5,6 +5,7 @@ Herodotus should be the knowledge-capture agent for the platform. Its v1 job is 
 
 Herodotus should not become a generic chatbot for meetings. It should produce durable, reviewable records.
 
+
 ## Product definition
 ### Goal
 - detect and ingest Microsoft Teams meeting transcripts and metadata
@@ -27,10 +28,12 @@ Herodotus should not become a generic chatbot for meetings. It should produce du
 - Gantt and Brooks may consume decisions and blockers as planning or delivery evidence
 - Hypatia may consume meeting-derived clarification or documentation suggestions
 
+
 ## Triggering model
 - Herodotus should run as an always-on transcript-ingest and summary service.
 - Normal work should start from Teams transcript-ready events or explicit ingest and summarize requests.
 - Humans should be able to review, publish, redact, or retract meeting summaries and extracted actions.
+
 
 ## Architecture
 ### Core design
@@ -55,159 +58,6 @@ Herodotus should treat transcript availability as the gating condition for v1:
 - any generated output must remain linked to the exact transcript source and meeting ID
 - if a transcript is partial, delayed, or unauthorized, Herodotus should record that state explicitly instead of fabricating a complete summary
 
-## Capture model
-### Inputs
-- Teams transcript-ready events
-- transcript text
-- meeting metadata such as meeting ID, title, organizer, channel, attendees, and timestamps
-- optional topic templates or policy profiles
-- optional linked artifact context such as Jira keys, build IDs, or repo references mentioned in meeting metadata
-
-### Outputs
-Herodotus should produce:
-- structured meeting summaries
-- decision logs
-- action item drafts
-- open-question lists
-- suggested downstream targets for Jira or documentation
-
-### Extraction rules
-- every summary must distinguish fact, decision, action, and unresolved question
-- direct quotes should be minimal and only used when needed for precision
-- uncertain speaker attribution or ownership should remain marked as uncertain
-- action items should remain drafts until accepted by a human or another owning workflow
-- references to Jira issues, builds, tests, or releases should be linked only when the identity is explicit or strongly supported
-
-## Publication model
-### Primary publication target
-V1 should publish to one durable internal meeting-summary store first.
-
-Recommended options:
-- an internal repo or docs store
-- a dedicated knowledge service
-- a record store queried by other agents
-
-### Secondary outputs
-Herodotus may also emit:
-- Jira follow-up suggestions for Drucker or humans
-- documentation-update suggestions for Hypatia
-- delivery/planning signals for Brooks and Gantt
-
-### Publication rules
-- the canonical record should be the internal meeting summary record, not a Jira comment
-- any downstream write-back should be optional, reviewable, and attributable to the meeting summary source
-- redaction policy must be applied before publishing outside the authorized summary store
-
-## Public API and contracts
-### API surface
-- `POST /v1/meetings/ingest`
-  - input: `meeting_id`, `transcript_ref`, metadata
-  - output: `MeetingRecord`
-- `POST /v1/meetings/{meeting_id}/summarize`
-  - generate or regenerate a `MeetingSummaryRecord`
-- `GET /v1/meetings/{meeting_id}`
-  - return raw ingest status, transcript status, and linked summary records
-- `GET /v1/meetings/{meeting_id}/summary`
-  - return structured summary, decisions, action items, and open questions
-- `POST /v1/meetings/{meeting_id}/publish`
-  - publish approved outputs to configured targets
-
-### Internal contracts
-- `MeetingRecord`
-- `TranscriptRecord`
-- `MeetingSummaryRecord`
-- `ActionItemDraft`
-- `DecisionRecord`
-
-## Record model
-### Meeting summary structure
-Each summary should contain:
-- meeting identity and metadata
-- short executive summary
-- decisions made
-- action items with owner/confidence/due-date if known
-- open questions
-- referenced systems or artifacts
-- confidence and completeness notes
-
-### Action item semantics
-Action items should include:
-- action text
-- proposed owner if identifiable
-- due date if explicit
-- source excerpt reference
-- confidence level
-- recommended destination such as Jira, docs, or manual follow-up
-
-## Integration boundaries
-### With Drucker
-- Herodotus may suggest Jira follow-up items
-- Drucker owns Jira workflow, routing, and field/state changes
-
-### With Gantt and Brooks
-- Herodotus provides structured signals about commitments, blockers, and decisions
-- Gantt and Brooks decide whether those signals affect planning or delivery views
-
-### With Hypatia
-- Herodotus provides documentation-update suggestions and context excerpts
-- Hypatia decides what becomes durable product or engineering documentation
-
-### With Linnaeus
-- Herodotus may emit references to issues, builds, tests, or releases mentioned in meetings
-- Linnaeus owns durable relationship truth across those systems
-
-## Observability and operations
-### Structured events
-Emit:
-- `meeting.transcript_ingested`
-- `meeting.summary_created`
-- `meeting.action_items_extracted`
-- `meeting.publication_requested`
-- `meeting.publication_completed`
-
-### Metrics
-Collect:
-- transcript ingestion success rate
-- summary publication latency
-- action-item extraction count
-- summary review acceptance rate
-- unresolved-owner rate for extracted actions
-
-### Operator controls
-- re-run summarization for a meeting
-- mark a summary as approved or rejected
-- suppress downstream publishing for a meeting
-- redact or retract a published summary under policy
-
-## Security and approvals
-- transcript access should be scoped to authorized meetings, channels, and users
-- summaries may contain sensitive technical or organizational context and should inherit meeting access policy where practical
-- downstream publication to Jira, docs, or other broad surfaces should require explicit approval or policy support
-- audit transcript access, summary generation, redaction, publication, and retraction actions
-- preserve source references without overexposing raw transcript text in broad channels
-
-## Platform changes required
-Herodotus needs a few platform capabilities to be robust.
-
-### 1. Teams transcript adapter
-Provide a stable integration that can:
-- detect transcript-ready events
-- fetch transcript content and meeting metadata
-- handle delayed transcript availability and retry safely
-
-### 2. Canonical meeting schema
-Define a shared meeting/transcript record schema with:
-- meeting ID
-- transcript reference
-- organizer and participant metadata
-- timestamps
-- downstream publication references
-
-### 3. Summary review workflow
-Add a lightweight approval model so summaries or action items can be accepted before broad publication or Jira creation.
-
-### 4. Link-friendly artifact detection
-Provide shared parsing helpers for Jira keys, build IDs, test IDs, and repo references mentioned in transcript-derived records.
 
 ## Diagrams
 
@@ -246,6 +96,169 @@ sequenceDiagram
     H->>Hy: Suggest doc updates
 ```
 
+
+## Capture model
+### Inputs
+- Teams transcript-ready events
+- transcript text
+- meeting metadata such as meeting ID, title, organizer, channel, attendees, and timestamps
+- optional topic templates or policy profiles
+- optional linked artifact context such as Jira keys, build IDs, or repo references mentioned in meeting metadata
+
+### Outputs
+Herodotus should produce:
+- structured meeting summaries
+- decision logs
+- action item drafts
+- open-question lists
+- suggested downstream targets for Jira or documentation
+
+### Extraction rules
+- every summary must distinguish fact, decision, action, and unresolved question
+- direct quotes should be minimal and only used when needed for precision
+- uncertain speaker attribution or ownership should remain marked as uncertain
+- action items should remain drafts until accepted by a human or another owning workflow
+- references to Jira issues, builds, tests, or releases should be linked only when the identity is explicit or strongly supported
+
+
+## Publication model
+### Primary publication target
+V1 should publish to one durable internal meeting-summary store first.
+
+Recommended options:
+- an internal repo or docs store
+- a dedicated knowledge service
+- a record store queried by other agents
+
+### Secondary outputs
+Herodotus may also emit:
+- Jira follow-up suggestions for Drucker or humans
+- documentation-update suggestions for Hypatia
+- delivery/planning signals for Brooks and Gantt
+
+### Publication rules
+- the canonical record should be the internal meeting summary record, not a Jira comment
+- any downstream write-back should be optional, reviewable, and attributable to the meeting summary source
+- redaction policy must be applied before publishing outside the authorized summary store
+
+
+## Public API and contracts
+### API surface
+- `POST /v1/meetings/ingest`
+  - input: `meeting_id`, `transcript_ref`, metadata
+  - output: `MeetingRecord`
+- `POST /v1/meetings/{meeting_id}/summarize`
+  - generate or regenerate a `MeetingSummaryRecord`
+- `GET /v1/meetings/{meeting_id}`
+  - return raw ingest status, transcript status, and linked summary records
+- `GET /v1/meetings/{meeting_id}/summary`
+  - return structured summary, decisions, action items, and open questions
+- `POST /v1/meetings/{meeting_id}/publish`
+  - publish approved outputs to configured targets
+
+### Internal contracts
+- `MeetingRecord`
+- `TranscriptRecord`
+- `MeetingSummaryRecord`
+- `ActionItemDraft`
+- `DecisionRecord`
+
+
+## Record model
+### Meeting summary structure
+Each summary should contain:
+- meeting identity and metadata
+- short executive summary
+- decisions made
+- action items with owner/confidence/due-date if known
+- open questions
+- referenced systems or artifacts
+- confidence and completeness notes
+
+### Action item semantics
+Action items should include:
+- action text
+- proposed owner if identifiable
+- due date if explicit
+- source excerpt reference
+- confidence level
+- recommended destination such as Jira, docs, or manual follow-up
+
+
+## Integration boundaries
+### With Drucker
+- Herodotus may suggest Jira follow-up items
+- Drucker owns Jira workflow, routing, and field/state changes
+
+### With Gantt and Brooks
+- Herodotus provides structured signals about commitments, blockers, and decisions
+- Gantt and Brooks decide whether those signals affect planning or delivery views
+
+### With Hypatia
+- Herodotus provides documentation-update suggestions and context excerpts
+- Hypatia decides what becomes durable product or engineering documentation
+
+### With Linnaeus
+- Herodotus may emit references to issues, builds, tests, or releases mentioned in meetings
+- Linnaeus owns durable relationship truth across those systems
+
+
+## Observability and operations
+### Structured events
+Emit:
+- `meeting.transcript_ingested`
+- `meeting.summary_created`
+- `meeting.action_items_extracted`
+- `meeting.publication_requested`
+- `meeting.publication_completed`
+
+### Metrics
+Collect:
+- transcript ingestion success rate
+- summary publication latency
+- action-item extraction count
+- summary review acceptance rate
+- unresolved-owner rate for extracted actions
+
+### Operator controls
+- re-run summarization for a meeting
+- mark a summary as approved or rejected
+- suppress downstream publishing for a meeting
+- redact or retract a published summary under policy
+
+
+## Security and approvals
+- transcript access should be scoped to authorized meetings, channels, and users
+- summaries may contain sensitive technical or organizational context and should inherit meeting access policy where practical
+- downstream publication to Jira, docs, or other broad surfaces should require explicit approval or policy support
+- audit transcript access, summary generation, redaction, publication, and retraction actions
+- preserve source references without overexposing raw transcript text in broad channels
+
+
+## Platform changes required
+Herodotus needs a few platform capabilities to be robust.
+
+### 1. Teams transcript adapter
+Provide a stable integration that can:
+- detect transcript-ready events
+- fetch transcript content and meeting metadata
+- handle delayed transcript availability and retry safely
+
+### 2. Canonical meeting schema
+Define a shared meeting/transcript record schema with:
+- meeting ID
+- transcript reference
+- organizer and participant metadata
+- timestamps
+- downstream publication references
+
+### 3. Summary review workflow
+Add a lightweight approval model so summaries or action items can be accepted before broad publication or Jira creation.
+
+### 4. Link-friendly artifact detection
+Provide shared parsing helpers for Jira keys, build IDs, test IDs, and repo references mentioned in transcript-derived records.
+
+
 ## Decision Logging & Audit Trail
 
 Every action this agent takes is logged with full context. For decisions, the complete decision tree is recorded — what options were considered, what data was evaluated, and why the chosen path was selected.
@@ -257,6 +270,7 @@ Every action this agent takes is logged with full context. For decisions, the co
 | **Rejection log** | When an action is rejected or blocked — what was attempted, what rule prevented it, what the agent did instead. | `decision=promote_release, attempted=sit_to_qa, blocked_by=failing_test_TES-456, action=hold_and_notify` |
 
 All logs are stored in PostgreSQL (audit table) and streamed to Grafana/Loki. Decision logs are queryable by correlation_id, agent_id, decision type, and time range.
+
 
 ## Tool Use & Token Efficiency
 
@@ -279,6 +293,7 @@ All token usage is logged to PostgreSQL and accumulates per agent, per day, per 
 | **Cumulative totals** | total_input_tokens, total_output_tokens, total_cost_usd | agent_id, date range, operation type |
 | **Efficiency ratio** | deterministic_actions / total_actions (target: >80%) | agent_id, date range |
 
+
 ## Standard Commands
 
 Every agent responds to these standard commands in its Teams channel and via REST API.
@@ -294,6 +309,7 @@ Every agent responds to these standard commands in its Teams channel and via RES
 
 All commands also work via the agent's REST API (e.g., `GET /v1/status/tokens`, `GET /v1/status/decisions`, `GET /v1/status/stats`).
 
+
 ## Teams Channel Interface
 
 This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the "Agent Workforce" team. This is the primary human interface. This channel is managed by **[Shannon](SHANNON_COMMUNICATIONS_AGENT_PLAN.md)**, the communications service agent.
@@ -306,6 +322,7 @@ This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the 
 | **Input requests** | When the agent needs information it cannot determine automatically, it posts a structured request. Engineers reply in-thread. |
 | **Error alerts** | Failures and anomalies posted with severity and suggested actions. Critical alerts @mention the relevant team. |
 | **Status queries** | Engineers can ask for status by posting in the channel. The agent responds in-thread. |
+
 
 ## Phased roadmap
 ### Phase 1. Transcript ingestion and summary records
@@ -340,6 +357,7 @@ Exit criteria:
 - follow-up suggestions are useful and auditable
 - downstream write-backs remain optional and controlled
 
+
 ## Test and acceptance plan
 ### Ingestion behavior
 - transcript-ready event produces a stored meeting record
@@ -360,6 +378,7 @@ Exit criteria:
 - regeneration preserves audit history
 - retractions or redactions are logged
 - downstream suggestion events remain linked to the source meeting summary
+
 
 ## Assumptions
 - Microsoft Teams is the initial transcript source

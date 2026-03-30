@@ -5,6 +5,7 @@ Gantt should be the project-planning agent for the platform. Its v1 job is to co
 
 Gantt should not replace human program ownership. It should make planning legible, current, and evidence-backed.
 
+
 ## Product definition
 ### Goal
 - consume Jira issue state and project structure
@@ -25,10 +26,12 @@ Gantt should not replace human program ownership. It should make planning legibl
 - Hedy supplies release intent and readiness context
 - Gantt turns those signals into planning intelligence
 
+
 ## Triggering model
 - Gantt should primarily run as an on-demand planning service, even if the service process itself is always available.
 - Normal work should start from explicit planning snapshot requests and, later, optional scheduled refreshes for defined projects or boards.
 - Humans should request snapshots, review recommendations, and approve any write-back into Jira planning fields.
+
 
 ## Architecture
 ### Core design
@@ -52,78 +55,6 @@ Gantt should treat Jira as the planning substrate for v1:
 - Gantt reads and annotates Jira, but does not become the primary planning database
 - any generated planning recommendations should be linkable back to concrete Jira issues and fields
 
-## Planning model
-### Inputs
-- Jira issue and epic state
-- priorities and assignees
-- release targets
-- build evidence from Josephine
-- test evidence from Faraday
-- release readiness from Hedy
-- version context from Babbage
-- traceability context from Linnaeus
-- meeting decisions and action items from Herodotus
-
-### Outputs
-Gantt should produce:
-- milestone proposals
-- dependency graphs
-- scope risk summaries
-- stale-work and blocked-work summaries
-- roadmap drift or slip signals
-
-### Planning rules
-- planning recommendations must always cite evidence
-- technical work with no linked build, test, or traceability evidence should be marked lower-confidence
-- blocked dependencies should surface before schedule promises are made
-- release-relevant work should be grouped with its readiness evidence where possible
-- recommendations should be incremental and reviewable, not sweeping rewrites of the backlog
-
-## Public API and contracts
-### API surface
-- `POST /v1/planning/snapshot`
-  - input: project or board scope, planning horizon, policy profile
-  - output: `PlanningSnapshot`
-- `GET /v1/planning/snapshots/{snapshot_id}`
-  - returns milestone, dependency, and risk views
-- `GET /v1/planning/projects/{project_key}/milestones`
-  - returns milestone proposals and health
-- `GET /v1/planning/projects/{project_key}/dependencies`
-  - returns dependency graph and blocker summary
-
-### Internal contracts
-- `PlanningRequest`
-- `PlanningSnapshot`
-- `MilestoneProposal`
-- `DependencyGraph`
-- `PlanningRiskRecord`
-
-## Observability and operations
-### Structured events
-Emit:
-- `planning.snapshot_created`
-- `planning.milestone_proposed`
-- `planning.dependency_risk_detected`
-- `planning.scope_drift_detected`
-
-### Metrics
-Collect:
-- blocked-work count
-- stale-work count
-- dependency depth by milestone
-- planning recommendation acceptance rate
-- issue-to-evidence coverage rate
-
-### Operator controls
-- regenerate a planning snapshot
-- approve or reject milestone proposals
-- mark dependency inference as accepted or incorrect
-
-## Security and approvals
-- read access to Jira planning data is required
-- write-back to Jira should be limited to comments, links, and explicitly approved planning annotations in v1
-- approval is required before changing target milestones, release targets, or major planning fields
-- audit every recommendation and every accepted or rejected recommendation
 
 ## Diagrams
 
@@ -164,6 +95,84 @@ sequenceDiagram
     end
 ```
 
+
+## Planning model
+### Inputs
+- Jira issue and epic state
+- priorities and assignees
+- release targets
+- build evidence from Josephine
+- test evidence from Faraday
+- release readiness from Hedy
+- version context from Babbage
+- traceability context from Linnaeus
+- meeting decisions and action items from Herodotus
+
+### Outputs
+Gantt should produce:
+- milestone proposals
+- dependency graphs
+- scope risk summaries
+- stale-work and blocked-work summaries
+- roadmap drift or slip signals
+
+### Planning rules
+- planning recommendations must always cite evidence
+- technical work with no linked build, test, or traceability evidence should be marked lower-confidence
+- blocked dependencies should surface before schedule promises are made
+- release-relevant work should be grouped with its readiness evidence where possible
+- recommendations should be incremental and reviewable, not sweeping rewrites of the backlog
+
+
+## Public API and contracts
+### API surface
+- `POST /v1/planning/snapshot`
+  - input: project or board scope, planning horizon, policy profile
+  - output: `PlanningSnapshot`
+- `GET /v1/planning/snapshots/{snapshot_id}`
+  - returns milestone, dependency, and risk views
+- `GET /v1/planning/projects/{project_key}/milestones`
+  - returns milestone proposals and health
+- `GET /v1/planning/projects/{project_key}/dependencies`
+  - returns dependency graph and blocker summary
+
+### Internal contracts
+- `PlanningRequest`
+- `PlanningSnapshot`
+- `MilestoneProposal`
+- `DependencyGraph`
+- `PlanningRiskRecord`
+
+
+## Observability and operations
+### Structured events
+Emit:
+- `planning.snapshot_created`
+- `planning.milestone_proposed`
+- `planning.dependency_risk_detected`
+- `planning.scope_drift_detected`
+
+### Metrics
+Collect:
+- blocked-work count
+- stale-work count
+- dependency depth by milestone
+- planning recommendation acceptance rate
+- issue-to-evidence coverage rate
+
+### Operator controls
+- regenerate a planning snapshot
+- approve or reject milestone proposals
+- mark dependency inference as accepted or incorrect
+
+
+## Security and approvals
+- read access to Jira planning data is required
+- write-back to Jira should be limited to comments, links, and explicitly approved planning annotations in v1
+- approval is required before changing target milestones, release targets, or major planning fields
+- audit every recommendation and every accepted or rejected recommendation
+
+
 ## Decision Logging & Audit Trail
 
 Every action this agent takes is logged with full context. For decisions, the complete decision tree is recorded — what options were considered, what data was evaluated, and why the chosen path was selected.
@@ -175,6 +184,7 @@ Every action this agent takes is logged with full context. For decisions, the co
 | **Rejection log** | When an action is rejected or blocked — what was attempted, what rule prevented it, what the agent did instead. | `decision=promote_release, attempted=sit_to_qa, blocked_by=failing_test_TES-456, action=hold_and_notify` |
 
 All logs are stored in PostgreSQL (audit table) and streamed to Grafana/Loki. Decision logs are queryable by correlation_id, agent_id, decision type, and time range.
+
 
 ## Tool Use & Token Efficiency
 
@@ -197,6 +207,7 @@ All token usage is logged to PostgreSQL and accumulates per agent, per day, per 
 | **Cumulative totals** | total_input_tokens, total_output_tokens, total_cost_usd | agent_id, date range, operation type |
 | **Efficiency ratio** | deterministic_actions / total_actions (target: >80%) | agent_id, date range |
 
+
 ## Standard Commands
 
 Every agent responds to these standard commands in its Teams channel and via REST API.
@@ -212,6 +223,7 @@ Every agent responds to these standard commands in its Teams channel and via RES
 
 All commands also work via the agent's REST API (e.g., `GET /v1/status/tokens`, `GET /v1/status/decisions`, `GET /v1/status/stats`).
 
+
 ## Teams Channel Interface
 
 This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the "Agent Workforce" team. This is the primary human interface. This channel is managed by **[Shannon](SHANNON_COMMUNICATIONS_AGENT_PLAN.md)**, the communications service agent.
@@ -224,6 +236,7 @@ This agent has a dedicated **Microsoft Teams channel** (`#agent-{name}`) in the 
 | **Input requests** | When the agent needs information it cannot determine automatically, it posts a structured request. Engineers reply in-thread. |
 | **Error alerts** | Failures and anomalies posted with severity and suggested actions. Critical alerts @mention the relevant team. |
 | **Status queries** | Engineers can ask for status by posting in the channel. The agent responds in-thread. |
+
 
 ## Phased roadmap
 ### Phase 1. Planning snapshots
@@ -258,6 +271,7 @@ Exit criteria:
 - planning outputs can flow back into Jira safely
 - no silent backlog mutation occurs
 
+
 ## Test and acceptance plan
 ### Snapshot behavior
 - creates project snapshot from Jira scope
@@ -277,6 +291,7 @@ Exit criteria:
 - repeated snapshot generation is stable
 - recommendations are auditable
 - rejected recommendations remain historically visible
+
 
 ## Assumptions
 - Jira remains the system of record for planned work
