@@ -299,17 +299,22 @@ def test_normalize_pr_extracts_fields():
     assert result['author'] == 'jdoe'
     assert result['state'] == 'open'
     assert result['draft'] is False
-    assert result['mergeable'] is True
+    assert result['mergeable'] is None, 'default include_reviews=False skips mergeable fetch'
     assert result['head_branch'] == 'fix-buffer'
     assert result['base_branch'] == 'main'
     assert result['requested_reviewers'] == ['reviewer1', 'reviewer2']
     assert result['requested_teams'] == ['core-team']
     assert result['labels'] == ['bug', 'urgent']
-    assert result['review_count'] == 2
-    assert result['approved'] is True
+    assert result['review_count'] == 0, 'default include_reviews=False skips review fetch'
+    assert result['approved'] is False, 'default include_reviews=False skips review fetch'
     assert result['created_at'] == now.isoformat()
     assert result['updated_at'] == now.isoformat()
     assert result['html_url'] == 'https://github.com/cornelisnetworks/opa-psm2/pull/1'
+
+    result_with_reviews = github_utils._normalize_pr(pr, include_reviews=True)
+    assert result_with_reviews['review_count'] == 2
+    assert result_with_reviews['approved'] is True
+    assert result_with_reviews['mergeable'] is True
 
 
 def test_normalize_review_extracts_fields():

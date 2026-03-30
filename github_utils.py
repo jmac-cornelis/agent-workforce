@@ -290,6 +290,7 @@ def connect_to_github():
 # ---------------------------------------------------------------------------
 
 _cached_connection = None
+_graphql_session = None
 
 
 def get_connection():
@@ -312,6 +313,114 @@ def get_connection():
     return _cached_connection
 
 
+def _get_graphql_session():
+    '''Return a reusable requests.Session configured for GitHub GraphQL.'''
+    global _graphql_session
+    if _graphql_session is None:
+        import requests as _req
+        token = get_github_credentials()
+        _graphql_session = _req.Session()
+        _graphql_session.headers.update({
+            'Authorization': f'Bearer {token}',
+            'Content-Type': 'application/json',
+        })
+    return _graphql_session
+
+
+def _graphql_list_open_prs(owner, name):
+    '''Fetch all open PRs via GraphQL (single HTTP request per 100 PRs).
+
+    Returns a list of normalised PR dicts identical in shape to those
+    returned by list_pull_requests(), but fetched in O(1) API calls
+    instead of O(N).
+    '''
+    query = '''
+    query($owner: String!, $name: String!, $cursor: String) {
+      repository(owner: $owner, name: $name) {
+        pullRequests(first: 100, states: OPEN,
+                     orderBy: {field: UPDATED_AT, direction: DESC},
+                     after: $cursor) {
+          pageInfo { hasNextPage endCursor }
+          nodes {
+            number title isDraft url
+            createdAt updatedAt mergedAt closedAt
+            headRefName baseRefName
+            author { login }
+            labels(first: 20)         { nodes { name } }
+            reviewRequests(first: 20) {
+              nodes { requestedReviewer {
+                ... on User { login }
+                ... on Team { slug }
+              }}
+            }
+            reviews(last: 30)         { totalCount nodes { state } }
+          }
+        }
+      }
+    }
+    '''
+    session = _get_graphql_session()
+    all_prs = []
+    cursor = None
+    while True:
+        resp = session.post(
+            'https://api.github.com/graphql',
+            json={'query': query, 'variables': {
+                'owner': owner, 'name': name, 'cursor': cursor,
+            }},
+        )
+        body = resp.json()
+        if 'errors' in body:
+            raise GitHubPRError(f'GraphQL error: {body["errors"]}')
+
+        pr_data = body['data']['repository']['pullRequests']
+        for node in pr_data['nodes']:
+            reviewer_users = []
+            reviewer_teams = []
+            for rr in node.get('reviewRequests', {}).get('nodes', []):
+                rrev = rr.get('requestedReviewer') or {}
+                if 'login' in rrev:
+                    reviewer_users.append(rrev['login'])
+                elif 'slug' in rrev:
+                    reviewer_teams.append(rrev['slug'])
+
+            reviews_data = node.get('reviews', {})
+            review_count = reviews_data.get('totalCount', 0)
+            approved = any(
+                r.get('state') == 'APPROVED'
+                for r in reviews_data.get('nodes', [])
+            )
+
+            all_prs.append({
+                'number': node['number'],
+                'title': node['title'],
+                'author': (node.get('author') or {}).get('login', 'unknown'),
+                'state': 'open',
+                'created_at': node['createdAt'],
+                'updated_at': node['updatedAt'],
+                'merged_at': node.get('mergedAt'),
+                'closed_at': node.get('closedAt'),
+                'head_branch': node['headRefName'],
+                'base_branch': node['baseRefName'],
+                'draft': node['isDraft'],
+                'mergeable': None,
+                'html_url': node['url'],
+                'requested_reviewers': reviewer_users,
+                'requested_teams': reviewer_teams,
+                'labels': [l['name'] for l in node.get('labels', {}).get('nodes', [])],
+                'review_count': review_count,
+                'approved': approved,
+            })
+
+        page_info = pr_data['pageInfo']
+        if not page_info['hasNextPage']:
+            break
+        cursor = page_info['endCursor']
+
+    log.info(f'GraphQL fetched {len(all_prs)} open PRs for {owner}/{name}')
+    return all_prs
+
+
 def reset_connection():
     '''
     Clear the cached GitHub connection.
@@ -319,8 +428,9 @@ def reset_connection():
     The next call to get_connection() will create a fresh connection.
     Useful for testing or after credential changes.
     '''
-    global _cached_connection
+    global _cached_connection, _graphql_session
     _cached_connection = None
+    _graphql_session = None
 
 
 # ****************************************************************************************
@@ -355,50 +465,64 @@ def _normalize_repo(repo):
     }
 
 
-def _normalize_pr(pr):
+def _normalize_pr(pr, include_reviews=False):
     '''
     Convert a PyGithub PullRequest object to a clean dict.
 
     Includes all metadata fields needed for hygiene analysis:
     number, title, author, state, timestamps, branches, draft status,
-    mergeable state, reviewers, labels, and review summary.
+    mergeable state, reviewers, labels, and optionally review summary.
 
     Input:
         pr: PyGithub PullRequest object.
+        include_reviews: If True, fetch review count and approval status
+            via an extra API call per PR.  Default False to avoid N+1
+            queries when listing many PRs.
 
     Output:
         Dict with PR metadata fields.
     '''
-    # Collect requested reviewers (users)
+    # Collect requested reviewers (users) — available without extra API call
     try:
         requested_reviewers = [u.login for u in pr.requested_reviewers]
     except Exception:
         requested_reviewers = []
 
-    # Collect requested teams
+    # Collect requested teams — available without extra API call
     try:
         requested_teams = [t.slug for t in pr.requested_teams]
     except Exception:
         requested_teams = []
 
-    # Collect labels
+    # Collect labels — available without extra API call
     try:
         labels = [l.name for l in pr.labels]
     except Exception:
         labels = []
 
-    # Count reviews and check for approvals
+    # Only fetch reviews when explicitly requested (costs 1 API call per PR)
     review_count = 0
     approved = False
-    try:
-        reviews = pr.get_reviews()
-        review_count = reviews.totalCount
-        for review in reviews:
-            if review.state == 'APPROVED':
-                approved = True
-                break
-    except Exception:
-        pass
+    if include_reviews:
+        try:
+            reviews = pr.get_reviews()
+            review_count = reviews.totalCount
+            for review in reviews:
+                if review.state == 'APPROVED':
+                    approved = True
+                    break
+        except Exception:
+            pass
+
+    # pr.mergeable triggers a lazy GET /pulls/{n} per PR in PyGithub when
+    # accessed on list-fetched objects.  Only fetch it in detail context
+    # (include_reviews=True) to avoid N+1 API calls when listing.
+    mergeable = None
+    if include_reviews:
+        try:
+            mergeable = pr.mergeable
+        except Exception:
+            mergeable = None
 
     return {
         'number': pr.number,
@@ -412,7 +536,7 @@ def _normalize_pr(pr):
         'head_branch': pr.head.ref if pr.head else 'unknown',
         'base_branch': pr.base.ref if pr.base else 'unknown',
         'draft': pr.draft,
-        'mergeable': pr.mergeable,
+        'mergeable': mergeable,
         'html_url': pr.html_url,
         'requested_reviewers': requested_reviewers,
         'requested_teams': requested_teams,
@@ -587,7 +711,7 @@ def get_pull_request(repo_name, pr_number):
     try:
         repo = gh.get_repo(repo_name)
         pr = repo.get_pull(pr_number)
-        result = _normalize_pr(pr)
+        result = _normalize_pr(pr, include_reviews=True)
         log.info(f'Retrieved PR #{pr_number} for {repo_name}')
         return result
     except UnknownObjectException:
@@ -669,7 +793,7 @@ def get_pr_review_requests(repo_name, pr_number):
 # Hygiene analysis — Drucker will call these directly
 # ****************************************************************************************
 
-def analyze_pr_staleness(repo_name, stale_days=5):
+def analyze_pr_staleness(repo_name, stale_days=5, _prefetched_prs=None):
     '''
     Find pull requests older than N days with no activity.
 
@@ -680,6 +804,7 @@ def analyze_pr_staleness(repo_name, stale_days=5):
     Input:
         repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
         stale_days: Number of days without update to consider stale (default: 5).
+        _prefetched_prs: Optional pre-fetched PR list to avoid redundant API calls.
 
     Output:
         List of dicts, each containing:
@@ -696,8 +821,8 @@ def analyze_pr_staleness(repo_name, stale_days=5):
     threshold = now - timedelta(days=stale_days)
     draft_threshold = now - timedelta(days=stale_days * 2)
 
-    # Fetch open PRs sorted by oldest update first
-    prs = list_pull_requests(repo_name, state='open', sort='updated', direction='asc')
+    prs = _prefetched_prs if _prefetched_prs is not None else list_pull_requests(
+        repo_name, state='open', sort='updated', direction='asc')
 
     stale_prs = []
     for pr in prs:
@@ -707,13 +832,11 @@ def analyze_pr_staleness(repo_name, stale_days=5):
 
         try:
             updated_at = datetime.fromisoformat(updated_str)
-            # Ensure timezone-aware comparison
             if updated_at.tzinfo is None:
                 updated_at = updated_at.replace(tzinfo=timezone.utc)
         except (ValueError, TypeError):
             continue
 
-        # Draft PRs get a 2x grace period
         effective_threshold = draft_threshold if pr.get('draft', False) else threshold
 
         if updated_at < effective_threshold:
@@ -730,7 +853,7 @@ def analyze_pr_staleness(repo_name, stale_days=5):
     return stale_prs
 
 
-def analyze_missing_reviews(repo_name):
+def analyze_missing_reviews(repo_name, _prefetched_prs=None):
     '''
     Find pull requests with zero reviews or pending review requests.
 
@@ -742,6 +865,7 @@ def analyze_missing_reviews(repo_name):
 
     Input:
         repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        _prefetched_prs: Optional pre-fetched PR list to avoid redundant API calls.
 
     Output:
         List of dicts, each containing:
@@ -755,33 +879,57 @@ def analyze_missing_reviews(repo_name):
     '''
     log.debug(f'Entering analyze_missing_reviews(repo_name={repo_name})')
 
-    prs = list_pull_requests(repo_name, state='open', sort='created', direction='desc')
+    prs = _prefetched_prs if _prefetched_prs is not None else list_pull_requests(
+        repo_name, state='open', sort='created', direction='desc')
+
+    _gh_repo = None
+
+    def _get_repo():
+        nonlocal _gh_repo
+        if _gh_repo is None:
+            gh = get_connection()
+            _gh_repo = gh.get_repo(repo_name)
+        return _gh_repo
 
     findings = []
     for pr in prs:
-        # Skip draft PRs — they are not expected to have reviews yet
         if pr.get('draft', False):
             continue
 
-        review_count = pr.get('review_count', 0)
         requested_reviewers = pr.get('requested_reviewers', [])
         requested_teams = pr.get('requested_teams', [])
-        approved = pr.get('approved', False)
 
-        if review_count == 0 and not requested_reviewers and not requested_teams:
-            # No reviews and no one asked to review
+        if not requested_reviewers and not requested_teams:
             findings.append({
                 'pr': pr,
                 'reason': 'no_reviewers',
                 'severity': 'medium',
             })
-        elif (requested_reviewers or requested_teams) and not approved:
-            # Reviews requested but not yet approved
-            findings.append({
-                'pr': pr,
-                'reason': 'pending_reviews',
-                'severity': 'medium',
-            })
+        elif pr.get('approved'):
+            continue
+        else:
+            if pr.get('review_count', 0) > 0 and not pr.get('approved'):
+                findings.append({
+                    'pr': pr,
+                    'reason': 'pending_reviews',
+                    'severity': 'medium',
+                })
+            else:
+                try:
+                    pr_obj = _get_repo().get_pull(pr['number'])
+                    review_list = list(pr_obj.get_reviews())
+                    reviews = [_normalize_review(r) for r in review_list]
+                except Exception:
+                    reviews = []
+                approved = any(r.get('state') == 'APPROVED' for r in reviews)
+                pr['review_count'] = len(reviews)
+                pr['approved'] = approved
+                if not approved:
+                    findings.append({
+                        'pr': pr,
+                        'reason': 'pending_reviews',
+                        'severity': 'medium',
+                    })
 
     log.info(f'Found {len(findings)} PRs with missing/pending reviews in {repo_name}')
     return findings
@@ -815,13 +963,20 @@ def analyze_repo_pr_hygiene(repo_name, stale_days=5):
     log.debug(f'Entering analyze_repo_pr_hygiene(repo_name={repo_name}, stale_days={stale_days})')
     scan_time = datetime.now(timezone.utc).isoformat()
 
-    # Run individual analyses
-    stale_findings = analyze_pr_staleness(repo_name, stale_days=stale_days)
-    review_findings = analyze_missing_reviews(repo_name)
+    parts = repo_name.split('/', 1)
+    if len(parts) == 2:
+        try:
+            open_prs = _graphql_list_open_prs(parts[0], parts[1])
+        except Exception as e:
+            log.warning(f'GraphQL fetch failed, falling back to REST: {e}')
+            open_prs = list_pull_requests(repo_name, state='open', limit=500)
+    else:
+        open_prs = list_pull_requests(repo_name, state='open', limit=500)
 
-    # Count total open PRs for context
-    open_prs = list_pull_requests(repo_name, state='open', limit=500)
     total_open = len(open_prs)
+
+    stale_findings = analyze_pr_staleness(repo_name, stale_days=stale_days, _prefetched_prs=open_prs)
+    review_findings = analyze_missing_reviews(repo_name, _prefetched_prs=open_prs)
 
     total_findings = len(stale_findings) + len(review_findings)
 

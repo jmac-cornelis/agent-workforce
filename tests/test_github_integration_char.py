@@ -85,8 +85,11 @@ def test_hygiene_report_to_card_pipeline(monkeypatch):
                           requested_reviewers=['reviewer1'], review_count=1,
                           approved=True)
 
+    all_prs = [stale_pr, no_review_pr, healthy_pr]
+    pr_by_number = {p.number: p for p in all_prs}
     fake_repo = SimpleNamespace(
-        get_pulls=lambda state, sort, direction: [stale_pr, no_review_pr, healthy_pr],
+        get_pulls=lambda state, sort, direction: all_prs,
+        get_pull=lambda n: pr_by_number[n],
     )
     fake_gh = SimpleNamespace(get_repo=lambda name: fake_repo)
     monkeypatch.setattr(github_utils, 'get_connection', lambda: fake_gh)
@@ -160,8 +163,11 @@ def test_missing_reviews_to_card_pipeline(monkeypatch):
     draft_pr = _make_pr(25, 'WIP draft', 'dev2', days_old=3,
                         draft=True, requested_reviewers=[], review_count=0)
 
+    all_prs = [no_reviewer, draft_pr]
+    pr_by_number = {p.number: p for p in all_prs}
     fake_repo = SimpleNamespace(
-        get_pulls=lambda state, sort, direction: [no_reviewer, draft_pr],
+        get_pulls=lambda state, sort, direction: all_prs,
+        get_pull=lambda n: pr_by_number[n],
     )
     fake_gh = SimpleNamespace(get_repo=lambda name: fake_repo)
     monkeypatch.setattr(github_utils, 'get_connection', lambda: fake_gh)
