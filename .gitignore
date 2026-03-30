@@ -47,6 +47,8 @@ logs/
 # Session data (contains potentially sensitive info)
 data/sessions/
 *.db
+data/gantt_release_surveys/
+data/gantt_release_monitors/
 
 # Temporary files
 tmp/
@@ -74,6 +76,7 @@ htmlcov/
 jql.txt
 *.csv
 !data/templates/*.json
+docs/12_2/
 
 # Generated plan outputs (per-project run artifacts)
 plans/STLSB-*/
