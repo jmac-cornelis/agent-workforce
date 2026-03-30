@@ -42,6 +42,11 @@ try:
         analyze_missing_reviews as _analyze_missing_reviews,
         analyze_repo_pr_hygiene as _analyze_repo_pr_hygiene,
         get_rate_limit as _get_rate_limit,
+        analyze_naming_compliance as _analyze_naming_compliance,
+        analyze_merge_conflicts as _analyze_merge_conflicts,
+        analyze_ci_failures as _analyze_ci_failures,
+        analyze_stale_branches as _analyze_stale_branches,
+        analyze_extended_hygiene as _analyze_extended_hygiene,
     )
     GITHUB_UTILS_AVAILABLE = True
 except ImportError as e:
@@ -353,6 +358,173 @@ def get_rate_limit_status() -> ToolResult:
 
 
 # ****************************************************************************************
+# Phase 5 — Extended Hygiene Scan Tools
+# ****************************************************************************************
+
+@tool(description='Check branch and PR title naming compliance against Jira ticket conventions')
+def check_naming_compliance(repo_name: str, ticket_patterns: str = '') -> ToolResult:
+    '''
+    Check branch and PR title naming compliance against Jira ticket conventions.
+
+    Input:
+        repo_name: Full repository name (e.g., 'org/repo').
+        ticket_patterns: Comma-separated regex patterns for ticket IDs.
+                         Default: None (uses built-in STL/STLSW patterns).
+
+    Output:
+        ToolResult with naming compliance analysis.
+    '''
+    log.debug(f'check_naming_compliance(repo_name={repo_name}, ticket_patterns={ticket_patterns!r})')
+
+    try:
+        get_github()
+        # Parse comma-separated string to list; empty string means use defaults
+        patterns = [p.strip() for p in ticket_patterns.split(',') if p.strip()] if ticket_patterns else None
+        result = _analyze_naming_compliance(repo_name, ticket_patterns=patterns)
+
+        return ToolResult.success(
+            result,
+            repo=repo_name,
+            total_prs=result.get('total_prs', 0),
+            title_compliant=result.get('title_compliant', 0),
+            title_noncompliant=result.get('title_noncompliant', 0),
+            no_jira_count=result.get('no_jira_count', 0),
+            branch_compliant=result.get('branch_compliant', 0),
+            branch_noncompliant=result.get('branch_noncompliant', 0),
+            total_findings=result.get('total_findings', 0),
+        )
+
+    except Exception as e:
+        log.error(f'Failed to check naming compliance: {e}')
+        return ToolResult.failure(f'Failed to check naming compliance for {repo_name}: {e}')
+
+
+@tool(description='Find open PRs with merge conflicts')
+def check_merge_conflicts(repo_name: str) -> ToolResult:
+    '''
+    Find open pull requests with merge conflicts.
+
+    Input:
+        repo_name: Full repository name (e.g., 'org/repo').
+
+    Output:
+        ToolResult with merge conflict analysis.
+    '''
+    log.debug(f'check_merge_conflicts(repo_name={repo_name})')
+
+    try:
+        get_github()
+        result = _analyze_merge_conflicts(repo_name)
+
+        return ToolResult.success(
+            result,
+            repo=repo_name,
+            total_open_prs=result.get('total_open_prs', 0),
+            total_conflicts=result.get('total_conflicts', 0),
+        )
+
+    except Exception as e:
+        log.error(f'Failed to check merge conflicts: {e}')
+        return ToolResult.failure(f'Failed to check merge conflicts for {repo_name}: {e}')
+
+
+@tool(description='Find open PRs with failing CI checks')
+def check_ci_failures(repo_name: str) -> ToolResult:
+    '''
+    Find open pull requests with failing CI checks.
+
+    Input:
+        repo_name: Full repository name (e.g., 'org/repo').
+
+    Output:
+        ToolResult with CI failure analysis.
+    '''
+    log.debug(f'check_ci_failures(repo_name={repo_name})')
+
+    try:
+        get_github()
+        result = _analyze_ci_failures(repo_name)
+
+        return ToolResult.success(
+            result,
+            repo=repo_name,
+            total_open_prs=result.get('total_open_prs', 0),
+            total_failures=result.get('total_failures', 0),
+        )
+
+    except Exception as e:
+        log.error(f'Failed to check CI failures: {e}')
+        return ToolResult.failure(f'Failed to check CI failures for {repo_name}: {e}')
+
+
+@tool(description='Find stale branches with no recent activity and no open PRs')
+def check_stale_branches(repo_name: str, stale_days: int = 30) -> ToolResult:
+    '''
+    Find stale branches with no recent activity and no open PRs.
+
+    Input:
+        repo_name: Full repository name (e.g., 'org/repo').
+        stale_days: Number of days without activity to consider a branch stale.
+
+    Output:
+        ToolResult with stale branch analysis.
+    '''
+    log.debug(f'check_stale_branches(repo_name={repo_name}, stale_days={stale_days})')
+
+    try:
+        get_github()
+        result = _analyze_stale_branches(repo_name, stale_days=stale_days)
+
+        return ToolResult.success(
+            result,
+            repo=repo_name,
+            stale_days=stale_days,
+            total_branches=result.get('total_branches', 0),
+            stale_count=result.get('stale_count', 0),
+        )
+
+    except Exception as e:
+        log.error(f'Failed to check stale branches: {e}')
+        return ToolResult.failure(f'Failed to check stale branches for {repo_name}: {e}')
+
+
+@tool(description='Run comprehensive extended hygiene analysis including all scan types')
+def analyze_extended_hygiene(repo_name: str, stale_days: int = 5, branch_stale_days: int = 30) -> ToolResult:
+    '''
+    Run comprehensive extended hygiene analysis including all scan types.
+
+    Combines naming compliance, merge conflicts, CI failures, stale branches,
+    and PR staleness into a single comprehensive report.
+
+    Input:
+        repo_name: Full repository name (e.g., 'org/repo').
+        stale_days: Number of days after which a PR is considered stale.
+        branch_stale_days: Number of days after which a branch is considered stale.
+
+    Output:
+        ToolResult with comprehensive extended hygiene report.
+    '''
+    log.debug(f'analyze_extended_hygiene(repo_name={repo_name}, stale_days={stale_days}, branch_stale_days={branch_stale_days})')
+
+    try:
+        get_github()
+        result = _analyze_extended_hygiene(
+            repo_name, stale_days=stale_days, branch_stale_days=branch_stale_days,
+        )
+
+        return ToolResult.success(
+            result,
+            repo=repo_name,
+            total_open_prs=result.get('total_open_prs', 0),
+            total_findings=result.get('total_findings', 0),
+        )
+
+    except Exception as e:
+        log.error(f'Failed to analyze extended hygiene: {e}')
+        return ToolResult.failure(f'Failed to analyze extended hygiene for {repo_name}: {e}')
+
+
+# ****************************************************************************************
 # Tool Collection Class
 # ****************************************************************************************
 
@@ -414,3 +586,23 @@ class GitHubTools(BaseTool):
     @tool(description='Get current GitHub API rate limit status')
     def get_rate_limit_status(self) -> ToolResult:
         return get_rate_limit_status()
+
+    @tool(description='Check branch and PR title naming compliance against Jira ticket conventions')
+    def check_naming_compliance(self, repo_name: str, ticket_patterns: str = '') -> ToolResult:
+        return check_naming_compliance(repo_name, ticket_patterns)
+
+    @tool(description='Find open PRs with merge conflicts')
+    def check_merge_conflicts(self, repo_name: str) -> ToolResult:
+        return check_merge_conflicts(repo_name)
+
+    @tool(description='Find open PRs with failing CI checks')
+    def check_ci_failures(self, repo_name: str) -> ToolResult:
+        return check_ci_failures(repo_name)
+
+    @tool(description='Find stale branches with no recent activity and no open PRs')
+    def check_stale_branches(self, repo_name: str, stale_days: int = 30) -> ToolResult:
+        return check_stale_branches(repo_name, stale_days)
+
+    @tool(description='Run comprehensive extended hygiene analysis including all scan types')
+    def analyze_extended_hygiene(self, repo_name: str, stale_days: int = 5, branch_stale_days: int = 30) -> ToolResult:
+        return analyze_extended_hygiene(repo_name, stale_days, branch_stale_days)

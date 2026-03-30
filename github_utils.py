@@ -18,6 +18,7 @@
 
 import argparse
 import logging
+import re
 import sys
 import os
 import json
@@ -80,6 +81,10 @@ __all__ = [
     # Hygiene Analysis
     'analyze_pr_staleness', 'analyze_missing_reviews',
     'analyze_repo_pr_hygiene',
+    # Extended Hygiene
+    'analyze_naming_compliance', 'analyze_merge_conflicts',
+    'analyze_ci_failures', 'analyze_stale_branches',
+    'analyze_extended_hygiene',
     # Rate Limit
     'get_rate_limit', 'check_rate_limit',
     # Display helpers
@@ -419,6 +424,267 @@ def _graphql_list_open_prs(owner, name):
 
     log.info(f'GraphQL fetched {len(all_prs)} open PRs for {owner}/{name}')
     return all_prs
+
+
+def _graphql_pr_mergeability(owner, name):
+    '''Fetch mergeability status for all open PRs via GraphQL.
+
+    Returns a list of dicts with keys: number, title, author, url,
+    head_ref, base_ref, draft, mergeable.
+    '''
+    query = '''
+    query($owner: String!, $name: String!, $cursor: String) {
+      repository(owner: $owner, name: $name) {
+        pullRequests(first: 100, states: OPEN, after: $cursor) {
+          pageInfo { hasNextPage endCursor }
+          nodes {
+            number title isDraft url
+            headRefName baseRefName
+            author { login }
+            mergeable
+          }
+        }
+      }
+    }
+    '''
+    session = _get_graphql_session()
+    results = []
+    cursor = None
+    while True:
+        resp = session.post(
+            'https://api.github.com/graphql',
+            json={'query': query, 'variables': {
+                'owner': owner, 'name': name, 'cursor': cursor,
+            }},
+        )
+        body = resp.json()
+        if 'errors' in body:
+            raise GitHubPRError(f'GraphQL error: {body["errors"]}')
+
+        pr_data = body['data']['repository']['pullRequests']
+        for node in pr_data['nodes']:
+            results.append({
+                'number': node['number'],
+                'title': node['title'],
+                'author': (node.get('author') or {}).get('login', 'unknown'),
+                'url': node['url'],
+                'head_ref': node['headRefName'],
+                'base_ref': node['baseRefName'],
+                'draft': node['isDraft'],
+                'mergeable': node.get('mergeable'),
+            })
+
+        page_info = pr_data['pageInfo']
+        if not page_info['hasNextPage']:
+            break
+        cursor = page_info['endCursor']
+
+    log.info(f'GraphQL fetched mergeability for {len(results)} open PRs in {owner}/{name}')
+    return results
+
+
+def _graphql_pr_ci_status(owner, name):
+    '''Fetch CI check rollup status for all open PRs via GraphQL.
+
+    Returns a list of dicts with keys: number, title, author, url,
+    head_ref, base_ref, draft, rollup_state, failed_checks.
+    '''
+    query = '''
+    query($owner: String!, $name: String!, $cursor: String) {
+      repository(owner: $owner, name: $name) {
+        pullRequests(first: 100, states: OPEN, after: $cursor) {
+          pageInfo { hasNextPage endCursor }
+          nodes {
+            number title isDraft url
+            headRefName baseRefName
+            author { login }
+            commits(last: 1) {
+              nodes {
+                commit {
+                  statusCheckRollup {
+                    state
+                    contexts(first: 30) {
+                      nodes {
+                        ... on CheckRun {
+                          name
+                          conclusion
+                          status
+                        }
+                        ... on StatusContext {
+                          context
+                          state
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    '''
+    session = _get_graphql_session()
+    results = []
+    cursor = None
+    while True:
+        resp = session.post(
+            'https://api.github.com/graphql',
+            json={'query': query, 'variables': {
+                'owner': owner, 'name': name, 'cursor': cursor,
+            }},
+        )
+        body = resp.json()
+        if 'errors' in body:
+            raise GitHubPRError(f'GraphQL error: {body["errors"]}')
+
+        pr_data = body['data']['repository']['pullRequests']
+        for node in pr_data['nodes']:
+            rollup_state = None
+            failed_checks = []
+
+            commits = node.get('commits', {}).get('nodes', [])
+            if commits:
+                rollup = commits[0].get('commit', {}).get('statusCheckRollup')
+                if rollup:
+                    rollup_state = rollup.get('state')
+                    for ctx in rollup.get('contexts', {}).get('nodes', []):
+                        # CheckRun nodes have 'name' and 'conclusion'
+                        if 'name' in ctx and ctx.get('conclusion') in ('FAILURE', 'ERROR', 'TIMED_OUT'):
+                            failed_checks.append({
+                                'name': ctx['name'],
+                                'conclusion': ctx['conclusion'],
+                            })
+                        # StatusContext nodes have 'context' and 'state'
+                        elif 'context' in ctx and ctx.get('state') in ('FAILURE', 'ERROR'):
+                            failed_checks.append({
+                                'name': ctx['context'],
+                                'conclusion': ctx['state'],
+                            })
+
+            results.append({
+                'number': node['number'],
+                'title': node['title'],
+                'author': (node.get('author') or {}).get('login', 'unknown'),
+                'url': node['url'],
+                'head_ref': node['headRefName'],
+                'base_ref': node['baseRefName'],
+                'draft': node['isDraft'],
+                'rollup_state': rollup_state,
+                'failed_checks': failed_checks,
+            })
+
+        page_info = pr_data['pageInfo']
+        if not page_info['hasNextPage']:
+            break
+        cursor = page_info['endCursor']
+
+    log.info(f'GraphQL fetched CI status for {len(results)} open PRs in {owner}/{name}')
+    return results
+
+
+def _graphql_stale_branches(owner, name, stale_cutoff):
+    '''Fetch branches with last commit info and open PR association via GraphQL.
+
+    Args:
+        owner: Repository owner.
+        name: Repository name.
+        stale_cutoff: ISO datetime string; branches with last commit before
+            this cutoff are candidates for staleness.
+
+    Returns a list of dicts with keys: name, last_commit_date,
+    last_commit_author, is_protected, open_pr_count.
+    '''
+    query = '''
+    query($owner: String!, $name: String!, $cursor: String) {
+      repository(owner: $owner, name: $name) {
+        refs(refPrefix: "refs/heads/", first: 100, after: $cursor) {
+          pageInfo { hasNextPage endCursor }
+          totalCount
+          nodes {
+            name
+            target {
+              ... on Commit {
+                committedDate
+                author { name }
+              }
+            }
+            associatedPullRequests(states: OPEN, first: 1) {
+              totalCount
+            }
+          }
+        }
+        branchProtectionRules(first: 20) {
+          nodes {
+            pattern
+          }
+        }
+      }
+    }
+    '''
+    session = _get_graphql_session()
+    results = []
+    protection_patterns = []
+    cursor = None
+    total_count = 0
+    while True:
+        resp = session.post(
+            'https://api.github.com/graphql',
+            json={'query': query, 'variables': {
+                'owner': owner, 'name': name, 'cursor': cursor,
+            }},
+        )
+        body = resp.json()
+        if 'errors' in body:
+            raise GitHubPRError(f'GraphQL error: {body["errors"]}')
+
+        repo_data = body['data']['repository']
+        refs_data = repo_data['refs']
+        total_count = refs_data.get('totalCount', 0)
+
+        # Collect branch protection patterns (only on first page)
+        if not protection_patterns:
+            for rule in repo_data.get('branchProtectionRules', {}).get('nodes', []):
+                protection_patterns.append(rule.get('pattern', ''))
+
+        for node in refs_data['nodes']:
+            target = node.get('target') or {}
+            committed_date = target.get('committedDate')
+            commit_author = (target.get('author') or {}).get('name', 'unknown')
+            open_pr_count = node.get('associatedPullRequests', {}).get('totalCount', 0)
+
+            # Check if branch matches any protection pattern
+            is_protected = False
+            for pattern in protection_patterns:
+                if _branch_matches_protection(node['name'], pattern):
+                    is_protected = True
+                    break
+
+            results.append({
+                'name': node['name'],
+                'last_commit_date': committed_date,
+                'last_commit_author': commit_author,
+                'is_protected': is_protected,
+                'open_pr_count': open_pr_count,
+            })
+
+        page_info = refs_data['pageInfo']
+        if not page_info['hasNextPage']:
+            break
+        cursor = page_info['endCursor']
+
+    log.info(f'GraphQL fetched {len(results)} branches for {owner}/{name}')
+    return results, total_count, protection_patterns
+
+
+def _branch_matches_protection(branch_name, pattern):
+    '''Check if a branch name matches a GitHub branch protection pattern.
+
+    GitHub patterns use fnmatch-style wildcards (e.g. "main", "release-*").
+    '''
+    import fnmatch
+    return fnmatch.fnmatch(branch_name, pattern)
 
 
 def reset_connection():
@@ -1006,6 +1272,542 @@ def analyze_repo_pr_hygiene(repo_name, stale_days=5):
 
 
 # ****************************************************************************************
+# Extended Hygiene — Phase 5 scans
+# ****************************************************************************************
+
+def analyze_naming_compliance(repo_name, ticket_patterns=None, _prefetched_prs=None):
+    '''
+    Check branch names and PR titles against Jira ticket naming convention.
+
+    Input:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        ticket_patterns: List of regex pattern strings to match ticket references.
+            Default: [r'(?i)(STL|STLSW)-\\d+']
+        _prefetched_prs: Optional pre-fetched PR list to avoid redundant API calls.
+
+    Output:
+        Dict with pr_findings, branch_findings, summary, and total_findings.
+
+    Raises:
+        GitHubRepoError: If the repository cannot be found.
+        GitHubPRError: If PR listing fails.
+    '''
+    log.debug(f'Entering analyze_naming_compliance(repo_name={repo_name})')
+
+    if ticket_patterns is None:
+        ticket_patterns = [r'(?i)(STL|STLSW)-\d+']
+
+    compiled_patterns = [re.compile(p) for p in ticket_patterns]
+    no_jira_re = re.compile(r'(?i)\[NO-JIRA\]')
+
+    if _prefetched_prs is not None:
+        prs = _prefetched_prs
+    else:
+        prs = list_pull_requests(repo_name, state='open')
+
+    pr_findings = []
+    branch_findings = []
+    title_compliant_count = 0
+    title_noncompliant_count = 0
+    no_jira_count = 0
+    branch_compliant_count = 0
+    branch_noncompliant_count = 0
+
+    for pr in prs:
+        title = pr.get('title', '')
+        head_ref = pr.get('head_branch', '') or pr.get('head_ref', '')
+        base_ref = pr.get('base_branch', '') or pr.get('base_ref', '')
+        author = pr.get('author', 'unknown')
+        number = pr.get('number', 0)
+
+        title_matches = any(p.search(title) for p in compiled_patterns)
+        has_no_jira = bool(no_jira_re.search(title))
+        title_ok = title_matches or has_no_jira
+        branch_ok = any(p.search(head_ref) for p in compiled_patterns)
+
+        if title_ok:
+            title_compliant_count += 1
+        else:
+            title_noncompliant_count += 1
+
+        if has_no_jira:
+            no_jira_count += 1
+
+        if branch_ok:
+            branch_compliant_count += 1
+        else:
+            branch_noncompliant_count += 1
+
+        # Severity: high if targeting main or release-* branches
+        targets_protected = base_ref in ('main', 'master') or base_ref.startswith('release-')
+        if not title_ok:
+            severity = 'high' if targets_protected else 'medium'
+        else:
+            severity = 'low'
+
+        if not title_ok:
+            pr_findings.append({
+                'pr': {
+                    'number': number,
+                    'title': title,
+                    'author': author,
+                    'url': pr.get('html_url', '') or pr.get('url', ''),
+                    'head_ref': head_ref,
+                    'base_ref': base_ref,
+                    'draft': pr.get('draft', False),
+                },
+                'title_compliant': title_ok,
+                'branch_compliant': branch_ok,
+                'has_no_jira': has_no_jira,
+                'severity': severity,
+            })
+
+        if not branch_ok:
+            branch_findings.append({
+                'branch_name': head_ref,
+                'pr_number': number,
+                'pr_title': title,
+                'author': author,
+            })
+
+    total_findings = title_noncompliant_count + branch_noncompliant_count
+
+    result = {
+        'repo': repo_name,
+        'scan_time': datetime.now(timezone.utc).isoformat(),
+        'ticket_patterns': ticket_patterns,
+        'pr_findings': pr_findings,
+        'branch_findings': branch_findings,
+        'summary': {
+            'total_prs_scanned': len(prs),
+            'title_compliant': title_compliant_count,
+            'title_noncompliant': title_noncompliant_count,
+            'no_jira_count': no_jira_count,
+            'branch_compliant': branch_compliant_count,
+            'branch_noncompliant': branch_noncompliant_count,
+        },
+        'total_findings': total_findings,
+    }
+
+    log.info(f'Naming compliance scan for {repo_name}: '
+             f'{title_noncompliant_count} title + {branch_noncompliant_count} branch findings')
+    return result
+
+
+def analyze_merge_conflicts(repo_name, _prefetched_prs=None):
+    '''
+    Find open PRs that have merge conflicts.
+
+    Uses GraphQL to fetch the mergeable field efficiently. Falls back to
+    REST if GraphQL fails (N+1 lazy fetches per PR).
+
+    Input:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        _prefetched_prs: Optional pre-fetched PR list (REST fallback only).
+
+    Output:
+        Dict with conflicts list, total_open_prs, total_conflicts, summary.
+
+    Raises:
+        GitHubRepoError: If the repository cannot be found.
+        GitHubPRError: If PR operations fail.
+    '''
+    log.debug(f'Entering analyze_merge_conflicts(repo_name={repo_name})')
+
+    conflicts = []
+    total_open = 0
+
+    parts = repo_name.split('/', 1)
+    graphql_ok = False
+
+    if len(parts) == 2:
+        try:
+            gql_prs = _graphql_pr_mergeability(parts[0], parts[1])
+            graphql_ok = True
+            total_open = len(gql_prs)
+            for pr in gql_prs:
+                if pr.get('mergeable') == 'CONFLICTING':
+                    conflicts.append({
+                        'pr': {
+                            'number': pr['number'],
+                            'title': pr['title'],
+                            'author': pr['author'],
+                            'url': pr['url'],
+                            'head_ref': pr['head_ref'],
+                            'base_ref': pr['base_ref'],
+                            'draft': pr['draft'],
+                        },
+                        'mergeable_state': 'CONFLICTING',
+                        'severity': 'high',
+                    })
+        except Exception as e:
+            log.warning(f'GraphQL mergeability fetch failed, falling back to REST: {e}')
+
+    if not graphql_ok:
+        prs = _prefetched_prs if _prefetched_prs is not None else list_pull_requests(
+            repo_name, state='open')
+        total_open = len(prs)
+        gh = get_connection()
+        repo_obj = gh.get_repo(repo_name)
+        for pr in prs:
+            try:
+                pr_obj = repo_obj.get_pull(pr['number'])
+                if pr_obj.mergeable is False:
+                    conflicts.append({
+                        'pr': {
+                            'number': pr['number'],
+                            'title': pr.get('title', ''),
+                            'author': pr.get('author', 'unknown'),
+                            'url': pr.get('html_url', ''),
+                            'head_ref': pr.get('head_branch', '') or pr.get('head_ref', ''),
+                            'base_ref': pr.get('base_branch', '') or pr.get('base_ref', ''),
+                            'draft': pr.get('draft', False),
+                        },
+                        'mergeable_state': 'dirty',
+                        'severity': 'high',
+                    })
+            except Exception as e:
+                log.warning(f'Could not check mergeability for PR #{pr["number"]}: {e}')
+
+    total_conflicts = len(conflicts)
+    summary = f'{total_conflicts} of {total_open} open PRs have merge conflicts'
+
+    result = {
+        'repo': repo_name,
+        'scan_time': datetime.now(timezone.utc).isoformat(),
+        'conflicts': conflicts,
+        'total_open_prs': total_open,
+        'total_conflicts': total_conflicts,
+        'summary': summary,
+    }
+
+    log.info(f'Merge conflict scan for {repo_name}: {summary}')
+    return result
+
+
+def analyze_ci_failures(repo_name, _prefetched_prs=None):
+    '''
+    Find open PRs with failing CI checks on their HEAD commit.
+
+    Uses GraphQL to fetch statusCheckRollup efficiently. Falls back to
+    REST commit status checks if GraphQL fails.
+
+    Input:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        _prefetched_prs: Optional pre-fetched PR list (REST fallback only).
+
+    Output:
+        Dict with failures list, total_open_prs, total_failures, summary.
+
+    Raises:
+        GitHubRepoError: If the repository cannot be found.
+        GitHubPRError: If PR operations fail.
+    '''
+    log.debug(f'Entering analyze_ci_failures(repo_name={repo_name})')
+
+    failures = []
+    total_open = 0
+
+    parts = repo_name.split('/', 1)
+    graphql_ok = False
+
+    if len(parts) == 2:
+        try:
+            gql_prs = _graphql_pr_ci_status(parts[0], parts[1])
+            graphql_ok = True
+            total_open = len(gql_prs)
+            for pr in gql_prs:
+                rollup = pr.get('rollup_state')
+                if rollup in ('FAILURE', 'ERROR'):
+                    failures.append({
+                        'pr': {
+                            'number': pr['number'],
+                            'title': pr['title'],
+                            'author': pr['author'],
+                            'url': pr['url'],
+                            'head_ref': pr['head_ref'],
+                            'base_ref': pr['base_ref'],
+                            'draft': pr['draft'],
+                        },
+                        'rollup_state': rollup,
+                        'failed_checks': pr.get('failed_checks', []),
+                        'severity': 'high' if not pr.get('draft') else 'medium',
+                    })
+        except Exception as e:
+            log.warning(f'GraphQL CI status fetch failed, falling back to REST: {e}')
+
+    if not graphql_ok:
+        prs = _prefetched_prs if _prefetched_prs is not None else list_pull_requests(
+            repo_name, state='open')
+        total_open = len(prs)
+        gh = get_connection()
+        repo_obj = gh.get_repo(repo_name)
+        for pr in prs:
+            try:
+                pr_obj = repo_obj.get_pull(pr['number'])
+                head_sha = pr_obj.head.sha
+                commit = repo_obj.get_commit(head_sha)
+                failed_checks = []
+
+                for check in commit.get_check_runs():
+                    if check.conclusion in ('failure', 'timed_out'):
+                        failed_checks.append({
+                            'name': check.name,
+                            'conclusion': check.conclusion.upper(),
+                        })
+
+                for status in commit.get_statuses():
+                    if status.state in ('failure', 'error'):
+                        failed_checks.append({
+                            'name': status.context,
+                            'conclusion': status.state.upper(),
+                        })
+
+                if failed_checks:
+                    failures.append({
+                        'pr': {
+                            'number': pr['number'],
+                            'title': pr.get('title', ''),
+                            'author': pr.get('author', 'unknown'),
+                            'url': pr.get('html_url', ''),
+                            'head_ref': pr.get('head_branch', '') or pr.get('head_ref', ''),
+                            'base_ref': pr.get('base_branch', '') or pr.get('base_ref', ''),
+                            'draft': pr.get('draft', False),
+                        },
+                        'rollup_state': 'FAILURE',
+                        'failed_checks': failed_checks,
+                        'severity': 'high' if not pr.get('draft') else 'medium',
+                    })
+            except Exception as e:
+                log.warning(f'Could not check CI status for PR #{pr["number"]}: {e}')
+
+    total_failures = len(failures)
+    summary = f'{total_failures} of {total_open} open PRs have failing CI checks'
+
+    result = {
+        'repo': repo_name,
+        'scan_time': datetime.now(timezone.utc).isoformat(),
+        'failures': failures,
+        'total_open_prs': total_open,
+        'total_failures': total_failures,
+        'summary': summary,
+    }
+
+    log.info(f'CI failure scan for {repo_name}: {summary}')
+    return result
+
+
+def analyze_stale_branches(repo_name, stale_days=30, exclude_protected=True):
+    '''
+    Find branches with no recent commits and no associated open PRs.
+
+    Uses GraphQL to fetch branch metadata efficiently.
+
+    Input:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        stale_days: Number of days without commits to consider stale (default: 30).
+        exclude_protected: Skip protected branches (default: True).
+
+    Output:
+        Dict with stale_branches list, summary, and total_findings.
+
+    Raises:
+        GitHubRepoError: If the repository cannot be found.
+        GitHubPRError: If branch operations fail.
+    '''
+    log.debug(f'Entering analyze_stale_branches(repo_name={repo_name}, '
+              f'stale_days={stale_days}, exclude_protected={exclude_protected})')
+
+    now = datetime.now(timezone.utc)
+    stale_cutoff = (now - timedelta(days=stale_days)).isoformat()
+
+    parts = repo_name.split('/', 1)
+    if len(parts) != 2:
+        raise GitHubRepoError(f'Invalid repo name format (expected owner/repo): {repo_name}')
+
+    branches, total_branches, protection_patterns = _graphql_stale_branches(
+        parts[0], parts[1], stale_cutoff)
+
+    stale_branches = []
+    protected_excluded = 0
+    with_open_prs = 0
+
+    for branch in branches:
+        if branch.get('open_pr_count', 0) > 0:
+            with_open_prs += 1
+            continue
+
+        if exclude_protected and branch.get('is_protected', False):
+            protected_excluded += 1
+            continue
+
+        committed_date_str = branch.get('last_commit_date')
+        if not committed_date_str:
+            continue
+
+        try:
+            committed_date = datetime.fromisoformat(committed_date_str.replace('Z', '+00:00'))
+            if committed_date.tzinfo is None:
+                committed_date = committed_date.replace(tzinfo=timezone.utc)
+        except (ValueError, TypeError):
+            continue
+
+        days_stale = (now - committed_date).days
+        if days_stale < stale_days:
+            continue
+
+        if days_stale < 60:
+            severity = 'low'
+        elif days_stale < 180:
+            severity = 'medium'
+        else:
+            severity = 'high'
+
+        stale_branches.append({
+            'name': branch['name'],
+            'last_commit_date': committed_date.isoformat(),
+            'last_commit_author': branch.get('last_commit_author', 'unknown'),
+            'days_stale': days_stale,
+            'is_protected': branch.get('is_protected', False),
+            'has_open_pr': False,
+            'severity': severity,
+        })
+
+    stale_branches.sort(key=lambda b: b['days_stale'], reverse=True)
+
+    result = {
+        'repo': repo_name,
+        'scan_time': datetime.now(timezone.utc).isoformat(),
+        'stale_days_threshold': stale_days,
+        'stale_branches': stale_branches,
+        'summary': {
+            'total_branches': total_branches,
+            'protected_excluded': protected_excluded,
+            'with_open_prs': with_open_prs,
+            'stale_count': len(stale_branches),
+        },
+        'total_findings': len(stale_branches),
+    }
+
+    log.info(f'Stale branch scan for {repo_name}: {len(stale_branches)} stale branches found')
+    return result
+
+
+def analyze_extended_hygiene(repo_name, stale_days=5, branch_stale_days=30, ticket_patterns=None):
+    '''
+    Combined extended hygiene report — runs all 6 scans in one pass.
+
+    Fetches the PR list once and passes it to each PR-based scan.
+    Stale branches is independent (fetches branches, not PRs).
+
+    Input:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        stale_days: PR staleness threshold in days (default: 5).
+        branch_stale_days: Branch staleness threshold in days (default: 30).
+        ticket_patterns: List of regex patterns for naming compliance.
+
+    Output:
+        Dict with results from all 6 scans plus combined totals.
+
+    Raises:
+        GitHubRepoError: If the repository cannot be found.
+        GitHubPRError: If operations fail.
+    '''
+    log.debug(f'Entering analyze_extended_hygiene(repo_name={repo_name})')
+    scan_time = datetime.now(timezone.utc).isoformat()
+
+    parts = repo_name.split('/', 1)
+    if len(parts) == 2:
+        try:
+            open_prs = _graphql_list_open_prs(parts[0], parts[1])
+        except Exception as e:
+            log.warning(f'GraphQL fetch failed, falling back to REST: {e}')
+            open_prs = list_pull_requests(repo_name, state='open', limit=500)
+    else:
+        open_prs = list_pull_requests(repo_name, state='open', limit=500)
+
+    total_open = len(open_prs)
+
+    stale_findings = analyze_pr_staleness(
+        repo_name, stale_days=stale_days, _prefetched_prs=open_prs)
+    review_findings = analyze_missing_reviews(
+        repo_name, _prefetched_prs=open_prs)
+    naming_findings = analyze_naming_compliance(
+        repo_name, ticket_patterns=ticket_patterns, _prefetched_prs=open_prs)
+    conflict_findings = analyze_merge_conflicts(repo_name)
+    ci_findings = analyze_ci_failures(repo_name)
+
+    try:
+        branch_findings = analyze_stale_branches(
+            repo_name, stale_days=branch_stale_days)
+    except Exception as e:
+        log.warning(f'Stale branch scan failed: {e}')
+        branch_findings = {
+            'repo': repo_name,
+            'scan_time': scan_time,
+            'stale_days_threshold': branch_stale_days,
+            'stale_branches': [],
+            'summary': {'total_branches': 0, 'protected_excluded': 0,
+                        'with_open_prs': 0, 'stale_count': 0},
+            'total_findings': 0,
+        }
+
+    naming_count = naming_findings['total_findings']
+    conflict_count = conflict_findings['total_conflicts']
+    ci_count = ci_findings['total_failures']
+    branch_count = branch_findings['total_findings']
+    total_findings = (
+        len(stale_findings)
+        + len(review_findings)
+        + naming_count
+        + conflict_count
+        + ci_count
+        + branch_count
+    )
+
+    summary_parts = []
+    if stale_findings:
+        summary_parts.append(f'{len(stale_findings)} stale PR(s)')
+    if review_findings:
+        summary_parts.append(f'{len(review_findings)} PR(s) missing reviews')
+    nf = naming_findings.get('total_findings', 0)
+    if nf:
+        summary_parts.append(f'{nf} naming finding(s)')
+    cf = conflict_findings.get('total_conflicts', 0)
+    if cf:
+        summary_parts.append(f'{cf} merge conflict(s)')
+    ci = ci_findings.get('total_failures', 0)
+    if ci:
+        summary_parts.append(f'{ci} CI failure(s)')
+    bf = branch_findings.get('total_findings', 0)
+    if bf:
+        summary_parts.append(f'{bf} stale branch(es)')
+
+    if not summary_parts:
+        summary = f'{repo_name}: {total_open} open PRs, no hygiene issues found'
+    else:
+        summary = (f'{repo_name}: {total_findings} findings across {total_open} open PRs — '
+                   + ', '.join(summary_parts))
+
+    report = {
+        'repo': repo_name,
+        'scan_time': scan_time,
+        'stale_prs': stale_findings,
+        'missing_reviews': review_findings,
+        'naming_findings': naming_findings,
+        'merge_conflicts': conflict_findings,
+        'ci_failures': ci_findings,
+        'stale_branches': branch_findings,
+        'total_open_prs': total_open,
+        'total_findings': total_findings,
+        'summary': summary,
+    }
+
+    log.info(f'Extended hygiene scan complete for {repo_name}: {summary}')
+    return report
+
+
+# ****************************************************************************************
 # Rate limit
 # ****************************************************************************************
 
@@ -1163,6 +1965,20 @@ Examples:
                         help='Full PR hygiene report for a repository')
     parser.add_argument('--days', type=int, default=5,
                         help='Staleness threshold in days (default: 5)')
+
+    # Extended hygiene operations
+    parser.add_argument('--naming-compliance', type=str, metavar='REPO',
+                        help='Check PR title and branch naming compliance')
+    parser.add_argument('--merge-conflicts', type=str, metavar='REPO',
+                        help='Find open PRs with merge conflicts')
+    parser.add_argument('--ci-failures', type=str, metavar='REPO',
+                        help='Find open PRs with failing CI checks')
+    parser.add_argument('--stale-branches', type=str, metavar='REPO',
+                        help='Find stale branches with no recent commits')
+    parser.add_argument('--extended-hygiene', type=str, metavar='REPO',
+                        help='Full extended hygiene report (all scans)')
+    parser.add_argument('--branch-stale-days', type=int, default=30,
+                        help='Branch staleness threshold in days (default: 30)')
 
     # Rate limit
     parser.add_argument('--rate-limit', action='store_true',
@@ -1411,6 +2227,138 @@ def main():
                                f'{f.get("reason")} [{f.get("severity")}]')
                     output('')
 
+                output(f'Total open PRs scanned: {report.get("total_open_prs")}')
+                output(f'Total findings: {report.get("total_findings")}')
+                output('')
+
+        # --- Extended hygiene operations ---
+
+        if args.naming_compliance:
+            report = analyze_naming_compliance(args.naming_compliance)
+            if args.json:
+                output(json.dumps(report, indent=2))
+            else:
+                output('')
+                output(f'Naming Compliance — {report.get("repo")}')
+                output(f'Scan time: {report.get("scan_time")}')
+                output(f'Patterns: {report.get("ticket_patterns")}')
+                output('=' * 120)
+                s = report.get('summary', {})
+                output(f'PRs scanned: {s.get("total_prs_scanned", 0)}  |  '
+                       f'Title compliant: {s.get("title_compliant", 0)}  |  '
+                       f'Title non-compliant: {s.get("title_noncompliant", 0)}  |  '
+                       f'[NO-JIRA]: {s.get("no_jira_count", 0)}')
+                output(f'Branch compliant: {s.get("branch_compliant", 0)}  |  '
+                       f'Branch non-compliant: {s.get("branch_noncompliant", 0)}')
+                output('')
+                pf = report.get('pr_findings', [])
+                if pf:
+                    output(f'Non-compliant PR titles ({len(pf)}):')
+                    output('-' * 120)
+                    for f in pf:
+                        pr = f.get('pr', {})
+                        output(f'  PR #{pr.get("number")} ({pr.get("author")}): '
+                               f'"{pr.get("title")}" -> {pr.get("base_ref")} '
+                               f'[{f.get("severity")}]')
+                    output('')
+                bf = report.get('branch_findings', [])
+                if bf:
+                    output(f'Non-compliant branches ({len(bf)}):')
+                    output('-' * 120)
+                    for f in bf:
+                        output(f'  {f.get("branch_name")} (PR #{f.get("pr_number")}, '
+                               f'{f.get("author")})')
+                    output('')
+                output(f'Total findings: {report.get("total_findings")}')
+                output('')
+
+        if args.merge_conflicts:
+            report = analyze_merge_conflicts(args.merge_conflicts)
+            if args.json:
+                output(json.dumps(report, indent=2))
+            else:
+                output('')
+                output(f'Merge Conflicts — {report.get("repo")}')
+                output(f'Scan time: {report.get("scan_time")}')
+                output('=' * 120)
+                output(report.get('summary', ''))
+                output('')
+                for f in report.get('conflicts', []):
+                    pr = f.get('pr', {})
+                    output(f'  PR #{pr.get("number")} ({pr.get("author")}): '
+                           f'"{pr.get("title")}" — {pr.get("head_ref")} -> {pr.get("base_ref")} '
+                           f'[{f.get("mergeable_state")}]')
+                if report.get('conflicts'):
+                    output('')
+
+        if args.ci_failures:
+            report = analyze_ci_failures(args.ci_failures)
+            if args.json:
+                output(json.dumps(report, indent=2))
+            else:
+                output('')
+                output(f'CI Failures — {report.get("repo")}')
+                output(f'Scan time: {report.get("scan_time")}')
+                output('=' * 120)
+                output(report.get('summary', ''))
+                output('')
+                for f in report.get('failures', []):
+                    pr = f.get('pr', {})
+                    checks = ', '.join(c.get('name', '') for c in f.get('failed_checks', []))
+                    output(f'  PR #{pr.get("number")} ({pr.get("author")}): '
+                           f'"{pr.get("title")}" — {f.get("rollup_state")} '
+                           f'[{f.get("severity")}]')
+                    if checks:
+                        output(f'    Failed: {checks}')
+                if report.get('failures'):
+                    output('')
+
+        if args.stale_branches:
+            report = analyze_stale_branches(
+                args.stale_branches, stale_days=args.branch_stale_days)
+            if args.json:
+                output(json.dumps(report, indent=2))
+            else:
+                output('')
+                output(f'Stale Branches — {report.get("repo")}')
+                output(f'Scan time: {report.get("scan_time")}')
+                output(f'Threshold: {report.get("stale_days_threshold")} days')
+                output('=' * 120)
+                s = report.get('summary', {})
+                output(f'Total branches: {s.get("total_branches", 0)}  |  '
+                       f'Protected excluded: {s.get("protected_excluded", 0)}  |  '
+                       f'With open PRs: {s.get("with_open_prs", 0)}  |  '
+                       f'Stale: {s.get("stale_count", 0)}')
+                output('')
+                output(f'{"Branch":<40} {"Last Commit":<25} {"Author":<20} {"Days":<8} {"Severity":<10}')
+                output('-' * 120)
+                for b in report.get('stale_branches', []):
+                    name = b.get('name', '')
+                    if len(name) > 38:
+                        name = name[:38] + '..'
+                    lcd = (b.get('last_commit_date', '') or '')[:10]
+                    author = b.get('last_commit_author', '')
+                    if len(author) > 18:
+                        author = author[:18] + '..'
+                    output(f'{name:<40} {lcd:<25} {author:<20} '
+                           f'{str(b.get("days_stale", 0)):<8} {b.get("severity", ""):<10}')
+                output('=' * 120)
+                output(f'Total: {report.get("total_findings")} stale branches')
+                output('')
+
+        if args.extended_hygiene:
+            report = analyze_extended_hygiene(
+                args.extended_hygiene, stale_days=args.days,
+                branch_stale_days=args.branch_stale_days)
+            if args.json:
+                output(json.dumps(report, indent=2))
+            else:
+                output('')
+                output(f'Extended Hygiene Report — {report.get("repo")}')
+                output(f'Scan time: {report.get("scan_time")}')
+                output('=' * 80)
+                output(report.get('summary', ''))
+                output('')
                 output(f'Total open PRs scanned: {report.get("total_open_prs")}')
                 output(f'Total findings: {report.get("total_findings")}')
                 output('')

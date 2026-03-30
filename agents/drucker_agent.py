@@ -531,6 +531,60 @@ class DruckerCoordinatorAgent(BaseAgent):
                         errors.append(f'{job_id}:{repo}: {exc}')
                 continue
 
+            # ── GitHub extended hygiene scan ───────────────────────
+            elif scan_type == 'github-extended':
+                github_repos = job_spec.get('github_repos') or []
+                if isinstance(github_repos, str):
+                    github_repos = [github_repos]
+                github_stale_days = int(
+                    job_spec.get('github_stale_days', 5)
+                )
+                branch_stale_days = int(
+                    job_spec.get('branch_stale_days', 30)
+                )
+
+                for repo in github_repos:
+                    try:
+                        import github_utils
+                        report = github_utils.analyze_extended_hygiene(
+                            repo,
+                            stale_days=github_stale_days,
+                            branch_stale_days=branch_stale_days,
+                        )
+                        tasks.append({
+                            'ok': True,
+                            'task_type': 'github_extended_hygiene',
+                            'job_id': job_id,
+                            'repo': repo,
+                            'report': report,
+                        })
+                        if notify_enabled:
+                            total_findings = report.get(
+                                'total_findings', 0
+                            )
+                            notifications.append(
+                                notify_shannon(
+                                    agent_id='drucker',
+                                    shannon_base_url=shannon_base_url,
+                                    title=f'GitHub Extended Hygiene: {repo}',
+                                    text=(
+                                        f'{total_findings} finding(s) '
+                                        f'in {repo}'
+                                    ),
+                                    body_lines=[
+                                        f'Stale PRs: {len(report.get("stale_prs", []))}',
+                                        f'Missing reviews: {len(report.get("missing_reviews", []))}',
+                                        f'Naming findings: {report.get("naming_findings", {}).get("total_findings", 0)}',
+                                        f'Merge conflicts: {report.get("merge_conflicts", {}).get("total_conflicts", 0)}',
+                                        f'CI failures: {report.get("ci_failures", {}).get("total_failures", 0)}',
+                                        f'Stale branches: {report.get("stale_branches", {}).get("total_findings", 0)}',
+                                    ],
+                                )
+                            )
+                    except Exception as exc:
+                        errors.append(f'{job_id}:{repo}: {exc}')
+                continue
+
             # ── Jira hygiene scan (default) ─────────────────────────
             project_key = str(
                 job_spec.get('project_key') or self.project_key or ''

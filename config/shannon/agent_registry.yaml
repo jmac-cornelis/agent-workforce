@@ -95,6 +95,32 @@ agents:
         description: List open PRs for a repository
         api_method: GET
         api_path: /v1/github/prs
+      # --- GitHub extended hygiene commands ---
+      - command: /naming-compliance
+        description: Check branch/PR naming compliance against Jira conventions
+        api_method: POST
+        api_path: /v1/github/naming-compliance
+        mutation: false
+      - command: /merge-conflicts
+        description: Find open PRs with merge conflicts
+        api_method: POST
+        api_path: /v1/github/merge-conflicts
+        mutation: false
+      - command: /ci-failures
+        description: Find open PRs with failing CI checks
+        api_method: POST
+        api_path: /v1/github/ci-failures
+        mutation: false
+      - command: /stale-branches
+        description: Find stale branches with no activity and no open PRs
+        api_method: POST
+        api_path: /v1/github/stale-branches
+        mutation: false
+      - command: /extended-hygiene
+        description: Run comprehensive extended hygiene analysis (all scan types)
+        api_method: POST
+        api_path: /v1/github/extended-hygiene
+        mutation: false
     timeout_seconds: 30
 
   - agent_id: gantt

@@ -2628,6 +2628,113 @@ async def get_github_rate_limit() -> list[Any]:
 
 
 # ---------------------------------------------------------------------------
+# Tool 37: check_naming_compliance — Check branch/PR naming conventions
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def check_naming_compliance(repo_full_name: str, ticket_patterns: str = '') -> list[Any]:
+    '''Check branch and PR title naming compliance against Jira ticket conventions.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/ifs-all').
+        ticket_patterns: Comma-separated regex patterns (default: STL/STLSW pattern).
+    '''
+    try:
+        github_utils.get_connection()
+        patterns = [p.strip() for p in ticket_patterns.split(',') if p.strip()] if ticket_patterns else None
+        result = github_utils.analyze_naming_compliance(repo_full_name, ticket_patterns=patterns)
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'check_naming_compliance failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 38: check_merge_conflicts — Find PRs with merge conflicts
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def check_merge_conflicts(repo_full_name: str) -> list[Any]:
+    '''Find open pull requests with merge conflicts.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/ifs-all').
+    '''
+    try:
+        github_utils.get_connection()
+        result = github_utils.analyze_merge_conflicts(repo_full_name)
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'check_merge_conflicts failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 39: check_ci_failures — Find PRs with failing CI checks
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def check_ci_failures(repo_full_name: str) -> list[Any]:
+    '''Find open pull requests with failing CI checks.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/ifs-all').
+    '''
+    try:
+        github_utils.get_connection()
+        result = github_utils.analyze_ci_failures(repo_full_name)
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'check_ci_failures failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 40: check_stale_branches — Find stale branches
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def check_stale_branches(repo_full_name: str, stale_days: int = 30) -> list[Any]:
+    '''Find stale branches with no recent activity and no open PRs.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/ifs-all').
+        stale_days: Number of days without activity to consider a branch stale (default: 30).
+    '''
+    try:
+        github_utils.get_connection()
+        result = github_utils.analyze_stale_branches(repo_full_name, stale_days=stale_days)
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'check_stale_branches failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 41: analyze_extended_hygiene — Comprehensive extended hygiene scan
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def analyze_extended_hygiene(repo_full_name: str, stale_days: int = 5, branch_stale_days: int = 30) -> list[Any]:
+    '''Run comprehensive extended hygiene analysis including all scan types.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/ifs-all').
+        stale_days: Number of days without activity to consider a PR stale (default: 5).
+        branch_stale_days: Number of days without activity to consider a branch stale (default: 30).
+    '''
+    try:
+        github_utils.get_connection()
+        result = github_utils.analyze_extended_hygiene(
+            repo_full_name, stale_days=stale_days, branch_stale_days=branch_stale_days,
+        )
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'analyze_extended_hygiene failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 

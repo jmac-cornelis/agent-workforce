@@ -25,3 +25,11 @@ jobs:
     enabled: false
     github_stale_days: 5
     github_repos: []
+
+  - job_id: github-extended-scan
+    description: Extended GitHub hygiene scan including naming, conflicts, CI, and stale branches.
+    scan_type: github-extended
+    enabled: false
+    github_stale_days: 5
+    branch_stale_days: 30
+    github_repos: []

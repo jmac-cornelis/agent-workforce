@@ -20,6 +20,7 @@ import requests
 
 from shannon.cards import (
     build_bug_activity_card,
+    build_ci_failures_card,
     build_drucker_hygiene_card,
     build_drucker_summary_card,
     build_dry_run_preview_card,
@@ -27,10 +28,13 @@ from shannon.cards import (
     build_gantt_release_monitor_card,
     build_gantt_release_survey_card,
     build_gantt_snapshot_card,
+    build_merge_conflicts_card,
+    build_naming_compliance_card,
     build_pr_hygiene_card,
     build_pr_list_card,
     build_pr_reviews_card,
     build_pr_stale_card,
+    build_stale_branches_card,
 )
 from shannon.models import AuditRecord, ConversationReference, ShannonResponse, normalize_command_text
 from shannon.poster import BasePoster, build_poster_from_env
@@ -412,6 +416,11 @@ class ShannonService:
             '/pr-stale': build_pr_stale_card,
             '/pr-reviews': build_pr_reviews_card,
             '/pr-list': build_pr_list_card,
+            '/naming-compliance': build_naming_compliance_card,
+            '/merge-conflicts': build_merge_conflicts_card,
+            '/ci-failures': build_ci_failures_card,
+            '/stale-branches': build_stale_branches_card,
+            '/extended-hygiene': build_pr_hygiene_card,
         },
         'gantt': {
             '/planning-snapshot': build_gantt_snapshot_card,
@@ -450,7 +459,11 @@ class ShannonService:
 
         card_builder = self.AGENT_CARD_BUILDERS.get(agent_id, {}).get(command)
         if card_builder and isinstance(data, dict):
-            if agent_id == 'drucker' and command in ('/pr-hygiene', '/pr-stale', '/pr-reviews', '/pr-list'):
+            if agent_id == 'drucker' and command in (
+                '/pr-hygiene', '/pr-stale', '/pr-reviews', '/pr-list',
+                '/naming-compliance', '/merge-conflicts', '/ci-failures',
+                '/stale-branches', '/extended-hygiene',
+            ):
                 card = card_builder(data)
                 repo = data.get('repo', '')
                 total = data.get('total_findings', data.get('total', len(data.get('prs', []))))

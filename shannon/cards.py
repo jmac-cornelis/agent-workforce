@@ -484,6 +484,176 @@ def build_pr_list_card(data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
+def build_naming_compliance_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a naming compliance scan result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    title_results = data.get('title_compliance', {})
+    branch_results = data.get('branch_compliance', {})
+    total_scanned = data.get('total_scanned', 0)
+
+    facts = {
+        'Repository': repo,
+        'Total Scanned': total_scanned,
+        'Title Compliant': title_results.get('compliant', 0),
+        'Title Non-compliant': title_results.get('noncompliant', 0),
+        'No Jira Reference': title_results.get('no_jira_count', 0),
+        'Branch Compliant': branch_results.get('compliant', 0),
+        'Branch Non-compliant': branch_results.get('noncompliant', 0),
+    }
+
+    body_lines: list[str] = []
+
+    noncompliant_titles = title_results.get('noncompliant_items', [])
+    if noncompliant_titles:
+        body_lines.append('**Non-compliant PR Titles:**')
+        for item in noncompliant_titles[:5]:
+            pr = item.get('pr', {})
+            body_lines.append(
+                f'• #{pr.get("number", "")} '
+                f'{pr.get("title", "")} '
+                f'({pr.get("author", "")})'
+            )
+        if len(noncompliant_titles) > 5:
+            body_lines.append(f'  ...and {len(noncompliant_titles) - 5} more')
+
+    noncompliant_branches = branch_results.get('noncompliant_items', [])
+    if noncompliant_branches:
+        body_lines.append('**Non-compliant Branches:**')
+        for item in noncompliant_branches[:5]:
+            body_lines.append(
+                f'• {item.get("branch", "")} '
+                f'(PR #{item.get("pr_number", "")})'
+            )
+        if len(noncompliant_branches) > 5:
+            body_lines.append(f'  ...and {len(noncompliant_branches) - 5} more')
+
+    if not body_lines:
+        body_lines.append('All PRs and branches follow naming conventions.')
+
+    return build_fact_card(
+        title=f'Naming Compliance — {repo}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_merge_conflicts_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a merge conflicts scan result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    conflicts = data.get('conflicting_prs', [])
+    total_open = data.get('total_open_prs', 0)
+    total_conflicts = data.get('total_conflicts', len(conflicts))
+
+    facts = {
+        'Repository': repo,
+        'Open PRs': total_open,
+        'Total Conflicts': total_conflicts,
+    }
+
+    body_lines: list[str] = []
+    for item in conflicts[:8]:
+        pr = item.get('pr', {})
+        body_lines.append(
+            f'• #{pr.get("number", "")} '
+            f'{pr.get("title", "")} '
+            f'({pr.get("author", "")})'
+        )
+    if len(conflicts) > 8:
+        body_lines.append(f'  ...and {len(conflicts) - 8} more')
+
+    if not body_lines:
+        body_lines.append('No merge conflicts found.')
+
+    return build_fact_card(
+        title=f'Merge Conflicts — {repo}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_ci_failures_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a CI failures scan result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    failures = data.get('failing_prs', [])
+    total_open = data.get('total_open_prs', 0)
+    total_failures = data.get('total_failures', len(failures))
+
+    facts = {
+        'Repository': repo,
+        'Open PRs': total_open,
+        'Total Failures': total_failures,
+    }
+
+    body_lines: list[str] = []
+    for item in failures[:8]:
+        pr = item.get('pr', {})
+        failed_checks = item.get('failed_checks', [])
+        checks_str = ', '.join(failed_checks[:3])
+        if len(failed_checks) > 3:
+            checks_str += f' +{len(failed_checks) - 3} more'
+        body_lines.append(
+            f'• #{pr.get("number", "")} '
+            f'{pr.get("title", "")} '
+            f'— {checks_str} '
+            f'({pr.get("author", "")})'
+        )
+    if len(failures) > 8:
+        body_lines.append(f'  ...and {len(failures) - 8} more')
+
+    if not body_lines:
+        body_lines.append('No CI failures found.')
+
+    return build_fact_card(
+        title=f'CI Failures — {repo}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_stale_branches_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a stale branches scan result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    stale_branches = data.get('stale_branches', [])
+    threshold = data.get('stale_days', 30)
+    total_branches = data.get('total_branches', 0)
+    stale_count = data.get('stale_count', len(stale_branches))
+
+    facts = {
+        'Repository': repo,
+        'Threshold': f'{threshold} days',
+        'Total Branches': total_branches,
+        'Stale Branches': stale_count,
+    }
+
+    body_lines: list[str] = []
+    for item in stale_branches[:10]:
+        name = item.get('name', '')
+        days = item.get('days_stale', 0)
+        author = item.get('last_author', '')
+        body_lines.append(
+            f'• {name} — {days}d stale ({author})'
+        )
+    if len(stale_branches) > 10:
+        body_lines.append(f'  ...and {len(stale_branches) - 10} more')
+
+    if not body_lines:
+        body_lines.append('No stale branches found.')
+
+    return build_fact_card(
+        title=f'Stale Branches — {repo}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
 def build_dry_run_preview_card(
     agent_id: str,
     command: str,

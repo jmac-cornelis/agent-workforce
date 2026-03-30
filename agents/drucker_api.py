@@ -89,6 +89,30 @@ class PRReviewsRequest(BaseModel):
     repo: str
 
 
+class NamingComplianceRequest(BaseModel):
+    repo: str
+    ticket_patterns: Optional[str] = None
+
+
+class MergeConflictsRequest(BaseModel):
+    repo: str
+
+
+class CIFailuresRequest(BaseModel):
+    repo: str
+
+
+class StaleBranchesRequest(BaseModel):
+    repo: str
+    stale_days: int = 30
+
+
+class ExtendedHygieneRequest(BaseModel):
+    repo: str
+    stale_days: int = 5
+    branch_stale_days: int = 30
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title='Drucker Agent API', version='1.0.0')
 
@@ -441,6 +465,66 @@ def create_app() -> FastAPI:
             }
         except Exception as e:
             log.error(f'GitHub PR list failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/github/naming-compliance')
+    def github_naming_compliance(body: NamingComplianceRequest) -> Dict[str, Any]:
+        try:
+            import github_utils
+            report = github_utils.analyze_naming_compliance(
+                body.repo,
+                ticket_patterns=body.ticket_patterns,
+            )
+            return {'ok': True, 'data': report}
+        except Exception as e:
+            log.error(f'GitHub naming compliance scan failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/github/merge-conflicts')
+    def github_merge_conflicts(body: MergeConflictsRequest) -> Dict[str, Any]:
+        try:
+            import github_utils
+            report = github_utils.analyze_merge_conflicts(body.repo)
+            return {'ok': True, 'data': report}
+        except Exception as e:
+            log.error(f'GitHub merge conflicts scan failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/github/ci-failures')
+    def github_ci_failures(body: CIFailuresRequest) -> Dict[str, Any]:
+        try:
+            import github_utils
+            report = github_utils.analyze_ci_failures(body.repo)
+            return {'ok': True, 'data': report}
+        except Exception as e:
+            log.error(f'GitHub CI failures scan failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/github/stale-branches')
+    def github_stale_branches(body: StaleBranchesRequest) -> Dict[str, Any]:
+        try:
+            import github_utils
+            report = github_utils.analyze_stale_branches(
+                body.repo,
+                stale_days=body.stale_days,
+            )
+            return {'ok': True, 'data': report}
+        except Exception as e:
+            log.error(f'GitHub stale branches scan failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/github/extended-hygiene')
+    def github_extended_hygiene(body: ExtendedHygieneRequest) -> Dict[str, Any]:
+        try:
+            import github_utils
+            report = github_utils.analyze_extended_hygiene(
+                body.repo,
+                stale_days=body.stale_days,
+                branch_stale_days=body.branch_stale_days,
+            )
+            return {'ok': True, 'data': report}
+        except Exception as e:
+            log.error(f'GitHub extended hygiene scan failed: {e}')
             return {'ok': False, 'error': str(e)}
 
     return app
