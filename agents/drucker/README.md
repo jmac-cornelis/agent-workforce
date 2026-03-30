@@ -167,21 +167,92 @@ Run the FastAPI application locally:
 uvicorn agents.drucker.api:app --host 0.0.0.0 --port 8201
 ```
 
-### Polling Job
+## CLI Commands
 
-Start the polling loop for automated monitoring:
+### Workflows (via `pm_agent.py`)
+
+All workflows require `--project` / `-p` for the Jira project key.
+
+| Workflow | Description | Example |
+|----------|-------------|---------|
+| `drucker-hygiene` | Full Jira hygiene analysis | `python pm_agent.py --workflow drucker-hygiene -p STL` |
+| `drucker-issue-check` | Single ticket intake validation | `python pm_agent.py --workflow drucker-issue-check -p STL --ticket-key STLSW-1234` |
+| `drucker-intake-report` | Recent ticket intake report | `python pm_agent.py --workflow drucker-intake-report -p STL --since "2026-03-01"` |
+| `drucker-bug-activity` | Daily bug activity summary | `python pm_agent.py --workflow drucker-bug-activity -p STL --target-date 2026-03-30` |
+| `drucker-poll` | Scheduled hygiene polling loop | `python pm_agent.py --workflow drucker-poll -p STL --poll-interval 300 --max-cycles 0` |
+
+#### Drucker Workflow Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--stale-days DAYS` | 30 | Stale ticket threshold in days |
+| `--ticket-key KEY` | — | Specific Jira ticket for `drucker-issue-check` |
+| `--target-date YYYY-MM-DD` | today | Target date for `drucker-bug-activity` |
+| `--since WHEN` | — | Checkpoint override (ISO timestamp or `YYYY-MM-DD HH:MM`) |
+| `--recent-only` | off | Use recent-ticket intake scanning in `drucker-poll` |
+| `--poll-config FILE` | — | YAML config for polling jobs |
+| `--poll-job NAME` | — | Specific job ID from `--poll-config` |
+| `--poll-interval SECS` | 300 | Polling interval in seconds |
+| `--max-cycles N` | 1 | Number of polling cycles (`0` = continuous) |
+| `--github-repos REPO...` | — | GitHub repos for PR hygiene (format: `owner/repo`) |
+| `--github-stale-days DAYS` | 5 | Stale PR threshold in days |
+| `--notify-shannon` | off | Post summaries through Shannon |
+| `--shannon-url URL` | localhost:8200 | Shannon service base URL |
+| `--include-done` | off | Include done/closed issues |
+| `--output FILE` | auto | Output filename |
+| `--limit N` | 200 | Maximum tickets per scan |
+| `--env FILE` | `.env` | Alternate environment file |
+
+#### Drucker Polling Examples
 
 ```bash
-python pm_agent.py --workflow drucker-poll --poll-interval 300 --max-cycles 0 --github-repos cornelisnetworks/ifs-all
+# Single Jira hygiene cycle
+python pm_agent.py --workflow drucker-poll -p STL --max-cycles 1
+
+# Continuous polling with GitHub PR scanning
+python pm_agent.py --workflow drucker-poll -p STL \
+  --poll-interval 300 --max-cycles 0 \
+  --github-repos cornelisnetworks/ifs-all cornelisnetworks/opa-psm2 \
+  --github-stale-days 7 --notify-shannon
+
+# Poll with custom config file
+python pm_agent.py --workflow drucker-poll -p STL \
+  --poll-config agents/drucker/config/polling.yaml
 ```
 
-### CLI Execution
+### GitHub Utilities (via `github_utils.py`)
 
-Execute specific scans directly from the command line:
+Standalone CLI for GitHub operations. Requires `GITHUB_TOKEN` in the environment.
 
-```bash
-python github_utils.py --extended-hygiene cornelisnetworks/ifs-all
-```
+| Command | Description | Example |
+|---------|-------------|---------|
+| `--list-repos ORG` | List repositories in a GitHub org | `python github_utils.py --list-repos cornelisnetworks` |
+| `--repo-info REPO` | Get metadata for a repository | `python github_utils.py --repo-info cornelisnetworks/ifs-all` |
+| `--list-prs REPO` | List pull requests | `python github_utils.py --list-prs cornelisnetworks/ifs-all --state open` |
+| `--get-pr REPO N` | Get details for a specific PR | `python github_utils.py --get-pr cornelisnetworks/ifs-all 623` |
+| `--pr-reviews REPO N` | Get reviews for a specific PR | `python github_utils.py --pr-reviews cornelisnetworks/ifs-all 623` |
+| `--stale-prs REPO` | Find stale PRs | `python github_utils.py --stale-prs cornelisnetworks/ifs-all --days 7` |
+| `--missing-reviews REPO` | Find PRs missing reviews | `python github_utils.py --missing-reviews cornelisnetworks/ifs-all` |
+| `--pr-hygiene REPO` | Full PR hygiene report | `python github_utils.py --pr-hygiene cornelisnetworks/ifs-all --days 5` |
+| `--naming-compliance REPO` | Branch/PR naming compliance | `python github_utils.py --naming-compliance cornelisnetworks/ifs-all` |
+| `--merge-conflicts REPO` | Find PRs with merge conflicts | `python github_utils.py --merge-conflicts cornelisnetworks/ifs-all` |
+| `--ci-failures REPO` | Find PRs with failing CI | `python github_utils.py --ci-failures cornelisnetworks/ifs-all` |
+| `--stale-branches REPO` | Find stale branches | `python github_utils.py --stale-branches cornelisnetworks/ifs-all --branch-stale-days 60` |
+| `--extended-hygiene REPO` | Full extended report (all scans) | `python github_utils.py --extended-hygiene cornelisnetworks/ifs-all` |
+| `--rate-limit` | Show API rate limit status | `python github_utils.py --rate-limit` |
+
+#### GitHub CLI Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--state STATE` | open | PR state filter (`open`, `closed`, `all`) |
+| `--limit N` | 100 | Maximum number of results |
+| `--days N` | 5 | Staleness threshold in days |
+| `--branch-stale-days N` | 30 | Branch staleness threshold in days |
+| `--env FILE` | — | Alternate `.env` file |
+| `--quiet` / `-q` | off | Suppress stdout (log file still written) |
+| `--json` | off | Output as JSON instead of tables |
+| `--verbose` / `-v` | off | Enable verbose console logging |
 
 ## Directory Structure
 

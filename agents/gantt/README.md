@@ -53,6 +53,72 @@ Like all agents, Gantt also supports the standard operational commands: `/stats`
 @Shannon /release-monitor v2.4.0 execute
 ```
 
+## CLI Commands
+
+### Workflows (via `pm_agent.py`)
+
+All workflows require `--project` / `-p` for the Jira project key.
+
+| Workflow | Description | Example |
+|----------|-------------|---------|
+| `gantt-snapshot` | Create a planning snapshot | `python pm_agent.py --workflow gantt-snapshot -p STL` |
+| `gantt-snapshot-get` | Load a stored snapshot | `python pm_agent.py --workflow gantt-snapshot-get -p STL --snapshot-id abc123` |
+| `gantt-snapshot-list` | List stored snapshots | `python pm_agent.py --workflow gantt-snapshot-list -p STL` |
+| `gantt-release-monitor` | Release health monitoring | `python pm_agent.py --workflow gantt-release-monitor -p STL --releases v2.4.0` |
+| `gantt-release-monitor-get` | Load a stored release report | `python pm_agent.py --workflow gantt-release-monitor-get --report-id abc123` |
+| `gantt-release-monitor-list` | List stored release reports | `python pm_agent.py --workflow gantt-release-monitor-list -p STL` |
+| `gantt-release-survey` | Release execution survey | `python pm_agent.py --workflow gantt-release-survey -p STL --releases v2.4.0` |
+| `gantt-release-survey-get` | Load a stored survey | `python pm_agent.py --workflow gantt-release-survey-get --survey-id abc123` |
+| `gantt-release-survey-list` | List stored surveys | `python pm_agent.py --workflow gantt-release-survey-list -p STL` |
+| `gantt-poll` | Scheduled planning and monitoring | `python pm_agent.py --workflow gantt-poll -p STL --poll-interval 300` |
+
+#### Gantt Workflow Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--planning-horizon DAYS` | 90 | Planning horizon in days for snapshots |
+| `--releases CSV` | — | Comma-separated release names |
+| `--scope-label LABEL` | — | Jira scope label filter |
+| `--survey-mode MODE` | feature-dev | Survey mode (`feature-dev` or `bug`) |
+| `--run-release-monitor` | off | Include release monitoring in `gantt-poll` |
+| `--run-release-survey` | off | Include release surveys in `gantt-poll` |
+| `--include-done` | off | Include done/closed issues |
+| `--no-gap-analysis` | on | Disable roadmap gap analysis |
+| `--no-bug-report` | on | Disable bug status/priority summary |
+| `--no-velocity` | on | Disable velocity metrics |
+| `--no-readiness` | on | Disable readiness assessment |
+| `--no-compare-previous` | on | Disable previous-report delta comparison |
+| `--snapshot-id ID` | — | Stored snapshot ID for `gantt-snapshot-get` |
+| `--report-id ID` | — | Stored report ID for `gantt-release-monitor-get` |
+| `--survey-id ID` | — | Stored survey ID for `gantt-release-survey-get` |
+| `--evidence FILE...` | — | Evidence files (JSON, YAML, Markdown) |
+| `--poll-interval SECS` | 300 | Polling interval in seconds |
+| `--max-cycles N` | 1 | Number of polling cycles (`0` = continuous) |
+| `--notify-shannon` | off | Post summaries through Shannon |
+| `--shannon-url URL` | localhost:8200 | Shannon service base URL |
+| `--output FILE` | auto | Output filename |
+| `--limit N` | 200 | Maximum issues or snapshots to return |
+| `--env FILE` | `.env` | Alternate environment file |
+
+#### Gantt Polling Examples
+
+```bash
+# Single snapshot + release monitor cycle
+python pm_agent.py --workflow gantt-poll -p STL \
+  --releases v2.4.0 --run-release-monitor --max-cycles 1
+
+# Continuous polling with all capabilities
+python pm_agent.py --workflow gantt-poll -p STL \
+  --releases v2.4.0,v2.5.0 --scope-label cn5000 \
+  --run-release-monitor --run-release-survey \
+  --poll-interval 600 --max-cycles 0 --notify-shannon
+
+# Export a release monitor report with evidence
+python pm_agent.py --workflow gantt-release-monitor -p STL \
+  --releases v2.4.0 --evidence build_results.json test_summary.yaml \
+  --output reports/release_health.json
+```
+
 ## What Gantt Does
 
 Gantt analyzes several sources of truth to build its recommendations:

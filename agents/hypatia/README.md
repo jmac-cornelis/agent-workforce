@@ -44,6 +44,57 @@ Hypatia draws from multiple agents to build documentation:
 | Linnaeus | Traceability context |
 | Herodotus | Meeting-derived clarification and documentation suggestions |
 
+## CLI Commands
+
+### Workflow (via `pm_agent.py`)
+
+| Workflow | Description | Example |
+|----------|-------------|---------|
+| `hypatia-generate` | Generate source-grounded documentation | `python pm_agent.py --workflow hypatia-generate --doc-title "CN5000 Build Guide" --docs src/build.md` |
+
+#### Hypatia Workflow Options
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--doc-title TEXT` | auto | Document title |
+| `--doc-type TYPE` | engineering_reference | Document class (`as_built`, `engineering_reference`, `how_to`, `release_note_support`, `user_guide`) |
+| `--doc-summary TEXT` | — | Purpose/scope summary |
+| `--docs FILE...` | — | Source documents / datasheets |
+| `--evidence FILE...` | — | Evidence files (JSON, YAML, Markdown) |
+| `--target-file FILE` | auto | Repo-owned Markdown target |
+| `--confluence-title TITLE` | — | Confluence page title |
+| `--confluence-page PAGE` | — | Confluence page ID or title to update |
+| `--confluence-space SPACE` | — | Confluence space key or ID |
+| `--confluence-parent-id ID` | — | Parent page ID for new Confluence pages |
+| `--version-message TEXT` | — | Confluence version message |
+| `--doc-validation PROFILE` | default | Validation profile (`default`, `strict`, `sphinx`) |
+| `--execute` | off | Actually publish approved changes (default: dry-run preview) |
+| `--project` / `-p` | — | Jira project key (optional) |
+| `--output FILE` | auto | Output filename |
+| `--env FILE` | `.env` | Alternate environment file |
+
+#### Hypatia Examples
+
+```bash
+# Generate documentation from source files (dry-run preview)
+python pm_agent.py --workflow hypatia-generate \
+  --doc-title "OPA PSM2 Architecture" --doc-type engineering_reference \
+  --docs docs/architecture.md src/psm2_hal.c \
+  --evidence build_log.json test_results.yaml
+
+# Generate and publish to Confluence
+python pm_agent.py --workflow hypatia-generate \
+  --doc-title "CN5000 User Guide" --doc-type user_guide \
+  --docs docs/user_guide.md \
+  --confluence-space ENG --confluence-parent-id 12345 \
+  --execute
+
+# Generate with strict validation
+python pm_agent.py --workflow hypatia-generate \
+  --doc-title "Release Notes v2.4" --doc-type release_note_support \
+  --docs CHANGELOG.md --doc-validation strict
+```
+
 ## Directory Structure
 
 ```text
