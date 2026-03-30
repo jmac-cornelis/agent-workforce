@@ -55,42 +55,90 @@ Like all agents, Gantt also supports the standard operational commands: `/stats`
 
 ## CLI Commands
 
+### Standalone CLI (`gantt-agent`)
+
+Gantt has its own standalone CLI for direct access without going through `pm_agent.py`:
+
+```bash
+gantt-agent <command> [options]
+```
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `snapshot` | Create a planning snapshot | `gantt-agent snapshot --project STL` |
+| `snapshot-get` | Load a stored snapshot | `gantt-agent snapshot-get --snapshot-id abc123` |
+| `snapshot-list` | List stored snapshots | `gantt-agent snapshot-list --project STL` |
+| `release-monitor` | Release health monitoring | `gantt-agent release-monitor --project STL --releases v2.4.0` |
+| `release-monitor-get` | Load a stored release report | `gantt-agent release-monitor-get --report-id abc123` |
+| `release-monitor-list` | List stored release reports | `gantt-agent release-monitor-list --project STL` |
+| `release-survey` | Release execution survey | `gantt-agent release-survey --project STL --releases v2.4.0` |
+| `release-survey-get` | Load a stored survey | `gantt-agent release-survey-get --survey-id abc123` |
+| `release-survey-list` | List stored surveys | `gantt-agent release-survey-list --project STL` |
+| `poll` | Scheduled planning and monitoring | `gantt-agent poll --project STL --poll-interval 300` |
+
+#### Standalone CLI Examples
+
+```bash
+# Create a planning snapshot with JSON output
+gantt-agent snapshot --project STL --planning-horizon 90 --json
+
+# Release health check across two releases
+gantt-agent release-monitor --project STL --releases v2.4.0,v2.5.0
+
+# Continuous polling with release monitoring and Shannon notifications
+gantt-agent poll --project STL \
+  --releases v2.4.0 --run-release-monitor --run-release-survey \
+  --poll-interval 600 --max-cycles 0 --notify-shannon
+
+# Export a release monitor report with evidence
+gantt-agent release-monitor --project STL \
+  --releases v2.4.0 --evidence build_results.json test_summary.yaml \
+  --output reports/release_health.json
+
+# List recent snapshots
+gantt-agent snapshot-list --project STL --limit 10
+
+# Use alternate env file
+gantt-agent snapshot --project STL --env /path/to/production.env
+```
+
 ### Workflows (via `pm_agent.py`)
 
-All workflows require `--project` / `-p` for the Jira project key.
+The same functionality is also available through `pm_agent.py`:
 
-| Workflow | Description | Example |
-|----------|-------------|---------|
-| `gantt-snapshot` | Create a planning snapshot | `python pm_agent.py --workflow gantt-snapshot -p STL` |
-| `gantt-snapshot-get` | Load a stored snapshot | `python pm_agent.py --workflow gantt-snapshot-get -p STL --snapshot-id abc123` |
-| `gantt-snapshot-list` | List stored snapshots | `python pm_agent.py --workflow gantt-snapshot-list -p STL` |
-| `gantt-release-monitor` | Release health monitoring | `python pm_agent.py --workflow gantt-release-monitor -p STL --releases v2.4.0` |
-| `gantt-release-monitor-get` | Load a stored release report | `python pm_agent.py --workflow gantt-release-monitor-get --report-id abc123` |
-| `gantt-release-monitor-list` | List stored release reports | `python pm_agent.py --workflow gantt-release-monitor-list -p STL` |
-| `gantt-release-survey` | Release execution survey | `python pm_agent.py --workflow gantt-release-survey -p STL --releases v2.4.0` |
-| `gantt-release-survey-get` | Load a stored survey | `python pm_agent.py --workflow gantt-release-survey-get --survey-id abc123` |
-| `gantt-release-survey-list` | List stored surveys | `python pm_agent.py --workflow gantt-release-survey-list -p STL` |
-| `gantt-poll` | Scheduled planning and monitoring | `python pm_agent.py --workflow gantt-poll -p STL --poll-interval 300` |
+| Workflow | Example |
+|----------|---------|
+| `gantt-snapshot` | `python pm_agent.py --workflow gantt-snapshot -p STL` |
+| `gantt-snapshot-get` | `python pm_agent.py --workflow gantt-snapshot-get --snapshot-id abc123` |
+| `gantt-snapshot-list` | `python pm_agent.py --workflow gantt-snapshot-list -p STL` |
+| `gantt-release-monitor` | `python pm_agent.py --workflow gantt-release-monitor -p STL --releases v2.4.0` |
+| `gantt-release-monitor-get` | `python pm_agent.py --workflow gantt-release-monitor-get --report-id abc123` |
+| `gantt-release-monitor-list` | `python pm_agent.py --workflow gantt-release-monitor-list -p STL` |
+| `gantt-release-survey` | `python pm_agent.py --workflow gantt-release-survey -p STL --releases v2.4.0` |
+| `gantt-release-survey-get` | `python pm_agent.py --workflow gantt-release-survey-get --survey-id abc123` |
+| `gantt-release-survey-list` | `python pm_agent.py --workflow gantt-release-survey-list -p STL` |
+| `gantt-poll` | `python pm_agent.py --workflow gantt-poll -p STL --poll-interval 300` |
 
-#### Gantt Workflow Options
+#### Options Reference
 
 | Option | Default | Description |
 |--------|---------|-------------|
+| `--project` / `-p` | — | Jira project key (required for most commands) |
 | `--planning-horizon DAYS` | 90 | Planning horizon in days for snapshots |
 | `--releases CSV` | — | Comma-separated release names |
 | `--scope-label LABEL` | — | Jira scope label filter |
 | `--survey-mode MODE` | feature-dev | Survey mode (`feature-dev` or `bug`) |
-| `--run-release-monitor` | off | Include release monitoring in `gantt-poll` |
-| `--run-release-survey` | off | Include release surveys in `gantt-poll` |
+| `--run-release-monitor` | off | Include release monitoring in polling |
+| `--run-release-survey` | off | Include release surveys in polling |
 | `--include-done` | off | Include done/closed issues |
-| `--no-gap-analysis` | on | Disable roadmap gap analysis |
-| `--no-bug-report` | on | Disable bug status/priority summary |
-| `--no-velocity` | on | Disable velocity metrics |
-| `--no-readiness` | on | Disable readiness assessment |
-| `--no-compare-previous` | on | Disable previous-report delta comparison |
-| `--snapshot-id ID` | — | Stored snapshot ID for `gantt-snapshot-get` |
-| `--report-id ID` | — | Stored report ID for `gantt-release-monitor-get` |
-| `--survey-id ID` | — | Stored survey ID for `gantt-release-survey-get` |
+| `--no-gap-analysis` | off | Disable roadmap gap analysis |
+| `--no-bug-report` | off | Disable bug status/priority summary |
+| `--no-velocity` | off | Disable velocity metrics |
+| `--no-readiness` | off | Disable readiness assessment |
+| `--no-compare-previous` | off | Disable previous-report delta comparison |
+| `--snapshot-id ID` | — | Stored snapshot ID |
+| `--report-id ID` | — | Stored report ID |
+| `--survey-id ID` | — | Stored survey ID |
 | `--evidence FILE...` | — | Evidence files (JSON, YAML, Markdown) |
 | `--poll-interval SECS` | 300 | Polling interval in seconds |
 | `--max-cycles N` | 1 | Number of polling cycles (`0` = continuous) |
@@ -98,26 +146,8 @@ All workflows require `--project` / `-p` for the Jira project key.
 | `--shannon-url URL` | localhost:8200 | Shannon service base URL |
 | `--output FILE` | auto | Output filename |
 | `--limit N` | 200 | Maximum issues or snapshots to return |
+| `--json` | off | Output as JSON instead of formatted text |
 | `--env FILE` | `.env` | Alternate environment file |
-
-#### Gantt Polling Examples
-
-```bash
-# Single snapshot + release monitor cycle
-python pm_agent.py --workflow gantt-poll -p STL \
-  --releases v2.4.0 --run-release-monitor --max-cycles 1
-
-# Continuous polling with all capabilities
-python pm_agent.py --workflow gantt-poll -p STL \
-  --releases v2.4.0,v2.5.0 --scope-label cn5000 \
-  --run-release-monitor --run-release-survey \
-  --poll-interval 600 --max-cycles 0 --notify-shannon
-
-# Export a release monitor report with evidence
-python pm_agent.py --workflow gantt-release-monitor -p STL \
-  --releases v2.4.0 --evidence build_results.json test_summary.yaml \
-  --output reports/release_health.json
-```
 
 ## What Gantt Does
 
@@ -159,6 +189,7 @@ agents/gantt/
 ├── __init__.py
 ├── agent.py                # Core GanttProjectPlannerAgent logic
 ├── api.py                  # FastAPI endpoints (port 8202)
+├── cli.py                  # Standalone CLI (gantt-agent command)
 ├── components.py           # Interpreters, Mappers, and Planners
 ├── models.py               # Data models (PlanningRequest, etc.)
 ├── tools.py                # Agent tool wrappers

@@ -46,13 +46,60 @@ Hypatia draws from multiple agents to build documentation:
 
 ## CLI Commands
 
+### Standalone CLI (`hypatia-agent`)
+
+Hypatia has its own standalone CLI for direct access without going through `pm_agent.py`:
+
+```bash
+hypatia-agent <command> [options]
+```
+
+| Command | Description | Example |
+|---------|-------------|---------|
+| `generate` | Generate source-grounded documentation | `hypatia-agent generate --doc-title "CN5000 Build Guide" --docs src/build.md` |
+| `list` | List stored documentation records | `hypatia-agent list --project STL` |
+| `get` | Load a stored documentation record | `hypatia-agent get --doc-id abc123` |
+
+#### Standalone CLI Examples
+
+```bash
+# Generate documentation from source files (dry-run preview)
+hypatia-agent generate \
+  --doc-title "OPA PSM2 Architecture" --doc-type engineering_reference \
+  --docs docs/architecture.md src/psm2_hal.c \
+  --evidence build_log.json test_results.yaml
+
+# Generate and publish to Confluence
+hypatia-agent generate \
+  --doc-title "CN5000 User Guide" --doc-type user_guide \
+  --docs docs/user_guide.md \
+  --confluence-space ENG --confluence-parent-id 12345 \
+  --execute
+
+# Generate with strict validation and JSON output
+hypatia-agent generate \
+  --doc-title "Release Notes v2.4" --doc-type release_note_support \
+  --docs CHANGELOG.md --doc-validation strict --json
+
+# List recent documentation records
+hypatia-agent list --project STL --limit 10
+
+# Export a stored record
+hypatia-agent get --doc-id abc123 --output exported_record.json
+
+# Use alternate env file
+hypatia-agent generate --doc-title "Guide" --docs README.md --env /path/to/prod.env
+```
+
 ### Workflow (via `pm_agent.py`)
 
-| Workflow | Description | Example |
-|----------|-------------|---------|
-| `hypatia-generate` | Generate source-grounded documentation | `python pm_agent.py --workflow hypatia-generate --doc-title "CN5000 Build Guide" --docs src/build.md` |
+The same functionality is also available through `pm_agent.py`:
 
-#### Hypatia Workflow Options
+```bash
+python pm_agent.py --workflow hypatia-generate --doc-title "CN5000 Build Guide" --docs src/build.md
+```
+
+#### Options Reference
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -71,29 +118,8 @@ Hypatia draws from multiple agents to build documentation:
 | `--execute` | off | Actually publish approved changes (default: dry-run preview) |
 | `--project` / `-p` | — | Jira project key (optional) |
 | `--output FILE` | auto | Output filename |
+| `--json` | off | Output as JSON instead of formatted text |
 | `--env FILE` | `.env` | Alternate environment file |
-
-#### Hypatia Examples
-
-```bash
-# Generate documentation from source files (dry-run preview)
-python pm_agent.py --workflow hypatia-generate \
-  --doc-title "OPA PSM2 Architecture" --doc-type engineering_reference \
-  --docs docs/architecture.md src/psm2_hal.c \
-  --evidence build_log.json test_results.yaml
-
-# Generate and publish to Confluence
-python pm_agent.py --workflow hypatia-generate \
-  --doc-title "CN5000 User Guide" --doc-type user_guide \
-  --docs docs/user_guide.md \
-  --confluence-space ENG --confluence-parent-id 12345 \
-  --execute
-
-# Generate with strict validation
-python pm_agent.py --workflow hypatia-generate \
-  --doc-title "Release Notes v2.4" --doc-type release_note_support \
-  --docs CHANGELOG.md --doc-validation strict
-```
 
 ## Directory Structure
 
@@ -102,6 +128,7 @@ agents/hypatia/
 ├── README.md               # This file
 ├── __init__.py
 ├── agent.py                # HypatiaDocumentationAgent
+├── cli.py                  # Standalone CLI (hypatia-agent command)
 ├── models.py               # Documentation models
 ├── tools.py                # Agent tool wrappers
 ├── prompts/

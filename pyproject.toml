@@ -52,6 +52,8 @@ confluence-utils = "confluence_utils:main"
 jira-mcp-server = "mcp_server:run"
 drawio-utils = "drawio_utilities:main"
 pm-agent = "pm_agent:main"
+gantt-agent = "agents.gantt.cli:main"
+hypatia-agent = "agents.hypatia.cli:main"
 excel-utils = "excel_utils:main"
 
 [tool.setuptools]
