@@ -1,0 +1,57 @@
+# ==========================================================================
+# Caddyfile — TLS reverse proxy for Shannon Teams bot
+# ==========================================================================
+# Caddy handles:
+#   1. Automatic TLS certificate provisioning (Let's Encrypt / self-signed)
+#   2. HTTPS termination on port 443
+#   3. Reverse-proxying to Shannon on localhost:8200
+#
+# Teams Outgoing Webhooks REQUIRE HTTPS with a valid TLS certificate.
+#
+# Usage:
+#   caddy run --config /path/to/Caddyfile
+#   caddy start --config /path/to/Caddyfile   # daemonize
+#
+# For internal-only deployments (no public DNS), use the self-signed
+# variant below by uncommenting the tls internal directive.
+# ==========================================================================
+
+# Option A: Public domain with automatic Let's Encrypt
+# Uncomment this block if bld-node-48 has a public DNS A record.
+#
+# bld-node-48.cornelisnetworks.com {
+#     reverse_proxy localhost:8200
+# }
+
+# Option B: Internal deployment with self-signed TLS
+# Use this when the server only has an internal hostname.
+# Teams will NOT accept self-signed certs for outgoing webhooks,
+# but this works for Bot Framework (Azure validates via app ID, not cert).
+:443 {
+    tls internal
+
+    # Shannon Teams bot
+    reverse_proxy localhost:8200 {
+        # Pass original headers for webhook signature verification
+        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Real-IP {remote_host}
+    }
+
+    # Health check passthrough
+    handle /health {
+        reverse_proxy localhost:8200
+    }
+
+    log {
+        output file /var/log/caddy/shannon-access.log {
+            roll_size 50MiB
+            roll_keep 5
+        }
+    }
+}
+
+# HTTP → HTTPS redirect
+:80 {
+    redir https://{host}{uri} permanent
+}
