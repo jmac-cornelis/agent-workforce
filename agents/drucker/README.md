@@ -169,55 +169,75 @@ uvicorn agents.drucker.api:app --host 0.0.0.0 --port 8201
 
 ## CLI Commands
 
-### Workflows (via `pm_agent.py`)
+### Standalone CLI (`drucker-agent`)
 
-All workflows require `--project` / `-p` for the Jira project key.
+The preferred way to run Drucker from the command line:
 
-| Workflow | Description | Example |
-|----------|-------------|---------|
-| `drucker-hygiene` | Full Jira hygiene analysis | `python pm_agent.py --workflow drucker-hygiene -p STL` |
-| `drucker-issue-check` | Single ticket intake validation | `python pm_agent.py --workflow drucker-issue-check -p STL --ticket-key STLSW-1234` |
-| `drucker-intake-report` | Recent ticket intake report | `python pm_agent.py --workflow drucker-intake-report -p STL --since "2026-03-01"` |
-| `drucker-bug-activity` | Daily bug activity summary | `python pm_agent.py --workflow drucker-bug-activity -p STL --target-date 2026-03-30` |
-| `drucker-poll` | Scheduled hygiene polling loop | `python pm_agent.py --workflow drucker-poll -p STL --poll-interval 300 --max-cycles 0` |
+```bash
+drucker-agent <subcommand> [options]
+```
 
-#### Drucker Workflow Options
+| Subcommand | Description | Example |
+|------------|-------------|---------|
+| `hygiene` | Full Jira hygiene analysis | `drucker-agent hygiene -p STL` |
+| `issue-check` | Single ticket intake validation | `drucker-agent issue-check -p STL -t STLSW-1234` |
+| `intake-report` | Recent ticket intake report | `drucker-agent intake-report -p STL --since "2026-03-01"` |
+| `bug-activity` | Daily bug activity summary | `drucker-agent bug-activity -p STL --target-date 2026-03-30` |
+| `github-hygiene` | GitHub PR hygiene scan | `drucker-agent github-hygiene cornelisnetworks/ifs-all` |
+| `poll` | Scheduled hygiene polling loop | `drucker-agent poll -p STL --max-cycles 0` |
+
+### Via `pm-agent` (unified CLI)
+
+All Drucker subcommands are also available through the unified agent CLI:
+
+```bash
+pm-agent drucker hygiene -p STL
+pm-agent drucker poll -p STL --poll-interval 300 --max-cycles 0
+```
+
+### Drucker CLI Options
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `--stale-days DAYS` | 30 | Stale ticket threshold in days |
-| `--ticket-key KEY` | — | Specific Jira ticket for `drucker-issue-check` |
-| `--target-date YYYY-MM-DD` | today | Target date for `drucker-bug-activity` |
-| `--since WHEN` | — | Checkpoint override (ISO timestamp or `YYYY-MM-DD HH:MM`) |
-| `--recent-only` | off | Use recent-ticket intake scanning in `drucker-poll` |
+| `--stale-days DAYS` | 14 | Stale ticket threshold in days |
+| `--ticket-key KEY` / `-t` | — | Specific Jira ticket for `issue-check` |
+| `--target-date YYYY-MM-DD` | today | Target date for `bug-activity` |
+| `--since DATE` | — | Checkpoint override (YYYY-MM-DD) |
+| `--recent-only` | off | Use recent-ticket intake scanning in `poll` |
 | `--poll-config FILE` | — | YAML config for polling jobs |
 | `--poll-job NAME` | — | Specific job ID from `--poll-config` |
 | `--poll-interval SECS` | 300 | Polling interval in seconds |
 | `--max-cycles N` | 1 | Number of polling cycles (`0` = continuous) |
 | `--github-repos REPO...` | — | GitHub repos for PR hygiene (format: `owner/repo`) |
 | `--github-stale-days DAYS` | 5 | Stale PR threshold in days |
+| `--branch-stale-days DAYS` | 30 | Branch staleness threshold for `github-hygiene` |
+| `--extended` | off | Run all 6 GitHub checks in `github-hygiene` |
 | `--notify-shannon` | off | Post summaries through Shannon |
 | `--shannon-url URL` | localhost:8200 | Shannon service base URL |
 | `--include-done` | off | Include done/closed issues |
 | `--output FILE` | auto | Output filename |
 | `--limit N` | 200 | Maximum tickets per scan |
+| `--json` | off | Output as JSON |
 | `--env FILE` | `.env` | Alternate environment file |
 
-#### Drucker Polling Examples
+### Polling Examples
 
 ```bash
 # Single Jira hygiene cycle
-python pm_agent.py --workflow drucker-poll -p STL --max-cycles 1
+drucker-agent poll -p STL --max-cycles 1
 
 # Continuous polling with GitHub PR scanning
-python pm_agent.py --workflow drucker-poll -p STL \
+drucker-agent poll -p STL \
   --poll-interval 300 --max-cycles 0 \
   --github-repos cornelisnetworks/ifs-all cornelisnetworks/opa-psm2 \
   --github-stale-days 7 --notify-shannon
 
 # Poll with custom config file
-python pm_agent.py --workflow drucker-poll -p STL \
+drucker-agent poll -p STL \
   --poll-config agents/drucker/config/polling.yaml
+
+# GitHub-only: scan a single repo
+drucker-agent github-hygiene cornelisnetworks/ifs-all --extended
 ```
 
 ### GitHub Utilities (via `github_utils.py`)
@@ -263,6 +283,7 @@ agents/drucker/
 ├── agent.py               # Core DruckerCoordinatorAgent (tick, polling, analysis)
 ├── api.py                 # FastAPI endpoints (port 8201)
 ├── models.py              # DruckerRequest, DruckerFinding, DruckerAction, DruckerHygieneReport
+├── cli.py                 # Standalone CLI (drucker-agent entry point)
 ├── tools.py               # Agent tool wrappers
 ├── config/
 │   ├── polling.yaml       # Polling job definitions

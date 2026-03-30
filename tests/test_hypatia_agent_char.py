@@ -270,7 +270,7 @@ def test_workflow_hypatia_generate_writes_record_and_publications(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    import pm_agent
+    from agents.hypatia.cli import cmd_generate as hypatia_cmd_generate
     from agents.hypatia import agent as hypatia_agent_module
 
     class _FakeReviewAgent:
@@ -342,7 +342,6 @@ def test_workflow_hypatia_generate_writes_record_and_publications(
             ]
 
     monkeypatch.setattr(hypatia_agent_module, 'HypatiaDocumentationAgent', _FakeHypatiaAgent)
-    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
     monkeypatch.setenv('HYPATIA_DOC_DIR', str(tmp_path / 'store'))
 
     output_path = tmp_path / 'hypatia_record.json'
@@ -352,19 +351,24 @@ def test_workflow_hypatia_generate_writes_record_and_publications(
         doc_type='engineering_reference',
         doc_summary='Build summary',
         docs=[],
+        evidence=[],
         target_file=str(tmp_path / 'docs' / 'hypatia.md'),
         confluence_title=None,
         confluence_page=None,
         confluence_space=None,
         confluence_parent_id=None,
         version_message=None,
+        doc_validation='default',
         output=str(output_path),
         execute=True,
+        env=None,
+        json=False,
     )
 
-    exit_code = pm_agent._workflow_hypatia_generate(args)
+    with pytest.raises(SystemExit) as exc_info:
+        hypatia_cmd_generate(args)
 
-    assert exit_code == 0
+    assert exc_info.value.code == 0
     assert output_path.exists()
     assert (tmp_path / 'hypatia_record.md').exists()
     assert (tmp_path / 'hypatia_record_review.json').exists()

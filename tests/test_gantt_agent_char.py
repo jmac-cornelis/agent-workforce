@@ -1168,7 +1168,7 @@ def test_gantt_release_survey_confluence_markdown_uses_live_jira_macros():
 
 
 def test_workflow_gantt_poll_runs_poller(monkeypatch: pytest.MonkeyPatch):
-    import pm_agent
+    from agents.gantt.cli import cmd_poll as gantt_cmd_poll
     from agents.gantt import agent as gantt_agent_module
 
     class _FakeGanttAgent:
@@ -1216,7 +1216,6 @@ def test_workflow_gantt_poll_runs_poller(monkeypatch: pytest.MonkeyPatch):
             }
 
     monkeypatch.setattr(gantt_agent_module, 'GanttProjectPlannerAgent', _FakeGanttAgent)
-    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
 
     args = SimpleNamespace(
         project='STL',
@@ -1238,9 +1237,14 @@ def test_workflow_gantt_poll_runs_poller(monkeypatch: pytest.MonkeyPatch):
         shannon_url='http://shannon.test',
         poll_interval=60,
         max_cycles=2,
+        env=None,
+        json=False,
+        output=None,
     )
 
-    assert pm_agent._workflow_gantt_poll(args) == 0
+    with pytest.raises(SystemExit) as exc_info:
+        gantt_cmd_poll(args)
+    assert exc_info.value.code == 0
 
 
 def test_gantt_agent_loads_evidence_bundle(monkeypatch: pytest.MonkeyPatch, tmp_path):
@@ -1410,7 +1414,7 @@ def test_workflow_gantt_snapshot_writes_json_and_markdown(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    import pm_agent
+    from agents.gantt.cli import cmd_snapshot as gantt_cmd_snapshot
     from agents.gantt import agent as gantt_agent
 
     class _FakeGanttAgent:
@@ -1435,7 +1439,6 @@ def test_workflow_gantt_snapshot_writes_json_and_markdown(
             )
 
     monkeypatch.setattr(gantt_agent, 'GanttProjectPlannerAgent', _FakeGanttAgent)
-    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
     monkeypatch.setenv('GANTT_SNAPSHOT_DIR', str(tmp_path / 'store'))
 
     output_path = tmp_path / 'snapshot.json'
@@ -1445,11 +1448,15 @@ def test_workflow_gantt_snapshot_writes_json_and_markdown(
         limit=25,
         include_done=False,
         output=str(output_path),
+        evidence=None,
+        env=None,
+        json=False,
     )
 
-    exit_code = pm_agent._workflow_gantt_snapshot(args)
+    with pytest.raises(SystemExit) as exc_info:
+        gantt_cmd_snapshot(args)
 
-    assert exit_code == 0
+    assert exc_info.value.code == 0
     assert output_path.exists()
     assert (tmp_path / 'snapshot.md').exists()
 
@@ -1634,8 +1641,10 @@ def test_gantt_release_survey_store_save_load_and_list(tmp_path):
 def test_workflow_gantt_snapshot_get_and_list(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
+    capsys,
 ):
-    import pm_agent
+    from agents.gantt.cli import cmd_snapshot_get as gantt_cmd_snapshot_get
+    from agents.gantt.cli import cmd_snapshot_list as gantt_cmd_snapshot_list
     from agents.gantt.state.snapshot_store import GanttSnapshotStore
 
     store = GanttSnapshotStore(storage_dir=str(tmp_path / 'store'))
@@ -1673,41 +1682,42 @@ def test_workflow_gantt_snapshot_get_and_list(
 
     monkeypatch.setenv('GANTT_SNAPSHOT_DIR', str(tmp_path / 'store'))
 
-    get_messages = []
-    monkeypatch.setattr(pm_agent, 'output', lambda message='', **_kwargs: get_messages.append(str(message)))
-
     export_path = tmp_path / 'exported_snapshot.json'
     get_args = SimpleNamespace(
         snapshot_id='snap-010',
         project='STL',
         output=str(export_path),
+        env=None,
+        json=False,
     )
 
-    get_exit_code = pm_agent._workflow_gantt_snapshot_get(get_args)
+    with pytest.raises(SystemExit) as exc_info:
+        gantt_cmd_snapshot_get(get_args)
 
-    assert get_exit_code == 0
+    assert exc_info.value.code == 0
     assert export_path.exists()
     assert (tmp_path / 'exported_snapshot.md').exists()
     exported = json.loads(export_path.read_text(encoding='utf-8'))
     assert exported['snapshot_id'] == 'snap-010'
-    assert any('Stored in:' in message for message in get_messages)
+    get_output = capsys.readouterr().out
+    assert 'Stored in:' in get_output
 
-    list_messages = []
-    monkeypatch.setattr(pm_agent, 'output', lambda message='', **_kwargs: list_messages.append(str(message)))
+    list_args = SimpleNamespace(project='STL', limit=10, env=None, json=False)
 
-    list_args = SimpleNamespace(project='STL', limit=10)
-    list_exit_code = pm_agent._workflow_gantt_snapshot_list(list_args)
+    with pytest.raises(SystemExit) as exc_info:
+        gantt_cmd_snapshot_list(list_args)
 
-    assert list_exit_code == 0
-    assert any('snap-010' in message for message in list_messages)
-    assert any('snap-011' in message for message in list_messages)
+    assert exc_info.value.code == 0
+    list_output = capsys.readouterr().out
+    assert 'snap-010' in list_output
+    assert 'snap-011' in list_output
 
 
 def test_workflow_gantt_release_survey_writes_json_and_markdown(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    import pm_agent
+    from agents.gantt.cli import cmd_release_survey as gantt_cmd_release_survey
     from agents.gantt import agent as gantt_agent
     from agents.gantt.models import ReleaseSurveyReport, ReleaseSurveyReleaseSummary
 
@@ -1741,7 +1751,6 @@ def test_workflow_gantt_release_survey_writes_json_and_markdown(
             return survey
 
     monkeypatch.setattr(gantt_agent, 'GanttProjectPlannerAgent', _FakeGanttAgent)
-    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
     monkeypatch.setenv('GANTT_RELEASE_SURVEY_DIR', str(tmp_path / 'store'))
 
     output_path = tmp_path / 'release_survey.json'
@@ -1751,11 +1760,14 @@ def test_workflow_gantt_release_survey_writes_json_and_markdown(
         scope_label='CN6000',
         survey_mode='feature-dev',
         output=str(output_path),
+        env=None,
+        json=False,
     )
 
-    exit_code = pm_agent._workflow_gantt_release_survey(args)
+    with pytest.raises(SystemExit) as exc_info:
+        gantt_cmd_release_survey(args)
 
-    assert exit_code == 0
+    assert exc_info.value.code == 0
     assert output_path.exists()
     assert (tmp_path / 'release_survey.md').exists()
 
@@ -1772,8 +1784,10 @@ def test_workflow_gantt_release_survey_writes_json_and_markdown(
 def test_workflow_gantt_release_survey_get_and_list(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
+    capsys,
 ):
-    import pm_agent
+    from agents.gantt.cli import cmd_release_survey_get as gantt_cmd_release_survey_get
+    from agents.gantt.cli import cmd_release_survey_list as gantt_cmd_release_survey_list
     from agents.gantt.state.release_survey_store import GanttReleaseSurveyStore
 
     store = GanttReleaseSurveyStore(storage_dir=str(tmp_path / 'store'))
@@ -1817,39 +1831,32 @@ def test_workflow_gantt_release_survey_get_and_list(
 
     monkeypatch.setenv('GANTT_RELEASE_SURVEY_DIR', str(tmp_path / 'store'))
 
-    get_messages = []
-    monkeypatch.setattr(
-        pm_agent,
-        'output',
-        lambda message='', **_kwargs: get_messages.append(str(message)),
-    )
-
     export_path = tmp_path / 'exported_survey.json'
     get_args = SimpleNamespace(
         survey_id='sur-010',
         project='STL',
         output=str(export_path),
+        env=None,
+        json=False,
     )
 
-    get_exit_code = pm_agent._workflow_gantt_release_survey_get(get_args)
+    with pytest.raises(SystemExit) as exc_info:
+        gantt_cmd_release_survey_get(get_args)
 
-    assert get_exit_code == 0
+    assert exc_info.value.code == 0
     assert export_path.exists()
     assert (tmp_path / 'exported_survey.md').exists()
     exported = json.loads(export_path.read_text(encoding='utf-8'))
     assert exported['survey_id'] == 'sur-010'
-    assert any('Stored in:' in message for message in get_messages)
+    get_output = capsys.readouterr().out
+    assert 'Stored in:' in get_output
 
-    list_messages = []
-    monkeypatch.setattr(
-        pm_agent,
-        'output',
-        lambda message='', **_kwargs: list_messages.append(str(message)),
-    )
+    list_args = SimpleNamespace(project='STL', limit=10, env=None, json=False)
 
-    list_args = SimpleNamespace(project='STL', limit=10)
-    list_exit_code = pm_agent._workflow_gantt_release_survey_list(list_args)
+    with pytest.raises(SystemExit) as exc_info:
+        gantt_cmd_release_survey_list(list_args)
 
-    assert list_exit_code == 0
-    assert any('sur-010' in message for message in list_messages)
-    assert any('sur-011' in message for message in list_messages)
+    assert exc_info.value.code == 0
+    list_output = capsys.readouterr().out
+    assert 'sur-010' in list_output
+    assert 'sur-011' in list_output

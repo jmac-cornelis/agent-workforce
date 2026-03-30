@@ -365,16 +365,11 @@ def cmd_get(args: argparse.Namespace) -> None:
 # Argument parser
 # ---------------------------------------------------------------------------
 
-def build_parser() -> argparse.ArgumentParser:
-    '''Build the argparse parser for the Hypatia Documentation CLI.'''
-    parser = argparse.ArgumentParser(
-        prog='hypatia-agent',
-        description='Hypatia Documentation agent CLI — generate, list, and retrieve documentation records.',
-    )
-    sub = parser.add_subparsers(dest='command', required=True)
+def register_subcommands(subparsers) -> None:
+    '''Add Hypatia subcommands to an argparse subparsers group.'''
 
     # --- generate -----------------------------------------------------------
-    p = sub.add_parser(
+    p = subparsers.add_parser(
         'generate',
         help='Generate source-grounded documentation (primary workflow)',
     )
@@ -414,20 +409,28 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_generate)
 
     # --- list ---------------------------------------------------------------
-    p = sub.add_parser('list', help='List stored documentation records')
+    p = subparsers.add_parser('list', help='List stored documentation records')
     p.add_argument('--project', '-p', default=None, help='Filter by project')
     p.add_argument('--limit', type=int, default=20, help='Max records (default: 20)')
     p.add_argument('--json', action='store_true', default=False, help='JSON output')
     p.set_defaults(func=cmd_list)
 
     # --- get ----------------------------------------------------------------
-    p = sub.add_parser('get', help='Load a stored documentation record')
+    p = subparsers.add_parser('get', help='Load a stored documentation record')
     p.add_argument('--doc-id', required=True, help='Document record ID')
     p.add_argument('--project', '-p', default=None, help='Project filter')
     p.add_argument('--output', default=None, help='Export to file')
     p.add_argument('--json', action='store_true', default=False, help='JSON output')
     p.set_defaults(func=cmd_get)
 
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog='hypatia-agent',
+        description='Hypatia Documentation agent CLI',
+    )
+    sub = parser.add_subparsers(dest='command', required=True)
+    register_subcommands(sub)
     return parser
 
 

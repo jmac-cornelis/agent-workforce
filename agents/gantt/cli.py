@@ -607,15 +607,11 @@ def cmd_poll(args: argparse.Namespace) -> None:
 # Argument parser
 # ------------------------------------------------------------------
 
-def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(
-        prog='gantt-agent',
-        description='Gantt Project Planner agent CLI',
-    )
-    sub = parser.add_subparsers(dest='command', required=True)
+def register_subcommands(subparsers) -> None:
+    '''Add Gantt subcommands to an argparse subparsers group.'''
 
     # --- snapshot ---
-    p = sub.add_parser('snapshot', help='Create a planning snapshot')
+    p = subparsers.add_parser('snapshot', help='Create a planning snapshot')
     p.add_argument('--project', required=True, help='Jira project key')
     p.add_argument('--planning-horizon', type=int, default=90, metavar='DAYS',
                    dest='planning_horizon',
@@ -635,7 +631,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_snapshot)
 
     # --- snapshot-get ---
-    p = sub.add_parser('snapshot-get', help='Load a stored planning snapshot')
+    p = subparsers.add_parser('snapshot-get', help='Load a stored planning snapshot')
     p.add_argument('--snapshot-id', required=True, dest='snapshot_id',
                    help='Stored snapshot ID')
     p.add_argument('--project', default=None, help='Optional project filter')
@@ -644,14 +640,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_snapshot_get)
 
     # --- snapshot-list ---
-    p = sub.add_parser('snapshot-list', help='List stored planning snapshots')
+    p = subparsers.add_parser('snapshot-list', help='List stored planning snapshots')
     p.add_argument('--project', default=None, help='Optional project filter')
     p.add_argument('--limit', type=int, default=None, metavar='N',
                    help='Maximum snapshots to list')
     p.set_defaults(func=cmd_snapshot_list)
 
     # --- release-monitor ---
-    p = sub.add_parser('release-monitor', help='Create a release health report')
+    p = subparsers.add_parser('release-monitor', help='Create a release health report')
     p.add_argument('--project', required=True, help='Jira project key')
     p.add_argument('--releases', default=None, metavar='CSV',
                    help='Comma-separated release names')
@@ -682,7 +678,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_release_monitor)
 
     # --- release-monitor-get ---
-    p = sub.add_parser('release-monitor-get', help='Load a stored release report')
+    p = subparsers.add_parser('release-monitor-get', help='Load a stored release report')
     p.add_argument('--report-id', required=True, dest='report_id',
                    help='Stored report ID')
     p.add_argument('--project', default=None, help='Optional project filter')
@@ -691,14 +687,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_release_monitor_get)
 
     # --- release-monitor-list ---
-    p = sub.add_parser('release-monitor-list', help='List stored release reports')
+    p = subparsers.add_parser('release-monitor-list', help='List stored release reports')
     p.add_argument('--project', default=None, help='Optional project filter')
     p.add_argument('--limit', type=int, default=None, metavar='N',
                    help='Maximum reports to list')
     p.set_defaults(func=cmd_release_monitor_list)
 
     # --- release-survey ---
-    p = sub.add_parser('release-survey', help='Create a release execution survey')
+    p = subparsers.add_parser('release-survey', help='Create a release execution survey')
     p.add_argument('--project', required=True, help='Jira project key')
     p.add_argument('--releases', default=None, metavar='CSV',
                    help='Comma-separated release names')
@@ -718,7 +714,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_release_survey)
 
     # --- release-survey-get ---
-    p = sub.add_parser('release-survey-get', help='Load a stored release survey')
+    p = subparsers.add_parser('release-survey-get', help='Load a stored release survey')
     p.add_argument('--survey-id', required=True, dest='survey_id',
                    help='Stored survey ID')
     p.add_argument('--project', default=None, help='Optional project filter')
@@ -727,14 +723,14 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=cmd_release_survey_get)
 
     # --- release-survey-list ---
-    p = sub.add_parser('release-survey-list', help='List stored release surveys')
+    p = subparsers.add_parser('release-survey-list', help='List stored release surveys')
     p.add_argument('--project', default=None, help='Optional project filter')
     p.add_argument('--limit', type=int, default=None, metavar='N',
                    help='Maximum surveys to list')
     p.set_defaults(func=cmd_release_survey_list)
 
     # --- poll ---
-    p = sub.add_parser('poll', help='Scheduled planning/monitoring loop')
+    p = subparsers.add_parser('poll', help='Scheduled planning/monitoring loop')
     p.add_argument('--project', required=True, help='Jira project key')
     p.add_argument('--planning-horizon', type=int, default=90, metavar='DAYS',
                    dest='planning_horizon',
@@ -792,6 +788,14 @@ def build_parser() -> argparse.ArgumentParser:
                    help='Alternate .env file path')
     p.set_defaults(func=cmd_poll)
 
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog='gantt-agent',
+        description='Gantt Project Planner agent CLI',
+    )
+    sub = parser.add_subparsers(dest='command', required=True)
+    register_subcommands(sub)
     return parser
 
 

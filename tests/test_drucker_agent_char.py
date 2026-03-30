@@ -744,7 +744,7 @@ def test_workflow_drucker_hygiene_writes_report_files(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    import pm_agent
+    from agents.drucker.cli import cmd_hygiene
     from agents.drucker import agent as drucker_agent_module
 
     class _FakeDruckerAgent:
@@ -777,7 +777,6 @@ def test_workflow_drucker_hygiene_writes_report_files(
             )
 
     monkeypatch.setattr(drucker_agent_module, 'DruckerCoordinatorAgent', _FakeDruckerAgent)
-    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
     monkeypatch.setenv('DRUCKER_REPORT_DIR', str(tmp_path / 'store'))
 
     output_path = tmp_path / 'drucker_report.json'
@@ -787,11 +786,15 @@ def test_workflow_drucker_hygiene_writes_report_files(
         include_done=False,
         stale_days=21,
         output=str(output_path),
+        quiet=True,
+        json=False,
+        env=None,
     )
 
-    exit_code = pm_agent._workflow_drucker_hygiene(args)
+    with pytest.raises(SystemExit) as exc_info:
+        cmd_hygiene(args)
 
-    assert exit_code == 0
+    assert exc_info.value.code == 0
     assert output_path.exists()
     assert (tmp_path / 'drucker_report.md').exists()
     assert (tmp_path / 'drucker_report_review.json').exists()
@@ -810,7 +813,7 @@ def test_workflow_drucker_intake_report_writes_report_files(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    import pm_agent
+    from agents.drucker.cli import cmd_intake_report
     from agents.drucker import agent as drucker_agent_module
 
     class _FakeDruckerAgent:
@@ -847,7 +850,6 @@ def test_workflow_drucker_intake_report_writes_report_files(
             )
 
     monkeypatch.setattr(drucker_agent_module, 'DruckerCoordinatorAgent', _FakeDruckerAgent)
-    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
     monkeypatch.setenv('DRUCKER_REPORT_DIR', str(tmp_path / 'store'))
 
     output_path = tmp_path / 'drucker_intake_report.json'
@@ -857,11 +859,15 @@ def test_workflow_drucker_intake_report_writes_report_files(
         stale_days=21,
         since='2026-03-24 00:00',
         output=str(output_path),
+        quiet=True,
+        json=False,
+        env=None,
     )
 
-    exit_code = pm_agent._workflow_drucker_intake_report(args)
+    with pytest.raises(SystemExit) as exc_info:
+        cmd_intake_report(args)
 
-    assert exit_code == 0
+    assert exc_info.value.code == 0
     assert output_path.exists()
     assert (tmp_path / 'drucker_intake_report.md').exists()
     assert (tmp_path / 'drucker_intake_report_review.json').exists()
@@ -872,7 +878,7 @@ def test_workflow_drucker_issue_check_writes_report_files(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    import pm_agent
+    from agents.drucker.cli import cmd_issue_check
     from agents.drucker import agent as drucker_agent_module
 
     class _FakeDruckerAgent:
@@ -907,7 +913,6 @@ def test_workflow_drucker_issue_check_writes_report_files(
             )
 
     monkeypatch.setattr(drucker_agent_module, 'DruckerCoordinatorAgent', _FakeDruckerAgent)
-    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
     monkeypatch.setenv('DRUCKER_REPORT_DIR', str(tmp_path / 'store'))
 
     output_path = tmp_path / 'drucker_issue_check.json'
@@ -916,11 +921,15 @@ def test_workflow_drucker_issue_check_writes_report_files(
         ticket_key='STL-201',
         stale_days=21,
         output=str(output_path),
+        quiet=True,
+        json=False,
+        env=None,
     )
 
-    exit_code = pm_agent._workflow_drucker_issue_check(args)
+    with pytest.raises(SystemExit) as exc_info:
+        cmd_issue_check(args)
 
-    assert exit_code == 0
+    assert exc_info.value.code == 0
     assert output_path.exists()
     assert (tmp_path / 'drucker_issue_check.md').exists()
     assert (tmp_path / 'drucker_issue_check_review.json').exists()
@@ -931,7 +940,7 @@ def test_workflow_drucker_bug_activity_writes_report_files(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    import pm_agent
+    from agents.drucker.cli import cmd_bug_activity
     from agents.drucker import agent as drucker_agent_module
 
     class _FakeDruckerAgent:
@@ -961,24 +970,27 @@ def test_workflow_drucker_bug_activity_writes_report_files(
             return '# DRUCKER BUG ACTIVITY: STL\n\nSummary'
 
     monkeypatch.setattr(drucker_agent_module, 'DruckerCoordinatorAgent', _FakeDruckerAgent)
-    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
 
     output_path = tmp_path / 'drucker_bug_activity.json'
     args = SimpleNamespace(
         project='STL',
         target_date='2026-03-25',
         output=str(output_path),
+        quiet=True,
+        json=False,
+        env=None,
     )
 
-    exit_code = pm_agent._workflow_drucker_bug_activity(args)
+    with pytest.raises(SystemExit) as exc_info:
+        cmd_bug_activity(args)
 
-    assert exit_code == 0
+    assert exc_info.value.code == 0
     assert output_path.exists()
     assert (tmp_path / 'drucker_bug_activity.md').exists()
 
 
 def test_workflow_drucker_poll_runs_poller(monkeypatch: pytest.MonkeyPatch):
-    import pm_agent
+    from agents.drucker.cli import cmd_poll as drucker_cmd_poll
     from agents.drucker import agent as drucker_agent_module
 
     class _FakeDruckerAgent:
@@ -1024,7 +1036,6 @@ def test_workflow_drucker_poll_runs_poller(monkeypatch: pytest.MonkeyPatch):
         'DruckerCoordinatorAgent',
         _FakeDruckerAgent,
     )
-    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
 
     args = SimpleNamespace(
         project='STL',
@@ -1039,15 +1050,23 @@ def test_workflow_drucker_poll_runs_poller(monkeypatch: pytest.MonkeyPatch):
         shannon_url='http://shannon.test',
         poll_interval=300,
         max_cycles=2,
+        quiet=True,
+        json=False,
+        env=None,
+        output=None,
+        github_repos=None,
+        github_stale_days=5,
     )
 
-    assert pm_agent._workflow_drucker_poll(args) == 0
+    with pytest.raises(SystemExit) as exc_info:
+        drucker_cmd_poll(args)
+    assert exc_info.value.code == 0
 
 
 def test_workflow_drucker_poll_passes_recent_only_options(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    import pm_agent
+    from agents.drucker.cli import cmd_poll as drucker_cmd_poll
     from agents.drucker import agent as drucker_agent_module
 
     class _FakeDruckerAgent:
@@ -1085,7 +1104,6 @@ def test_workflow_drucker_poll_passes_recent_only_options(
         'DruckerCoordinatorAgent',
         _FakeDruckerAgent,
     )
-    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
 
     args = SimpleNamespace(
         project='STL',
@@ -1100,15 +1118,23 @@ def test_workflow_drucker_poll_passes_recent_only_options(
         max_cycles=1,
         recent_only=True,
         since='2026-03-14 00:00',
+        quiet=True,
+        json=False,
+        env=None,
+        output=None,
+        github_repos=None,
+        github_stale_days=5,
     )
 
-    assert pm_agent._workflow_drucker_poll(args) == 0
+    with pytest.raises(SystemExit) as exc_info:
+        drucker_cmd_poll(args)
+    assert exc_info.value.code == 0
 
 
 def test_workflow_drucker_poll_passes_configured_job_options(
     monkeypatch: pytest.MonkeyPatch,
 ):
-    import pm_agent
+    from agents.drucker.cli import cmd_poll as drucker_cmd_poll
     from agents.drucker import agent as drucker_agent_module
 
     class _FakeDruckerAgent:
@@ -1148,7 +1174,6 @@ def test_workflow_drucker_poll_passes_configured_job_options(
         'DruckerCoordinatorAgent',
         _FakeDruckerAgent,
     )
-    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
 
     args = SimpleNamespace(
         project='STL',
@@ -1163,6 +1188,14 @@ def test_workflow_drucker_poll_passes_configured_job_options(
         max_cycles=1,
         recent_only=False,
         since=None,
+        quiet=True,
+        json=False,
+        env=None,
+        output=None,
+        github_repos=None,
+        github_stale_days=5,
     )
 
-    assert pm_agent._workflow_drucker_poll(args) == 0
+    with pytest.raises(SystemExit) as exc_info:
+        drucker_cmd_poll(args)
+    assert exc_info.value.code == 0
