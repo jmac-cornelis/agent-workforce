@@ -10,23 +10,23 @@
 ##########################################################################################
 
 from agents.base import BaseAgent, AgentConfig, AgentResponse
-from agents.drucker_agent import DruckerCoordinatorAgent
-from agents.drucker_models import (
+from agents.drucker.agent import DruckerCoordinatorAgent
+from agents.drucker.models import (
     DruckerAction,
     DruckerFinding,
     DruckerHygieneReport,
     DruckerRequest,
 )
-from agents.gantt_agent import GanttProjectPlannerAgent
-from agents.gantt_components import (
+from agents.gantt.agent import GanttProjectPlannerAgent
+from agents.gantt.components import (
     BacklogInterpreter,
     DependencyMapper,
     MilestonePlanner,
     PlanningSummarizer,
     RiskProjector,
 )
-from agents.hypatia_agent import HypatiaDocumentationAgent
-from agents.hypatia_models import (
+from agents.hypatia.agent import HypatiaDocumentationAgent
+from agents.hypatia.models import (
     DocumentationImpactRecord,
     DocumentationPatch,
     DocumentationRecord,

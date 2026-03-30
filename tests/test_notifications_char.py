@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 
 def test_jira_comment_notifier_builds_hygiene_comment_with_suggestions():
-    from agents.drucker_models import DruckerFinding
+    from agents.drucker.models import DruckerFinding
     from notifications.jira_comments import JiraCommentNotifier
 
     comment = JiraCommentNotifier.build_hygiene_comment(
@@ -46,5 +46,5 @@ def test_jira_comment_notifier_blocks_duplicate_marker_comments():
     notifier = JiraCommentNotifier(_FakeJira())
 
     assert notifier.has_existing_comment('STL-201') is True
-    assert notifier.send('STL-201', 'Another message', level='flag') is False
+    assert notifier.send('STL-201', 'Another message', level='flag', dry_run=False) is False
     assert posted == []

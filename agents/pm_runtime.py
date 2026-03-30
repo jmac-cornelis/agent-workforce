@@ -7,6 +7,8 @@ from typing import Any, Dict, Iterable, List, Optional
 
 import requests
 
+from config.env_loader import resolve_dry_run
+
 log = logging.getLogger(os.path.basename(sys.argv[0]))
 
 
@@ -32,10 +34,12 @@ def notify_shannon(
     body_lines: Optional[Iterable[str]] = None,
     shannon_base_url: Optional[str] = None,
     timeout: int = 15,
+    dry_run: Optional[bool] = None,
 ) -> Dict[str, Any]:
     '''
     Post a proactive notification through Shannon and return a structured result.
     '''
+    effective_dry_run = resolve_dry_run(dry_run)
     base_url = str(
         shannon_base_url
         or os.getenv('SHANNON_API_BASE_URL')
@@ -47,6 +51,14 @@ def notify_shannon(
         'text': text,
         'body_lines': [str(line) for line in (body_lines or []) if str(line).strip()],
     }
+
+    if effective_dry_run:
+        return {
+            'ok': True,
+            'dry_run': True,
+            'base_url': base_url,
+            'payload': payload,
+        }
 
     try:
         response = requests.post(

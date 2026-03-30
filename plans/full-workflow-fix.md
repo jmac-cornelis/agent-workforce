@@ -215,7 +215,7 @@ plans/STLSB-redfish-rde/
     └── phase3_scoping.md
 ```
 
-### 5. Workflow Summary Update (`pm_agent.py`)
+### 5. Workflow Summary Update (`agent_cli.py`)
 
 Track all intermediate files in `all_created_files` for the summary table:
 ```
@@ -239,7 +239,7 @@ WORKFLOW COMPLETE: feature-plan
 2. Update 3 prompt files with JSON output requirements
 3. Update 3 agent parsers with JSON-first strategy
 4. Update orchestrator with hybrid two-pass + intermediate file saving
-5. Update `_workflow_feature_plan()` in `pm_agent.py` for output directory + file tracking
+5. Update `_workflow_feature_plan()` in `agent_cli.py` for output directory + file tracking
 6. Test end-to-end
 7. Commit
 

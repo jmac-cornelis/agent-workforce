@@ -33,19 +33,19 @@ def test_import_confluence_tools_class():
 
 
 def test_import_gantt_tools_class():
-    from tools.gantt_tools import GanttTools
+    from agents.gantt.tools import GanttTools
 
     assert GanttTools is not None
 
 
 def test_import_drucker_tools_class():
-    from tools.drucker_tools import DruckerTools
+    from agents.drucker.tools import DruckerTools
 
     assert DruckerTools is not None
 
 
 def test_import_hypatia_tools_class():
-    from tools.hypatia_tools import HypatiaTools
+    from agents.hypatia.tools import HypatiaTools
 
     assert HypatiaTools is not None
 
@@ -81,19 +81,19 @@ def test_import_mcp_tools_class():
 
 
 def test_import_gantt_agent_class():
-    from agents.gantt_agent import GanttProjectPlannerAgent
+    from agents.gantt.agent import GanttProjectPlannerAgent
 
     assert GanttProjectPlannerAgent is not None
 
 
 def test_import_drucker_agent_class():
-    from agents.drucker_agent import DruckerCoordinatorAgent
+    from agents.drucker.agent import DruckerCoordinatorAgent
 
     assert DruckerCoordinatorAgent is not None
 
 
 def test_import_hypatia_agent_class():
-    from agents.hypatia_agent import HypatiaDocumentationAgent
+    from agents.hypatia.agent import HypatiaDocumentationAgent
 
     assert HypatiaDocumentationAgent is not None
 
@@ -105,13 +105,13 @@ def test_import_shannon_service_package():
 
 
 def test_import_shannon_state_store():
-    from state.shannon_state_store import ShannonStateStore
+    from agents.shannon.state_store import ShannonStateStore
 
     assert ShannonStateStore is not None
 
 
 def test_import_gantt_components():
-    from agents.gantt_components import (
+    from agents.gantt.components import (
         BacklogInterpreter,
         DependencyMapper,
         MilestonePlanner,
@@ -127,25 +127,25 @@ def test_import_gantt_components():
 
 
 def test_import_gantt_snapshot_store():
-    from state.gantt_snapshot_store import GanttSnapshotStore
+    from agents.gantt.state.snapshot_store import GanttSnapshotStore
 
     assert GanttSnapshotStore is not None
 
 
 def test_import_drucker_report_store():
-    from state.drucker_report_store import DruckerReportStore
+    from agents.drucker.state.report_store import DruckerReportStore
 
     assert DruckerReportStore is not None
 
 
 def test_import_hypatia_record_store():
-    from state.hypatia_record_store import HypatiaRecordStore
+    from agents.hypatia.state.record_store import HypatiaRecordStore
 
     assert HypatiaRecordStore is not None
 
 
 def test_import_gantt_dependency_review_store():
-    from state.gantt_dependency_review_store import GanttDependencyReviewStore
+    from agents.gantt.state.dependency_review_store import GanttDependencyReviewStore
 
     assert GanttDependencyReviewStore is not None
 

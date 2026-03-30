@@ -480,10 +480,10 @@ Uses existing `jira_tools.py` `create_ticket()` — creates Epics first, then St
 
 ## 8. CLI Integration
 
-Add a new workflow to `pm_agent.py`:
+Add a new workflow to `agent_cli.py`:
 
 ```
-pm-agent --workflow feature-plan \
+agent-cli --workflow feature-plan \
     --project STL \
     --feature "Add PQC device support to CN5000 board" \
     [--docs path/to/spec.pdf path/to/datasheet.pdf] \
@@ -561,7 +561,7 @@ data/knowledge/jira_conventions.md           # NEW: Cornelis Jira naming/labelin
 
 | File | Changes |
 |------|---------|
-| `pm_agent.py` | Add `--workflow feature-plan` subcommand |
+| `agent_cli.py` | Add `--workflow feature-plan` subcommand |
 | `config/settings.py` | Add MCP and feature planning config fields |
 | `.env.example` | Add MCP environment variables |
 | `data/knowledge/cornelis_products.md` | Enhance with more hardware detail |
@@ -577,7 +577,7 @@ data/knowledge/jira_conventions.md           # NEW: Cornelis Jira naming/labelin
 4. **Scoping Agent**: Agent + prompt + embedded expertise prompt engineering
 5. **Feature Plan Builder Agent**: Agent + prompt + dry-run output
 6. **Orchestrator**: Wire all agents together, state management, session persistence
-7. **CLI Integration**: Add `--workflow feature-plan` to `pm_agent.py`
+7. **CLI Integration**: Add `--workflow feature-plan` to `agent_cli.py`
 8. **Review & Execute**: Integrate with existing ReviewAgent and jira_tools
 9. **Knowledge Base**: Create embedded_sw_fw_patterns.md and jira_conventions.md
 10. **Testing & Refinement**: End-to-end test with PQC example, tune prompts

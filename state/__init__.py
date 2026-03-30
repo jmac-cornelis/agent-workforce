@@ -32,31 +32,31 @@ __all__ = [
 
 def __getattr__(name: str) -> Any:
     if name == 'DruckerReportStore':
-        from state.drucker_report_store import DruckerReportStore
+        from agents.drucker.state.report_store import DruckerReportStore
 
         return DruckerReportStore
     if name == 'GanttDependencyReviewStore':
-        from state.gantt_dependency_review_store import GanttDependencyReviewStore
+        from agents.gantt.state.dependency_review_store import GanttDependencyReviewStore
 
         return GanttDependencyReviewStore
     if name == 'GanttReleaseMonitorStore':
-        from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+        from agents.gantt.state.release_monitor_store import GanttReleaseMonitorStore
 
         return GanttReleaseMonitorStore
     if name == 'GanttReleaseSurveyStore':
-        from state.gantt_release_survey_store import GanttReleaseSurveyStore
+        from agents.gantt.state.release_survey_store import GanttReleaseSurveyStore
 
         return GanttReleaseSurveyStore
     if name == 'GanttSnapshotStore':
-        from state.gantt_snapshot_store import GanttSnapshotStore
+        from agents.gantt.state.snapshot_store import GanttSnapshotStore
 
         return GanttSnapshotStore
     if name == 'HypatiaRecordStore':
-        from state.hypatia_record_store import HypatiaRecordStore
+        from agents.hypatia.state.record_store import HypatiaRecordStore
 
         return HypatiaRecordStore
     if name == 'ShannonStateStore':
-        from state.shannon_state_store import ShannonStateStore
+        from agents.shannon.state_store import ShannonStateStore
 
         return ShannonStateStore
     raise AttributeError(f'module {__name__!r} has no attribute {name!r}')

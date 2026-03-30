@@ -31,6 +31,21 @@ from typing import Optional
 
 from dotenv import load_dotenv
 
+# Dry-run resolution — import from config layer with standalone fallback.
+try:
+    from config.env_loader import resolve_dry_run
+except ImportError:
+    def resolve_dry_run(explicit=None):
+        '''Inline fallback for standalone CLI use (no config package).'''
+        if explicit is not None:
+            return explicit
+        env_val = os.environ.get('DRY_RUN', '').strip().lower()
+        if env_val in ('0', 'false', 'no', 'off'):
+            return False
+        if env_val in ('1', 'true', 'yes', 'on'):
+            return True
+        return True
+
 # Load environment variables from the default .env if present.
 #
 # CLI users can override this at runtime with --env; see handle_args().
@@ -4018,7 +4033,7 @@ def create_ticket(
     labels=None,
     parent_key=None,
     product_family=None,
-    dry_run=True,
+    dry_run=None,
 ):
     '''
     Create a Jira ticket.
@@ -4108,7 +4123,7 @@ def create_ticket(
 
     output('')
     output('=' * 80)
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output('CREATE TICKET - DRY RUN (no changes will be made)')
     else:
         output('CREATE TICKET - EXECUTING')
@@ -4131,7 +4146,7 @@ def create_ticket(
         output(f'Product Family: {", ".join(pf_display)}')
     output('-' * 80)
 
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output('Would create ticket with the above fields.')
         output('To execute creation, add --execute.')
         output('=' * 80)
@@ -4201,7 +4216,7 @@ def create_ticket(
 
 
 def bulk_update_tickets(jira, input_file, set_release=None, remove_release=False,
-                        transition=None, assign=None, dry_run=True, max_updates=None,
+                        transition=None, assign=None, dry_run=None, max_updates=None,
                         fix_version_mode='replace'):
     '''
     Perform bulk updates on tickets loaded from a CSV file.
@@ -4269,7 +4284,7 @@ def bulk_update_tickets(jira, input_file, set_release=None, remove_release=False
     # Print summary
     output()
     output('=' * 80)
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output('BULK UPDATE - DRY RUN (no changes will be made)')
     else:
         output('BULK UPDATE - EXECUTING CHANGES')
@@ -4306,7 +4321,7 @@ def bulk_update_tickets(jira, input_file, set_release=None, remove_release=False
         if has_csv_fix_version and csv_fix_versions:
             per_ticket_versions = [v.strip() for v in csv_fix_versions.split(',') if v.strip()]
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             dry_ops = list(operations)
             if per_ticket_versions:
                 dry_ops = [f'Set fix versions to: {", ".join(per_ticket_versions)} (mode={fix_version_mode})']
@@ -4380,7 +4395,7 @@ def bulk_update_tickets(jira, input_file, set_release=None, remove_release=False
         if len(errors) > 10:
             output(f'  ... and {len(errors) - 10} more errors')
     
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output()
         output('This was a DRY RUN. To execute changes, add --execute flag.')
     
@@ -4388,7 +4403,7 @@ def bulk_update_tickets(jira, input_file, set_release=None, remove_release=False
     output()
 
 
-def bulk_delete_tickets(jira, input_file, delete_subtasks=False, dry_run=True, max_deletes=None, force=False):
+def bulk_delete_tickets(jira, input_file, delete_subtasks=False, dry_run=None, max_deletes=None, force=False):
     '''
     Perform bulk deletion of tickets listed in a CSV file.
 
@@ -4435,7 +4450,7 @@ def bulk_delete_tickets(jira, input_file, delete_subtasks=False, dry_run=True, m
     # Print summary
     output()
     output('=' * 80)
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output('BULK DELETE - DRY RUN (no changes will be made)')
     else:
         output('BULK DELETE - EXECUTING DELETES')
@@ -4480,7 +4495,7 @@ def bulk_delete_tickets(jira, input_file, delete_subtasks=False, dry_run=True, m
 
         status_str = f'[{i}/{len(tickets)}] {ticket_key}'
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             output(f'{status_str}: Would delete (delete_subtasks={delete_subtasks})')
             success_count += 1
             continue
@@ -4532,7 +4547,7 @@ def bulk_delete_tickets(jira, input_file, delete_subtasks=False, dry_run=True, m
         if len(errors) > 10:
             output(f'  ... and {len(errors) - 10} more errors')
 
-    if dry_run:
+    if resolve_dry_run(dry_run):
         output()
         output('This was a DRY RUN. To execute deletions, add --execute flag.')
 
@@ -5139,7 +5154,7 @@ def get_dashboard(jira, dashboard_id):
         raise JiraDashboardError(str(e))
 
 
-def create_dashboard(jira, name, description=None, share_permissions=None):
+def create_dashboard(jira, name, description=None, share_permissions=None, dry_run=None):
     '''
     Create a new dashboard.
 
@@ -5148,6 +5163,7 @@ def create_dashboard(jira, name, description=None, share_permissions=None):
         name: Name for the new dashboard.
         description: Optional description for the dashboard.
         share_permissions: Optional list of share permission dicts, or JSON string.
+        dry_run: If True, only preview what would be created.
 
     Output:
         None; prints created dashboard details to stdout.
@@ -5155,8 +5171,31 @@ def create_dashboard(jira, name, description=None, share_permissions=None):
     Raises:
         JiraDashboardError: If the dashboard creation fails.
     '''
-    log.debug(f'Entering create_dashboard(name={name}, description={description}, share_permissions={share_permissions})')
-    
+    log.debug(f'Entering create_dashboard(name={name}, description={description}, share_permissions={share_permissions}, dry_run={dry_run})')
+
+    parsed_permissions = []
+    if share_permissions:
+        if isinstance(share_permissions, str):
+            try:
+                parsed_permissions = json.loads(share_permissions)
+            except json.JSONDecodeError as e:
+                raise JiraDashboardError(f'Invalid JSON for share-permissions: {e}')
+        else:
+            parsed_permissions = share_permissions
+
+    if resolve_dry_run(dry_run):
+        output('')
+        output('DRY RUN (no changes will be made)')
+        output('=' * 80)
+        output('Would Create Dashboard')
+        output('=' * 80)
+        output(f'Name:        {name}')
+        output(f'Description: {description or "N/A"}')
+        output(f'Permissions: {share_permissions or "private"}')
+        output('=' * 80)
+        output('')
+        return
+
     try:
         email, api_token = get_jira_credentials()
         
@@ -5166,18 +5205,7 @@ def create_dashboard(jira, name, description=None, share_permissions=None):
         if description:
             payload['description'] = description
         
-        # Parse share_permissions if provided as JSON string
-        if share_permissions:
-            if isinstance(share_permissions, str):
-                try:
-                    payload['sharePermissions'] = json.loads(share_permissions)
-                except json.JSONDecodeError as e:
-                    raise JiraDashboardError(f'Invalid JSON for share-permissions: {e}')
-            else:
-                payload['sharePermissions'] = share_permissions
-        else:
-            # Default to private (empty share permissions)
-            payload['sharePermissions'] = []
+        payload['sharePermissions'] = parsed_permissions
         
         log.debug(f'Create dashboard payload: {payload}')
         
@@ -5214,7 +5242,7 @@ def create_dashboard(jira, name, description=None, share_permissions=None):
         raise JiraDashboardError(str(e))
 
 
-def update_dashboard(jira, dashboard_id, name=None, description=None, share_permissions=None):
+def update_dashboard(jira, dashboard_id, name=None, description=None, share_permissions=None, dry_run=None):
     '''
     Update an existing dashboard.
 
@@ -5224,6 +5252,7 @@ def update_dashboard(jira, dashboard_id, name=None, description=None, share_perm
         name: New name for the dashboard, or None to keep existing.
         description: New description, or None to keep existing.
         share_permissions: New share permissions as list or JSON string, or None to keep existing.
+        dry_run: If True, only preview what would be updated.
 
     Output:
         None; prints updated dashboard details to stdout.
@@ -5231,8 +5260,25 @@ def update_dashboard(jira, dashboard_id, name=None, description=None, share_perm
     Raises:
         JiraDashboardError: If the dashboard update fails.
     '''
-    log.debug(f'Entering update_dashboard(dashboard_id={dashboard_id}, name={name}, description={description})')
+    log.debug(f'Entering update_dashboard(dashboard_id={dashboard_id}, name={name}, description={description}, dry_run={dry_run})')
     
+    if resolve_dry_run(dry_run):
+        output('')
+        output('DRY RUN (no changes will be made)')
+        output('=' * 80)
+        output('Would Update Dashboard')
+        output('=' * 80)
+        output(f'Dashboard ID: {dashboard_id}')
+        if name:
+            output(f'Name:         {name}')
+        if description is not None:
+            output(f'Description:  {description}')
+        if share_permissions:
+            output(f'Permissions:  {share_permissions}')
+        output('=' * 80)
+        output('')
+        return
+
     try:
         email, api_token = get_jira_credentials()
         
@@ -5306,7 +5352,7 @@ def update_dashboard(jira, dashboard_id, name=None, description=None, share_perm
         raise JiraDashboardError(str(e))
 
 
-def delete_dashboard(jira, dashboard_id, force=False):
+def delete_dashboard(jira, dashboard_id, force=False, dry_run=None):
     '''
     Delete a dashboard.
 
@@ -5314,6 +5360,7 @@ def delete_dashboard(jira, dashboard_id, force=False):
         jira: JIRA object with active connection.
         dashboard_id: The dashboard ID to delete.
         force: If True, skip confirmation prompt.
+        dry_run: If True, only preview what would be deleted.
 
     Output:
         None; prints deletion confirmation to stdout.
@@ -5321,12 +5368,22 @@ def delete_dashboard(jira, dashboard_id, force=False):
     Raises:
         JiraDashboardError: If the dashboard deletion fails.
     '''
-    log.debug(f'Entering delete_dashboard(dashboard_id={dashboard_id}, force={force})')
+    log.debug(f'Entering delete_dashboard(dashboard_id={dashboard_id}, force={force}, dry_run={dry_run})')
     
+    if resolve_dry_run(dry_run):
+        output('')
+        output('DRY RUN (no changes will be made)')
+        output('=' * 80)
+        output('Would Delete Dashboard')
+        output('=' * 80)
+        output(f'Dashboard ID: {dashboard_id}')
+        output('=' * 80)
+        output('')
+        return
+
     try:
         email, api_token = get_jira_credentials()
         
-        # First, get the dashboard to show what will be deleted
         response = requests.get(
             f'{JIRA_URL}/rest/api/3/dashboard/{dashboard_id}',
             auth=(email, api_token),
@@ -5342,7 +5399,6 @@ def delete_dashboard(jira, dashboard_id, force=False):
         dashboard = response.json()
         dashboard_name = dashboard.get('name', 'Unknown')
         
-        # Confirm deletion unless force is True
         if not force:
             output('')
             output(f'WARNING: About to delete dashboard "{dashboard_name}" (ID: {dashboard_id})')
@@ -5352,7 +5408,6 @@ def delete_dashboard(jira, dashboard_id, force=False):
             output('')
             return
         
-        # Perform deletion
         response = requests.delete(
             f'{JIRA_URL}/rest/api/3/dashboard/{dashboard_id}',
             auth=(email, api_token),
@@ -5382,7 +5437,7 @@ def delete_dashboard(jira, dashboard_id, force=False):
         raise JiraDashboardError(str(e))
 
 
-def copy_dashboard(jira, dashboard_id, name, description=None, share_permissions=None):
+def copy_dashboard(jira, dashboard_id, name, description=None, share_permissions=None, dry_run=None):
     '''
     Copy/clone an existing dashboard.
 
@@ -5392,6 +5447,7 @@ def copy_dashboard(jira, dashboard_id, name, description=None, share_permissions
         name: Name for the new dashboard copy.
         description: Optional description for the copy, or None to copy from source.
         share_permissions: Optional share permissions for the copy, or None for private.
+        dry_run: If True, only preview what would be copied.
 
     Output:
         None; prints created dashboard details to stdout.
@@ -5399,8 +5455,22 @@ def copy_dashboard(jira, dashboard_id, name, description=None, share_permissions
     Raises:
         JiraDashboardError: If the dashboard copy fails.
     '''
-    log.debug(f'Entering copy_dashboard(dashboard_id={dashboard_id}, name={name}, description={description})')
+    log.debug(f'Entering copy_dashboard(dashboard_id={dashboard_id}, name={name}, description={description}, dry_run={dry_run})')
     
+    if resolve_dry_run(dry_run):
+        output('')
+        output('DRY RUN (no changes will be made)')
+        output('=' * 80)
+        output('Would Copy Dashboard')
+        output('=' * 80)
+        output(f'Source ID:   {dashboard_id}')
+        output(f'New Name:    {name}')
+        output(f'Description: {description or "N/A"}')
+        output(f'Permissions: {share_permissions or "private"}')
+        output('=' * 80)
+        output('')
+        return
+
     try:
         email, api_token = get_jira_credentials()
         
@@ -5534,7 +5604,7 @@ def list_gadgets(jira, dashboard_id):
         raise JiraDashboardError(str(e))
 
 
-def add_gadget(jira, dashboard_id, module_key, position=None, color=None, properties=None):
+def add_gadget(jira, dashboard_id, module_key, position=None, color=None, properties=None, dry_run=None):
     '''
     Add a gadget to a dashboard.
 
@@ -5545,6 +5615,7 @@ def add_gadget(jira, dashboard_id, module_key, position=None, color=None, proper
         position: Optional position as 'row,column' string.
         color: Optional gadget color (blue, red, yellow, green, cyan, purple, gray, white).
         properties: Optional gadget properties as dict or JSON string.
+        dry_run: If True, only preview what would be added.
 
     Output:
         None; prints added gadget details to stdout.
@@ -5552,28 +5623,49 @@ def add_gadget(jira, dashboard_id, module_key, position=None, color=None, proper
     Raises:
         JiraDashboardError: If the gadget addition fails.
     '''
-    log.debug(f'Entering add_gadget(dashboard_id={dashboard_id}, module_key={module_key}, position={position}, color={color})')
-    
+    log.debug(f'Entering add_gadget(dashboard_id={dashboard_id}, module_key={module_key}, position={position}, color={color}, dry_run={dry_run})')
+
+    valid_colors = ['blue', 'red', 'yellow', 'green', 'cyan', 'purple', 'gray', 'white']
+    if position:
+        try:
+            parts = position.split(',')
+            if len(parts) != 2:
+                raise ValueError('Position must be in format row,column')
+            int(parts[0].strip())
+            int(parts[1].strip())
+        except ValueError as e:
+            raise JiraDashboardError(f'Invalid position format: {e}')
+    if color:
+        if color.lower() not in valid_colors:
+            raise JiraDashboardError(f'Invalid color "{color}". Valid colors: {", ".join(valid_colors)}')
+
+    if resolve_dry_run(dry_run):
+        output('')
+        output('DRY RUN (no changes will be made)')
+        output('=' * 80)
+        output('Would Add Gadget')
+        output('=' * 80)
+        output(f'Dashboard ID: {dashboard_id}')
+        output(f'Module Key:   {module_key}')
+        if position:
+            output(f'Position:     {position}')
+        if color:
+            output(f'Color:        {color}')
+        output('=' * 80)
+        output('')
+        return
+
     try:
         email, api_token = get_jira_credentials()
         
-        # Build request payload
         payload = {'moduleKey': module_key}
         
-        # Parse position if provided
         if position:
-            try:
-                parts = position.split(',')
-                if len(parts) != 2:
-                    raise ValueError('Position must be in format row,column')
-                row = int(parts[0].strip())
-                col = int(parts[1].strip())
-                payload['position'] = {'row': row, 'column': col}
-            except ValueError as e:
-                raise JiraDashboardError(f'Invalid position format: {e}')
+            parts = position.split(',')
+            row = int(parts[0].strip())
+            col = int(parts[1].strip())
+            payload['position'] = {'row': row, 'column': col}
         
-        # Validate and set color
-        valid_colors = ['blue', 'red', 'yellow', 'green', 'cyan', 'purple', 'gray', 'white']
         if color:
             color_lower = color.lower()
             if color_lower not in valid_colors:
@@ -5632,7 +5724,7 @@ def add_gadget(jira, dashboard_id, module_key, position=None, color=None, proper
         raise JiraDashboardError(str(e))
 
 
-def remove_gadget(jira, dashboard_id, gadget_id):
+def remove_gadget(jira, dashboard_id, gadget_id, dry_run=None):
     '''
     Remove a gadget from a dashboard.
 
@@ -5640,6 +5732,7 @@ def remove_gadget(jira, dashboard_id, gadget_id):
         jira: JIRA object with active connection.
         dashboard_id: The dashboard ID.
         gadget_id: The gadget ID to remove.
+        dry_run: If True, only preview what would be removed.
 
     Output:
         None; prints removal confirmation to stdout.
@@ -5647,8 +5740,20 @@ def remove_gadget(jira, dashboard_id, gadget_id):
     Raises:
         JiraDashboardError: If the gadget removal fails.
     '''
-    log.debug(f'Entering remove_gadget(dashboard_id={dashboard_id}, gadget_id={gadget_id})')
+    log.debug(f'Entering remove_gadget(dashboard_id={dashboard_id}, gadget_id={gadget_id}, dry_run={dry_run})')
     
+    if resolve_dry_run(dry_run):
+        output('')
+        output('DRY RUN (no changes will be made)')
+        output('=' * 80)
+        output('Would Remove Gadget')
+        output('=' * 80)
+        output(f'Dashboard ID: {dashboard_id}')
+        output(f'Gadget ID:    {gadget_id}')
+        output('=' * 80)
+        output('')
+        return
+
     try:
         email, api_token = get_jira_credentials()
         
@@ -5684,7 +5789,7 @@ def remove_gadget(jira, dashboard_id, gadget_id):
         raise JiraDashboardError(str(e))
 
 
-def update_gadget(jira, dashboard_id, gadget_id, position=None, color=None):
+def update_gadget(jira, dashboard_id, gadget_id, position=None, color=None, dry_run=None):
     '''
     Update a gadget on a dashboard.
 
@@ -5694,6 +5799,7 @@ def update_gadget(jira, dashboard_id, gadget_id, position=None, color=None):
         gadget_id: The gadget ID to update.
         position: New position as 'row,column' string, or None to keep existing.
         color: New color, or None to keep existing.
+        dry_run: If True, only preview what would be updated.
 
     Output:
         None; prints updated gadget details to stdout.
@@ -5701,36 +5807,54 @@ def update_gadget(jira, dashboard_id, gadget_id, position=None, color=None):
     Raises:
         JiraDashboardError: If the gadget update fails.
     '''
-    log.debug(f'Entering update_gadget(dashboard_id={dashboard_id}, gadget_id={gadget_id}, position={position}, color={color})')
-    
+    log.debug(f'Entering update_gadget(dashboard_id={dashboard_id}, gadget_id={gadget_id}, position={position}, color={color}, dry_run={dry_run})')
+
+    if not position and not color:
+        raise JiraDashboardError('No updates specified. Use --position or --color.')
+
+    valid_colors = ['blue', 'red', 'yellow', 'green', 'cyan', 'purple', 'gray', 'white']
+    if position:
+        try:
+            parts = position.split(',')
+            if len(parts) != 2:
+                raise ValueError('Position must be in format row,column')
+            int(parts[0].strip())
+            int(parts[1].strip())
+        except ValueError as e:
+            raise JiraDashboardError(f'Invalid position format: {e}')
+    if color:
+        if color.lower() not in valid_colors:
+            raise JiraDashboardError(f'Invalid color "{color}". Valid colors: {", ".join(valid_colors)}')
+
+    if resolve_dry_run(dry_run):
+        output('')
+        output('DRY RUN (no changes will be made)')
+        output('=' * 80)
+        output('Would Update Gadget')
+        output('=' * 80)
+        output(f'Dashboard ID: {dashboard_id}')
+        output(f'Gadget ID:    {gadget_id}')
+        if position:
+            output(f'Position:     {position}')
+        if color:
+            output(f'Color:        {color}')
+        output('=' * 80)
+        output('')
+        return
+
     try:
         email, api_token = get_jira_credentials()
         
-        # Build request payload
         payload = {}
         
-        # Parse position if provided
         if position:
-            try:
-                parts = position.split(',')
-                if len(parts) != 2:
-                    raise ValueError('Position must be in format row,column')
-                row = int(parts[0].strip())
-                col = int(parts[1].strip())
-                payload['position'] = {'row': row, 'column': col}
-            except ValueError as e:
-                raise JiraDashboardError(f'Invalid position format: {e}')
+            parts = position.split(',')
+            row = int(parts[0].strip())
+            col = int(parts[1].strip())
+            payload['position'] = {'row': row, 'column': col}
         
-        # Validate and set color
-        valid_colors = ['blue', 'red', 'yellow', 'green', 'cyan', 'purple', 'gray', 'white']
         if color:
-            color_lower = color.lower()
-            if color_lower not in valid_colors:
-                raise JiraDashboardError(f'Invalid color "{color}". Valid colors: {", ".join(valid_colors)}')
-            payload['color'] = color_lower
-        
-        if not payload:
-            raise JiraDashboardError('No updates specified. Use --position or --color.')
+            payload['color'] = color.lower()
         
         log.debug(f'Update gadget payload: {payload}')
         
@@ -5936,7 +6060,7 @@ def get_automation(jira, rule_uuid):
         raise JiraAutomationError(str(e))
 
 
-def create_automation(jira, rule_file, project_key=None, dry_run=True):
+def create_automation(jira, rule_file, project_key=None, dry_run=None):
     '''
     Create an automation rule from a JSON file.
 
@@ -5963,7 +6087,7 @@ def create_automation(jira, rule_file, project_key=None, dry_run=True):
 
         rule_name = payload.get('name', 'Unnamed Rule')
 
-        if dry_run:
+        if resolve_dry_run(dry_run):
             output('')
             output('=' * 80)
             output('DRY RUN — Automation Rule Creation')
@@ -6029,13 +6153,14 @@ def create_automation(jira, rule_file, project_key=None, dry_run=True):
         raise JiraAutomationError(str(e))
 
 
-def enable_automation(jira, rule_uuid):
+def enable_automation(jira, rule_uuid, dry_run=None):
     '''
     Enable an automation rule.
 
     Input:
         jira: JIRA object (unused — automation API uses raw requests).
         rule_uuid: The automation rule UUID to enable.
+        dry_run: If True, only preview what would be enabled.
 
     Output:
         None; prints confirmation to stdout.
@@ -6043,7 +6168,19 @@ def enable_automation(jira, rule_uuid):
     Raises:
         JiraAutomationError: If the enable operation fails.
     '''
-    log.debug(f'Entering enable_automation(rule_uuid={rule_uuid})')
+    log.debug(f'Entering enable_automation(rule_uuid={rule_uuid}, dry_run={dry_run})')
+
+    if resolve_dry_run(dry_run):
+        output('')
+        output('DRY RUN (no changes will be made)')
+        output('=' * 80)
+        output('Would Enable Automation Rule')
+        output('=' * 80)
+        output(f'Rule UUID:    {rule_uuid}')
+        output(f'Target State: ENABLED')
+        output('=' * 80)
+        output('')
+        return
 
     try:
         email, api_token = get_jira_credentials()
@@ -6091,13 +6228,14 @@ def enable_automation(jira, rule_uuid):
         raise JiraAutomationError(str(e))
 
 
-def disable_automation(jira, rule_uuid):
+def disable_automation(jira, rule_uuid, dry_run=None):
     '''
     Disable an automation rule.
 
     Input:
         jira: JIRA object (unused — automation API uses raw requests).
         rule_uuid: The automation rule UUID to disable.
+        dry_run: If True, only preview what would be disabled.
 
     Output:
         None; prints confirmation to stdout.
@@ -6105,7 +6243,19 @@ def disable_automation(jira, rule_uuid):
     Raises:
         JiraAutomationError: If the disable operation fails.
     '''
-    log.debug(f'Entering disable_automation(rule_uuid={rule_uuid})')
+    log.debug(f'Entering disable_automation(rule_uuid={rule_uuid}, dry_run={dry_run})')
+
+    if resolve_dry_run(dry_run):
+        output('')
+        output('DRY RUN (no changes will be made)')
+        output('=' * 80)
+        output('Would Disable Automation Rule')
+        output('=' * 80)
+        output(f'Rule UUID:    {rule_uuid}')
+        output(f'Target State: DISABLED')
+        output('=' * 80)
+        output('')
+        return
 
     try:
         email, api_token = get_jira_credentials()

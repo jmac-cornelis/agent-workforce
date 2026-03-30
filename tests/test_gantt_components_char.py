@@ -1,12 +1,12 @@
 from datetime import datetime, timezone
 
-from agents.gantt_models import DependencyEdge, DependencyGraph, MilestoneProposal, PlanningSnapshot
+from agents.gantt.models import DependencyEdge, DependencyGraph, MilestoneProposal, PlanningSnapshot
 
 
 def test_backlog_interpreter_and_dependency_mapper_normalize_and_attach_edges(
     fake_issue_resource_factory,
 ):
-    from agents.gantt_components import BacklogInterpreter, DependencyMapper
+    from agents.gantt.components import BacklogInterpreter, DependencyMapper
 
     issue = fake_issue_resource_factory(
         key='STL-201',
@@ -58,7 +58,7 @@ def test_backlog_interpreter_and_dependency_mapper_normalize_and_attach_edges(
 
 
 def test_milestone_planner_risk_projector_and_summarizer_build_outputs():
-    from agents.gantt_components import (
+    from agents.gantt.components import (
         DependencyMapper,
         MilestonePlanner,
         PlanningSummarizer,
@@ -167,8 +167,8 @@ def test_milestone_planner_risk_projector_and_summarizer_build_outputs():
 
 
 def test_backlog_interpreter_build_backlog_jql():
-    from agents.gantt_components import BacklogInterpreter
-    from agents.gantt_models import PlanningRequest
+    from agents.gantt.components import BacklogInterpreter
+    from agents.gantt.models import PlanningRequest
 
     request = PlanningRequest(project_key='STL', include_done=False)
     jql = BacklogInterpreter.build_backlog_jql(request)
@@ -179,8 +179,8 @@ def test_backlog_interpreter_build_backlog_jql():
 
 
 def test_dependency_mapper_infers_edges_applies_reviews_and_builds_graph(tmp_path):
-    from agents.gantt_components import DependencyMapper
-    from state.gantt_dependency_review_store import GanttDependencyReviewStore
+    from agents.gantt.components import DependencyMapper
+    from agents.gantt.state.dependency_review_store import GanttDependencyReviewStore
 
     review_store = GanttDependencyReviewStore(storage_dir=str(tmp_path / 'reviews'))
     review_store.record_review(
@@ -244,7 +244,7 @@ def test_dependency_mapper_infers_edges_applies_reviews_and_builds_graph(tmp_pat
 
 
 def test_dependency_mapper_detects_cycles_from_inferred_edges():
-    from agents.gantt_components import DependencyMapper
+    from agents.gantt.components import DependencyMapper
 
     mapper = DependencyMapper()
     issues = [
@@ -284,7 +284,7 @@ def test_dependency_mapper_detects_cycles_from_inferred_edges():
 
 
 def test_risk_projector_and_summarizer_surface_dependency_analysis_details():
-    from agents.gantt_components import PlanningSummarizer, RiskProjector
+    from agents.gantt.components import PlanningSummarizer, RiskProjector
 
     issues = [
         {

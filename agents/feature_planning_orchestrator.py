@@ -1853,13 +1853,13 @@ class FeaturePlanningOrchestrator(BaseAgent):
             )
 
             result = create_ticket(
-                project_key=project_key,
-                summary=summary,
-                issue_type='Initiative',
-                description=description,
-                components=components or None,
-                product_family=product_family or None,
-            )
+                    project_key=project_key,
+                    summary=summary,
+                    issue_type='Initiative',
+                    description=description,
+                    components=components or None,
+                    product_family=product_family or None,
+                )
 
             if hasattr(result, 'is_success') and result.is_success:
                 new_key = result.data.get('key', '')
@@ -2389,7 +2389,7 @@ class FeaturePlanningOrchestrator(BaseAgent):
         if created_csv_path:
             lines.extend(['', f'Cleanup CSV: {created_csv_path}',
                            '  To undo all created tickets:',
-                           f'  python pm_agent.py --cleanup {created_csv_path} --execute'])
+                           f'  python agent_cli.py --cleanup {created_csv_path} --execute'])
 
         return AgentResponse.success_response(
             content=content,

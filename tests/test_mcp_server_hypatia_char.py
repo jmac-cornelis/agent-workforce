@@ -12,7 +12,7 @@ def _payload(result):
 
 @pytest.mark.asyncio
 async def test_generate_hypatia_documentation_tool(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
-    from agents.hypatia_models import DocumentationPatch, DocumentationRecord
+    from agents.hypatia.models import DocumentationPatch, DocumentationRecord
     from agents.review_agent import ReviewItem, ReviewSession
 
     class _FakeHypatiaAgent:

@@ -29,8 +29,8 @@ wheels/
 
 # Virtual environments
 venv/
-ENV/
-env/
+/ENV/
+/env/
 .venv/
 
 # IDE
@@ -101,6 +101,11 @@ my_map.xlsx
 
 # Credentials / env variants
 .env_prod
+
+# Deployment env files with real credentials (templates are tracked as-is)
+# If you create config/env/*.env.local or config/env/*.env.prod, they are ignored:
+config/env/*.env.local
+config/env/*.env.prod
 
 # Shell scripts (user-local)
 go.sh

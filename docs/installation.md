@@ -65,7 +65,7 @@ JIRA_URL=https://cornelisnetworks.atlassian.net
 
 Fill in these sections based on what you plan to use:
 
-**For agentic workflows** (`pm_agent --workflow ...`), configure at least one LLM provider:
+**For agentic workflows** (`agent-cli ...`), configure at least one LLM provider:
 
 ```bash
 # Cornelis internal LLM (preferred)
@@ -110,7 +110,7 @@ You can maintain separate configs for production vs. sandbox:
 ```bash
 python3 jira_utils.py --list --env .env_prod
 python3 jira_utils.py --list --env .env_sandbox
-pm_agent --env .env_sandbox --workflow feature-plan --project STLSB --feature "Redfish RDE"
+agent-cli --env .env_sandbox feature-plan --project STLSB --feature "Redfish RDE"
 ```
 
 ---
@@ -170,7 +170,7 @@ confluence-utils -h     # or: python3 confluence_utils.py -h
 python3 jira_utils.py --list
 
 # Check agentic workflows (requires LLM config)
-python3 pm_agent.py --help
+python3 agent_cli.py --help
 ```
 
 ---

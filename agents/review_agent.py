@@ -453,7 +453,7 @@ Then execute the approved items.'''
                     project_key=data['project_key'],
                     name=data['name'],
                     description=data.get('description'),
-                    release_date=data.get('release_date')
+                    release_date=data.get('release_date'),
                 )
                 
                 if result.is_success:
@@ -470,7 +470,7 @@ Then execute the approved items.'''
                     assignee=data.get('assignee'),
                     components=data.get('components'),
                     fix_versions=data.get('fix_versions'),
-                    labels=data.get('labels')
+                    labels=data.get('labels'),
                 )
                 
                 if result.is_success:

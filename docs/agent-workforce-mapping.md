@@ -196,7 +196,7 @@ This repo has important foundations here, but most implementations are still thi
 - `tools/jira_tools.py`
 - `mcp_server.py`
 - `agents/review_agent.py`
-- workflow support in `pm_agent.py`
+- workflow support in `agent_cli.py`
 - `state/drucker_report_store.py`
 
 **Maturity**
@@ -224,7 +224,7 @@ The newer dedicated Drucker slice makes the mapping much more concrete:
 - project-level findings are persisted durably through `DruckerReportStore`
 - ticket-level remediation suggestions are converted into reviewable Jira actions
 - Jira write-back is gated through the shared `ReviewAgent` execution model
-- `pm_agent --workflow drucker-hygiene` makes the slice usable without custom code
+- `agent-cli drucker hygiene` makes the slice usable without custom code
 
 `JiraAnalystAgent` still matters here as a precursor and supporting capability:
 
@@ -355,7 +355,7 @@ Herodotus is mostly future work.
 
 **Current mapping in `jira-utilities`**
 
-- Jira bug-report workflow in `pm_agent.py`
+- Jira bug-report workflow in `agent_cli.py`
 - `agents/jira_analyst.py`
 - `tools/jira_tools.py`
 - `tools/file_tools.py`

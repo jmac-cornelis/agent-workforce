@@ -295,6 +295,12 @@ def _mock_llm_client(monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _clean_dry_run_env(monkeypatch):
+    monkeypatch.delenv('DRY_RUN', raising=False)
+    yield
+
+
+@pytest.fixture(autouse=True)
 def reset_jira_utils_state():
     try:
         import jira_utils

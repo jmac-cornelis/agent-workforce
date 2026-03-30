@@ -1,8 +1,8 @@
 # Agentic Workflows
 
-Agentic workflows are operator-oriented flows orchestrated by [`pm_agent.py`](../pm_agent.py). Some PM workflows are deterministic, while others use an LLM to research, analyze, scope, and plan.
+Agentic workflows are operator-oriented flows orchestrated by [`agent_cli.py`](../agent_cli.py). Each agent also has a standalone CLI. Some workflows are deterministic, while others use an LLM to research, analyze, scope, and plan.
 
-All workflows are invoked via `pm_agent --workflow <name>`. By default, workflows operate in **dry-run mode** — no Jira tickets are created or modified until `--execute` is explicitly passed.
+All workflows are invoked via `agent-cli <agent> <command>` or standalone `<agent-name> <command>`. By default, workflows operate in **dry-run mode** — no Jira tickets are created or modified until `--execute` is explicitly passed.
 
 ## Table of Contents
 
@@ -31,16 +31,16 @@ Build, persist, and review Jira-grounded planning snapshots with milestone propo
 
 ```bash
 # Create and persist a new planning snapshot
-pm_agent --workflow gantt-snapshot --project STL --planning-horizon 120
+agent-cli gantt-snapshot --project STL --planning-horizon 120
 
 # Add build/test/release evidence inputs to the snapshot
-pm_agent --workflow gantt-snapshot --project STL --evidence build.json test.yaml release.md
+agent-cli gantt-snapshot --project STL --evidence build.json test.yaml release.md
 
 # List stored snapshots, optionally scoped to one project
-pm_agent --workflow gantt-snapshot-list --project STL
+agent-cli gantt-snapshot-list --project STL
 
 # Load a stored snapshot by ID and re-export it
-pm_agent --workflow gantt-snapshot-get --snapshot-id a1b2c3d4 --output stl_snapshot.json
+agent-cli gantt-snapshot-get --snapshot-id a1b2c3d4 --output stl_snapshot.json
 ```
 
 Snapshots are stored under `data/gantt_snapshots/<PROJECT>/<SNAPSHOT_ID>/`.
@@ -51,14 +51,14 @@ Build, persist, and review release-health reports for one or more Jira fix versi
 
 ```bash
 # Create and persist a release monitor report
-pm_agent --workflow gantt-release-monitor --project STL --releases 12.1.1.x,12.2.0.x
+agent-cli gantt-release-monitor --project STL --releases 12.1.1.x,12.2.0.x
 
 # Scope the report and re-export ad hoc files
-pm_agent --workflow gantt-release-monitor --project STL --scope-label CN6000 --output stl_release_monitor.json
+agent-cli gantt-release-monitor --project STL --scope-label CN6000 --output stl_release_monitor.json
 
 # List and retrieve stored reports
-pm_agent --workflow gantt-release-monitor-list --project STL
-pm_agent --workflow gantt-release-monitor-get --report-id 12345678-1234-1234-1234-123456789abc
+agent-cli gantt-release-monitor-list --project STL
+agent-cli gantt-release-monitor-get --report-id 12345678-1234-1234-1234-123456789abc
 ```
 
 Release-monitor reports are stored under `data/gantt_release_monitors/<PROJECT>/<REPORT_ID>/`.
@@ -69,10 +69,10 @@ Run Gantt as an always-on CLI poller that performs one-shot work on a schedule.
 
 ```bash
 # Run one Gantt polling cycle (planning snapshot only)
-pm_agent --workflow gantt-poll --project STL
+agent-cli gantt-poll --project STL
 
 # Run two cycles with planning + release monitoring and proactive Teams notifications
-pm_agent --workflow gantt-poll --project STL --run-release-monitor \
+agent-cli gantt-poll --project STL --run-release-monitor \
   --releases 12.1.1.x --max-cycles 2 --poll-interval 60 --notify-shannon
 ```
 
@@ -84,14 +84,14 @@ Generate a Jira project plan (Initiative → Epics → Stories) from a scope doc
 
 ```bash
 # 1. Generate plan from scope document (dry-run — no tickets created)
-pm_agent --workflow feature-plan --project STL --feature "SPDM Attestation" \
+agent-cli feature-plan --project STL --feature "SPDM Attestation" \
          --scope-doc scope.json
 
 # 2. Review the generated plan
 cat plans/STL-spdm-attestation/plan.md
 
 # 3. Execute: create tickets in Jira under an existing Initiative
-pm_agent --workflow feature-plan --project STL \
+agent-cli feature-plan --project STL \
          --plan-file plans/STL-spdm-attestation/plan.json \
          --initiative STL-74071 --execute
 ```
@@ -140,10 +140,10 @@ Build, persist, and review Jira hygiene reports with ticket-level remediation su
 
 ```bash
 # Create and persist a Drucker hygiene report
-pm_agent --workflow drucker-hygiene --project STL
+agent-cli drucker-hygiene --project STL
 
 # Tighten the stale threshold and export ad hoc files
-pm_agent --workflow drucker-hygiene --project STL --stale-days 21 --output stl_hygiene.json
+agent-cli drucker-hygiene --project STL --stale-days 21 --output stl_hygiene.json
 ```
 
 Each `drucker-hygiene` run stores a durable copy under `data/drucker_reports/<PROJECT>/<REPORT_ID>/`
@@ -158,10 +158,10 @@ Run Drucker as an always-on CLI poller that executes scheduled hygiene scans and
 
 ```bash
 # Run one hygiene polling cycle
-pm_agent --workflow drucker-poll --project STL
+agent-cli drucker-poll --project STL
 
 # Run two cycles and post the summaries to Shannon
-pm_agent --workflow drucker-poll --project STL --max-cycles 2 --poll-interval 300 --notify-shannon
+agent-cli drucker-poll --project STL --max-cycles 2 --poll-interval 300 --notify-shannon
 ```
 
 ---
@@ -173,18 +173,18 @@ repo Markdown and optional Confluence targets.
 
 ```bash
 # Generate a repo-owned documentation draft
-pm_agent --workflow hypatia-generate --doc-title "STL Build Notes" --docs README.md AGENTS.md
+agent-cli hypatia-generate --doc-title "STL Build Notes" --docs README.md AGENTS.md
 
 # Target a specific repo doc path and documentation class
-pm_agent --workflow hypatia-generate --doc-title "Fabric Bring-Up Guide" \
+agent-cli hypatia-generate --doc-title "Fabric Bring-Up Guide" \
   --doc-type how_to --docs docs/source.md --target-file docs/fabric-bring-up.md
 
 # Add evidence files and stricter validation for release-note support
-pm_agent --workflow hypatia-generate --doc-title "Release Notes Support" \
+agent-cli hypatia-generate --doc-title "Release Notes Support" \
   --doc-type release_note_support --docs notes.md --evidence release.json --doc-validation strict
 
 # Stage a Confluence publication target alongside the repo draft
-pm_agent --workflow hypatia-generate --doc-title "STL Weekly Summary" \
+agent-cli hypatia-generate --doc-title "STL Weekly Summary" \
   --docs README.md --confluence-title "STL Weekly Summary" --confluence-space ENG
 ```
 
@@ -200,19 +200,19 @@ Generate a cleaned, enriched bug report from a Jira filter.
 
 ```bash
 # Basic usage — looks up filter by name, pulls tickets, sends to LLM, converts to Excel
-pm_agent --workflow bug-report --filter "SW 12.1.1 P0/P1 Bugs" --timeout 800
+agent-cli bug-report --filter "SW 12.1.1 P0/P1 Bugs" --timeout 800
 
 # With verbose logging
-pm_agent --workflow bug-report --filter "SW 12.1.1 P0/P1 Bugs" --timeout 800 --verbose
+agent-cli bug-report --filter "SW 12.1.1 P0/P1 Bugs" --timeout 800 --verbose
 
 # Override the LLM model for this run
-pm_agent --workflow bug-report --filter "SW 12.1.1 P0/P1 Bugs" --model developer-opus --timeout 800
+agent-cli bug-report --filter "SW 12.1.1 P0/P1 Bugs" --model developer-opus --timeout 800
 
 # Custom prompt file
-pm_agent --workflow bug-report --filter "My Filter" --prompt my_prompt.md --timeout 600
+agent-cli bug-report --filter "My Filter" --prompt my_prompt.md --timeout 600
 
 # With dashboard pivot columns
-pm_agent --workflow bug-report --filter "SW 12.1.1 P0/P1 Bugs" --d-columns Phase Customer Product Module Priority
+agent-cli bug-report --filter "SW 12.1.1 P0/P1 Bugs" --d-columns Phase Customer Product Module Priority
 ```
 
 **Steps performed:**
@@ -237,24 +237,9 @@ pm_agent --workflow bug-report --filter "SW 12.1.1 P0/P1 Bugs" --d-columns Phase
 
 ---
 
-## Release Planning Workflow
+## Release Planning Workflow (Legacy — Removed)
 
-Full release planning from roadmap documents.
-
-```bash
-# Run full release planning workflow
-pm_agent --plan --project PROJ --roadmap slides.pptx --org-chart org.drawio
-
-# Analyze Jira project state
-pm_agent --analyze --project PROJ --quick
-
-# Analyze roadmap files
-pm_agent --vision roadmap.png roadmap.xlsx
-
-# List / resume saved sessions
-pm_agent --sessions --list-sessions
-pm_agent --resume abc123
-```
+These legacy commands (`--plan`, `--analyze`, `--vision`, `--sessions`, `--resume`) were removed during the `agent-cli` restructure. Use `agent-cli feature-plan` for feature planning workflows.
 
 ---
 

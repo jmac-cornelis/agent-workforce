@@ -20,17 +20,26 @@ import requests
 
 from shannon.cards import (
     build_bug_activity_card,
+    build_ci_failures_card,
     build_drucker_hygiene_card,
     build_drucker_summary_card,
+    build_dry_run_preview_card,
     build_fact_card,
     build_gantt_release_monitor_card,
     build_gantt_release_survey_card,
     build_gantt_snapshot_card,
+    build_merge_conflicts_card,
+    build_naming_compliance_card,
+    build_pr_hygiene_card,
+    build_pr_list_card,
+    build_pr_reviews_card,
+    build_pr_stale_card,
+    build_stale_branches_card,
 )
 from shannon.models import AuditRecord, ConversationReference, ShannonResponse, normalize_command_text
 from shannon.poster import BasePoster, build_poster_from_env
 from shannon.registry import ShannonAgentRegistry
-from state.shannon_state_store import ShannonStateStore
+from agents.shannon.state_store import ShannonStateStore
 
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
@@ -403,6 +412,15 @@ class ShannonService:
             '/hygiene-run': build_drucker_hygiene_card,
             '/hygiene-report': build_drucker_hygiene_card,
             '/bug-activity': build_bug_activity_card,
+            '/pr-hygiene': build_pr_hygiene_card,
+            '/pr-stale': build_pr_stale_card,
+            '/pr-reviews': build_pr_reviews_card,
+            '/pr-list': build_pr_list_card,
+            '/naming-compliance': build_naming_compliance_card,
+            '/merge-conflicts': build_merge_conflicts_card,
+            '/ci-failures': build_ci_failures_card,
+            '/stale-branches': build_stale_branches_card,
+            '/extended-hygiene': build_pr_hygiene_card,
         },
         'gantt': {
             '/planning-snapshot': build_gantt_snapshot_card,
@@ -412,6 +430,8 @@ class ShannonService:
             '/release-survey-report': build_gantt_release_survey_card,
         },
     }
+
+    MUTATION_COMMANDS: set[str] = set()
 
     def _agent_response_to_shannon(
         self,
@@ -428,8 +448,33 @@ class ShannonService:
 
         data = result.get('data', result)
 
+        if isinstance(data, dict) and data.get('dry_run') is True:
+            card = build_dry_run_preview_card(agent_id, command, data)
+            return ShannonResponse(
+                text=f'Dry-run preview for {command}. Send again with "execute" to confirm.',
+                card=card,
+                command=command,
+                decision='dry_run_preview',
+            )
+
         card_builder = self.AGENT_CARD_BUILDERS.get(agent_id, {}).get(command)
         if card_builder and isinstance(data, dict):
+            if agent_id == 'drucker' and command in (
+                '/pr-hygiene', '/pr-stale', '/pr-reviews', '/pr-list',
+                '/naming-compliance', '/merge-conflicts', '/ci-failures',
+                '/stale-branches', '/extended-hygiene',
+            ):
+                card = card_builder(data)
+                repo = data.get('repo', '')
+                total = data.get('total_findings', data.get('total', len(data.get('prs', []))))
+                label = 'findings' if command != '/pr-list' else 'PRs'
+                return ShannonResponse(
+                    text=f'{repo}: {total} {label}',
+                    card=card,
+                    command=command,
+                    decision='agent_call_success',
+                )
+
             if agent_id == 'drucker':
                 report = data.get('report', data)
                 card = card_builder(report)
@@ -620,14 +665,26 @@ class ShannonService:
                 json_body = None
                 params = None
                 args = parts[1:] if len(parts) > 1 else []
+
+                execute_requested = (
+                    len(args) > 0
+                    and args[-1].lower() == 'execute'
+                )
+                if execute_requested:
+                    args = args[:-1]
+
                 if method.upper() == 'POST':
                     json_body = {
                         args[i]: args[i + 1]
                         for i in range(0, len(args) - 1, 2)
                     } if args else {}
+                    is_mutation = (
+                        command in self.MUTATION_COMMANDS
+                        or cc.get('mutation', False)
+                    )
+                    if is_mutation:
+                        json_body['dry_run'] = not execute_requested
                 elif args:
-                    # Append first arg as path segment (e.g. /hygiene-report <id>)
-                    # and pass remaining as query params
                     path = f'{path.rstrip("/")}/{args[0]}'
                     if len(args) > 1:
                         params = {'args': ' '.join(args[1:])}
@@ -680,8 +737,8 @@ class ShannonService:
     ) -> Dict[str, Any]:
         activity = response.to_message_activity()
         if reply and reference.reply_to_id:
-            return self.poster.reply_to_activity(reference, reference.reply_to_id, activity)
-        return self.poster.send_to_conversation(reference, activity)
+            return self.poster.reply_to_activity(reference, reference.reply_to_id, activity, dry_run=False)
+        return self.poster.send_to_conversation(reference, activity, dry_run=False)
 
     def process_teams_activity(self, activity: Dict[str, Any]) -> Dict[str, Any]:
         '''

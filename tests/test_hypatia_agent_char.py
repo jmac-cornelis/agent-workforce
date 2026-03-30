@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from agents.hypatia_models import (
+from agents.hypatia.models import (
     DocumentationPatch,
     DocumentationRecord,
     DocumentationRequest,
@@ -17,8 +17,8 @@ def test_hypatia_agent_builds_record_and_review_session(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents.hypatia_agent import HypatiaDocumentationAgent
-    from agents import hypatia_agent as hypatia_agent_module
+    from agents.hypatia.agent import HypatiaDocumentationAgent
+    from agents.hypatia import agent as hypatia_agent_module
 
     source_path = tmp_path / 'inputs.md'
     source_path.write_text(
@@ -72,7 +72,7 @@ def test_hypatia_agent_builds_record_and_review_session(
 
 
 def test_hypatia_record_store_save_load_list_and_publications(tmp_path):
-    from state.hypatia_record_store import HypatiaRecordStore
+    from agents.hypatia.state.record_store import HypatiaRecordStore
 
     store = HypatiaRecordStore(storage_dir=str(tmp_path / 'hypatia'))
 
@@ -125,8 +125,8 @@ def test_hypatia_publish_approved_executes_repo_and_confluence_targets(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents.hypatia_agent import HypatiaDocumentationAgent
-    from agents import hypatia_agent as hypatia_agent_module
+    from agents.hypatia.agent import HypatiaDocumentationAgent
+    from agents.hypatia import agent as hypatia_agent_module
     from tools import file_tools as file_tools_module
     from tools import confluence_tools as confluence_tools_module
 
@@ -200,7 +200,7 @@ def test_hypatia_strict_validation_requires_source_refs(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents.hypatia_agent import HypatiaDocumentationAgent
+    from agents.hypatia.agent import HypatiaDocumentationAgent
 
     monkeypatch.setattr(
         HypatiaDocumentationAgent,
@@ -226,8 +226,8 @@ def test_hypatia_sphinx_validation_runs_when_requested(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents.hypatia_agent import HypatiaDocumentationAgent
-    from agents import hypatia_agent as hypatia_agent_module
+    from agents.hypatia.agent import HypatiaDocumentationAgent
+    from agents.hypatia import agent as hypatia_agent_module
 
     docs_source = tmp_path / 'docs' / 'source'
     docs_source.mkdir(parents=True)
@@ -270,8 +270,8 @@ def test_workflow_hypatia_generate_writes_record_and_publications(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    import pm_agent
-    from agents import hypatia_agent as hypatia_agent_module
+    from agents.hypatia.cli import cmd_generate as hypatia_cmd_generate
+    from agents.hypatia import agent as hypatia_agent_module
 
     class _FakeReviewAgent:
         def approve_all(self, session):
@@ -342,7 +342,6 @@ def test_workflow_hypatia_generate_writes_record_and_publications(
             ]
 
     monkeypatch.setattr(hypatia_agent_module, 'HypatiaDocumentationAgent', _FakeHypatiaAgent)
-    monkeypatch.setattr(pm_agent, 'output', lambda *args, **kwargs: None)
     monkeypatch.setenv('HYPATIA_DOC_DIR', str(tmp_path / 'store'))
 
     output_path = tmp_path / 'hypatia_record.json'
@@ -352,19 +351,24 @@ def test_workflow_hypatia_generate_writes_record_and_publications(
         doc_type='engineering_reference',
         doc_summary='Build summary',
         docs=[],
+        evidence=[],
         target_file=str(tmp_path / 'docs' / 'hypatia.md'),
         confluence_title=None,
         confluence_page=None,
         confluence_space=None,
         confluence_parent_id=None,
         version_message=None,
+        doc_validation='default',
         output=str(output_path),
         execute=True,
+        env=None,
+        json=False,
     )
 
-    exit_code = pm_agent._workflow_hypatia_generate(args)
+    with pytest.raises(SystemExit) as exc_info:
+        hypatia_cmd_generate(args)
 
-    assert exit_code == 0
+    assert exc_info.value.code == 0
     assert output_path.exists()
     assert (tmp_path / 'hypatia_record.md').exists()
     assert (tmp_path / 'hypatia_record_review.json').exists()

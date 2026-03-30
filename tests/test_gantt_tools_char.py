@@ -1,6 +1,6 @@
 import pytest
 
-from agents.gantt_models import (
+from agents.gantt.models import (
     BugSummary,
     DependencyGraph,
     PlanningSnapshot,
@@ -8,7 +8,7 @@ from agents.gantt_models import (
     ReleaseSurveyReleaseSummary,
     ReleaseSurveyReport,
 )
-from tools.gantt_tools import (
+from agents.gantt.tools import (
     GanttTools,
     create_gantt_snapshot,
     create_release_monitor,
@@ -26,7 +26,7 @@ def test_create_gantt_snapshot_tool_persists_snapshot(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents import gantt_agent as gantt_agent_module
+    from agents.gantt import agent as gantt_agent_module
 
     class _FakeGanttAgent:
         def __init__(self, project_key=None, **_kwargs):
@@ -65,8 +65,8 @@ def test_create_gantt_snapshot_tool_persists_snapshot(
 
 
 def test_get_and_list_gantt_snapshots_tools(monkeypatch: pytest.MonkeyPatch, tmp_path):
-    from state.gantt_snapshot_store import GanttSnapshotStore
-    from tools import gantt_tools
+    from agents.gantt.state.snapshot_store import GanttSnapshotStore
+    from agents.gantt import tools as gantt_tools
 
     store = GanttSnapshotStore(storage_dir=str(tmp_path / 'store'))
     store.save_snapshot(
@@ -102,7 +102,7 @@ def test_create_release_monitor_tool_persists_report(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents import gantt_agent as gantt_agent_module
+    from agents.gantt import agent as gantt_agent_module
 
     class _FakeGanttAgent:
         def __init__(self, project_key=None, **_kwargs):
@@ -146,7 +146,7 @@ def test_get_and_list_gantt_release_monitor_reports_tools(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from state.gantt_release_monitor_store import GanttReleaseMonitorStore
+    from agents.gantt.state.release_monitor_store import GanttReleaseMonitorStore
 
     store = GanttReleaseMonitorStore(storage_dir=str(tmp_path / 'reports'))
     store.save_report(
@@ -182,7 +182,7 @@ def test_create_release_survey_tool_persists_report(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents import gantt_agent as gantt_agent_module
+    from agents.gantt import agent as gantt_agent_module
 
     class _FakeGanttAgent:
         def __init__(self, project_key=None, **_kwargs):
@@ -234,7 +234,7 @@ def test_get_and_list_gantt_release_surveys_tools(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from state.gantt_release_survey_store import GanttReleaseSurveyStore
+    from agents.gantt.state.release_survey_store import GanttReleaseSurveyStore
 
     store = GanttReleaseSurveyStore(storage_dir=str(tmp_path / 'surveys'))
     store.save_survey(

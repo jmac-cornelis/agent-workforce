@@ -2,18 +2,18 @@
 
 ## Overview
 
-A subcommand in `pm_agent.py` that orchestrates a multi-step Jira data gathering and Excel assembly pipeline. It produces a single `.xlsx` workbook with:
+A subcommand in `agent_cli.py` that orchestrates a multi-step Jira data gathering and Excel assembly pipeline. It produces a single `.xlsx` workbook with:
 
 - **Sheet 1 ("Tickets")**: An indented overview of root ticket(s) and their first-level children only (`hierarchy=1`). Uses Depth 0 / Depth 1 columns to show the parent-child relationship.
 - **Sheets 2..N (per ticket key)**: Each first-level child gets its own sheet with unlimited child hierarchy (indented format with depth columns).
 
-Designed as a deterministic pipeline in `pm_agent.py` (subcommand `build-excel-map`) that imports from `jira_utils.py` for Jira data gathering and `_write_excel()` for Excel output. Also wrapped as an agent tool in `tools/excel_tools.py`.
+Designed as a deterministic pipeline in `agent_cli.py` (subcommand `build-excel-map`) that imports from `jira_utils.py` for Jira data gathering and `_write_excel()` for Excel output. Also wrapped as an agent tool in `tools/excel_tools.py`.
 
 ## Workflow Diagram
 
 ```mermaid
 flowchart TD
-    A[CLI: python pm_agent.py build-excel-map STL-74071] --> B[Step 1: Connect to Jira]
+    A[CLI: python agent_cli.py build-excel-map STL-74071] --> B[Step 1: Connect to Jira]
     B --> C[Step 2: _get_related_data hierarchy=1 — first level only]
     C --> D[Merge + dedup across all root tickets]
     D --> E[Write flat Tickets sheet to temp file]
@@ -63,7 +63,7 @@ flowchart TD
 ## CLI Interface
 
 ```
-python pm_agent.py build-excel-map STL-74071 [STL-76297 ...] [options]
+python agent_cli.py build-excel-map STL-74071 [STL-76297 ...] [options]
 
 Required:
   ticket_keys              One or more root ticket keys
@@ -98,7 +98,7 @@ def _get_children_data(jira, root_key, limit=None):
     ...
 ```
 
-### In `pm_agent.py` (subcommand handler + orchestration)
+### In `agent_cli.py` (subcommand handler + orchestration)
 
 ```python
 def cmd_build_excel_map(args):
@@ -183,8 +183,8 @@ This follows the existing pattern where `_write_excel()` is already a separate h
 |------|--------|
 | `jira_utils.py` | Extract `_get_related_data()` from `get_related_issues()` |
 | `jira_utils.py` | Extract `_get_children_data()` from `get_children_hierarchy()` |
-| `pm_agent.py` | Add `cmd_build_excel_map()` handler function |
-| `pm_agent.py` | Add `build-excel-map` subparser to `handle_args()` |
+| `agent_cli.py` | Add `cmd_build_excel_map()` handler function |
+| `agent_cli.py` | Add `build-excel-map` subparser to `handle_args()` |
 | `tools/excel_tools.py` | Agent tool wrapper for `build_excel_map` and `excel_utils` functions |
 | `tools/__init__.py` | Add excel tool exports |
 

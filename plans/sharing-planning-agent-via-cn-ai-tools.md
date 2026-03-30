@@ -18,7 +18,7 @@ The `jira-utilities` planning pipeline is a **multi-agent Python application** w
 | LLM abstraction | `llm/*.py` | CornelisLLM client, LiteLLM fallback |
 | State management | `state/*.py` | Session persistence, workflow state |
 | Knowledge base | `data/knowledge/*.md` | Cornelis domain knowledge |
-| CLI entry point | `pm_agent.py` | argparse CLI with workflow dispatch |
+| CLI entry point | `agent_cli.py` | argparse CLI with workflow dispatch |
 | Dependencies | `requirements.txt` | jira, openai, litellm, openpyxl, etc. |
 
 This is fundamentally different from a cn-ai-tools agent (prompt + model config). The planning pipeline is a **standalone application** that happens to use LLMs, not a prompt that runs inside OpenCode/Roo Code.
@@ -41,7 +41,7 @@ graph TD
     D --> F[Atlassian MCP Server]
     
     C --> G[pip install cornelis-jira-tools]
-    G --> H[pm-agent CLI]
+    G --> H[agent-cli CLI]
     H --> I[Full 6-agent pipeline]
     I --> E
     I --> J[Jira REST API direct]
@@ -154,7 +154,7 @@ Everything that requires Python runtime:
 
 - All `agents/*.py` files (orchestrator, research, HW analyst, scoping, plan builder, review)
 - All `tools/*.py` files (Jira API wrappers, MCP client)
-- `pm_agent.py` CLI
+- `agent_cli.py` CLI
 - `llm/*.py`, `state/*.py`, `config/*.py`
 - `data/knowledge/*.md` (though these could be duplicated or symlinked)
 - `requirements.txt`, `pyproject.toml`

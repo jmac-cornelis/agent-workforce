@@ -1,0 +1,35 @@
+defaults:
+  project_key: ''
+  limit: 200
+  include_done: false
+  stale_days: 30
+  label_prefix: drucker
+  persist: true
+  notify_shannon: false
+  github_stale_days: 5
+
+jobs:
+  - job_id: hygiene-scan
+    description: Full-project hygiene scan for active work.
+    scan_type: jira
+    recent_only: false
+
+  - job_id: recent-ticket-intake
+    description: Recent-ticket intake scan using Drucker checkpoint state.
+    scan_type: jira
+    recent_only: true
+
+  - job_id: github-hygiene-scan
+    description: GitHub PR hygiene scan for stale PRs and missing reviews.
+    scan_type: github
+    enabled: false
+    github_stale_days: 5
+    github_repos: []
+
+  - job_id: github-extended-scan
+    description: Extended GitHub hygiene scan including naming, conflicts, CI, and stale branches.
+    scan_type: github-extended
+    enabled: false
+    github_stale_days: 5
+    branch_stale_days: 30
+    github_repos: []

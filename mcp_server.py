@@ -3,10 +3,11 @@
 #
 # Module: mcp_server.py
 #
-# Description: Cornelis Jira MCP Server.
-#              Exposes Jira tools via the Model Context Protocol (MCP) so that
-#              AI assistants (Claude Desktop, Cursor, Windsurf, etc.) can interact
-#              with Jira through a standardised tool-calling interface.
+# Description: Cornelis Jira & GitHub MCP Server.
+#              Exposes Jira and GitHub tools via the Model Context Protocol (MCP)
+#              so that AI assistants (Claude Desktop, Cursor, Windsurf, etc.) can
+#              interact with Jira and GitHub through a standardised tool-calling
+#              interface.
 #
 #              Transport: stdio (JSON-RPC 2.0 over stdin/stdout).
 #
@@ -34,6 +35,8 @@ import sys
 from typing import Any, Optional, cast
 
 from dotenv import load_dotenv
+
+from config.env_loader import resolve_dry_run
 
 # Load environment variables before importing jira_utils
 load_dotenv()
@@ -70,24 +73,26 @@ except ImportError:
 # ---------------------------------------------------------------------------
 import jira_utils
 import confluence_utils
-from agents.drucker_agent import DruckerCoordinatorAgent
-from agents.drucker_models import DruckerRequest
-from agents.gantt_agent import GanttProjectPlannerAgent
-from agents.gantt_models import PlanningRequest, ReleaseMonitorRequest, ReleaseSurveyRequest
-from agents.hypatia_agent import HypatiaDocumentationAgent
-from agents.hypatia_models import DocumentationRequest
-from state.drucker_report_store import DruckerReportStore
-from state.gantt_dependency_review_store import GanttDependencyReviewStore
-from state.gantt_release_monitor_store import GanttReleaseMonitorStore
-from state.gantt_release_survey_store import GanttReleaseSurveyStore
-from state.gantt_snapshot_store import GanttSnapshotStore
-from state.hypatia_record_store import HypatiaRecordStore
+import github_utils
+from agents.drucker.agent import DruckerCoordinatorAgent
+from agents.drucker.models import DruckerRequest
+from agents.gantt.agent import GanttProjectPlannerAgent
+from agents.gantt.models import PlanningRequest, ReleaseMonitorRequest, ReleaseSurveyRequest
+from agents.hypatia.agent import HypatiaDocumentationAgent
+from agents.hypatia.models import DocumentationRequest
+from agents.drucker.state.report_store import DruckerReportStore
+from agents.gantt.state.dependency_review_store import GanttDependencyReviewStore
+from agents.gantt.state.release_monitor_store import GanttReleaseMonitorStore
+from agents.gantt.state.release_survey_store import GanttReleaseSurveyStore
+from agents.gantt.state.snapshot_store import GanttSnapshotStore
+from agents.hypatia.state.record_store import HypatiaRecordStore
 
 # CRITICAL: Suppress all stdout output from jira_utils.  The MCP protocol
 # uses stdout exclusively for JSON-RPC 2.0 messages; any stray print()
 # would corrupt the transport.
 jira_utils._quiet_mode = True
 confluence_utils._quiet_mode = True
+github_utils._quiet_mode = True
 
 # ---------------------------------------------------------------------------
 # MCP Server instance
@@ -474,6 +479,7 @@ async def transition_ticket(
     to_status: str,
     comment: Optional[str] = None,
     fields: Optional[dict[str, Any]] = None,
+    dry_run: Optional[bool] = None,
 ) -> list[Any]:
     """Transition a Jira ticket to a new status.
 
@@ -482,6 +488,7 @@ async def transition_ticket(
         to_status: Transition name or destination status name.
         comment: Optional comment to add after the transition.
         fields: Optional transition field payload.
+        dry_run: Preview only — do not apply the transition.
     """
     try:
         jira = jira_utils.get_connection()
@@ -493,6 +500,18 @@ async def transition_ticket(
             return _error_result(
                 f'Cannot transition to "{to_status}". Available transitions: {available}'
             )
+
+        if resolve_dry_run(dry_run):
+            current_status = str(getattr(issue.fields, 'status', ''))
+            return _json_result({
+                'dry_run': True,
+                'ticket_key': ticket_key,
+                'current_status': current_status,
+                'target_status': to_status,
+                'transition': _normalize_transition(target),
+                'comment_would_add': comment is not None,
+                'fields_would_set': list(fields.keys()) if fields else [],
+            })
 
         transition_kwargs: dict[str, Any] = {}
         if fields:
@@ -513,9 +532,22 @@ async def transition_ticket(
 
 
 @_tool_decorator()
-async def add_ticket_comment(ticket_key: str, body: str) -> list[Any]:
-    """Add a comment to a Jira ticket."""
+async def add_ticket_comment(ticket_key: str, body: str, dry_run: Optional[bool] = None) -> list[Any]:
+    """Add a comment to a Jira ticket.
+
+    Args:
+        ticket_key: Jira issue key.
+        body: Comment body text.
+        dry_run: Preview only — do not post the comment.
+    """
     try:
+        if resolve_dry_run(dry_run):
+            return _json_result({
+                'dry_run': True,
+                'ticket_key': ticket_key,
+                'comment_body_length': len(body),
+                'comment_body_preview': body[:200],
+            })
         jira = jira_utils.get_connection()
         issue = jira.issue(ticket_key)
         comment = jira.add_comment(issue, body)
@@ -1355,6 +1387,7 @@ async def create_ticket(
     fix_version: Optional[str] = None,
     labels: Optional[str] = None,
     parent_key: Optional[str] = None,
+    dry_run: Optional[bool] = None,
 ) -> list[Any]:
     """Create a new Jira ticket.
 
@@ -1368,17 +1401,27 @@ async def create_ticket(
         fix_version: Optional fix-version name to set.
         labels: Optional comma-separated label string (e.g. 'backend,urgent').
         parent_key: Optional parent issue key for sub-tasks or child issues.
+        dry_run: Preview only — do not create the ticket.
     """
     try:
-        jira = jira_utils.get_connection()
-
-        # Convert comma-separated labels to list
         labels_list = [l.strip() for l in labels.split(',')] if labels else None
-
-        # Convert fix_version to list
         fix_versions_list = [fix_version] if fix_version else None
 
-        # Call jira_utils.create_ticket with dry_run=False so it actually creates
+        if resolve_dry_run(dry_run):
+            return _json_result({
+                'dry_run': True,
+                'project_key': project_key,
+                'summary': summary,
+                'issue_type': issue_type,
+                'description': description[:200] if description else None,
+                'assignee': assignee,
+                'priority': priority,
+                'fix_version': fix_version,
+                'labels': labels_list,
+                'parent_key': parent_key,
+            })
+
+        jira = jira_utils.get_connection()
         jira_utils.create_ticket(
             jira,
             project_key=project_key,
@@ -1392,9 +1435,6 @@ async def create_ticket(
             dry_run=False,
         )
 
-        # jira_utils.create_ticket prints the key but doesn't return it.
-        # Search for the just-created ticket by summary to return its key.
-        # Use a targeted JQL query.
         issues = jira_utils.run_jql_query(
             jira,
             f'project = "{project_key}" AND summary ~ "{summary}" ORDER BY created DESC',
@@ -1424,6 +1464,7 @@ async def update_ticket(
     fix_version: Optional[str] = None,
     labels: Optional[str] = None,
     description: Optional[str] = None,
+    dry_run: Optional[bool] = None,
 ) -> list[Any]:
     """Update fields on an existing Jira ticket.
 
@@ -1438,12 +1479,9 @@ async def update_ticket(
         fix_version: Fix-version name to set (replaces existing).
         labels: Comma-separated labels to set (replaces existing).
         description: New plain-text description.
+        dry_run: Preview only — do not apply updates.
     """
     try:
-        jira = jira_utils.get_connection()
-        issue = jira.issue(ticket_key)
-
-        # Build the update fields dict
         update_fields: dict[str, Any] = {}
         if summary is not None:
             update_fields['summary'] = summary
@@ -1456,13 +1494,25 @@ async def update_ticket(
         if labels is not None:
             update_fields['labels'] = [l.strip() for l in labels.split(',')]
         if description is not None:
+            update_fields['description'] = description
+
+        if resolve_dry_run(dry_run):
+            return _json_result({
+                'dry_run': True,
+                'ticket_key': ticket_key,
+                'fields_would_update': list(update_fields.keys()),
+                'status_would_transition': status,
+            })
+
+        jira = jira_utils.get_connection()
+        issue = jira.issue(ticket_key)
+
+        if description is not None:
             update_fields['description'] = jira_utils._adf_from_text(description)
 
-        # Apply field updates
         if update_fields:
             issue.update(fields=update_fields)
 
-        # Handle status transition separately (requires workflow transition)
         if status is not None:
             transitions = jira.transitions(issue)
             target = None
@@ -1814,7 +1864,7 @@ async def get_components(project_key: str) -> list[Any]:
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def assign_ticket(ticket_key: str, assignee: str) -> list[Any]:
+async def assign_ticket(ticket_key: str, assignee: str, dry_run: Optional[bool] = None) -> list[Any]:
     """Assign a Jira ticket to a user.
 
     Args:
@@ -1822,8 +1872,15 @@ async def assign_ticket(ticket_key: str, assignee: str) -> list[Any]:
         assignee: The accountId, display name, email, or username of the user
                   to assign, or 'unassigned' to clear.  Human-readable values
                   are automatically resolved to accountIds via UserResolver.
+        dry_run: Preview only — do not change the assignee.
     """
     try:
+        if resolve_dry_run(dry_run):
+            return _json_result({
+                'dry_run': True,
+                'ticket_key': ticket_key,
+                'assignee': assignee,
+            })
         jira = jira_utils.get_connection()
         issue = jira.issue(ticket_key)
 
@@ -1857,7 +1914,7 @@ async def assign_ticket(ticket_key: str, assignee: str) -> list[Any]:
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def link_tickets(from_key: str, to_key: str, link_type: str = 'Relates') -> list[Any]:
+async def link_tickets(from_key: str, to_key: str, link_type: str = 'Relates', dry_run: Optional[bool] = None) -> list[Any]:
     """Create a link between two Jira tickets.
 
     Args:
@@ -1865,8 +1922,16 @@ async def link_tickets(from_key: str, to_key: str, link_type: str = 'Relates') -
         to_key: Target issue key (e.g. 'STL-200').
         link_type: Link type name (e.g. 'Relates', 'Blocks', 'is blocked by',
                    'Cloners', 'Duplicate'). Default: 'Relates'.
+        dry_run: Preview only — do not create the link.
     """
     try:
+        if resolve_dry_run(dry_run):
+            return _json_result({
+                'dry_run': True,
+                'from_key': from_key,
+                'to_key': to_key,
+                'link_type': link_type,
+            })
         jira = jira_utils.get_connection()
         jira.create_issue_link(
             type=link_type,
@@ -2167,12 +2232,13 @@ async def get_automation(rule_uuid: str) -> list[Any]:
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def create_automation(rule_json: str, project_key: str = '') -> list[Any]:
+async def create_automation(rule_json: str, project_key: str = '', dry_run: Optional[bool] = None) -> list[Any]:
     """Create a new Jira automation rule from a JSON payload.
 
     Args:
         rule_json: JSON string defining the automation rule configuration.
         project_key: Optional project key to scope the rule to.
+        dry_run: Preview only — do not create the rule.
     """
     try:
         import json as _json
@@ -2181,6 +2247,14 @@ async def create_automation(rule_json: str, project_key: str = '') -> list[Any]:
         return _error_result(f'Invalid JSON payload: {e}')
 
     try:
+        if resolve_dry_run(dry_run):
+            return _json_result({
+                'dry_run': True,
+                'rule_name': payload.get('name', ''),
+                'project_key': project_key,
+                'payload_keys': list(payload.keys()),
+            })
+
         jira = jira_utils.get_connection()
         email, api_token = jira_utils.get_jira_credentials()
         base_url = jira_utils._get_automation_base_url()
@@ -2207,13 +2281,20 @@ async def create_automation(rule_json: str, project_key: str = '') -> list[Any]:
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def enable_automation(rule_uuid: str) -> list[Any]:
+async def enable_automation(rule_uuid: str, dry_run: Optional[bool] = None) -> list[Any]:
     """Enable a Jira automation rule.
 
     Args:
         rule_uuid: UUID of the automation rule to enable.
+        dry_run: Preview only — do not change the rule state.
     """
     try:
+        if resolve_dry_run(dry_run):
+            return _json_result({
+                'dry_run': True,
+                'rule_uuid': rule_uuid,
+                'target_state': 'ENABLED',
+            })
         jira = jira_utils.get_connection()
         email, api_token = jira_utils.get_jira_credentials()
         base_url = jira_utils._get_automation_base_url()
@@ -2241,13 +2322,20 @@ async def enable_automation(rule_uuid: str) -> list[Any]:
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def disable_automation(rule_uuid: str) -> list[Any]:
+async def disable_automation(rule_uuid: str, dry_run: Optional[bool] = None) -> list[Any]:
     """Disable a Jira automation rule.
 
     Args:
         rule_uuid: UUID of the automation rule to disable.
+        dry_run: Preview only — do not change the rule state.
     """
     try:
+        if resolve_dry_run(dry_run):
+            return _json_result({
+                'dry_run': True,
+                'rule_uuid': rule_uuid,
+                'target_state': 'DISABLED',
+            })
         jira = jira_utils.get_connection()
         email, api_token = jira_utils.get_jira_credentials()
         base_url = jira_utils._get_automation_base_url()
@@ -2275,13 +2363,20 @@ async def disable_automation(rule_uuid: str) -> list[Any]:
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def delete_automation(rule_uuid: str) -> list[Any]:
+async def delete_automation(rule_uuid: str, dry_run: Optional[bool] = None) -> list[Any]:
     """Delete a Jira automation rule.
 
     Args:
         rule_uuid: UUID of the automation rule to delete.
+        dry_run: Preview only — do not delete the rule.
     """
     try:
+        if resolve_dry_run(dry_run):
+            return _json_result({
+                'dry_run': True,
+                'rule_uuid': rule_uuid,
+                'action': 'DELETE',
+            })
         jira = jira_utils.get_connection()
         email, api_token = jira_utils.get_jira_credentials()
         base_url = jira_utils._get_automation_base_url()
@@ -2300,6 +2395,342 @@ async def delete_automation(rule_uuid: str) -> list[Any]:
         return _json_result({'rule_uuid': rule_uuid, 'deleted': True})
     except Exception as e:
         log.error(f'delete_automation failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 26: list_github_repos — List GitHub repositories
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def list_github_repos(org: Optional[str] = None, limit: int = 50) -> list[Any]:
+    '''List GitHub repositories, optionally filtered by organization.
+
+    Args:
+        org: GitHub organization name (optional; lists authenticated user repos if omitted).
+        limit: Maximum number of repos to return (default: 50).
+    '''
+    try:
+        github_utils.get_connection()
+        repos = github_utils.list_repos(org=org, limit=limit)
+        return _json_result(repos)
+    except Exception as e:
+        log.error(f'list_github_repos failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 27: get_github_repo — Get detailed info for a GitHub repository
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def get_github_repo(repo_full_name: str) -> list[Any]:
+    '''Get detailed information for a GitHub repository.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+    '''
+    try:
+        github_utils.get_connection()
+        info = github_utils.get_repo_info(repo_full_name)
+        return _json_result(info)
+    except Exception as e:
+        log.error(f'get_github_repo failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 28: validate_github_repo — Validate a GitHub repository exists
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def validate_github_repo(repo_full_name: str) -> list[Any]:
+    '''Validate that a GitHub repository exists and is accessible.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+    '''
+    try:
+        github_utils.get_connection()
+        result = github_utils.validate_repo(repo_full_name)
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'validate_github_repo failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 29: list_github_pull_requests — List PRs for a repository
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def list_github_pull_requests(repo_full_name: str, state: str = 'open', sort: str = 'created', direction: str = 'desc', limit: int = 50) -> list[Any]:
+    '''List pull requests for a GitHub repository.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        state: PR state filter — 'open', 'closed', or 'all' (default: 'open').
+        sort: Sort field — 'created', 'updated', or 'popularity' (default: 'created').
+        direction: Sort direction — 'asc' or 'desc' (default: 'desc').
+        limit: Maximum number of PRs to return (default: 50).
+    '''
+    try:
+        github_utils.get_connection()
+        prs = github_utils.list_pull_requests(repo_full_name, state=state, sort=sort, direction=direction, limit=limit)
+        return _json_result(prs)
+    except Exception as e:
+        log.error(f'list_github_pull_requests failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 30: get_github_pull_request — Get details for a single PR
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def get_github_pull_request(repo_full_name: str, pr_number: int) -> list[Any]:
+    '''Get detailed information for a single GitHub pull request.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        pr_number: Pull request number.
+    '''
+    try:
+        github_utils.get_connection()
+        pr = github_utils.get_pull_request(repo_full_name, pr_number)
+        return _json_result(pr)
+    except Exception as e:
+        log.error(f'get_github_pull_request failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 31: get_github_pr_reviews — Get reviews for a PR
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def get_github_pr_reviews(repo_full_name: str, pr_number: int) -> list[Any]:
+    '''Get reviews for a GitHub pull request.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        pr_number: Pull request number.
+    '''
+    try:
+        github_utils.get_connection()
+        reviews = github_utils.get_pr_reviews(repo_full_name, pr_number)
+        return _json_result(reviews)
+    except Exception as e:
+        log.error(f'get_github_pr_reviews failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 32: get_github_pr_review_requests — Get pending review requests
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def get_github_pr_review_requests(repo_full_name: str, pr_number: int) -> list[Any]:
+    '''Get pending review requests for a GitHub pull request.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        pr_number: Pull request number.
+    '''
+    try:
+        github_utils.get_connection()
+        requests = github_utils.get_pr_review_requests(repo_full_name, pr_number)
+        return _json_result(requests)
+    except Exception as e:
+        log.error(f'get_github_pr_review_requests failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 33: find_stale_github_prs — Find stale pull requests
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def find_stale_github_prs(repo_full_name: str, stale_days: int = 5) -> list[Any]:
+    '''Find stale pull requests in a GitHub repository.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        stale_days: Number of days without activity to consider a PR stale (default: 5).
+    '''
+    try:
+        github_utils.get_connection()
+        stale = github_utils.analyze_pr_staleness(repo_full_name, stale_days=stale_days)
+        return _json_result(stale)
+    except Exception as e:
+        log.error(f'find_stale_github_prs failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 34: find_github_prs_missing_reviews — Find PRs missing reviews
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def find_github_prs_missing_reviews(repo_full_name: str) -> list[Any]:
+    '''Find pull requests missing reviews in a GitHub repository.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+    '''
+    try:
+        github_utils.get_connection()
+        missing = github_utils.analyze_missing_reviews(repo_full_name)
+        return _json_result(missing)
+    except Exception as e:
+        log.error(f'find_github_prs_missing_reviews failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 35: analyze_github_pr_hygiene — Full PR hygiene analysis
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def analyze_github_pr_hygiene(repo_full_name: str, stale_days: int = 5) -> list[Any]:
+    '''Run a full PR hygiene analysis on a GitHub repository.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        stale_days: Number of days without activity to consider a PR stale (default: 5).
+    '''
+    try:
+        github_utils.get_connection()
+        hygiene = github_utils.analyze_repo_pr_hygiene(repo_full_name, stale_days=stale_days)
+        return _json_result(hygiene)
+    except Exception as e:
+        log.error(f'analyze_github_pr_hygiene failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 36: get_github_rate_limit — Check GitHub API rate limit status
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def get_github_rate_limit() -> list[Any]:
+    '''Check the current GitHub API rate limit status.
+
+    Args:
+        (none)
+    '''
+    try:
+        rate = github_utils.get_rate_limit()
+        return _json_result(rate)
+    except Exception as e:
+        log.error(f'get_github_rate_limit failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 37: check_naming_compliance — Check branch/PR naming conventions
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def check_naming_compliance(repo_full_name: str, ticket_patterns: str = '') -> list[Any]:
+    '''Check branch and PR title naming compliance against Jira ticket conventions.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/ifs-all').
+        ticket_patterns: Comma-separated regex patterns (default: STL/STLSW pattern).
+    '''
+    try:
+        github_utils.get_connection()
+        patterns = [p.strip() for p in ticket_patterns.split(',') if p.strip()] if ticket_patterns else None
+        result = github_utils.analyze_naming_compliance(repo_full_name, ticket_patterns=patterns)
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'check_naming_compliance failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 38: check_merge_conflicts — Find PRs with merge conflicts
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def check_merge_conflicts(repo_full_name: str) -> list[Any]:
+    '''Find open pull requests with merge conflicts.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/ifs-all').
+    '''
+    try:
+        github_utils.get_connection()
+        result = github_utils.analyze_merge_conflicts(repo_full_name)
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'check_merge_conflicts failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 39: check_ci_failures — Find PRs with failing CI checks
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def check_ci_failures(repo_full_name: str) -> list[Any]:
+    '''Find open pull requests with failing CI checks.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/ifs-all').
+    '''
+    try:
+        github_utils.get_connection()
+        result = github_utils.analyze_ci_failures(repo_full_name)
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'check_ci_failures failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 40: check_stale_branches — Find stale branches
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def check_stale_branches(repo_full_name: str, stale_days: int = 30) -> list[Any]:
+    '''Find stale branches with no recent activity and no open PRs.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/ifs-all').
+        stale_days: Number of days without activity to consider a branch stale (default: 30).
+    '''
+    try:
+        github_utils.get_connection()
+        result = github_utils.analyze_stale_branches(repo_full_name, stale_days=stale_days)
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'check_stale_branches failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 41: analyze_extended_hygiene — Comprehensive extended hygiene scan
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def analyze_extended_hygiene(repo_full_name: str, stale_days: int = 5, branch_stale_days: int = 30) -> list[Any]:
+    '''Run comprehensive extended hygiene analysis including all scan types.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/ifs-all').
+        stale_days: Number of days without activity to consider a PR stale (default: 5).
+        branch_stale_days: Number of days without activity to consider a branch stale (default: 30).
+    '''
+    try:
+        github_utils.get_connection()
+        result = github_utils.analyze_extended_hygiene(
+            repo_full_name, stale_days=stale_days, branch_stale_days=branch_stale_days,
+        )
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'analyze_extended_hygiene failed: {e}')
         return _error_result(str(e))
 
 

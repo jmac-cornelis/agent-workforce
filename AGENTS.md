@@ -21,15 +21,28 @@ This file provides guidance to agents when working with code in this repository.
 - **Data models**: `@dataclass` from stdlib, not Pydantic. See [`agents/base.py`](agents/base.py:31), [`tools/base.py`](tools/base.py:34).
 - **Env loading**: `from dotenv import load_dotenv; load_dotenv()` at module top in any module that reads env vars.
 
+## Agent Interface Requirements
+
+Every implemented agent MUST expose all three user-facing surfaces:
+
+1. **CLI** (`agents/<name>/cli.py`) — Standalone argparse-based CLI with subcommands. Registered as a console entry point in `pyproject.toml` (e.g., `drucker-agent = "agents.drucker.cli:main"`). Pattern: `build_parser()` → `main()` → `args.func(args)` dispatch. See `agents/shannon/cli.py` or `agents/gantt/cli.py` for reference.
+2. **Shannon Teams interface** — Commands registered in `config/shannon/agent_registry.yaml` under the agent's entry. Each command needs: `command`, `description`, `api_method`, `api_path`, `mutation` flag. Card builders in `shannon/cards.py` render responses as Adaptive Cards.
+3. **REST API** (`agents/<name>/api.py`) — FastAPI app created via `create_agent_app()` from `framework/api/app.py`. Pydantic request models, JSON responses. Endpoints must match the `api_path` values in the Shannon registry.
+
+All three surfaces must stay aligned — same capabilities, same parameters, same behavior. When adding a new feature to an agent, wire it through all three.
+
+**Mutation safety**: All mutation endpoints use `dry_run: Optional[bool] = None` resolved via `config.env_loader.resolve_dry_run()` (explicit param > `DRY_RUN` env var > `True` default). Shannon enforces a two-step flow for commands marked `mutation: true` — preview first, user must say "execute" to proceed.
+
 ## Architecture (Non-Obvious)
 
-- **Two-layer tool pattern**: Standalone CLIs (`jira_utils.py`, `confluence_utils.py`) contain all business logic. `tools/*.py` are thin wrappers that return [`ToolResult`](tools/base.py:34) objects for agent consumption. [`mcp_server.py`](mcp_server.py) wraps the same utilities for MCP. All three surfaces must stay aligned.
-- **Prompt files**: Agent prompts live in `config/prompts/<agent_name>.md`. Loaded via `_load_prompt_file()` using `os.path.join('config', 'prompts', ...)` — path is relative to CWD, not module location.
-- **Workforce agents**: `agents/workforce/<name>/` each have `config.yaml`, `prompts/system.md`, `agent.py`, `api.py`, `models.py`. The `config.yaml` declares event contracts (`consumes`/`produces`) and inter-agent `dependencies`.
-- **Shannon dual location**: `shannon/` is the legacy FastAPI Teams service; `agents/workforce/shannon/` is the newer agent-framework version with Graph API client.
-- **State stores**: `state/*.py` — each agent domain has its own store class (e.g., `drucker_report_store.py`, `gantt_snapshot_store.py`). Persistence backends in [`state/persistence.py`](state/persistence.py) support JSON files and SQLite.
+- **Per-agent directories**: Each agent lives in `agents/<name>/` with `agent.py`, `api.py`, `models.py`, `cli.py`, `tools.py`, `prompts/system.md`, `config/`, `state/`, `docs/`. See [`agents/README.md`](agents/README.md) for the full TOC.
+- **Two-layer tool pattern**: Standalone CLIs (`jira_utils.py`, `github_utils.py`, `confluence_utils.py`) contain all business logic. `tools/*.py` and `agents/<name>/tools.py` are thin wrappers that return [`ToolResult`](tools/base.py:34) objects for agent consumption. [`mcp_server.py`](mcp_server.py) wraps the same utilities for MCP. All three surfaces must stay aligned.
+- **Prompt files**: Agent prompts live in `agents/<name>/prompts/system.md`. Loaded via `_load_prompt_file()` using path relative to the agent module's `__file__`.
+- **Shannon dual location**: `shannon/` is the legacy FastAPI Teams service; `agents/shannon/` is the newer agent-framework version with Graph API client.
+- **State stores**: `agents/<name>/state/*.py` — each agent domain has its own store class. Persistence backends in [`state/persistence.py`](state/persistence.py) support JSON files and SQLite. Backward-compat re-exports in `state/__init__.py`.
 - **`core/` is pure logic**: No print statements, no CLI concerns. Returns structured dicts for any consumer. See [`core/reporting.py`](core/reporting.py:7) header.
 - **Framework API factory**: [`framework/api/app.py`](framework/api/app.py:20) `create_agent_app()` gives every agent a FastAPI instance with standard middleware (correlation ID, request logging, metrics) and health/status routes.
+- **Environment loading**: `config/env_loader.py` provides `load_env()` (three-tier: explicit path → `config/env/` directory → root `.env`) and `resolve_dry_run()`. Agent APIs and `config/settings.py` use `load_env()`; standalone CLIs keep their own `load_dotenv()` for independent operation.
 
 ## Safety
 

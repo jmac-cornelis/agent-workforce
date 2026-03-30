@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from agents.gantt_models import (
+from agents.gantt.models import (
     BugSummary,
     ReleaseMonitorReport,
     ReleaseSurveyReleaseSummary,
@@ -19,7 +19,7 @@ def _payload(result):
 
 @pytest.mark.asyncio
 async def test_create_gantt_snapshot_tool(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
-    from agents.gantt_models import DependencyGraph, PlanningSnapshot
+    from agents.gantt.models import DependencyGraph, PlanningSnapshot
 
     class _FakeGanttAgent:
         def __init__(self, project_key=None, **_kwargs):

@@ -27,7 +27,7 @@ This repository contains three categories of tooling:
 | Category | What it does | LLM required? |
 |----------|-------------|----------------|
 | **Agents** | Specialized AI agents for Jira coordination, Teams communication, project planning, and documentation — each with its own API and Teams channel | Varies |
-| **Agentic Workflows** | Multi-phase AI pipelines for feature planning, bug reporting, hygiene analysis, and documentation generation via `pm_agent.py` | Yes |
+| **Agentic Workflows** | Multi-phase AI pipelines for feature planning, bug reporting, hygiene analysis, and documentation generation via `agent-cli` | Yes |
 | **Standalone Utilities** | CLI tools for Jira queries, Excel formatting, Draw.io diagrams, Confluence, and bulk operations — no LLM needed | No |
 
 ### When to Use What
@@ -135,19 +135,18 @@ The full architectural vision, agent specifications, and implementation phasing 
 
 ## Agentic Workflows
 
-Agentic workflows are multi-step operator flows orchestrated by [`pm_agent.py`](pm_agent.py). Some PM workflows are deterministic, while others use an LLM to research, analyze, scope, and plan.
+Agentic workflows are multi-step operator flows orchestrated by [`agent_cli.py`](agent_cli.py). Each agent also has a standalone CLI. Some workflows are deterministic, while others use an LLM to research, analyze, scope, and plan.
 
 | Workflow | Command | Description |
 |----------|---------|-------------|
-| **Gantt Snapshot** | `pm_agent --workflow gantt-snapshot` | Jira-grounded planning snapshots with milestone proposals and risk summaries |
-| **Gantt Release Monitor** | `pm_agent --workflow gantt-release-monitor` | Release-health reports with bug summaries, readiness, and stored exports |
-| **Gantt Poller** | `pm_agent --workflow gantt-poll` | Scheduled Gantt cycles for always-on planning and release monitoring |
-| **Feature Plan** | `pm_agent --workflow feature-plan` | Scope document → Initiative → Epics → Stories in Jira |
-| **Drucker Hygiene** | `pm_agent --workflow drucker-hygiene` | Ticket hygiene reports with remediation suggestions |
-| **Drucker Poller** | `pm_agent --workflow drucker-poll` | Scheduled Drucker hygiene scans with optional Shannon notifications |
-| **Hypatia Docs** | `pm_agent --workflow hypatia-generate` | Source-grounded documentation drafts for repo Markdown or Confluence |
-| **Bug Report** | `pm_agent --workflow bug-report` | Enriched bug reports from Jira filters, exported to styled Excel |
-| **Release Planning** | `pm_agent --plan` | Full release planning from roadmap documents |
+| **Gantt Snapshot** | `agent-cli gantt snapshot` | Jira-grounded planning snapshots with milestone proposals and risk summaries |
+| **Gantt Release Monitor** | `agent-cli gantt release-monitor` | Release-health reports with bug summaries, readiness, and stored exports |
+| **Gantt Poller** | `agent-cli gantt poll` | Scheduled Gantt cycles for always-on planning and release monitoring |
+| **Feature Plan** | `agent-cli feature-plan` | Scope document → Initiative → Epics → Stories in Jira |
+| **Drucker Hygiene** | `agent-cli drucker hygiene` | Ticket hygiene reports with remediation suggestions |
+| **Drucker Poller** | `agent-cli drucker poll` | Scheduled Drucker hygiene scans with optional Shannon notifications |
+| **Hypatia Docs** | `agent-cli hypatia generate` | Source-grounded documentation drafts for repo Markdown or Confluence |
+| **Bug Report** | `agent-cli bug-report` | Enriched bug reports from Jira filters, exported to styled Excel |
 
 All workflows are **dry-run by default** — no Jira tickets are created or modified until `--execute` is passed.
 
@@ -321,7 +320,7 @@ The `tools/` directory and [`mcp_server.py`](mcp_server.py) expose agent-callabl
 
 ```
 agent-workforce/
-├── pm_agent.py                  # Agentic workflow entry point
+├── agent_cli.py                 # Unified CLI entry point (→ agent-cli)
 ├── jira_utils.py                # Standalone Jira CLI (→ jira-utils)
 ├── excel_utils.py               # Standalone Excel CLI (→ excel-utils)
 ├── drawio_utilities.py          # Standalone Draw.io CLI (→ drawio-utils)

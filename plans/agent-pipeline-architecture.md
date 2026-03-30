@@ -139,7 +139,7 @@ cornelis-agent/
 │   ├── jira_utils.py            # Original Jira utilities
 │   └── drawio_utilities.py      # Original draw.io utilities
 │
-├── pm_agent.py                      # CLI entry point
+├── agent_cli.py                      # CLI entry point
 └── tests/                       # Test suite
     ├── __init__.py
     ├── test_llm/

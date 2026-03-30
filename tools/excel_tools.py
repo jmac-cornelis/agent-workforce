@@ -3,7 +3,7 @@
 # Module: tools/excel_tools.py
 #
 # Description: Agent tool wrappers for Excel map building and Excel utility operations.
-#              Wraps the build-excel-map pipeline from pm_agent.py and excel_utils.py
+#              Wraps the build-excel-map pipeline from agent_cli.py and excel_utils.py
 #              functions as agent-callable tools.
 #
 # Author: Cornelis Networks

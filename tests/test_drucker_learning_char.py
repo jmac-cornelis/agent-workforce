@@ -2,7 +2,7 @@ import pytest
 
 
 def test_drucker_learning_store_predicts_component_fix_version_and_priority():
-    from state.drucker_learning_store import DruckerLearningStore
+    from agents.drucker.state.learning_store import DruckerLearningStore
 
     store = DruckerLearningStore(db_path=':memory:', min_observations=2)
 
@@ -54,7 +54,7 @@ def test_drucker_learning_store_predicts_component_fix_version_and_priority():
 
 
 def test_drucker_learning_store_requires_minimum_observations():
-    from state.drucker_learning_store import DruckerLearningStore
+    from agents.drucker.state.learning_store import DruckerLearningStore
 
     store = DruckerLearningStore(db_path=':memory:', min_observations=3)
     store.record_ticket({
@@ -84,7 +84,7 @@ def test_drucker_learning_store_requires_minimum_observations():
 
 
 def test_drucker_learning_store_dedupes_repeated_ticket_learning():
-    from state.drucker_learning_store import DruckerLearningStore
+    from agents.drucker.state.learning_store import DruckerLearningStore
 
     store = DruckerLearningStore(db_path=':memory:', min_observations=2)
     ticket = {

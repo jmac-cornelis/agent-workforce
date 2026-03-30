@@ -310,6 +310,447 @@ def build_bug_activity_card(data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
+def build_pr_hygiene_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a GitHub PR hygiene scan result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    stale_prs = data.get('stale_prs', [])
+    missing_reviews = data.get('missing_reviews', [])
+    total_open = data.get('total_open_prs', 0)
+    total_findings = data.get('total_findings', 0)
+
+    facts = {
+        'Repository': repo,
+        'Open PRs': total_open,
+        'Total Findings': total_findings,
+        'Stale PRs': len(stale_prs),
+        'Missing Reviews': len(missing_reviews),
+    }
+
+    body_lines: list[str] = []
+
+    if stale_prs:
+        body_lines.append('**Stale PRs:**')
+        for item in stale_prs[:5]:
+            pr = item.get('pr', {})
+            days = item.get('days_stale', 0)
+            severity = item.get('severity', 'medium')
+            body_lines.append(
+                f'• [{severity.upper()}] #{pr.get("number", "")} '
+                f'{pr.get("title", "")} — {days}d stale '
+                f'({pr.get("author", "")})'
+            )
+        if len(stale_prs) > 5:
+            body_lines.append(f'  ...and {len(stale_prs) - 5} more')
+
+    if missing_reviews:
+        body_lines.append('**Missing Reviews:**')
+        for item in missing_reviews[:5]:
+            pr = item.get('pr', {})
+            reason = item.get('reason', '')
+            label = 'no reviewers' if reason == 'no_reviewers' else 'pending reviews'
+            body_lines.append(
+                f'• #{pr.get("number", "")} '
+                f'{pr.get("title", "")} — {label} '
+                f'({pr.get("author", "")})'
+            )
+        if len(missing_reviews) > 5:
+            body_lines.append(f'  ...and {len(missing_reviews) - 5} more')
+
+    if not body_lines:
+        body_lines.append('No hygiene issues found.')
+
+    return build_fact_card(
+        title=f'PR Hygiene — {repo}',
+        subtitle=data.get('scan_time', ''),
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_pr_stale_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a stale PR scan result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    stale_prs = data.get('stale_prs', [])
+    stale_days = data.get('stale_days', 5)
+
+    facts = {
+        'Repository': repo,
+        'Threshold': f'{stale_days} days',
+        'Stale PRs': len(stale_prs),
+    }
+
+    body_lines: list[str] = []
+    for item in stale_prs[:8]:
+        pr = item.get('pr', {})
+        days = item.get('days_stale', 0)
+        severity = item.get('severity', 'medium')
+        body_lines.append(
+            f'• [{severity.upper()}] #{pr.get("number", "")} '
+            f'{pr.get("title", "")} — {days}d stale '
+            f'({pr.get("author", "")})'
+        )
+    if len(stale_prs) > 8:
+        body_lines.append(f'  ...and {len(stale_prs) - 8} more')
+
+    if not body_lines:
+        body_lines.append('No stale PRs found.')
+
+    return build_fact_card(
+        title=f'Stale PRs — {repo}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_pr_reviews_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a missing reviews scan result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    findings = data.get('missing_reviews', [])
+
+    no_reviewers = [f for f in findings if f.get('reason') == 'no_reviewers']
+    pending = [f for f in findings if f.get('reason') == 'pending_reviews']
+
+    facts = {
+        'Repository': repo,
+        'Total Findings': len(findings),
+        'No Reviewers': len(no_reviewers),
+        'Pending Reviews': len(pending),
+    }
+
+    body_lines: list[str] = []
+    for item in findings[:8]:
+        pr = item.get('pr', {})
+        reason = item.get('reason', '')
+        label = 'no reviewers' if reason == 'no_reviewers' else 'pending reviews'
+        body_lines.append(
+            f'• #{pr.get("number", "")} '
+            f'{pr.get("title", "")} — {label} '
+            f'({pr.get("author", "")})'
+        )
+    if len(findings) > 8:
+        body_lines.append(f'  ...and {len(findings) - 8} more')
+
+    if not body_lines:
+        body_lines.append('All PRs have active reviews.')
+
+    return build_fact_card(
+        title=f'Missing Reviews — {repo}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_pr_list_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a PR listing result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    prs = data.get('prs', [])
+    state = data.get('state', 'open')
+
+    facts = {
+        'Repository': repo,
+        'State': state,
+        'Count': len(prs),
+    }
+
+    body_lines: list[str] = []
+    for pr in prs[:10]:
+        draft = ' [DRAFT]' if pr.get('draft', False) else ''
+        reviews = pr.get('review_count', 0)
+        approved = ' ✓' if pr.get('approved', False) else ''
+        body_lines.append(
+            f'• #{pr.get("number", "")} '
+            f'{pr.get("title", "")}{draft} '
+            f'({pr.get("author", "")}) '
+            f'[{reviews} review(s){approved}]'
+        )
+    if len(prs) > 10:
+        body_lines.append(f'  ...and {len(prs) - 10} more')
+
+    if not body_lines:
+        body_lines.append(f'No {state} PRs found.')
+
+    return build_fact_card(
+        title=f'Pull Requests — {repo}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_naming_compliance_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a naming compliance scan result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    title_results = data.get('title_compliance', {})
+    branch_results = data.get('branch_compliance', {})
+    total_scanned = data.get('total_scanned', 0)
+
+    facts = {
+        'Repository': repo,
+        'Total Scanned': total_scanned,
+        'Title Compliant': title_results.get('compliant', 0),
+        'Title Non-compliant': title_results.get('noncompliant', 0),
+        'No Jira Reference': title_results.get('no_jira_count', 0),
+        'Branch Compliant': branch_results.get('compliant', 0),
+        'Branch Non-compliant': branch_results.get('noncompliant', 0),
+    }
+
+    body_lines: list[str] = []
+
+    noncompliant_titles = title_results.get('noncompliant_items', [])
+    if noncompliant_titles:
+        body_lines.append('**Non-compliant PR Titles:**')
+        for item in noncompliant_titles[:5]:
+            pr = item.get('pr', {})
+            body_lines.append(
+                f'• #{pr.get("number", "")} '
+                f'{pr.get("title", "")} '
+                f'({pr.get("author", "")})'
+            )
+        if len(noncompliant_titles) > 5:
+            body_lines.append(f'  ...and {len(noncompliant_titles) - 5} more')
+
+    noncompliant_branches = branch_results.get('noncompliant_items', [])
+    if noncompliant_branches:
+        body_lines.append('**Non-compliant Branches:**')
+        for item in noncompliant_branches[:5]:
+            body_lines.append(
+                f'• {item.get("branch", "")} '
+                f'(PR #{item.get("pr_number", "")})'
+            )
+        if len(noncompliant_branches) > 5:
+            body_lines.append(f'  ...and {len(noncompliant_branches) - 5} more')
+
+    if not body_lines:
+        body_lines.append('All PRs and branches follow naming conventions.')
+
+    return build_fact_card(
+        title=f'Naming Compliance — {repo}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_merge_conflicts_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a merge conflicts scan result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    conflicts = data.get('conflicting_prs', [])
+    total_open = data.get('total_open_prs', 0)
+    total_conflicts = data.get('total_conflicts', len(conflicts))
+
+    facts = {
+        'Repository': repo,
+        'Open PRs': total_open,
+        'Total Conflicts': total_conflicts,
+    }
+
+    body_lines: list[str] = []
+    for item in conflicts[:8]:
+        pr = item.get('pr', {})
+        body_lines.append(
+            f'• #{pr.get("number", "")} '
+            f'{pr.get("title", "")} '
+            f'({pr.get("author", "")})'
+        )
+    if len(conflicts) > 8:
+        body_lines.append(f'  ...and {len(conflicts) - 8} more')
+
+    if not body_lines:
+        body_lines.append('No merge conflicts found.')
+
+    return build_fact_card(
+        title=f'Merge Conflicts — {repo}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_ci_failures_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a CI failures scan result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    failures = data.get('failing_prs', [])
+    total_open = data.get('total_open_prs', 0)
+    total_failures = data.get('total_failures', len(failures))
+
+    facts = {
+        'Repository': repo,
+        'Open PRs': total_open,
+        'Total Failures': total_failures,
+    }
+
+    body_lines: list[str] = []
+    for item in failures[:8]:
+        pr = item.get('pr', {})
+        failed_checks = item.get('failed_checks', [])
+        checks_str = ', '.join(failed_checks[:3])
+        if len(failed_checks) > 3:
+            checks_str += f' +{len(failed_checks) - 3} more'
+        body_lines.append(
+            f'• #{pr.get("number", "")} '
+            f'{pr.get("title", "")} '
+            f'— {checks_str} '
+            f'({pr.get("author", "")})'
+        )
+    if len(failures) > 8:
+        body_lines.append(f'  ...and {len(failures) - 8} more')
+
+    if not body_lines:
+        body_lines.append('No CI failures found.')
+
+    return build_fact_card(
+        title=f'CI Failures — {repo}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_stale_branches_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a stale branches scan result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    stale_branches = data.get('stale_branches', [])
+    threshold = data.get('stale_days', 30)
+    total_branches = data.get('total_branches', 0)
+    stale_count = data.get('stale_count', len(stale_branches))
+
+    facts = {
+        'Repository': repo,
+        'Threshold': f'{threshold} days',
+        'Total Branches': total_branches,
+        'Stale Branches': stale_count,
+    }
+
+    body_lines: list[str] = []
+    for item in stale_branches[:10]:
+        name = item.get('name', '')
+        days = item.get('days_stale', 0)
+        author = item.get('last_author', '')
+        body_lines.append(
+            f'• {name} — {days}d stale ({author})'
+        )
+    if len(stale_branches) > 10:
+        body_lines.append(f'  ...and {len(stale_branches) - 10} more')
+
+    if not body_lines:
+        body_lines.append('No stale branches found.')
+
+    return build_fact_card(
+        title=f'Stale Branches — {repo}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_dry_run_preview_card(
+    agent_id: str,
+    command: str,
+    data: Dict[str, Any],
+) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card previewing a dry-run result.
+
+    Shows what WOULD happen if the user confirms execution.
+    The user re-sends the same command with "execute" appended to proceed.
+    '''
+    preview_facts: Dict[str, Any] = {}
+    body_lines: list[str] = []
+
+    for key, value in data.items():
+        if key == 'dry_run':
+            continue
+        if isinstance(value, (dict, list)):
+            if isinstance(value, list):
+                body_lines.append(f'**{key}** ({len(value)} items):')
+                for item in value[:5]:
+                    if isinstance(item, dict):
+                        label = (
+                            item.get('ticket_key')
+                            or item.get('summary')
+                            or item.get('name')
+                            or item.get('title')
+                            or str(item)
+                        )
+                        body_lines.append(f'  • {label}')
+                    else:
+                        body_lines.append(f'  • {item}')
+                if len(value) > 5:
+                    body_lines.append(f'  ...and {len(value) - 5} more')
+            else:
+                body_lines.append(f'**{key}**: {len(value)} entries')
+        else:
+            preview_facts[str(key)] = value
+
+    execute_hint = (
+        f'This is a **dry-run preview**. To execute, re-send:\n\n'
+        f'`@Shannon {command} ... execute`'
+    )
+
+    card_body: list[dict[str, Any]] = [
+        {
+            'type': 'TextBlock',
+            'size': 'Large',
+            'weight': 'Bolder',
+            'text': f'⏸ Dry Run — {agent_id.title()} {command}',
+            'wrap': True,
+        },
+        {
+            'type': 'TextBlock',
+            'text': 'No changes were made. Review the preview below.',
+            'wrap': True,
+            'spacing': 'Small',
+            'isSubtle': True,
+        },
+    ]
+
+    fact_items = _fact_entries(preview_facts)
+    if fact_items:
+        card_body.append({
+            'type': 'FactSet',
+            'facts': fact_items,
+        })
+
+    for line in body_lines:
+        if str(line).strip():
+            card_body.append({
+                'type': 'TextBlock',
+                'text': str(line),
+                'wrap': True,
+            })
+
+    card_body.append({
+        'type': 'TextBlock',
+        'text': '---',
+        'spacing': 'Medium',
+    })
+    card_body.append({
+        'type': 'TextBlock',
+        'text': execute_hint,
+        'wrap': True,
+        'weight': 'Bolder',
+        'color': 'Accent',
+    })
+
+    return {
+        '$schema': 'http://adaptivecards.io/schemas/adaptive-card.json',
+        'type': 'AdaptiveCard',
+        'version': '1.5',
+        'body': card_body,
+    }
+
+
 def build_drucker_summary_card(summary: Dict[str, Any]) -> Dict[str, Any]:
     '''
     Build a simple Adaptive Card for Drucker /stats response.
