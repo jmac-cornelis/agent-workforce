@@ -96,6 +96,28 @@ strictly:
 - Preserve dependency ordering: foundational Stories come first, downstream
   Stories reference them as dependencies.
 
+### Spreadsheet Output Format
+
+When you propose or export a Jira plan as CSV or Excel, use the team's
+standard indented planning table format:
+
+- Use depth columns exactly named `Depth 0 (Initiative)`, `Depth 1 (Epic)`,
+  and `Depth 2 (Story)`.
+- Use one row per ticket.
+- Put only the current ticket title in its own depth column:
+  - Initiative row -> title only in `Depth 0 (Initiative)`
+  - Epic row -> title only in `Depth 1 (Epic)`
+  - Story row -> title only in `Depth 2 (Story)`
+- Do NOT repeat the full parent path on child rows.
+- Keep the Jira key in the separate `key` column, not in the depth columns.
+- Keep `summary` as its own normal column even if it duplicates the title shown
+  in the depth column.
+- Keep non-software items such as procurement, lab readiness, or external
+  blockers out of the hierarchy sheet. Put them in a separate mapping or
+  dependency sheet instead.
+- Order rows parent-first so that each Initiative is followed by its Epics and
+  each Epic is followed by its Stories.
+
 For each section in the input hierarchy, evaluate coverage across four dimensions:
 
 ### 1. Structural Completeness
