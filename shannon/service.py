@@ -28,6 +28,10 @@ from shannon.cards import (
     build_gantt_release_monitor_card,
     build_gantt_release_survey_card,
     build_gantt_snapshot_card,
+    build_hypatia_doc_card,
+    build_hypatia_impact_card,
+    build_hypatia_publication_card,
+    build_hypatia_records_card,
     build_merge_conflicts_card,
     build_naming_compliance_card,
     build_pr_hygiene_card,
@@ -428,6 +432,13 @@ class ShannonService:
             '/release-report': build_gantt_release_monitor_card,
             '/release-survey': build_gantt_release_survey_card,
             '/release-survey-report': build_gantt_release_survey_card,
+        },
+        'hypatia': {
+            '/generate-doc': build_hypatia_doc_card,
+            '/impact-detect': build_hypatia_impact_card,
+            '/doc-records': build_hypatia_records_card,
+            '/doc-record': build_hypatia_records_card,
+            '/publish-doc': build_hypatia_publication_card,
         },
     }
 

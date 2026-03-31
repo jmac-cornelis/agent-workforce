@@ -1,0 +1,33 @@
+[Unit]
+Description=Hypatia Documentation Agent
+Documentation=https://github.com/jmac-cornelis/agent-workforce
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=60
+
+ExecStartPre=-/usr/bin/podman stop -t 10 hypatia
+ExecStartPre=-/usr/bin/podman rm -f hypatia
+
+ExecStart=/usr/bin/podman run \
+    --name hypatia \
+    --rm \
+    -p 8203:8203 \
+    --env-file %h/agent-workforce/deploy/env/shared.env \
+    --env-file %h/agent-workforce/deploy/env/llm.env \
+    -v %h/agent-workforce/config:/app/config:ro,Z \
+    -v %h/agent-workforce/data/hypatia:/data/state:Z \
+    localhost/cornelis/agent-workforce:latest \
+    uvicorn agents.hypatia.api:app --host 0.0.0.0 --port 8203
+
+ExecStop=/usr/bin/podman stop -t 10 hypatia
+
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Install]
+WantedBy=default.target

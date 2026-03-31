@@ -751,6 +751,162 @@ def build_dry_run_preview_card(
     }
 
 
+def build_hypatia_doc_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a Hypatia /generate-doc response.
+    '''
+    doc_id = data.get('doc_id', '')
+    title = data.get('title', '')
+    doc_type = data.get('doc_type', '')
+    confidence = data.get('confidence', '')
+    created_at = data.get('created_at', '')
+    patches = data.get('patches', [])
+    validation = data.get('validation', {})
+    warnings = data.get('warnings', [])
+    content_markdown = data.get('content_markdown', '')
+
+    facts = {
+        'Doc ID': doc_id,
+        'Title': title,
+        'Type': doc_type,
+        'Confidence': confidence,
+        'Created': created_at,
+    }
+
+    body_lines: list[str] = []
+    body_lines.append(f'Patches: {len(patches)}')
+    is_valid = validation.get('valid', False)
+    body_lines.append(f'Validation: {"valid" if is_valid else "invalid"}')
+    body_lines.append(f'Warnings: {len(warnings)}')
+    for warning in warnings[:3]:
+        body_lines.append(f'• {warning}')
+
+    if content_markdown:
+        preview = content_markdown[:200]
+        if len(content_markdown) > 200:
+            preview += '...'
+        body_lines.append(f'**Preview:** {preview}')
+
+    return build_fact_card(
+        title=f'Hypatia Doc — {title}',
+        subtitle=f'{created_at} | {doc_id}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_hypatia_impact_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a Hypatia /impact-detect response.
+    '''
+    impact_id = data.get('impact_id', '')
+    title = data.get('title', '')
+    doc_type = data.get('doc_type', '')
+    confidence = data.get('confidence', '')
+    affected_targets = data.get('affected_targets', [])
+    reasons = data.get('reasons', [])
+    blocking_issues = data.get('blocking_issues', [])
+
+    facts = {
+        'Impact ID': impact_id,
+        'Title': title,
+        'Type': doc_type,
+        'Confidence': confidence,
+    }
+
+    body_lines: list[str] = []
+    if affected_targets:
+        body_lines.append('**Affected Targets:**')
+        for target in affected_targets[:5]:
+            body_lines.append(f'• {target}')
+        if len(affected_targets) > 5:
+            body_lines.append(f'  ...and {len(affected_targets) - 5} more')
+
+    if reasons:
+        body_lines.append('**Reasons:**')
+        for reason in reasons:
+            body_lines.append(f'• {reason}')
+
+    if blocking_issues:
+        body_lines.append('**Blocking Issues:**')
+        for issue in blocking_issues:
+            body_lines.append(f'• {issue}')
+
+    if not body_lines:
+        body_lines.append('No impact detected.')
+
+    return build_fact_card(
+        title=f'Hypatia Impact — {title}',
+        subtitle=impact_id or None,
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_hypatia_records_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a Hypatia /doc-records or /doc-record response.
+    '''
+    records = data.get('records', [])
+    total = data.get('total', len(records))
+
+    facts = {
+        'Total Records': total,
+    }
+
+    body_lines: list[str] = []
+    for record in records[:10]:
+        doc_id = record.get('doc_id', '')
+        title = record.get('title', '')
+        doc_type = record.get('doc_type', '')
+        created_at = record.get('created_at', '')
+        body_lines.append(f'• **{doc_id}** {title} [{doc_type}] ({created_at})')
+
+    if len(records) > 10:
+        body_lines.append(f'  ...and {len(records) - 10} more')
+
+    if not body_lines:
+        body_lines.append('No documentation records found.')
+
+    return build_fact_card(
+        title='Hypatia Documentation Records',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_hypatia_publication_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a Hypatia /publish-doc response.
+    '''
+    doc_id = data.get('doc_id', '')
+    title = data.get('title', '')
+    publications = data.get('publications', [])
+
+    facts = {
+        'Doc ID': doc_id,
+        'Title': title,
+        'Publications': len(publications),
+    }
+
+    body_lines: list[str] = []
+    for pub in publications:
+        target_type = pub.get('target_type', '')
+        status = pub.get('status', '')
+        target_ref = pub.get('target_ref', '')
+        body_lines.append(f'• {target_type}: {status} ({target_ref})')
+
+    if not body_lines:
+        body_lines.append('No publication results.')
+
+    return build_fact_card(
+        title=f'Hypatia Publication — {title}',
+        subtitle=doc_id or None,
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
 def build_drucker_summary_card(summary: Dict[str, Any]) -> Dict[str, Any]:
     '''
     Build a simple Adaptive Card for Drucker /stats response.

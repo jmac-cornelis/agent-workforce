@@ -171,3 +171,39 @@ agents:
         api_method: GET
         api_path: /v1/release-survey/reports
     timeout_seconds: 30
+
+  - agent_id: hypatia
+    display_name: Hypatia
+    role: Documentation
+    description: Source-grounded documentation generation, impact analysis, and review-gated publication
+    zone: intelligence_knowledge
+    channel_name: agent-hypatia
+    channel_id: ""
+    team_id: "19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2"
+    api_base_url: http://localhost:8203
+    approval_types: []
+    custom_commands:
+      - command: /generate-doc
+        description: Generate a documentation record from source files
+        api_method: POST
+        api_path: /v1/docs/generate
+        mutation: true
+      - command: /impact-detect
+        description: Analyze documentation impact of changes
+        api_method: POST
+        api_path: /v1/docs/impact
+        mutation: false
+      - command: /doc-records
+        description: List stored documentation records
+        api_method: GET
+        api_path: /v1/docs/records
+      - command: /doc-record
+        description: Get a specific documentation record
+        api_method: GET
+        api_path: /v1/docs/record
+      - command: /publish-doc
+        description: Publish an approved documentation record
+        api_method: POST
+        api_path: /v1/docs/publish
+        mutation: true
+    timeout_seconds: 60
