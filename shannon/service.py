@@ -37,7 +37,7 @@ from shannon.cards import (
     build_stale_branches_card,
 )
 from shannon.models import AuditRecord, ConversationReference, ShannonResponse, normalize_command_text
-from shannon.poster import BasePoster, build_poster_from_env
+from shannon.poster import BasePoster, WorkflowsPoster, build_poster_from_env
 from shannon.registry import ShannonAgentRegistry
 from agents.shannon.state_store import ShannonStateStore
 
@@ -728,17 +728,29 @@ class ShannonService:
 
         return reference, response
 
+    def _get_poster_for_agent(self, agent_id: str) -> BasePoster:
+        '''
+        Return an agent-specific poster if the agent has its own webhook URL,
+        otherwise fall back to the default Shannon poster.
+        '''
+        registration = self.registry.get_agent(agent_id)
+        if registration and registration.notifications_webhook_url:
+            return WorkflowsPoster(webhook_url=registration.notifications_webhook_url)
+        return self.poster
+
     def _post_response(
         self,
         reference: ConversationReference,
         response: ShannonResponse,
         *,
         reply: bool,
+        agent_id: Optional[str] = None,
     ) -> Dict[str, Any]:
+        poster = self._get_poster_for_agent(agent_id) if agent_id else self.poster
         activity = response.to_message_activity()
         if reply and reference.reply_to_id:
-            return self.poster.reply_to_activity(reference, reference.reply_to_id, activity, dry_run=False)
-        return self.poster.send_to_conversation(reference, activity, dry_run=False)
+            return poster.reply_to_activity(reference, reference.reply_to_id, activity, dry_run=False)
+        return poster.send_to_conversation(reference, activity, dry_run=False)
 
     def process_teams_activity(self, activity: Dict[str, Any]) -> Dict[str, Any]:
         '''
@@ -778,7 +790,7 @@ class ShannonService:
                     ),
                     decision='posted_install_welcome',
                 )
-                post_result = self._post_response(reference, welcome, reply=False)
+                post_result = self._post_response(reference, welcome, reply=False, agent_id=agent_id)
                 self._record(
                     'notification_posted',
                     reference=reference,
@@ -807,7 +819,7 @@ class ShannonService:
             decision=response.decision,
             details={'input': normalize_command_text(str(activity.get('text') or ''))},
         )
-        post_result = self._post_response(reference, response, reply=True)
+        post_result = self._post_response(reference, response, reply=True, agent_id=agent_id)
         self._record(
             'notification_posted',
             reference=reference,
@@ -884,17 +896,6 @@ class ShannonService:
         if registration is None:
             raise ValueError('Unknown Shannon agent/channel target')
 
-        reference = self.state_store.get_conversation_reference(
-            agent_id=registration.agent_id,
-            channel_id=registration.channel_id or channel_id or '',
-        )
-        if reference is None:
-            raise ValueError(
-                'No stored conversation reference for this channel yet. '
-                'Install the bot in the team and send a first message or wait for a '
-                'conversationUpdate event.'
-            )
-
         response = ShannonResponse(
             text=text,
             card=build_fact_card(
@@ -904,10 +905,27 @@ class ShannonService:
             ),
             decision='posted_agent_notification',
         )
-        post_result = self._post_response(reference, response, reply=False)
+
+        if registration.notifications_webhook_url:
+            poster = WorkflowsPoster(webhook_url=registration.notifications_webhook_url)
+            activity = response.to_message_activity()
+            ref = ConversationReference(channel_id=registration.channel_id or '', agent_id=registration.agent_id)
+            post_result = poster.send_to_conversation(ref, activity, dry_run=False)
+        else:
+            ref = self.state_store.get_conversation_reference(
+                agent_id=registration.agent_id,
+                channel_id=registration.channel_id or channel_id or '',
+            )
+            if ref is None:
+                raise ValueError(
+                    'No stored conversation reference for this channel yet. '
+                    'Install the bot in the team and send a first message or wait for a '
+                    'conversationUpdate event.'
+                )
+            post_result = self._post_response(ref, response, reply=False, agent_id=registration.agent_id)
         self._record(
             'notification_posted',
-            reference=reference,
+            reference=ref,
             agent_id=registration.agent_id,
             decision='posted_agent_notification',
             details=post_result,
@@ -915,6 +933,6 @@ class ShannonService:
         return {
             'ok': True,
             'agent_id': registration.agent_id,
-            'channel_id': reference.channel_id,
+            'channel_id': ref.channel_id,
             'post_result': post_result,
         }

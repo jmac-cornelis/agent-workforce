@@ -106,10 +106,10 @@ The repo implements specialized agents that automate engineering workflows. Each
 
 | Agent | Directory | Description | Port |
 |-------|-----------|-------------|------|
-| **Shannon** | `shannon/` | Microsoft Teams communications service. Routes commands from Teams to backend agents, renders Adaptive Card responses, and posts proactive notifications. Zero-cost deployment via Outgoing Webhook + Power Automate Workflows. | 8200 |
-| **Drucker** | `agents/drucker_api.py` | Jira hygiene coordinator. Runs ticket hygiene scans, tracks bug activity, and produces remediation reports. Operates as a standalone FastAPI service called by Shannon. | 8201 |
-| **Gantt** | `agents/gantt_api.py` | Project planning service. Builds Jira-grounded planning snapshots, release-health reports, and scheduled PM polling outputs. | 8202 |
-| **Hypatia** | `agents/hypatia_agent.py` | Documentation agent. Produces source-grounded documentation candidates for repo Markdown and optional Confluence publication. | — |
+| **Shannon** | `shannon/` + `agents/shannon/` | Microsoft Teams communications service. Routes commands from Teams to backend agents, renders Adaptive Card responses, and posts proactive notifications. Deployed at `shannon.cn-agents.com` via Cloudflare tunnel. | 8200 |
+| **Drucker** | `agents/drucker/` | Engineering hygiene agent. Jira ticket quality scans, GitHub PR lifecycle monitoring (6 scan types), and remediation reports. | 8201 |
+| **Gantt** | `agents/gantt/` | Project planning service. Builds Jira-grounded planning snapshots, release-health reports, and scheduled PM polling outputs. | 8202 |
+| **Hypatia** | `agents/hypatia/` | Documentation agent. Produces source-grounded documentation candidates for repo Markdown and optional Confluence publication. | — |
 
 ### Agent Communication
 
@@ -119,7 +119,9 @@ Engineers interact with agents by mentioning `@Shannon` in the appropriate Micro
 - `#agent-drucker` — Drucker hygiene commands (`/hygiene-run`, `/hygiene-report`, `/bug-activity`, etc.)
 - `#agent-gantt` — Gantt planning and release-monitor commands (`/planning-snapshot`, `/planning-snapshots`, `/release-monitor`, etc.)
 
-Agent routing is configured in [`config/shannon/agent_registry.yaml`](config/shannon/agent_registry.yaml). For setup details, see [docs/shannon-teams-setup.md](docs/shannon-teams-setup.md).
+Agent routing is configured in [`config/shannon/agent_registry.yaml`](config/shannon/agent_registry.yaml). For setup details, see [docs/shannon-teams-setup.md](docs/shannon-teams-setup.md). For deployment, see [`deploy/README.md`](deploy/README.md).
+
+Shannon and Drucker are currently deployed on `bld-node-48.cornelisnetworks.com` with HTTPS provided by a Cloudflare named tunnel at `shannon.cn-agents.com` (domain: `cn-agents.com`).
 
 ### Agent Workforce Vision
 

@@ -147,24 +147,146 @@ Required environment variables for full functionality:
 *   `JIRA_URL`: Base URL for the Jira instance.
 *   `DRY_RUN`: Controls mutation safety (defaults to `true`).
 
-## Running the Agent
+## Deployment
 
-You can run Drucker in several ways depending on your needs.
+### Prerequisites
 
-### Docker
+Drucker runs as a Podman container alongside Shannon. Shannon is **required** — it handles Teams command routing to Drucker's API.
 
-Run via Docker Compose (exposes port 8201):
+| Requirement | Value |
+|-------------|-------|
+| Shannon | Must be running on the same host (port 8200) |
+| Jira credentials | Service account email + API token |
+| GitHub token | (Optional) PAT with `repo` + `read:org` scopes |
+| Port | 8201 |
+
+### Current Production Server
+
+| Property | Value |
+|----------|-------|
+| Host | `bld-node-48.cornelisnetworks.com` |
+| Data dir | `/home/scm/agent-workforce/data/drucker/` |
+| Env files | `deploy/env/shared.env`, `deploy/env/jira.env`, `deploy/env/github.env` |
+
+### Step 1: Build the Image
+
+Uses the same shared image as Shannon (see [Shannon deployment](../shannon/README.md#deployment)):
 
 ```bash
-docker compose up drucker
+podman build -t localhost/cornelis/agent-workforce:latest .
 ```
 
-### Local API Server
+### Step 2: Configure Environment Files
 
-Run the FastAPI application locally:
+Drucker needs Jira credentials and optionally GitHub:
+
+**`deploy/env/jira.env`** — Jira authentication (required):
+```bash
+JIRA_EMAIL=scm@cornelisnetworks.com
+JIRA_API_TOKEN=<your-jira-api-token>
+JIRA_URL=https://cornelisnetworks.atlassian.net
+JIRA_DEFAULT_PROJECT=ONECLI
+```
+
+**`deploy/env/github.env`** — GitHub authentication (optional, for PR hygiene):
+```bash
+GITHUB_TOKEN=<your-github-pat>
+GITHUB_API_URL=https://api.github.com
+GITHUB_ORG=cornelisnetworks
+```
+
+The PAT needs `repo` and `read:org` scopes. Generate at: https://github.com/settings/tokens
+
+**`deploy/env/shared.env`** — Shared config (same file Shannon uses):
+```bash
+LOG_LEVEL=INFO
+STATE_BACKEND=json
+PERSISTENCE_DIR=/data/state
+DRY_RUN=true
+```
+
+### Step 3: Create Data Directory
 
 ```bash
+mkdir -p data/drucker
+```
+
+### Step 4: Start Drucker
+
+```bash
+podman run -d --name drucker -p 8201:8201 \
+    --env-file deploy/env/shared.env \
+    --env-file deploy/env/jira.env \
+    --env-file deploy/env/github.env \
+    -v $(pwd)/config:/app/config:ro,Z \
+    -v $(pwd)/data/drucker:/data/state:Z \
+    localhost/cornelis/agent-workforce:latest \
+    uvicorn agents.drucker.api:app --host 0.0.0.0 --port 8201
+```
+
+> **Cross-container networking:** Shannon reaches Drucker via `http://host.containers.internal:8201` (configured in `config/shannon/agent_registry.yaml`). `host.containers.internal` resolves to the host's loopback from inside Podman containers.
+
+### Step 5: Verify
+
+```bash
+# Health check
+curl -s http://localhost:8201/v1/health | python3 -m json.tool
+# Expected: {"ok": true}
+
+# Test Jira connectivity (real API call)
+curl -s -X POST http://localhost:8201/v1/activity/bugs \
+    -H "Content-Type: application/json" \
+    -d '{"project_key": "STL"}' | python3 -m json.tool
+
+# Test Shannon → Drucker routing (in Teams)
+# @Shannon /bug-activity project STL
+```
+
+### Step 6: Install Systemd Service
+
+```bash
+cp deploy/systemd/drucker.service ~/.config/systemd/user/
+systemctl --user daemon-reload
+systemctl --user enable --now drucker
+
+# Check status
+systemctl --user status drucker
+journalctl --user -u drucker -f  # tail logs
+```
+
+### Step 7: Verify Shannon Integration
+
+In the Teams channel where Shannon is configured:
+
+```text
+@Shannon /bug-activity project STL        # Jira bug activity
+@Shannon /issue-check STLSW-1234          # Single ticket check
+@Shannon /pr-hygiene cornelisnetworks/ifs-all  # GitHub PR scan (requires GITHUB_TOKEN)
+```
+
+If Shannon returns an error, check:
+1. Drucker is healthy on port 8201: `curl http://localhost:8201/v1/health`
+2. Shannon can reach Drucker: `podman exec shannon python3 -c "import urllib.request; print(urllib.request.urlopen('http://host.containers.internal:8201/v1/health').read())"`
+3. Shannon's conversation reference is established (send `@Shannon /stats` first)
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `LLMError: litellm package required` | Image missing litellm | Rebuild with `podman build --no-cache` (Dockerfile includes litellm) |
+| `JiraConnectionError` | Bad credentials in jira.env | Verify `JIRA_EMAIL` and `JIRA_API_TOKEN` — test with `curl -u email:token https://cornelisnetworks.atlassian.net/rest/api/2/myself` |
+| `GitHubConnectionError` | Missing or expired PAT | Generate new token at github.com/settings/tokens with `repo` + `read:org` scopes |
+| Shannon commands return 500 | Drucker not reachable | Verify `api_base_url` in registry uses `host.containers.internal:8201` |
+| `dry_run: true` in all responses | `DRY_RUN=true` in shared.env | Set `DRY_RUN=false` in `shared.env` or pass `dry_run=false` per request |
+
+### Running Locally (Development)
+
+```bash
+# API server
 uvicorn agents.drucker.api:app --host 0.0.0.0 --port 8201
+
+# Docker Compose
+docker compose up drucker
 ```
 
 ## CLI Commands

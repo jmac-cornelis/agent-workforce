@@ -1,0 +1,34 @@
+# ==========================================================================
+# systemd unit — Caddy TLS reverse proxy for Shannon
+# ==========================================================================
+# Install:
+#   mkdir -p ~/.config/systemd/user
+#   cp caddy-proxy.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now caddy-proxy
+#
+# Note: Caddy on port 443 requires:
+#   sudo setcap cap_net_bind_service=+ep $(which caddy)
+#   OR run as root (not recommended)
+#   OR use port 8443 and firewall redirect
+# ==========================================================================
+
+[Unit]
+Description=Caddy TLS Reverse Proxy for Shannon
+Documentation=https://caddyserver.com/docs/
+After=network-online.target shannon.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=5
+
+ExecStart=/usr/bin/caddy run --config %h/agent-workforce/deploy/caddy/Caddyfile
+ExecReload=/usr/bin/caddy reload --config %h/agent-workforce/deploy/caddy/Caddyfile
+
+Environment=XDG_DATA_HOME=%h/.local/share
+Environment=XDG_CONFIG_HOME=%h/.config
+
+[Install]
+WantedBy=default.target

@@ -4,9 +4,28 @@
 
 ## Overview
 
-This guide covers the practical deployment of the Cornelis Networks AI Agent Workforce. It focuses on the on-premise Docker Compose deployment to the `cn-ai-[01:04]` host cluster. The deployment utilizes a single-image, multi-entrypoint pattern where all agents run from the same foundational container image but execute different entrypoint commands.
+This guide covers the deployment architecture for the Cornelis Networks AI Agent Workforce. It describes the single-image, multi-entrypoint pattern where all agents run from the same foundational container image but execute different entrypoint commands.
 
 For information on the underlying platform components, event transport, and security architecture, see the [Infrastructure Architecture](INFRASTRUCTURE_ARCHITECTURE.md) document.
+
+## Current Production Deployment
+
+Shannon and Drucker are deployed on `bld-node-48.cornelisnetworks.com` using rootless Podman containers. Teams connectivity is provided by a Cloudflare named tunnel at `shannon.cn-agents.com` (domain: `cn-agents.com`).
+
+| Property | Value |
+|----------|-------|
+| Server | `bld-node-48.cornelisnetworks.com` (RHEL 10.1, 88 CPUs, 62 GB RAM) |
+| Runtime | Podman 5.6.0 (rootless) |
+| Shannon | Port 8200, `https://shannon.cn-agents.com` |
+| Drucker | Port 8201, internal only via `host.containers.internal` |
+| Tunnel | Cloudflare named tunnel `agent-workforce` |
+| Teams callback | `https://shannon.cn-agents.com/api/webhook` |
+
+For step-by-step deployment instructions, see [`deploy/README.md`](../../deploy/README.md). For per-agent guides, see [`agents/shannon/README.md`](../../agents/shannon/README.md#deployment) and [`agents/drucker/README.md`](../../agents/drucker/README.md#deployment).
+
+## Planned Multi-Host Architecture
+
+The long-term vision targets deployment across the `cn-ai-[01:04]` host cluster using Docker Compose.
 
 ## Container Architecture
 
@@ -21,9 +40,9 @@ graph TD
         Base --> Deps --> Code
     end
 
-    Code --> Agent1[Entrypoint: agents.shannon_agent:app]
-    Code --> Agent2[Entrypoint: agents.drucker_agent:app]
-    Code --> AgentN[Entrypoint: agents.*_agent:app]
+    Code --> Agent1[Entrypoint: shannon.app:app]
+    Code --> Agent2[Entrypoint: agents.drucker.api:app]
+    Code --> AgentN[Entrypoint: agents.*.api:app]
 
     subgraph Volumes
         Config[/app/config/]
@@ -51,7 +70,7 @@ The entrypoint is configurable via environment variable or command override.
 
 **Example execution:**
 ```bash
-CMD ["uvicorn", "agents.drucker_agent:app", "--host", "0.0.0.0", "--port", "8201"]
+CMD ["uvicorn", "agents.drucker.api:app", "--host", "0.0.0.0", "--port", "8201"]
 ```
 
 ## Environment File Architecture
@@ -229,9 +248,9 @@ For local development, the segregated `config/env/` split is not strictly requir
 
 To run agents locally:
 ```bash
-python -m agents.drucker_agent
+uvicorn agents.drucker.api:app --reload --port 8201
 # OR
-uvicorn agents.drucker_agent:app --reload
+uvicorn shannon.app:app --reload --port 8200
 ```
 
 ## Secrets Management Roadmap

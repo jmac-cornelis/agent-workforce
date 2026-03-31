@@ -37,6 +37,7 @@ class AgentChannelRegistration:
     team_id: str = ''
     api_base_url: str = ''
     icon_url: str = ''
+    notifications_webhook_url: str = ''
     approval_types: List[str] = field(default_factory=list)
     custom_commands: List[Dict[str, Any]] = field(default_factory=list)
     timeout_seconds: int = 30
@@ -54,6 +55,7 @@ class AgentChannelRegistration:
             team_id=str(data.get('team_id') or '').strip(),
             api_base_url=str(data.get('api_base_url') or '').strip(),
             icon_url=str(data.get('icon_url') or '').strip(),
+            notifications_webhook_url=str(data.get('notifications_webhook_url') or '').strip(),
             approval_types=list(data.get('approval_types') or []),
             custom_commands=list(data.get('custom_commands') or []),
             timeout_seconds=int(data.get('timeout_seconds') or 30),

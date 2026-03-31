@@ -1,0 +1,52 @@
+# ==========================================================================
+# systemd unit — Shannon Teams Bot (Podman rootless container)
+# ==========================================================================
+# Install:
+#   mkdir -p ~/.config/systemd/user
+#   cp shannon.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now shannon
+#   loginctl enable-linger scm          # keep running after logout
+#
+# Logs:
+#   journalctl --user -u shannon -f
+#
+# Restart:
+#   systemctl --user restart shannon
+# ==========================================================================
+
+[Unit]
+Description=Shannon Teams Bot Service
+Documentation=https://github.com/jmac-cornelis/agent-workforce
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=60
+
+# Rootless podman — run as current user
+ExecStartPre=-/usr/bin/podman stop -t 10 shannon
+ExecStartPre=-/usr/bin/podman rm -f shannon
+
+ExecStart=/usr/bin/podman run \
+    --name shannon \
+    --rm \
+    --network host \
+    --env-file %h/agent-workforce/deploy/env/shared.env \
+    --env-file %h/agent-workforce/deploy/env/teams.env \
+    -v %h/agent-workforce/config:/app/config:ro,Z \
+    -v %h/agent-workforce/data/shannon:/data/shannon:Z \
+    localhost/cornelis/agent-workforce:latest \
+    uvicorn shannon.app:app --host 0.0.0.0 --port 8200
+
+ExecStop=/usr/bin/podman stop -t 10 shannon
+
+# Restart up to 5 times within a 2 minute window
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Install]
+WantedBy=default.target

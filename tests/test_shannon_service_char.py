@@ -227,6 +227,8 @@ def test_process_drucker_issue_check_posts_reply(tmp_path, monkeypatch):
     service, poster = _service(tmp_path)
     drucker_registration = service.registry.get_agent('drucker')
     assert drucker_registration is not None
+    # Clear webhook URL so test MemoryPoster is used instead of a real WorkflowsPoster
+    drucker_registration.notifications_webhook_url = ''
 
     def _fake_call(registration, method, path, params=None, json_body=None):
         assert registration.agent_id == 'drucker'
@@ -281,6 +283,7 @@ def test_process_drucker_intake_report_posts_reply(tmp_path, monkeypatch):
     service, poster = _service(tmp_path)
     drucker_registration = service.registry.get_agent('drucker')
     assert drucker_registration is not None
+    drucker_registration.notifications_webhook_url = ''
 
     def _fake_call(registration, method, path, params=None, json_body=None):
         assert registration.agent_id == 'drucker'
@@ -337,6 +340,7 @@ def test_process_drucker_bug_activity_posts_reply(tmp_path, monkeypatch):
     service, poster = _service(tmp_path)
     drucker_registration = service.registry.get_agent('drucker')
     assert drucker_registration is not None
+    drucker_registration.notifications_webhook_url = ''
 
     def _fake_call(registration, method, path, params=None, json_body=None):
         assert registration.agent_id == 'drucker'
