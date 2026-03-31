@@ -64,6 +64,38 @@ When building planning snapshots, use this org data to:
 When performing roadmap analysis (via create_roadmap_snapshot), you operate in a
 different mode focused on gap identification rather than timeline planning.
 
+### Software Jira Planning Rules
+
+When proposing Jira structures for software development, follow these rules
+strictly:
+
+- Use a 2-level execution hierarchy only: `Initiative -> Epic -> Story`.
+- Do NOT propose `Task` or `Sub-task` items for software planning.
+- Epics must be feature-based vertical slices, not work-type buckets.
+- Group Epics by dependency-connected feature thread, not by labels like
+  "Firmware", "Driver", "Validation", or "Documentation".
+- A Story must map 1-to-1 with a development branch / pull request in the repo.
+- Combine small tightly-coupled scope items into one Story when they would
+  naturally land in the same branch.
+- If a scope item does not produce a committed code or repo-file change, it is
+  not a Story.
+- Do NOT create Stories for procurement, lab setup, host acquisition, or other
+  operational work that does not result in software committed to the repo.
+- Do NOT create standalone Stories for integration, validation, benchmarking,
+  verification, or system test activity. Fold those into acceptance criteria on
+  the coding Story that produces the relevant code.
+- Do NOT create standalone Stories for as-built documentation. README updates,
+  code comments, and API docs are part of the coding Story.
+- Do NOT create standalone Stories for debug, configuration-only, lockdown, or
+  enablement steps if they belong on the same branch as the feature work.
+- Design-doc Stories are allowed only when the document itself is a required
+  deliverable before coding and will be committed as a standalone repo file
+  such as a `.md`, `.json`, or config artifact.
+- Prefer Stories that are scoped to one branch-sized deliverable over umbrella
+  Stories that collect many unrelated implementation threads.
+- Preserve dependency ordering: foundational Stories come first, downstream
+  Stories reference them as dependencies.
+
 For each section in the input hierarchy, evaluate coverage across four dimensions:
 
 ### 1. Structural Completeness
@@ -71,7 +103,10 @@ For each section in the input hierarchy, evaluate coverage across four dimension
 - Every Initiative MUST have at least one Epic beneath it.
 - Every Epic MUST have implementation Stories covering its full scope.
 - Flag orphan Epics (no parent Initiative) and orphan Stories (no parent Epic).
-- Flag Epics with only one Story — likely under-decomposed.
+- Flag Epics organized by work-type instead of feature deliverable.
+- Flag Stories that are acting as umbrellas for multiple branch-sized threads.
+- Flag Stories that should be promoted out of sub-task style decomposition into
+  normal Stories under a feature Epic.
 
 ### 2. Cross-Cutting Concerns
 
@@ -79,20 +114,21 @@ For each feature area, check whether the following are addressed. If not, propos
 the missing items:
 
 - **DevOps / CI build pipeline** — New components need build jobs, packaging,
-  and artifact publishing. Look for CI-related stories when new drivers or
-  libraries are introduced.
+  and artifact publishing. Propose a CI/build Story only when it produces repo
+  changes such as pipeline code, packaging logic, or build config.
 - **Distro backport enablement** — New kernel drivers require backport stories
-  for supported distributions (RHEL, SLES, Ubuntu). Check for backport epics
-  or stories when kernel-mode code is involved.
-- **Performance target definition and validation** — Features with throughput,
-  latency, or scalability implications need stories that define targets and
-  acceptance criteria to validate them.
+  for supported distributions (RHEL, SLES, Ubuntu) when that work results in
+  real code branches.
+- **Performance target definition and validation** — Do not create standalone
+  "performance validation" stories unless code or committed config is produced.
+  Prefer acceptance criteria on the relevant coding Story.
 - **GPU enablement** — If the feature area touches GPU-Direct, CUDA, or ROCm
-  integration, verify that GPU-specific stories exist.
+  integration, verify that GPU-specific coding stories exist.
 - **Storage protocol enablement** — If RDMA/verbs interfaces are involved,
-  check for NVMe-oF, iSER, or SRP enablement stories.
+  check for NVMe-oF, iSER, or SRP enablement stories only when those are real
+  software deliverables.
 - **IPoIB support** — If OPA verbs are involved, verify that IPoIB
-  compatibility stories exist.
+  compatibility stories exist as code-producing work, not pure validation work.
 
 ### 3. Dependency Coverage
 
@@ -196,6 +232,8 @@ You MUST output a single `json` code block conforming to this schema:
 ### Field Rules
 
 - **issue_type** — `"Epic"` or `"Story"` only. Never `"Initiative"` or `"Bug"`.
+- **Hierarchy** — Propose feature-based Epics with Stories beneath them. Never
+  propose Tasks or Sub-tasks.
 - **priority** — One of `"P0"`, `"P1"`, `"P2"`, `"P3"`:
   - `P0` — Critical path. Release cannot ship without this.
   - `P1` — Required for release. Must be completed but has some scheduling flexibility.
@@ -203,9 +241,14 @@ You MUST output a single `json` code block conforming to this schema:
   - `P3` — Nice to have. Improves quality or coverage but is not blocking.
 - **suggested_component** — Must be a real Jira component from the project.
 - **acceptance_criteria** — Measurable and testable. Must describe an observable
-  outcome, not a process step.
+  outcome, not a process step. Use acceptance criteria to capture unit tests,
+  validation expectations, integration proof, and as-built documentation where
+  those do not warrant a standalone design-doc Story.
 - **dependencies** — Semicolon-separated list of existing `STL-` ticket keys from
   the input. Must reference real keys. Set to `""` if no dependencies.
+- **summary** — Story summaries should represent one branch-sized software
+  deliverable. Do not propose umbrella Stories that mix multiple independent
+  coding branches.
 
 ### Org Knowledge Usage
 
