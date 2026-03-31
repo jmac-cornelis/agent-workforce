@@ -12,7 +12,7 @@ Shannon is not a dumb proxy. It owns command parsing, routing, response renderin
 
 ```bash
 # Podman (production)
-podman run -d --name shannon --network host \
+podman run -d --name shannon -p 8200:8200 \
     --env-file deploy/env/shared.env \
     --env-file deploy/env/teams.env \
     -v $(pwd)/config:/app/config:ro,Z \
@@ -101,7 +101,7 @@ mkdir -p data/shannon
 ### Step 4: Start Shannon
 
 ```bash
-podman run -d --name shannon --network host \
+podman run -d --name shannon -p 8200:8200 \
     --env-file deploy/env/shared.env \
     --env-file deploy/env/teams.env \
     -v $(pwd)/config:/app/config:ro,Z \
@@ -110,7 +110,7 @@ podman run -d --name shannon --network host \
     uvicorn shannon.app:app --host 0.0.0.0 --port 8200
 ```
 
-> **`--network host` is required** — Shannon calls agent APIs at `localhost:8201`, `localhost:8202`, etc. Bridge networking isolates containers so `localhost` inside Shannon's container can't reach Drucker. Host networking puts all containers on the same network namespace.
+> **Cross-container communication:** Shannon calls agent APIs via `host.containers.internal` (e.g., `http://host.containers.internal:8201`), which resolves to the host's loopback from inside any Podman container. This is configured in `config/shannon/agent_registry.yaml`.
 
 > **`:Z` suffix on volumes** — Required for SELinux on RHEL. Tells Podman to relabel the volume for the container's SELinux context.
 
@@ -147,24 +147,28 @@ journalctl --user -u shannon -f  # tail logs
 
 Teams outgoing webhooks require HTTPS. Two options:
 
-**Option A: Cloudflare Tunnel (quick, ephemeral URL)**
+**Option A: Cloudflare Named Tunnel (production — permanent URL)**
+
+The production deployment uses a Cloudflare named tunnel with the domain `cn-agents.com`:
+
+| Property | Value |
+|----------|-------|
+| Domain | `cn-agents.com` (Cloudflare-managed) |
+| Shannon URL | `https://shannon.cn-agents.com` |
+| Tunnel name | `agent-workforce` |
+| Teams webhook callback | `https://shannon.cn-agents.com/api/webhook` |
 
 ```bash
 # Install cloudflared
 sudo dnf install -y https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-x86_64.rpm
 
-# Start tunnel (URL changes on each restart)
-nohup cloudflared tunnel --url http://localhost:8200 > /tmp/cloudflared.log 2>&1 &
-
-# Get the URL
-grep -o 'https://[^ ]*trycloudflare.com' /tmp/cloudflared.log | head -1
+# Start the named tunnel (stable URL, survives restarts)
+cloudflared tunnel run --token <TUNNEL_TOKEN>
 ```
 
-The tunnel URL (e.g., `https://category-mentor-columnists-serve.trycloudflare.com`) must be set as the outgoing webhook endpoint in Teams: `<tunnel-url>/v1/teams/outgoing-webhook`.
+The named tunnel maintains a permanent URL — no need to update webhook URLs on restart. Configure the route in Cloudflare Zero Trust dashboard: **Networks → Tunnels → Public Hostname** → `shannon.cn-agents.com` → `http://localhost:8200`.
 
-> **Limitation:** The URL changes every time `cloudflared` restarts. Update the Teams webhook accordingly.
-
-**Option B: Caddy Reverse Proxy (persistent, requires DNS)**
+**Option B: Caddy Reverse Proxy (alternative, requires DNS)**
 
 See `deploy/caddy/Caddyfile`. Requires the server hostname to be resolvable and port 443 reachable.
 
@@ -183,7 +187,7 @@ Shannon uses two webhook directions:
 This lets users send `@Shannon /command` in Teams and have it reach Shannon's API.
 
 1. In Microsoft Teams, go to the target channel → **Manage channel** → **Apps** → **Outgoing Webhook**
-2. Name: `Shannon`, Callback URL: `<https-url>/v1/teams/outgoing-webhook`
+2. Name: `Shannon`, Callback URL: `https://shannon.cn-agents.com/api/webhook`
 3. Copy the **HMAC secret** Teams generates
 4. Paste it into `deploy/env/teams.env` as `SHANNON_TEAMS_OUTGOING_WEBHOOK_SECRET`
 5. Restart Shannon: `systemctl --user restart shannon`
@@ -199,6 +203,26 @@ This lets Shannon proactively post messages (e.g., polling results, notification
 5. Set `SHANNON_TEAMS_POST_MODE=workflows`
 6. Restart Shannon: `systemctl --user restart shannon`
 
+#### Per-Agent Notification Channels
+
+Each domain agent can have its own Teams channel with a dedicated Workflows incoming webhook. When configured, proactive notifications (polling results, alerts) are posted directly to the agent's channel — not the default Shannon channel.
+
+To set up a per-agent channel:
+
+1. Create a dedicated Teams channel (e.g., `agent-drucker`)
+2. Add a "Send webhook alerts to a channel" Workflow in that channel
+3. Add the webhook URL to the agent's entry in `config/shannon/agent_registry.yaml`:
+
+```yaml
+agents:
+  drucker:
+    channel_name: agent-drucker
+    notifications_webhook_url: "https://...powerautomate.com/..."
+```
+
+4. Restart Shannon: `systemctl --user restart shannon`
+5. Test: `curl -X POST http://localhost:8200/v1/bot/notify -H 'Content-Type: application/json' -d '{"agent_id": "drucker", "title": "Test", "text": "Hello from Drucker"}'`
+
 #### Re-establishing Conversation References
 
 After a container restart, Shannon loses its in-memory conversation references. Send **`@Shannon /stats`** in the Teams channel to re-establish the reference. This is required before Shannon can route commands to other agents.
@@ -209,10 +233,10 @@ After a container restart, Shannon loses its in-memory conversation references. 
 |---------|-------|-----|
 | `Connection closed by remote host` on SSH | SSH rate limiting (MaxStartups) | Wait 5-10 min, or run `deploy/scripts/fix-server.sh` when access recovers |
 | `podman restart` fails with port conflict | Race condition in rootless Podman | `podman stop -t 10 shannon && podman rm -f shannon` then re-run |
-| Shannon returns 500 on agent commands | Agent container not reachable at localhost:PORT | Verify both containers use `--network host` |
+| Shannon returns 500 on agent commands | Agent container not reachable | Verify `api_base_url` in registry uses `host.containers.internal:PORT` |
 | Teams commands get no response | Conversation reference lost after restart | Send `@Shannon /stats` to re-establish |
 | `poster_mode: MemoryPoster` in /stats | `SHANNON_TEAMS_POST_MODE` not set or wrong | Check `deploy/env/teams.env`, restart container |
-| Cloudflare tunnel URL changed | Ephemeral tunnel restarted | Update Teams outgoing webhook callback URL |
+| Cloudflare tunnel down | `cloudflared` process died | Restart: `cloudflared tunnel run --token <TOKEN>` |
 
 ## How It Works
 
@@ -249,7 +273,8 @@ Shannon's routing is configured via `config/shannon/agent_registry.yaml`. Each a
 
 - `agent_id`, `display_name`, `role`
 - `channel_name`, `channel_id` — which Teams channel maps to which agent
-- `api_base_url` — where to forward commands (e.g., `http://localhost:8201`)
+- `api_base_url` — where to forward commands (e.g., `http://host.containers.internal:8201`)
+- `notifications_webhook_url` — optional per-agent Workflows webhook for proactive notifications
 - `custom_commands` — list of commands with `command`, `description`, `api_method`, `api_path`, and `mutation` flag
 
 Adding a new command is as simple as adding an entry to the YAML file. Shannon picks it up on restart.

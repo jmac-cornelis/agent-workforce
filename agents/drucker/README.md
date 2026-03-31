@@ -214,7 +214,7 @@ mkdir -p data/drucker
 ### Step 4: Start Drucker
 
 ```bash
-podman run -d --name drucker --network host \
+podman run -d --name drucker -p 8201:8201 \
     --env-file deploy/env/shared.env \
     --env-file deploy/env/jira.env \
     --env-file deploy/env/github.env \
@@ -224,7 +224,7 @@ podman run -d --name drucker --network host \
     uvicorn agents.drucker.api:app --host 0.0.0.0 --port 8201
 ```
 
-> **`--network host` is required** — Shannon routes commands to Drucker at `http://localhost:8201`. Both must share the host network namespace.
+> **Cross-container networking:** Shannon reaches Drucker via `http://host.containers.internal:8201` (configured in `config/shannon/agent_registry.yaml`). `host.containers.internal` resolves to the host's loopback from inside Podman containers.
 
 ### Step 5: Verify
 
@@ -265,8 +265,8 @@ In the Teams channel where Shannon is configured:
 ```
 
 If Shannon returns an error, check:
-1. Both containers use `--network host`
-2. Drucker is healthy on port 8201
+1. Drucker is healthy on port 8201: `curl http://localhost:8201/v1/health`
+2. Shannon can reach Drucker: `podman exec shannon python3 -c "import urllib.request; print(urllib.request.urlopen('http://host.containers.internal:8201/v1/health').read())"`
 3. Shannon's conversation reference is established (send `@Shannon /stats` first)
 
 ### Troubleshooting
@@ -276,7 +276,7 @@ If Shannon returns an error, check:
 | `LLMError: litellm package required` | Image missing litellm | Rebuild with `podman build --no-cache` (Dockerfile includes litellm) |
 | `JiraConnectionError` | Bad credentials in jira.env | Verify `JIRA_EMAIL` and `JIRA_API_TOKEN` — test with `curl -u email:token https://cornelisnetworks.atlassian.net/rest/api/2/myself` |
 | `GitHubConnectionError` | Missing or expired PAT | Generate new token at github.com/settings/tokens with `repo` + `read:org` scopes |
-| Shannon commands return 500 | Drucker not reachable at localhost:8201 | Verify `--network host` on both containers |
+| Shannon commands return 500 | Drucker not reachable | Verify `api_base_url` in registry uses `host.containers.internal:8201` |
 | `dry_run: true` in all responses | `DRY_RUN=true` in shared.env | Set `DRY_RUN=false` in `shared.env` or pass `dry_run=false` per request |
 
 ### Running Locally (Development)

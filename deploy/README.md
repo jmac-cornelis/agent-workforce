@@ -18,8 +18,8 @@ All agents share a single Docker/Podman image (`localhost/cornelis/agent-workfor
 │  └────────┬────────┘  │  shared.env      │              │
 │           │            └──────────────────┘              │
 │  ┌────────┴────────┐                                    │
-│  │ Cloudflare Tunnel│  HTTPS → localhost:8200            │
-│  │ (ephemeral URL)  │                                   │
+│  │ Cloudflare Tunnel│  shannon.cn-agents.com → :8200    │
+│  │ (named tunnel)   │                                   │
 │  └─────────────────┘                                    │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -80,7 +80,7 @@ vim deploy/env/jira.env    # Jira service account
 vim deploy/env/github.env  # GitHub PAT (optional)
 
 # 6. Start both agents
-podman run -d --name shannon --network host \
+podman run -d --name shannon -p 8200:8200 \
     --env-file deploy/env/shared.env \
     --env-file deploy/env/teams.env \
     -v $(pwd)/config:/app/config:ro,Z \
@@ -88,7 +88,7 @@ podman run -d --name shannon --network host \
     localhost/cornelis/agent-workforce:latest \
     uvicorn shannon.app:app --host 0.0.0.0 --port 8200
 
-podman run -d --name drucker --network host \
+podman run -d --name drucker -p 8201:8201 \
     --env-file deploy/env/shared.env \
     --env-file deploy/env/jira.env \
     --env-file deploy/env/github.env \
@@ -109,11 +109,11 @@ systemctl --user daemon-reload
 systemctl --user enable --now shannon drucker
 loginctl enable-linger $(whoami)
 
-# 9. Set up HTTPS for Teams (Cloudflare Tunnel)
+# 9. Set up HTTPS for Teams (Cloudflare Named Tunnel)
 sudo dnf install -y https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-x86_64.rpm
-nohup cloudflared tunnel --url http://localhost:8200 > /tmp/cloudflared.log 2>&1 &
-grep -o 'https://[^ ]*trycloudflare.com' /tmp/cloudflared.log | head -1
-# → Use this URL as the Teams outgoing webhook callback
+# Use the named tunnel (stable URL: https://shannon.cn-agents.com)
+cloudflared tunnel run --token <TUNNEL_TOKEN>
+# Tunnel routes shannon.cn-agents.com → http://localhost:8200
 
 # 10. In Teams: @Shannon /stats  (establishes conversation reference)
 ```
@@ -188,11 +188,11 @@ Engineering hygiene agent. Jira ticket validation + GitHub PR lifecycle scanning
 
 ## Networking
 
-All containers use **`--network host`**. This is critical:
+Containers use **Podman bridge networking** (the default). Cross-container communication uses `host.containers.internal`:
 
-- Shannon calls Drucker at `http://localhost:8201` (per `config/shannon/agent_registry.yaml`)
-- Bridge networking isolates each container's `localhost` — Shannon can't reach Drucker
-- Host networking puts all containers on the same network namespace
+- Shannon calls Drucker at `http://host.containers.internal:8201` (configured in `config/shannon/agent_registry.yaml`)
+- `host.containers.internal` resolves to the host's loopback from inside any Podman container
+- Each container binds its port to the host via `-p PORT:PORT`
 - The `:Z` volume suffix is required for SELinux on RHEL
 
 To override agent API URLs without editing YAML (e.g., multi-host deployment):
@@ -205,19 +205,43 @@ GANTT_API_URL=http://cn-ai-03:8202
 
 Shannon's registry loader checks `{AGENT_ID}_API_URL` env vars at startup.
 
-## HTTPS for Teams
+## Per-Agent Notification Routing
 
-Teams outgoing webhooks require HTTPS. Current approach: **Cloudflare Tunnel** (quick, no DNS config).
+Each agent can have its own Teams channel and webhook. When an agent has a `notifications_webhook_url` in the registry YAML, proactive notifications are posted directly to that agent's channel — not the default Shannon channel.
 
-```bash
-# Start ephemeral tunnel
-nohup cloudflared tunnel --url http://localhost:8200 > /tmp/cloudflared.log 2>&1 &
-grep -o 'https://[^ ]*trycloudflare.com' /tmp/cloudflared.log | head -1
+```yaml
+# In config/shannon/agent_registry.yaml
+agents:
+  drucker:
+    channel_name: agent-drucker
+    notifications_webhook_url: "https://...powerautomate.com/..."  # Drucker-specific webhook
 ```
 
-**Limitation:** URL changes on every restart. Update the Teams outgoing webhook callback URL accordingly.
+**How it works:**
+- Command responses from `@Shannon /pr-hygiene` → posted to the channel where the command was sent
+- Proactive notifications (polling results) via `POST /v1/bot/notify {agent_id: "drucker"}` → posted to Drucker's dedicated channel
+- If no `notifications_webhook_url` is configured, notifications fall back to the default Shannon poster
 
-For persistent HTTPS, use Caddy (`deploy/caddy/Caddyfile`) with a public DNS record.
+## HTTPS for Teams
+
+Teams outgoing webhooks require HTTPS. Current approach: **Cloudflare Named Tunnel** with a permanent domain.
+
+| Property | Value |
+|----------|-------|
+| Domain | `cn-agents.com` (Cloudflare-managed) |
+| Shannon URL | `https://shannon.cn-agents.com` |
+| Tunnel name | `agent-workforce` |
+| Route | `shannon.cn-agents.com` → `http://localhost:8200` |
+| Teams webhook callback | `https://shannon.cn-agents.com/api/webhook` |
+
+```bash
+# Start the named tunnel (stable URL, survives restarts)
+cloudflared tunnel run --token <TUNNEL_TOKEN>
+```
+
+The named tunnel maintains a permanent URL (`shannon.cn-agents.com`) — no need to update webhook URLs on restart. The tunnel token is stored on the server at `/home/scm/.cloudflared/`.
+
+**Alternative:** For environments without Cloudflare, use Caddy (`deploy/caddy/Caddyfile`) with a public DNS record and Let's Encrypt TLS.
 
 ## Updating
 
@@ -276,7 +300,7 @@ After container restart, Shannon loses conversation references. Send `@Shannon /
 | Teams commands get no response | Lost conversation reference | Send `@Shannon /stats` in Teams |
 | `poster_mode: MemoryPoster` | Wrong `SHANNON_TEAMS_POST_MODE` | Fix `teams.env`, restart shannon |
 | `JiraConnectionError` | Bad Jira creds | Test: `curl -u email:token https://cornelisnetworks.atlassian.net/rest/api/2/myself` |
-| Cloudflare tunnel URL changed | Ephemeral tunnel restarted | Update Teams webhook callback URL |
+| Cloudflare tunnel down | `cloudflared` process died | Restart: `cloudflared tunnel run --token <TOKEN>` |
 
 ## Detailed Agent Deployment Guides
 

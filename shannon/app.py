@@ -111,6 +111,7 @@ def create_app(service: Optional[ShannonService] = None) -> FastAPI:
         return bot_messages(activity)
 
     @app.post('/v1/teams/outgoing-webhook')
+    @app.post('/api/webhook')
     async def teams_outgoing_webhook(
         request: Request,
         authorization: Optional[str] = Header(default=None),
