@@ -31,6 +31,7 @@ from agents.drucker.models import (
 )
 from agents.pm_runtime import notify_shannon
 from agents.review_agent import ReviewAgent, ReviewItem, ReviewSession
+from config.jira_identity import get_jira_actor_email
 from core.monitoring import (
     MonitorConfig,
     ValidationResult,
@@ -212,6 +213,10 @@ class DruckerCoordinatorAgent(BaseAgent):
                 label_prefix=str(
                     input_data.get('label_prefix', 'drucker') or 'drucker'
                 ),
+                requested_by=input_data.get('requested_by'),
+                approved_by=input_data.get('approved_by'),
+                correlation_id=input_data.get('correlation_id'),
+                trigger=str(input_data.get('trigger', 'interactive') or 'interactive'),
             )
 
         raise ValueError('Invalid input: expected project key string or request dict')
@@ -614,6 +619,10 @@ class DruckerCoordinatorAgent(BaseAgent):
                     label_prefix=str(
                         job_spec.get('label_prefix', 'drucker') or 'drucker'
                     ),
+                    requested_by=job_spec.get('requested_by'),
+                    approved_by=job_spec.get('approved_by'),
+                    correlation_id=job_spec.get('correlation_id'),
+                    trigger='polling',
                 )
                 result = self.run_once(request, persist=persist)
                 result['job_id'] = job_id
@@ -1182,6 +1191,16 @@ class DruckerCoordinatorAgent(BaseAgent):
         '''
         Convert proposed Drucker actions into a review-gated execution session.
         '''
+        request_meta = report.request or {}
+        trigger = str(request_meta.get('trigger') or 'interactive').strip() or 'interactive'
+        requested_by = str(request_meta.get('requested_by') or '').strip()
+        approved_by = str(request_meta.get('approved_by') or '').strip() or None
+        correlation_root = str(request_meta.get('correlation_id') or '').strip()
+
+        if not requested_by:
+            fallback_actor = 'service_account' if trigger == 'polling' else 'requester'
+            requested_by = get_jira_actor_email(fallback_actor)
+
         session = ReviewSession(
             session_id=report.report_id,
             created_at=datetime.now(timezone.utc).isoformat(),
@@ -1215,6 +1234,14 @@ class DruckerCoordinatorAgent(BaseAgent):
                 item_type='ticket',
                 action=action.action_type,
                 data=data,
+                trigger=trigger,
+                requested_by=requested_by or None,
+                approved_by=approved_by,
+                correlation_id=(
+                    f'{correlation_root}:{action.action_id}'
+                    if correlation_root
+                    else f'{report.report_id}:{action.action_id}'
+                ),
             ))
 
         return session

@@ -310,6 +310,56 @@ def test_review_agent_create_session_and_execute_approved_items(monkeypatch: pyt
 
     assert [result['item_id'] for result in results] == ['R1', 'T2']
     assert create_release_calls[0]['name'] == '12.2.0'
+    assert create_release_calls[0]['actor_mode'] == 'service_account'
+    assert create_release_calls[0]['policy_rule'] == 'approved_system_batch_apply'
     assert create_ticket_calls[0]['summary'] == 'Revised summary'
+    assert create_ticket_calls[0]['actor_mode'] == 'service_account'
+    assert create_ticket_calls[0]['policy_rule'] == 'approved_system_batch_apply'
     assert session.items[0].status == ApprovalStatus.EXECUTED
     assert session.items[1].status == ApprovalStatus.EXECUTED
+
+
+def test_review_agent_uses_requester_for_sensitive_ticket_update(monkeypatch: pytest.MonkeyPatch):
+    from agents.review_agent import ApprovalStatus, ReviewAgent, ReviewItem, ReviewSession
+    from tools import jira_tools as jira_tools_module
+
+    monkeypatch.setattr(
+        ReviewAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'review prompt'),
+    )
+    monkeypatch.setenv('JIRA_EMAIL', 'pm@cornelisnetworks.com')
+    monkeypatch.setenv('JIRA_API_TOKEN', 'token-123')
+
+    update_calls = []
+
+    monkeypatch.setattr(
+        jira_tools_module,
+        'update_ticket',
+        lambda **kwargs: (
+            update_calls.append(kwargs) or
+            ToolResult.success({'key': kwargs['ticket_key'], 'audit': kwargs})
+        ),
+    )
+
+    agent = ReviewAgent(llm=_DummyLLM([]))
+    session = ReviewSession(
+        session_id='sess-1',
+        created_at='2026-04-01T12:00:00+00:00',
+        items=[
+            ReviewItem(
+                id='T1',
+                item_type='ticket',
+                action='update',
+                data={'ticket_key': 'STL-1', 'priority': 'P0-Stopper'},
+                status=ApprovalStatus.APPROVED,
+            )
+        ],
+    )
+
+    results = agent.execute_approved(session)
+
+    assert results[0]['success'] is True
+    assert update_calls[0]['ticket_key'] == 'STL-1'
+    assert update_calls[0]['actor_mode'] == 'requester'
+    assert update_calls[0]['policy_rule'] == 'human_judgment_change'

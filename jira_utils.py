@@ -46,6 +46,29 @@ except ImportError:
             return True
         return True
 
+try:
+    from config.jira_identity import (
+        get_jira_credentials_for_actor,
+        normalize_actor_mode,
+    )
+except ImportError:
+    def normalize_actor_mode(actor_mode=None):
+        if not actor_mode:
+            return 'requester'
+        normalized = str(actor_mode).strip().lower()
+        if normalized not in ('draft_only', 'requester', 'service_account'):
+            return 'requester'
+        return normalized
+
+    def get_jira_credentials_for_actor(actor_mode=None):
+        email = os.environ.get('JIRA_EMAIL')
+        api_token = os.environ.get('JIRA_API_TOKEN')
+        if not email:
+            raise ValueError('JIRA_EMAIL environment variable not set')
+        if not api_token:
+            raise ValueError('JIRA_API_TOKEN environment variable not set')
+        return email, api_token
+
 # Load environment variables from the default .env if present.
 #
 # CLI users can override this at runtime with --env; see handle_args().
@@ -468,12 +491,12 @@ class JiraAutomationError(Error):
 # Functions
 # ****************************************************************************************
 
-def get_jira_credentials():
+def get_jira_credentials(actor_mode='requester'):
     '''
     Retrieve Jira credentials from environment variables.
 
     Input:
-        None directly; reads from environment variables JIRA_EMAIL and JIRA_API_TOKEN.
+        actor_mode: Credential profile to resolve.
 
     Output:
         Tuple of (email, api_token) strings.
@@ -481,25 +504,23 @@ def get_jira_credentials():
     Raises:
         JiraCredentialsError: If required environment variables are not set.
     '''
-    log.debug('Entering get_jira_credentials()')
-    email = os.environ.get('JIRA_EMAIL')
-    api_token = os.environ.get('JIRA_API_TOKEN')
-    
-    if not email:
-        raise JiraCredentialsError('JIRA_EMAIL environment variable not set')
-    if not api_token:
-        raise JiraCredentialsError('JIRA_API_TOKEN environment variable not set')
-    
-    log.debug(f'Retrieved credentials for: {email}')
+    normalized = normalize_actor_mode(actor_mode)
+    log.debug(f'Entering get_jira_credentials(actor_mode={normalized})')
+    try:
+        email, api_token = get_jira_credentials_for_actor(normalized)
+    except ValueError as exc:
+        raise JiraCredentialsError(str(exc))
+
+    log.debug(f'Retrieved credentials for actor {normalized}: {email}')
     return email, api_token
 
 
-def connect_to_jira():
+def connect_to_jira(actor_mode='requester'):
     '''
     Establish connection to Jira instance using API token authentication.
 
     Input:
-        None directly; uses credentials from environment variables.
+        actor_mode: Credential profile to use.
 
     Output:
         JIRA object connected to the Cornelis Networks Jira instance.
@@ -508,10 +529,11 @@ def connect_to_jira():
         JiraConnectionError: If connection to Jira fails.
         JiraCredentialsError: If credentials are missing.
     '''
-    log.debug('Entering connect_to_jira()')
-    email, api_token = get_jira_credentials()
+    normalized = normalize_actor_mode(actor_mode)
+    log.debug(f'Entering connect_to_jira(actor_mode={normalized})')
+    email, api_token = get_jira_credentials(normalized)
     
-    log.info(f'Connecting to Jira at {JIRA_URL}...')
+    log.info(f'Connecting to Jira at {JIRA_URL} as {email} ({normalized})...')
     try:
         jira = JIRA(
             server=JIRA_URL,
@@ -528,10 +550,10 @@ def connect_to_jira():
 # Cached connection management
 # ---------------------------------------------------------------------------
 
-_cached_connection = None
+_cached_connections = {}
 
 
-def get_connection():
+def get_connection(actor_mode='requester'):
     '''
     Get or create a cached Jira connection.
 
@@ -545,21 +567,33 @@ def get_connection():
     Raises:
         JiraConnectionError: If connection fails.
     '''
-    global _cached_connection
-    if _cached_connection is None:
-        _cached_connection = connect_to_jira()
-    return _cached_connection
+    global _cached_connections
+    normalized = normalize_actor_mode(actor_mode)
+    cache_key = 'requester' if normalized == 'draft_only' else normalized
+    if cache_key not in _cached_connections:
+        if cache_key == 'requester':
+            _cached_connections[cache_key] = connect_to_jira()
+        else:
+            _cached_connections[cache_key] = connect_to_jira(cache_key)
+    return _cached_connections[cache_key]
 
 
-def reset_connection():
+def reset_connection(actor_mode=None):
     '''
     Clear the cached Jira connection.
 
     The next call to get_connection() will create a fresh connection.
-    Useful for testing or after credential changes.
+    Useful for testing or after credential changes. When actor_mode is not
+    supplied, clears all cached Jira connections.
     '''
-    global _cached_connection
-    _cached_connection = None
+    global _cached_connections
+    if actor_mode is None:
+        _cached_connections = {}
+        return
+
+    normalized = normalize_actor_mode(actor_mode)
+    cache_key = 'requester' if normalized == 'draft_only' else normalized
+    _cached_connections.pop(cache_key, None)
 
 
 # ---------------------------------------------------------------------------
