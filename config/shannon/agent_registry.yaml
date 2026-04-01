@@ -54,16 +54,47 @@ agents:
         api_method: POST
         api_path: /v1/hygiene/issue
         mutation: false
+        params:
+          - name: project_key
+            type: str
+            required: true
+            label: Jira project key
+          - name: ticket_key
+            type: str
+            required: true
+            label: Jira ticket key
+          - name: stale_days
+            type: int
+            required: false
+            label: Days threshold (default 30)
       - command: /intake-report
         description: Run a recent-ticket intake report
         api_method: POST
         api_path: /v1/hygiene/intake
         mutation: false
+        params:
+          - name: project_key
+            type: str
+            required: true
+            label: Jira project key
+          - name: stale_days
+            type: int
+            required: false
+            label: Days threshold (default 30)
       - command: /hygiene-run
         description: Run hygiene analysis
         api_method: POST
         api_path: /v1/hygiene/run
         mutation: false
+        params:
+          - name: project_key
+            type: str
+            required: true
+            label: Jira project key
+          - name: stale_days
+            type: int
+            required: false
+            label: Days threshold (default 30)
       - command: /hygiene-report
         description: Get a stored report
         api_method: GET
@@ -76,22 +107,50 @@ agents:
         description: Bug ticket activity today (opened, status changes, comments)
         api_method: POST
         api_path: /v1/activity/bugs
+        params:
+          - name: project_key
+            type: str
+            required: false
+            label: Jira project key (default STL)
       # --- GitHub PR hygiene commands ---
       - command: /pr-hygiene
         description: Full PR hygiene scan — stale PRs and missing reviews
         api_method: POST
         api_path: /v1/github/pr-hygiene
         mutation: false
+        params:
+          - name: repo
+            type: str
+            required: true
+            label: GitHub repo (owner/name)
+          - name: stale_days
+            type: int
+            required: false
+            label: Days threshold (default 5)
       - command: /pr-stale
         description: Find stale PRs with no activity
         api_method: POST
         api_path: /v1/github/pr-stale
         mutation: false
+        params:
+          - name: repo
+            type: str
+            required: true
+            label: GitHub repo (owner/name)
+          - name: stale_days
+            type: int
+            required: false
+            label: Days threshold (default 5)
       - command: /pr-reviews
         description: Find PRs missing code review
         api_method: POST
         api_path: /v1/github/pr-reviews
         mutation: false
+        params:
+          - name: repo
+            type: str
+            required: true
+            label: GitHub repo (owner/name)
       - command: /pr-list
         description: List open PRs for a repository
         api_method: GET
@@ -102,26 +161,63 @@ agents:
         api_method: POST
         api_path: /v1/github/naming-compliance
         mutation: false
+        params:
+          - name: repo
+            type: str
+            required: true
+            label: GitHub repo (owner/name)
       - command: /merge-conflicts
         description: Find open PRs with merge conflicts
         api_method: POST
         api_path: /v1/github/merge-conflicts
         mutation: false
+        params:
+          - name: repo
+            type: str
+            required: true
+            label: GitHub repo (owner/name)
       - command: /ci-failures
         description: Find open PRs with failing CI checks
         api_method: POST
         api_path: /v1/github/ci-failures
         mutation: false
+        params:
+          - name: repo
+            type: str
+            required: true
+            label: GitHub repo (owner/name)
       - command: /stale-branches
         description: Find stale branches with no activity and no open PRs
         api_method: POST
         api_path: /v1/github/stale-branches
         mutation: false
+        params:
+          - name: repo
+            type: str
+            required: true
+            label: GitHub repo (owner/name)
+          - name: stale_days
+            type: int
+            required: false
+            label: Days threshold (default 30)
       - command: /extended-hygiene
         description: Run comprehensive extended hygiene analysis (all scan types)
         api_method: POST
         api_path: /v1/github/extended-hygiene
         mutation: false
+        params:
+          - name: repo
+            type: str
+            required: true
+            label: GitHub repo (owner/name)
+          - name: stale_days
+            type: int
+            required: false
+            label: PR stale days (default 5)
+          - name: branch_stale_days
+            type: int
+            required: false
+            label: Branch stale days (default 30)
     timeout_seconds: 30
 
   - agent_id: gantt
@@ -140,6 +236,11 @@ agents:
         api_method: POST
         api_path: /v1/planning/snapshot
         mutation: false
+        params:
+          - name: project_key
+            type: str
+            required: true
+            label: Jira project key
       - command: /planning-snapshots
         description: List stored planning snapshots
         api_method: GET
@@ -149,11 +250,21 @@ agents:
         api_method: POST
         api_path: /v1/release-monitor/run
         mutation: false
+        params:
+          - name: project_key
+            type: str
+            required: true
+            label: Jira project key
       - command: /release-survey
         description: Create a release execution survey
         api_method: POST
         api_path: /v1/release-survey/run
         mutation: false
+        params:
+          - name: project_key
+            type: str
+            required: true
+            label: Jira project key
       - command: /release-report
         description: Get a stored release monitor report
         api_method: GET
@@ -178,9 +289,9 @@ agents:
     description: Source-grounded documentation generation, impact analysis, and review-gated publication
     zone: intelligence_knowledge
     channel_name: agent-hypatia
-    channel_id: ""
+    channel_id: "19:7210321d1f45408c94a82b089b543206@thread.tacv2"
     team_id: "19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2"
-    api_base_url: http://localhost:8203
+    api_base_url: http://host.containers.internal:8203
     approval_types: []
     custom_commands:
       - command: /generate-doc
@@ -188,11 +299,65 @@ agents:
         api_method: POST
         api_path: /v1/docs/generate
         mutation: true
+        params:
+          - name: doc_title
+            type: str
+            required: true
+            label: Document title
+          - name: doc_type
+            type: str
+            required: false
+            label: "Type: as_built, engineering_reference, how_to, user_guide, release_note_support (default engineering_reference)"
+          - name: project_key
+            type: str
+            required: false
+            label: Jira project key
+          - name: doc_summary
+            type: str
+            required: false
+            label: Brief summary of document
+          - name: source_paths
+            type: list
+            required: false
+            label: Source files (comma-separated)
+          - name: source_refs
+            type: list
+            required: false
+            label: Source references (comma-separated)
+          - name: evidence_paths
+            type: list
+            required: false
+            label: Evidence files (comma-separated)
+          - name: target_file
+            type: str
+            required: false
+            label: Output file path
+          - name: confluence_space
+            type: str
+            required: false
+            label: Confluence space ID
+          - name: confluence_parent_id
+            type: str
+            required: false
+            label: Confluence parent page ID
       - command: /impact-detect
         description: Analyze documentation impact of changes
         api_method: POST
         api_path: /v1/docs/impact
         mutation: false
+        params:
+          - name: doc_title
+            type: str
+            required: true
+            label: Document title
+          - name: doc_type
+            type: str
+            required: false
+            label: Document type (default engineering_reference)
+          - name: source_paths
+            type: list
+            required: false
+            label: Source files (comma-separated)
       - command: /doc-records
         description: List stored documentation records
         api_method: GET
@@ -206,14 +371,65 @@ agents:
         api_method: POST
         api_path: /v1/docs/publish
         mutation: true
+        params:
+          - name: doc_id
+            type: str
+            required: true
+            label: Documentation record ID to publish
+          - name: project_key
+            type: str
+            required: false
+            label: Jira project key
       - command: /search-docs
         description: Search Hypatia documentation records by query, project, type, or source
         api_method: POST
         api_path: /v1/docs/search
         mutation: false
+        params:
+          - name: query
+            type: str
+            required: false
+            label: Search query text
+          - name: project_key
+            type: str
+            required: false
+            label: Filter by project key
+          - name: doc_type
+            type: str
+            required: false
+            label: Filter by doc type
+          - name: source_ref
+            type: str
+            required: false
+            label: Filter by source reference
       - command: /confluence-publish
         description: Publish a markdown file to Confluence with diagram rendering
         api_method: POST
         api_path: /v1/docs/confluence/publish-page
         mutation: true
+        params:
+          - name: title
+            type: str
+            required: true
+            label: Confluence page title
+          - name: input_file
+            type: str
+            required: true
+            label: Path to markdown file
+          - name: space
+            type: str
+            required: false
+            label: Confluence space ID
+          - name: parent_id
+            type: str
+            required: false
+            label: Parent page ID
+          - name: operation
+            type: str
+            required: false
+            label: "Operation: create, update, append, update_section (default create)"
+          - name: page_id_or_title
+            type: str
+            required: false
+            label: Existing page ID/title (for update/append)
     timeout_seconds: 60
