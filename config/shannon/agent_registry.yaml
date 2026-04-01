@@ -402,6 +402,24 @@ agents:
             type: str
             required: false
             label: Filter by source reference
+      - command: /pr-review
+        description: Analyze a PR and generate documentation
+        api_method: POST
+        api_path: /v1/docs/pr-review
+        mutation: true
+        params:
+          - name: repo
+            type: str
+            required: true
+            label: "Repository (owner/repo)"
+          - name: pr_number
+            type: int
+            required: true
+            label: "PR number"
+          - name: target_dir
+            type: str
+            required: false
+            label: "Target docs directory"
       - command: /confluence-publish
         description: Publish a markdown file to Confluence with diagram rendering
         api_method: POST

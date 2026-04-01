@@ -114,6 +114,15 @@ class PublishRequest(BaseModel):
     dry_run: Optional[bool] = None
 
 
+class PRReviewRequest(BaseModel):
+    '''Request body for POST /v1/docs/pr-review.'''
+    repo: str  # "owner/repo" format
+    pr_number: int
+    doc_types: Optional[List[str]] = None  # filter which doc types to generate
+    target_dir: Optional[str] = 'docs'  # where to put generated docs in the repo
+    dry_run: Optional[bool] = None
+
+
 class ConfluencePublishPageRequest(BaseModel):
     '''Request body for POST /v1/docs/confluence/publish-page.'''
     title: Optional[str] = None
@@ -471,6 +480,252 @@ def create_app() -> FastAPI:
                 'doc_id': body.doc_id,
                 'publications': [pub.to_dict() for pub in publications],
                 'publication_count': len(publications),
+            },
+        }
+
+    # ------------------------------------------------------------------
+    # PR review → doc generation → commit pipeline
+    # ------------------------------------------------------------------
+
+    # File-extension patterns considered doc-relevant in a PR diff.
+    _DOC_RELEVANT_EXTENSIONS = {
+        '.md', '.rst', '.txt', '.h', '.py', '.c', '.go', '.java', '.rs',
+    }
+    _DOC_RELEVANT_PREFIXES = ('docs/', 'doc/', 'README',)
+
+    def _is_doc_relevant(filename: str) -> bool:
+        '''Return True if *filename* is likely to affect documentation.'''
+        import posixpath
+        if any(filename.startswith(p) for p in _DOC_RELEVANT_PREFIXES):
+            return True
+        ext = posixpath.splitext(filename)[1].lower()
+        return ext in _DOC_RELEVANT_EXTENSIONS
+
+    @app.post('/v1/docs/pr-review')
+    def docs_pr_review(body: PRReviewRequest) -> Dict[str, Any]:
+        '''
+        Orchestrate the full PR → doc generation → commit pipeline.
+
+        Accepts a repo + PR number, detects doc impact from changed files,
+        generates documentation, commits the generated docs back to the PR
+        branch, and saves a Hypatia record.
+        '''
+        global _run_count, _last_run_at
+
+        from config.env_loader import resolve_dry_run
+
+        dry_run = resolve_dry_run(body.dry_run)
+
+        # --- input validation ---
+        if '/' not in body.repo:
+            return {
+                'ok': False,
+                'error': 'repo must be in "owner/repo" format.',
+            }
+        if body.pr_number < 1:
+            return {
+                'ok': False,
+                'error': 'pr_number must be a positive integer.',
+            }
+
+        # --- import github_utils (may not be installed) ---
+        try:
+            import github_utils
+        except ImportError:
+            return {
+                'ok': False,
+                'error': (
+                    'github_utils is not available. '
+                    'Install the github integration package to use /pr-review.'
+                ),
+            }
+
+        # --- fetch PR changed files ---
+        try:
+            changed_files = github_utils.get_pr_changed_files(
+                body.repo, body.pr_number,
+            )
+        except Exception as exc:
+            log.error(f'GitHub API error fetching PR files: {exc}')
+            return {'ok': False, 'error': f'GitHub API error: {exc}'}
+
+        # --- filter for doc-relevant files ---
+        relevant_files = [f for f in changed_files if _is_doc_relevant(f)]
+
+        if not relevant_files:
+            return {
+                'ok': True,
+                'data': {
+                    'pr_number': body.pr_number,
+                    'repo': body.repo,
+                    'impact_summary': 'No doc-relevant files detected in this PR.',
+                    'files_generated': [],
+                    'files_committed': False,
+                    'commit_sha': None,
+                    'record_id': None,
+                    'dry_run': dry_run,
+                },
+            }
+
+        # --- dry-run gate: preview only ---
+        if dry_run:
+            preview_files = []
+            for fpath in relevant_files:
+                import posixpath
+                base = posixpath.splitext(posixpath.basename(fpath))[0]
+                slug = base.lower().replace('_', '-').replace(' ', '-')
+                target_dir = body.target_dir or 'docs'
+                target = f'{target_dir}/{slug}.md'
+                is_readme = posixpath.basename(fpath).upper().startswith('README')
+                preview_files.append({
+                    'source': fpath,
+                    'target': target,
+                    'doc_type': 'user_guide' if is_readme else 'as_built',
+                })
+            return {
+                'ok': True,
+                'data': {
+                    'dry_run': True,
+                    'pr_number': body.pr_number,
+                    'repo': body.repo,
+                    'impact_summary': (
+                        f'{len(relevant_files)} doc-relevant file(s) detected. '
+                        f'Dry-run — no generation or commit performed.'
+                    ),
+                    'files_planned': preview_files,
+                    'files_committed': False,
+                    'commit_sha': None,
+                    'record_id': None,
+                },
+            }
+
+        # --- build DocumentationRequest per relevant file and run agent ---
+        target_dir = body.target_dir or 'docs'
+        all_generated: List[Dict[str, Any]] = []
+        files_to_commit: Dict[str, str] = {}
+        last_record_id: Optional[str] = None
+
+        for fpath in relevant_files:
+            import posixpath
+            base = posixpath.splitext(posixpath.basename(fpath))[0]
+            slug = base.lower().replace('_', '-').replace(' ', '-')
+            is_readme = posixpath.basename(fpath).upper().startswith('README')
+            doc_type = 'user_guide' if is_readme else 'as_built'
+
+            if body.doc_types and doc_type not in body.doc_types:
+                continue
+
+            title_label = base.replace('_', ' ').replace('-', ' ').title()
+            target_file = f'{target_dir}/{slug}.md'
+
+            doc_request = DocumentationRequest(
+                title=f'{title_label} Documentation',
+                doc_type=doc_type,
+                source_paths=[fpath],
+                target_file=target_file,
+            )
+
+            agent = HypatiaDocumentationAgent()
+            try:
+                result = agent.run(doc_request)
+            except Exception as exc:
+                log.error(f'Hypatia agent run failed for {fpath}: {exc}')
+                continue
+
+            if not result.success:
+                log.warning(f'Hypatia agent returned error for {fpath}: {result.error}')
+                continue
+
+            doc_record_dict = (result.metadata or {}).get('documentation_record', {})
+            patches = doc_record_dict.get('patches', [])
+            for patch in patches:
+                if patch.get('target_type') == 'repo_markdown':
+                    p_target = patch.get('target_ref', target_file)
+                    p_content = patch.get('content_markdown', '')
+                    if p_content:
+                        files_to_commit[p_target] = p_content
+                        all_generated.append({
+                            'path': p_target,
+                            'operation': patch.get('operation', 'create'),
+                        })
+
+            # Save record
+            record_id = doc_record_dict.get('doc_id', '')
+            if doc_record_dict:
+                try:
+                    record_obj = DocumentationRecord(
+                        title=doc_record_dict.get('title', ''),
+                        doc_type=doc_record_dict.get('doc_type', ''),
+                        project_key=doc_record_dict.get('project_key', ''),
+                        doc_id=record_id,
+                        created_at=doc_record_dict.get('created_at', ''),
+                        request=doc_record_dict.get('request', {}),
+                        impact=doc_record_dict.get('impact', {}),
+                        source_refs=doc_record_dict.get('source_refs', []),
+                        evidence_summary=doc_record_dict.get('evidence_summary', {}),
+                        content_markdown=doc_record_dict.get('content_markdown', ''),
+                        summary_markdown=doc_record_dict.get('summary_markdown', ''),
+                        validation=doc_record_dict.get('validation', {}),
+                        warnings=doc_record_dict.get('warnings', []),
+                        confidence=doc_record_dict.get('confidence', 'medium'),
+                        metadata=doc_record_dict.get('metadata', {}),
+                    )
+                    record_store.save_record(record_obj)
+                    last_record_id = record_id
+                except Exception as exc:
+                    log.warning(f'Failed to save Hypatia record for {fpath}: {exc}')
+
+        # --- commit generated files to PR branch ---
+        commit_sha: Optional[str] = None
+        head_branch: Optional[str] = None
+        files_committed = False
+
+        if files_to_commit:
+            try:
+                pr_info = github_utils.get_pull_request(
+                    body.repo, body.pr_number,
+                )
+                head_branch = str(pr_info.get('head_branch', '') or '')
+            except Exception as exc:
+                log.error(f'GitHub API error fetching PR info: {exc}')
+                return {'ok': False, 'error': f'GitHub API error: {exc}'}
+
+            if not head_branch:
+                return {'ok': False, 'error': 'Could not determine PR head branch.'}
+
+            try:
+                commit_result = github_utils.batch_commit_files(
+                    body.repo,
+                    files_to_commit,
+                    f'docs: auto-generate documentation for PR #{body.pr_number} [skip ci]',
+                    head_branch,
+                )
+                commit_sha = str(commit_result.get('sha', '')) if isinstance(commit_result, dict) else str(commit_result)
+                files_committed = True
+            except Exception as exc:
+                log.error(f'GitHub commit failed: {exc}')
+                return {'ok': False, 'error': f'GitHub commit failed: {exc}'}
+
+        _run_count += 1
+        _last_run_at = datetime.now(timezone.utc).isoformat()
+
+        impact_summary = (
+            f'{len(relevant_files)} doc-relevant file(s) detected, '
+            f'{len(all_generated)} doc(s) generated'
+        )
+
+        return {
+            'ok': True,
+            'data': {
+                'pr_number': body.pr_number,
+                'repo': body.repo,
+                'head_branch': head_branch,
+                'impact_summary': impact_summary,
+                'files_generated': all_generated,
+                'files_committed': files_committed,
+                'commit_sha': commit_sha,
+                'record_id': last_record_id,
+                'dry_run': False,
             },
         }
 

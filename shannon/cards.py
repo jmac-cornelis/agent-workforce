@@ -751,6 +751,64 @@ def build_dry_run_preview_card(
     }
 
 
+def build_hypatia_pr_review_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a Hypatia /pr-review response.
+    '''
+    repo = data.get('repo', '')
+    pr_number = data.get('pr_number', '')
+    head_branch = data.get('head_branch', '')
+    impact_summary = data.get('impact_summary', '')
+    files_generated = data.get('files_generated', [])
+    files_committed = data.get('files_committed', False)
+    commit_sha = data.get('commit_sha', '')
+    dry_run = data.get('dry_run', False)
+
+    card_title = f'Hypatia PR Review — {repo} #{pr_number}'
+    if dry_run:
+        card_title += ' (Dry-Run)'
+
+    facts: Dict[str, Any] = {
+        'Repository': repo,
+        'PR': f'#{pr_number}',
+    }
+    if head_branch:
+        facts['Branch'] = head_branch
+    facts['Committed'] = 'Yes' if files_committed else 'No'
+    if commit_sha:
+        facts['Commit SHA'] = str(commit_sha)[:12]
+
+    body_lines: list[str] = []
+    if impact_summary:
+        body_lines.append(f'**Impact:** {impact_summary}')
+
+    if files_generated:
+        body_lines.append('**Generated Files:**')
+        for fg in files_generated[:10]:
+            body_lines.append(f'• {fg.get("path", "")} ({fg.get("operation", "")})')
+        if len(files_generated) > 10:
+            body_lines.append(f'  ...and {len(files_generated) - 10} more')
+
+    files_planned = data.get('files_planned', [])
+    if files_planned:
+        body_lines.append('**Planned Files:**')
+        for fp in files_planned[:10]:
+            body_lines.append(
+                f'• {fp.get("source", "")} → {fp.get("target", "")} [{fp.get("doc_type", "")}]'
+            )
+        if len(files_planned) > 10:
+            body_lines.append(f'  ...and {len(files_planned) - 10} more')
+
+    if not body_lines:
+        body_lines.append('No documentation impact detected.')
+
+    return build_fact_card(
+        title=card_title,
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
 def build_hypatia_doc_card(data: Dict[str, Any]) -> Dict[str, Any]:
     '''
     Build an Adaptive Card for a Hypatia /generate-doc response.

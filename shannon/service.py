@@ -30,6 +30,7 @@ from shannon.cards import (
     build_gantt_snapshot_card,
     build_hypatia_confluence_publish_card,
     build_hypatia_doc_card,
+    build_hypatia_pr_review_card,
     build_hypatia_impact_card,
     build_hypatia_publication_card,
     build_hypatia_records_card,
@@ -469,6 +470,7 @@ class ShannonService:
             '/publish-doc': build_hypatia_publication_card,
             '/search-docs': build_hypatia_search_card,
             '/confluence-publish': build_hypatia_confluence_publish_card,
+            '/pr-review': build_hypatia_pr_review_card,
         },
     }
 

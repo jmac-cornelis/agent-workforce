@@ -1,0 +1,178 @@
+# GitHub Action: Hypatia Documentation Generation
+# Triggers on PRs, calls Hypatia API to detect doc impact and generate docs,
+# then commits generated documentation back to the PR branch.
+#
+# Copy this workflow to any repo that should get auto-generated docs.
+# Requires: HYPATIA_API_URL secret (e.g., https://hypatia.cn-agents.com)
+#
+# Flow:
+#   1. PR opened/updated → get changed files
+#   2. Call Hypatia /v1/docs/pr-review with file list
+#   3. If docs generated → commit to PR branch with [skip ci]
+#   4. On merge to main → MkDocs deploys to GitHub Pages (separate workflow)
+
+name: Generate Documentation
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+# Prevent concurrent runs on the same PR — cancel in-progress if new push arrives
+concurrency:
+  group: doc-gen-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate-docs:
+    # Skip if the commit was made by this bot (prevents infinite loops)
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed
+        run: |
+          # Get list of changed files from PR
+          FILES=$(gh pr view ${{ github.event.pull_request.number }} \
+            --json files --jq '[.files[].path] | join(",")')
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+
+          # Count for logging
+          COUNT=$(echo "$FILES" | tr ',' '\n' | wc -l)
+          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
+          echo "::notice::PR #${{ github.event.pull_request.number }} has $COUNT changed files"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Call Hypatia doc review
+        id: hypatia
+        run: |
+          HYPATIA_URL="${{ secrets.HYPATIA_API_URL }}"
+          if [ -z "$HYPATIA_URL" ]; then
+            HYPATIA_URL="https://hypatia.cn-agents.com"
+          fi
+
+          # Call Hypatia PR review endpoint
+          RESPONSE=$(curl -sf -X POST \
+            "${HYPATIA_URL}/v1/docs/pr-review" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "repo": "${{ github.repository }}",
+              "pr_number": ${{ github.event.pull_request.number }},
+              "target_dir": "docs",
+              "dry_run": false
+            }' \
+            --max-time 120 \
+            --retry 2 \
+            --retry-delay 5 \
+            2>/dev/null) || {
+            echo "::warning::Hypatia API call failed — skipping doc generation"
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+
+          # Check if docs were generated
+          OK=$(echo "$RESPONSE" | jq -r '.ok // false')
+          FILES_COUNT=$(echo "$RESPONSE" | jq -r '.data.files_generated | length // 0')
+          SUMMARY=$(echo "$RESPONSE" | jq -r '.data.impact_summary // "no impact detected"')
+
+          echo "::notice::Hypatia: $SUMMARY"
+
+          if [ "$OK" = "true" ] && [ "$FILES_COUNT" -gt 0 ]; then
+            echo "generated=true" >> "$GITHUB_OUTPUT"
+            echo "summary=$SUMMARY" >> "$GITHUB_OUTPUT"
+            echo "files_count=$FILES_COUNT" >> "$GITHUB_OUTPUT"
+
+            # Save generated file paths for commit step
+            echo "$RESPONSE" | jq -r '.data.files_generated[].path' > /tmp/generated_files.txt
+          else
+            echo "generated=false" >> "$GITHUB_OUTPUT"
+            echo "summary=$SUMMARY" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit generated docs
+        if: steps.hypatia.outputs.generated == 'true'
+        run: |
+          # Check if there are actual file changes to commit
+          git add docs/ || true
+          if git diff --staged --quiet; then
+            echo "::notice::No file changes to commit"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Commit with [skip ci] to prevent re-triggering this workflow
+          SUMMARY="${{ steps.hypatia.outputs.summary }}"
+          git commit -m "docs: auto-generate documentation for PR #${{ github.event.pull_request.number }} [skip ci]" \
+                     -m "$SUMMARY"
+          git push origin HEAD:${{ github.head_ref }}
+
+          echo "::notice::Committed ${{ steps.hypatia.outputs.files_count }} generated doc files"
+
+      - name: Post PR comment
+        if: steps.hypatia.outputs.generated == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const summary = '${{ steps.hypatia.outputs.summary }}';
+            const count = '${{ steps.hypatia.outputs.files_count }}';
+            const body = [
+              '## 📝 Documentation Auto-Generated',
+              '',
+              `**Hypatia** detected documentation impact and generated **${count}** doc file(s).`,
+              '',
+              `> ${summary}`,
+              '',
+              'Generated files have been committed to this PR branch.',
+              'They will be published to GitHub Pages when this PR is merged.',
+              '',
+              '*This comment was generated by [Hypatia Documentation Agent](https://github.com/jmac-cornelis/agent-workforce).*'
+            ].join('\n');
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Post no-impact comment
+        if: steps.hypatia.outputs.generated == 'false' && steps.hypatia.outputs.summary != ''
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Only post once per PR — check for existing bot comment
+            const comments = await github.rest.issues.listComments({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 100
+            });
+            const existing = comments.data.find(c =>
+              c.user.login === 'github-actions[bot]' &&
+              c.body.includes('Documentation Auto-Generated')
+            );
+            if (existing) return;  // Don't spam
+
+            // No impact — post lightweight notice
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '📝 **Hypatia**: No documentation impact detected for this PR.'
+            });
