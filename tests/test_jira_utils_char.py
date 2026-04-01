@@ -44,6 +44,18 @@ def test_get_jira_credentials_success(monkeypatch: pytest.MonkeyPatch):
     assert token == 'token-123'
 
 
+def test_get_jira_credentials_service_account_profile(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv('JIRA_EMAIL', 'engineer@cornelisnetworks.com')
+    monkeypatch.setenv('JIRA_API_TOKEN', 'token-123')
+    monkeypatch.setenv('JIRA_SERVICE_EMAIL', 'scm@cornelisnetworks.com')
+    monkeypatch.setenv('JIRA_SERVICE_API_TOKEN', 'svc-token')
+
+    email, token = jira_utils.get_jira_credentials('service_account')
+
+    assert email == 'scm@cornelisnetworks.com'
+    assert token == 'svc-token'
+
+
 def test_get_jira_credentials_missing_token(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setenv('JIRA_EMAIL', 'engineer@cornelisnetworks.com')
     monkeypatch.delenv('JIRA_API_TOKEN', raising=False)
@@ -73,6 +85,28 @@ def test_get_connection_caches_and_reset(monkeypatch: pytest.MonkeyPatch):
     jira_utils.reset_connection()
     _ = jira_utils.get_connection()
     assert call_count['count'] == 2
+
+
+def test_get_connection_caches_per_actor(monkeypatch: pytest.MonkeyPatch):
+    requester_conn = object()
+    service_conn = object()
+    calls = []
+
+    def _fake_connect(actor_mode='requester'):
+        calls.append(actor_mode)
+        return requester_conn if actor_mode == 'requester' else service_conn
+
+    monkeypatch.setattr(jira_utils, 'connect_to_jira', _fake_connect)
+    jira_utils.reset_connection()
+
+    conn1 = jira_utils.get_connection('requester')
+    conn2 = jira_utils.get_connection('service_account')
+    conn3 = jira_utils.get_connection('service_account')
+
+    assert conn1 is requester_conn
+    assert conn2 is service_conn
+    assert conn3 is service_conn
+    assert calls == ['requester', 'service_account']
 
 
 def test_normalize_issue_types_case_insensitive(mock_jira):

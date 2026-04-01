@@ -37,8 +37,21 @@ load_dotenv(override=False)
 try:
     from github import Github, Auth, GithubException, RateLimitExceededException, UnknownObjectException
 except ImportError:
-    print('Error: PyGithub package not installed. Run: pip install PyGithub')
-    sys.exit(1)
+    Github = None
+
+    class Auth:  # type: ignore[no-redef]
+        @staticmethod
+        def Token(token):
+            return token
+
+    class GithubException(Exception):  # type: ignore[no-redef]
+        pass
+
+    class RateLimitExceededException(GithubException):  # type: ignore[no-redef]
+        pass
+
+    class UnknownObjectException(GithubException):  # type: ignore[no-redef]
+        pass
 
 # ****************************************************************************************
 # Global data and configuration
@@ -274,6 +287,11 @@ def connect_to_github():
         GitHubCredentialsError: If credentials are missing.
     '''
     log.debug('Entering connect_to_github()')
+    if Github is None:
+        raise GitHubConnectionError(
+            'PyGithub package not installed. Run: pip install PyGithub'
+        )
+
     token = get_github_credentials()
 
     log.info(f'Connecting to GitHub at {GITHUB_URL}...')

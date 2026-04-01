@@ -13,11 +13,13 @@ import logging
 import os
 import sys
 import tempfile
+from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Optional
 from dataclasses import dataclass, field
 from enum import Enum
 
 from agents.base import BaseAgent, AgentConfig, AgentResponse
+from core.jira_actor_policy import resolve_jira_actor
 from tools.confluence_tools import ConfluenceTools
 from tools.file_tools import FileTools
 from tools.jira_tools import JiraTools
@@ -49,6 +51,14 @@ class ReviewItem:
     modified_data: Optional[Dict[str, Any]] = None
     result: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
+    actor_mode: Optional[str] = None
+    requested_by: Optional[str] = None
+    approved_by: Optional[str] = None
+    executed_by: Optional[str] = None
+    policy_rule: Optional[str] = None
+    trigger: Optional[str] = None
+    correlation_id: Optional[str] = None
+    audit_timestamp: Optional[str] = None
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -59,7 +69,15 @@ class ReviewItem:
             'status': self.status.value,
             'modified_data': self.modified_data,
             'result': self.result,
-            'error': self.error
+            'error': self.error,
+            'actor_mode': self.actor_mode,
+            'requested_by': self.requested_by,
+            'approved_by': self.approved_by,
+            'executed_by': self.executed_by,
+            'policy_rule': self.policy_rule,
+            'trigger': self.trigger,
+            'correlation_id': self.correlation_id,
+            'audit_timestamp': self.audit_timestamp,
         }
     
     def get_effective_data(self) -> Dict[str, Any]:
@@ -227,7 +245,6 @@ Then execute the approved items.'''
             ReviewSession with items to review.
         '''
         import uuid
-        from datetime import datetime
         
         session = ReviewSession(
             session_id=str(uuid.uuid4())[:8],
@@ -416,6 +433,10 @@ Then execute the approved items.'''
             if result.get('success'):
                 item.status = ApprovalStatus.EXECUTED
                 item.result = result
+                audit = result.get('data', {}).get('audit', {})
+                if audit:
+                    item.executed_by = audit.get('executed_by')
+                    item.audit_timestamp = audit.get('timestamp')
                 
                 # Track created items
                 if item.item_type == 'release':
@@ -446,6 +467,12 @@ Then execute the approved items.'''
         from tools.file_tools import write_file
         
         data = item.get_effective_data()
+        execution_context = self._resolve_item_execution_context(item)
+        item.actor_mode = execution_context.get('actor_mode')
+        item.requested_by = execution_context.get('requested_by')
+        item.approved_by = execution_context.get('approved_by')
+        item.policy_rule = execution_context.get('policy_rule')
+        item.correlation_id = execution_context.get('correlation_id')
         
         try:
             if item.item_type == 'release' and item.action == 'create':
@@ -454,6 +481,11 @@ Then execute the approved items.'''
                     name=data['name'],
                     description=data.get('description'),
                     release_date=data.get('release_date'),
+                    actor_mode=item.actor_mode,
+                    requested_by=item.requested_by,
+                    approved_by=item.approved_by,
+                    policy_rule=item.policy_rule,
+                    correlation_id=item.correlation_id,
                 )
                 
                 if result.is_success:
@@ -471,6 +503,11 @@ Then execute the approved items.'''
                     components=data.get('components'),
                     fix_versions=data.get('fix_versions'),
                     labels=data.get('labels'),
+                    actor_mode=item.actor_mode,
+                    requested_by=item.requested_by,
+                    approved_by=item.approved_by,
+                    policy_rule=item.policy_rule,
+                    correlation_id=item.correlation_id,
                 )
                 
                 if result.is_success:
@@ -490,6 +527,11 @@ Then execute the approved items.'''
                     components=data.get('components'),
                     labels=data.get('labels'),
                     custom_fields=data.get('custom_fields'),
+                    actor_mode=item.actor_mode,
+                    requested_by=item.requested_by,
+                    approved_by=item.approved_by,
+                    policy_rule=item.policy_rule,
+                    correlation_id=item.correlation_id,
                 )
 
                 if result.is_success:
@@ -501,6 +543,11 @@ Then execute the approved items.'''
                 result = add_ticket_comment(
                     ticket_key=data['ticket_key'],
                     body=data.get('body', ''),
+                    actor_mode=item.actor_mode,
+                    requested_by=item.requested_by,
+                    approved_by=item.approved_by,
+                    policy_rule=item.policy_rule,
+                    correlation_id=item.correlation_id,
                 )
 
                 if result.is_success:
@@ -514,6 +561,11 @@ Then execute the approved items.'''
                     to_status=data['to_status'],
                     comment=data.get('comment'),
                     fields=data.get('fields'),
+                    actor_mode=item.actor_mode,
+                    requested_by=item.requested_by,
+                    approved_by=item.approved_by,
+                    policy_rule=item.policy_rule,
+                    correlation_id=item.correlation_id,
                 )
 
                 if result.is_success:
@@ -598,6 +650,93 @@ Then execute the approved items.'''
         except Exception as e:
             log.error(f'Execution failed for {item.id}: {e}')
             return {'success': False, 'error': str(e), 'item_id': item.id}
+
+    @staticmethod
+    def _classify_item_action(item: ReviewItem) -> tuple[str, str]:
+        '''
+        Classify one review item into actor-policy action class and risk.
+        '''
+        data = item.get_effective_data()
+
+        if item.item_type == 'release' and item.action == 'create':
+            return 'bulk_create', 'low'
+
+        if item.item_type != 'ticket':
+            return 'metadata_sync', 'low'
+
+        if item.action == 'create':
+            return 'ticket_tree_create', 'low'
+
+        if item.action == 'comment':
+            if data.get('comment_voice') == 'requester' or data.get('human_decision'):
+                return 'commitment_comment', 'sensitive'
+            return 'machine_comment', 'low'
+
+        if item.action == 'transition':
+            return 'status_transition', 'sensitive'
+
+        if item.action == 'update':
+            if data.get('priority') is not None:
+                return 'priority_change', 'sensitive'
+            if data.get('fix_versions') is not None:
+                return 'fix_version_change', 'sensitive'
+            if data.get('assignee') is not None:
+                return 'ownership_change', 'sensitive'
+            if data.get('status') is not None:
+                return 'status_transition', 'sensitive'
+            return 'metadata_sync', 'low'
+
+        return 'metadata_sync', 'low'
+
+    def _resolve_item_execution_context(self, item: ReviewItem) -> Dict[str, Any]:
+        '''
+        Resolve Jira actor and audit context for one review item execution.
+        '''
+        if item.item_type not in ('ticket', 'release'):
+            correlation_id = item.correlation_id or (self.current_session.session_id if self.current_session else item.id)
+            timestamp = datetime.now(timezone.utc).isoformat()
+            return {
+                'actor_mode': item.actor_mode,
+                'requested_by': item.requested_by,
+                'approved_by': item.approved_by,
+                'policy_rule': item.policy_rule,
+                'correlation_id': correlation_id,
+                'timestamp': timestamp,
+            }
+
+        if item.actor_mode and item.policy_rule:
+            return {
+                'actor_mode': item.actor_mode,
+                'requested_by': item.requested_by,
+                'approved_by': item.approved_by,
+                'policy_rule': item.policy_rule,
+                'correlation_id': item.correlation_id or (self.current_session.session_id if self.current_session else item.id),
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+            }
+
+        action_class, risk = self._classify_item_action(item)
+        correlation_id = item.correlation_id or (self.current_session.session_id if self.current_session else item.id)
+        trigger = item.trigger or str(item.get_effective_data().get('trigger') or 'interactive')
+        resolution = resolve_jira_actor(
+            action_class=action_class,
+            trigger=trigger,
+            risk=risk,
+            approval_required=True,
+            approved=item.status in (ApprovalStatus.APPROVED, ApprovalStatus.MODIFIED),
+            agent_name=self.config.name,
+            requested_by=item.requested_by,
+            approved_by=item.approved_by,
+            correlation_id=correlation_id,
+        )
+        timestamp = datetime.now(timezone.utc).isoformat()
+        return {
+            'actor_mode': resolution.actor_mode,
+            'requested_by': resolution.requested_by,
+            'approved_by': resolution.approved_by,
+            'policy_rule': resolution.policy_rule,
+            'correlation_id': resolution.correlation_id,
+            'timestamp': timestamp,
+        }
     
     def _interactive_approval(self, item: ReviewItem) -> ApprovalStatus:
         '''Get approval interactively from console.'''
