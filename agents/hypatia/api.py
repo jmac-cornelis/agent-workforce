@@ -36,7 +36,23 @@ from agents.hypatia.models import (
 )
 from agents.hypatia.state.record_store import HypatiaRecordStore
 
+import re
+
 log = logging.getLogger(os.path.basename(sys.argv[0]))
+
+
+def _parse_confluence_url(url: str) -> Dict[str, str]:
+    '''
+    Extract space_id and page_id from an Atlassian Confluence URL.
+
+    Supported formats:
+      https://DOMAIN/wiki/spaces/SPACE/pages/PAGE_ID/optional-title
+      https://DOMAIN/wiki/spaces/SPACE/pages/PAGE_ID
+    '''
+    m = re.search(r'/wiki/spaces/([^/]+)/pages/(\d+)', url)
+    if m:
+        return {'space': m.group(1), 'page_id': m.group(2)}
+    return {}
 
 record_store = HypatiaRecordStore()
 
@@ -105,6 +121,7 @@ class ConfluencePublishPageRequest(BaseModel):
     input_file: Optional[str] = None
     space: Optional[str] = None
     parent_id: Optional[str] = None
+    parent_url: Optional[str] = None
     page_id_or_title: Optional[str] = None
     heading: Optional[str] = None
     version_message: Optional[str] = None
@@ -490,6 +507,13 @@ def create_app() -> FastAPI:
                     f'Must be one of: {", ".join(valid_operations)}'
                 ),
             )
+
+        if body.parent_url and not body.parent_id:
+            parsed = _parse_confluence_url(body.parent_url)
+            if parsed.get('page_id'):
+                body.parent_id = parsed['page_id']
+            if parsed.get('space') and not body.space:
+                body.space = parsed['space']
 
         if not body.markdown_content and not body.input_file:
             raise HTTPException(

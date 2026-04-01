@@ -424,6 +424,10 @@ agents:
             type: str
             required: false
             label: Parent page ID
+          - name: parent_url
+            type: str
+            required: false
+            label: Confluence parent page URL (alternative to space + parent_id)
           - name: operation
             type: str
             required: false
