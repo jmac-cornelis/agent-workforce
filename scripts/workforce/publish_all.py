@@ -157,7 +157,7 @@ def md_to_storage(plan_path, agent):
 <ac:parameter ac:name="maxLevel">2</ac:parameter>
 </ac:structured-macro>
 
-<p><ac:link><ri:page ri:content-title="AI Agent Workforce" /><ac:plain-text-link-body><![CDATA[Back to Agent Workforce Overview]]></ac:plain-text-link-body></ac:link></p>
+<p><ac:link><ri:page ri:content-title="AI Agent Workforce" /><ac:plain-text-link-body><![CDATA[Back to AI Agent Workforce]]></ac:plain-text-link-body></ac:link></p>
 
 <ac:structured-macro ac:name="info" ac:schema-version="1">
 <ac:rich-text-body>
@@ -268,7 +268,7 @@ USER_DOCS = [
     {'name': 'Gantt', 'title': 'Gantt — User Guide', 'readme': 'agents/gantt/README.md'},
     {'name': 'Hypatia', 'title': 'Hypatia — User Guide', 'readme': 'agents/hypatia/README.md'},
     {'name': 'Shannon', 'title': 'Shannon — User Guide', 'readme': 'agents/shannon/README.md'},
-    {'name': 'Workforce', 'title': 'Agent Workforce — Overview', 'readme': 'agents/README.md'},
+    {'name': 'Workforce', 'title': 'Agent Catalog and Status', 'readme': 'agents/README.md'},
 ]
 
 
@@ -389,7 +389,7 @@ def publish_user_doc(c, doc):
 <ac:structured-macro ac:name="toc" ac:schema-version="1">
 <ac:parameter ac:name="maxLevel">3</ac:parameter>
 </ac:structured-macro>
-<p><ac:link><ri:page ri:content-title="AI Agent Workforce" /><ac:plain-text-link-body><![CDATA[Back to Agent Workforce Overview]]></ac:plain-text-link-body></ac:link></p>
+<p><ac:link><ri:page ri:content-title="AI Agent Workforce" /><ac:plain-text-link-body><![CDATA[Back to AI Agent Workforce]]></ac:plain-text-link-body></ac:link></p>
 '''
 
     for key in sections:
@@ -412,7 +412,7 @@ def publish_user_doc(c, doc):
         page = resp.json()
         page_id = page['id']
         print(f'  Created page {page_id}')
-    elif resp.status_code == 409:
+    elif resp.status_code in (400, 409) and 'already exists' in resp.text.lower():
         print(f'  Page already exists, searching...')
         search_resp = c.session.get(f'{c.base_url}/api/v2/pages', params={
             'spaceId': SPACE_ID, 'title': doc['title'], 'status': 'current'
