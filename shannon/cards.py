@@ -965,6 +965,50 @@ def build_hypatia_publication_card(data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
+def build_hypatia_confluence_publish_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a Hypatia /confluence-publish response.
+    '''
+    dry_run = data.get('dry_run', False)
+    page_id = data.get('page_id', '')
+    title = data.get('title', '')
+    operation = data.get('operation', '')
+    space = data.get('space', '')
+    link = data.get('link', '')
+    attachments_uploaded = data.get('attachments_uploaded', [])
+    diagrams_rendered = data.get('diagrams_rendered', 0)
+
+    card_title = '\U0001f4c4 Confluence Publication'
+    if dry_run:
+        card_title += ' (Dry-Run Preview)'
+
+    facts: Dict[str, Any] = {
+        'Page ID': page_id,
+        'Title': title,
+        'Operation': operation,
+        'Space': space,
+    }
+    if link:
+        facts['Link'] = link
+
+    body_lines: list[str] = []
+    if dry_run:
+        body_lines.append('**Preview — no changes made**')
+    if attachments_uploaded:
+        body_lines.append(f'Attachments uploaded: {len(attachments_uploaded)}')
+    if diagrams_rendered:
+        body_lines.append(f'Diagrams rendered: {diagrams_rendered}')
+
+    if not body_lines:
+        body_lines.append('Publication complete.')
+
+    return build_fact_card(
+        title=card_title,
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
 def build_drucker_summary_card(summary: Dict[str, Any]) -> Dict[str, Any]:
     '''
     Build a simple Adaptive Card for Drucker /stats response.

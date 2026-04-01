@@ -15,6 +15,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import tempfile
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -94,6 +95,21 @@ class PublishRequest(BaseModel):
     '''Request body for POST /v1/docs/publish.'''
     doc_id: str
     project_key: Optional[str] = None
+    dry_run: Optional[bool] = None
+
+
+class ConfluencePublishPageRequest(BaseModel):
+    '''Request body for POST /v1/docs/confluence/publish-page.'''
+    title: Optional[str] = None
+    markdown_content: Optional[str] = None
+    input_file: Optional[str] = None
+    space: Optional[str] = None
+    parent_id: Optional[str] = None
+    page_id_or_title: Optional[str] = None
+    heading: Optional[str] = None
+    version_message: Optional[str] = None
+    operation: str = 'create'
+    render_diagrams: bool = True
     dry_run: Optional[bool] = None
 
 
@@ -440,6 +456,137 @@ def create_app() -> FastAPI:
                 'publication_count': len(publications),
             },
         }
+
+    # ------------------------------------------------------------------
+    # Direct Confluence publish endpoint
+    # ------------------------------------------------------------------
+
+    @app.post('/v1/docs/confluence/publish-page')
+    def docs_confluence_publish_page(
+        body: ConfluencePublishPageRequest,
+    ) -> Dict[str, Any]:
+        '''
+        Publish markdown content directly to Confluence as a page.
+
+        Supports create, update, append, and update_section operations.
+        Handles Mermaid and draw.io diagram rendering when render_diagrams
+        is enabled.  This is a mutation endpoint — dry_run gate applies.
+        '''
+        from config.env_loader import resolve_dry_run
+        from tools.confluence_tools import (
+            append_to_confluence_page,
+            create_confluence_page,
+            update_confluence_page,
+            update_confluence_section,
+        )
+
+        # --- validation ---------------------------------------------------
+        valid_operations = ('create', 'update', 'append', 'update_section')
+        if body.operation not in valid_operations:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f'Invalid operation {body.operation!r}. '
+                    f'Must be one of: {", ".join(valid_operations)}'
+                ),
+            )
+
+        if not body.markdown_content and not body.input_file:
+            raise HTTPException(
+                status_code=400,
+                detail='Either markdown_content or input_file must be provided.',
+            )
+
+        if body.operation == 'create' and not body.title:
+            raise HTTPException(
+                status_code=400,
+                detail='title is required for create operations.',
+            )
+
+        if body.operation in ('update', 'append', 'update_section') and not body.page_id_or_title:
+            raise HTTPException(
+                status_code=400,
+                detail='page_id_or_title is required for update/append/update_section operations.',
+            )
+
+        if body.operation == 'update_section' and not body.heading:
+            raise HTTPException(
+                status_code=400,
+                detail='heading is required for update_section operations.',
+            )
+
+        dry_run = resolve_dry_run(body.dry_run)
+
+        # --- resolve input file -------------------------------------------
+        # When raw markdown is provided, write it to a temp file so the
+        # confluence_tools functions (which expect a file path) can consume it.
+        temp_path: Optional[str] = None
+        input_file = body.input_file
+
+        if body.markdown_content:
+            handle = tempfile.NamedTemporaryFile(
+                mode='w',
+                encoding='utf-8',
+                suffix='.md',
+                delete=False,
+            )
+            handle.write(body.markdown_content)
+            handle.close()
+            temp_path = handle.name
+            input_file = temp_path
+
+        try:
+            # --- dispatch to correct tool ---------------------------------
+            if body.operation == 'create':
+                result = create_confluence_page(
+                    title=body.title or '',
+                    input_file=input_file or '',
+                    space=body.space,
+                    parent_id=body.parent_id,
+                    version_message=body.version_message,
+                    dry_run=dry_run,
+                )
+            elif body.operation == 'update':
+                result = update_confluence_page(
+                    page_id_or_title=body.page_id_or_title or '',
+                    input_file=input_file or '',
+                    space=body.space,
+                    version_message=body.version_message,
+                    dry_run=dry_run,
+                )
+            elif body.operation == 'append':
+                result = append_to_confluence_page(
+                    page_id_or_title=body.page_id_or_title or '',
+                    input_file=input_file or '',
+                    space=body.space,
+                    version_message=body.version_message,
+                    dry_run=dry_run,
+                )
+            else:
+                result = update_confluence_section(
+                    page_id_or_title=body.page_id_or_title or '',
+                    heading=body.heading or '',
+                    input_file=input_file or '',
+                    space=body.space,
+                    version_message=body.version_message,
+                    dry_run=dry_run,
+                )
+
+            if result.is_success:
+                return {'ok': True, 'data': result.data}
+
+            return {'ok': False, 'error': result.error}
+
+        except Exception as e:
+            log.error(f'Confluence publish-page failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+        finally:
+            if temp_path:
+                try:
+                    os.unlink(temp_path)
+                except OSError:
+                    pass
 
     return app
 

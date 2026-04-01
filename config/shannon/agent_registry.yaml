@@ -211,4 +211,9 @@ agents:
         api_method: POST
         api_path: /v1/docs/search
         mutation: false
+      - command: /confluence-publish
+        description: Publish a markdown file to Confluence with diagram rendering
+        api_method: POST
+        api_path: /v1/docs/confluence/publish-page
+        mutation: true
     timeout_seconds: 60
