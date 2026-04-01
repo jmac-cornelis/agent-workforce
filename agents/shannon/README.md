@@ -279,6 +279,24 @@ Shannon's routing is configured via `config/shannon/agent_registry.yaml`. Each a
 
 Adding a new command is as simple as adding an entry to the YAML file. Shannon picks it up on restart.
 
+### Typed Parameters
+
+POST commands support typed parameters with automatic coercion. Each command's `params` in the YAML defines:
+
+- `name` — Parameter key
+- `type` — `str`, `int`, `list`, or `bool`
+- `required` — Whether the parameter is mandatory
+- `label` — Human-readable description shown in `/help`
+
+When a user types `@Shannon /pr-hygiene repo cornelisnetworks/ifs-all stale_days 7`, Shannon:
+1. Parses `repo` as `str` → `"cornelisnetworks/ifs-all"`
+2. Parses `stale_days` as `int` → `7`
+3. Sends `{"repo": "cornelisnetworks/ifs-all", "stale_days": 7}` to the agent API
+
+List parameters use comma-separation: `source_paths src/a.c,src/b.c` → `["src/a.c", "src/b.c"]`
+
+Use `/help` in any agent channel to see the full parameter syntax for all commands.
+
 ### Currently Registered Agents
 
 | Agent | Role | Port | Commands |
@@ -286,6 +304,7 @@ Adding a new command is as simple as adding an entry to the YAML file. Shannon p
 | Shannon | Communications | 8200 | 6 built-in |
 | Drucker | Engineering Hygiene | 8201 | 15 commands (Jira + GitHub) |
 | Gantt | Project Planning | 8202 | 8 commands |
+| Hypatia | Documentation | 8203 | 7 commands (generate, search, publish) |
 
 ## Approval Workflows
 

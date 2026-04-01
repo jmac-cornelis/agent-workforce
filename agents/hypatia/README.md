@@ -22,6 +22,8 @@ uvicorn agents.hypatia.api:app --host 0.0.0.0 --port 8203
 - Updates user and engineering documentation when code, build, test, release, or meeting knowledge changes
 - Proposes documentation changes linked to their triggering events
 - Publishes approved docs to internal documentation targets (Sphinx/ReadTheDocs)
+- Publishes markdown directly to Confluence with automatic Mermaid and draw.io diagram rendering
+- Searches across Hypatia records, Confluence pages, and GitHub repositories for existing documentation
 - Keeps documentation linked to builds, versions, and traceability records
 
 ### What Hypatia Does Not Do
@@ -46,22 +48,46 @@ Hypatia draws from multiple agents to build documentation:
 
 ## Shannon Teams Commands
 
-Hypatia has 5 Shannon commands registered:
+Hypatia has 7 Shannon commands registered:
 
-- `/generate-doc` - Generate source-grounded documentation (mutation: true, requires "execute" to proceed)
-- `/impact-detect` - Detect documentation impact from changes (mutation: false)
-- `/doc-records` - List stored documentation records (GET)
-- `/doc-record` - Get specific documentation record (GET)
-- `/publish-doc` - Publish approved documentation (mutation: true, requires "execute")
+| Command | Action | Mutation | Example |
+|---------|--------|----------|---------|
+| `/generate-doc` | Generate source-grounded documentation | Yes (requires "execute") | `@Shannon /generate-doc doc_title "CN5000 Build Guide" doc_type engineering_reference` |
+| `/impact-detect` | Detect documentation impact from changes | No | `@Shannon /impact-detect doc_title "PSM2 Architecture" source_paths src/psm2_hal.c` |
+| `/doc-records` | List stored documentation records | No (GET) | `@Shannon /doc-records` |
+| `/doc-record` | Get specific documentation record | No (GET) | `@Shannon /doc-record abc123` |
+| `/publish-doc` | Publish an approved documentation record | Yes (requires "execute") | `@Shannon /publish-doc doc_id abc123` |
+| `/search-docs` | Search Hypatia documentation records | No | `@Shannon /search-docs query "build guide" doc_type engineering_reference` |
+| `/confluence-publish` | Publish markdown to Confluence with diagram rendering | Yes (requires "execute") | `@Shannon /confluence-publish title "My Doc" input_file agents/drucker/docs/PLAN.md parent_url https://cornelisnetworks.atlassian.net/wiki/spaces/238190621/pages/656572464` |
+
+### Typed Parameters
+
+Shannon parses typed parameters from your message. Types are coerced automatically:
+
+- **Strings**: `doc_title "CN5000 Build Guide"` or `doc_title CN5000`
+- **Lists**: `source_paths src/a.c,src/b.c,src/c.c` (comma-separated, no spaces)
+- **Integers**: `stale_days 7`
+- **Booleans**: `render_diagrams true`
+
+Use `/help` in the Hypatia Teams channel to see all parameters for each command.
 
 ### Teams Usage Examples
 
 ```
-@Shannon /generate-doc title "CN5000 Build Guide" doc_type engineering_reference
-@Shannon /impact-detect project STL
-@Shannon /doc-records project STL
-@Shannon /doc-record doc_id abc123
-@Shannon /publish-doc doc_id abc123
+# Generate documentation from source files (dry-run preview first)
+@Shannon /generate-doc doc_title "CN5000 Build Guide" doc_type engineering_reference source_paths src/build.c,src/config.h
+
+# Execute for real (append "execute")
+@Shannon /generate-doc doc_title "CN5000 Build Guide" doc_type engineering_reference source_paths src/build.c execute
+
+# Search existing documentation
+@Shannon /search-docs query "architecture" project_key STL
+
+# Publish a markdown file to Confluence (using parent page URL)
+@Shannon /confluence-publish title "Deployment Guide" input_file docs/workforce/DEPLOYMENT_GUIDE.md parent_url https://cornelisnetworks.atlassian.net/wiki/spaces/238190621/pages/656572464
+
+# Publish using space + parent_id instead of URL
+@Shannon /confluence-publish title "Agent Docs" input_file agents/drucker/README.md space 238190621 parent_id 656572464
 ```
 
 ## REST API
@@ -70,13 +96,19 @@ Hypatia exposes a REST API on port 8203.
 
 ### Key Endpoints
 
-- `GET /v1/health` - Health check
-- `GET /v1/status/stats` - Session statistics (total sessions, total documents)
-- `POST /v1/docs/generate` - Generate documentation (dry_run by default)
-- `GET /v1/docs/records` - List documentation records
-- `GET /v1/docs/record/{doc_id}` - Get specific record
-- `POST /v1/docs/impact` - Detect documentation impact
-- `POST /v1/docs/publish` - Publish approved docs (dry_run by default)
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/v1/health` | GET | Health check |
+| `/v1/status/stats` | GET | Session statistics |
+| `/v1/docs/generate` | POST | Generate documentation (dry_run by default) |
+| `/v1/docs/records` | GET | List documentation records |
+| `/v1/docs/record/{doc_id}` | GET | Get specific record |
+| `/v1/docs/impact` | POST | Detect documentation impact |
+| `/v1/docs/publish` | POST | Publish approved docs (dry_run by default) |
+| `/v1/docs/search` | POST | Search documentation records by query, project, type, or source |
+| `/v1/docs/confluence/publish-page` | POST | Publish markdown to Confluence with diagram rendering (dry_run by default) |
+
+The `/confluence-publish` endpoint supports a `parent_url` parameter — paste a Confluence page URL and it automatically extracts the space ID and parent page ID.
 
 ## Documentation Types
 
@@ -101,6 +133,7 @@ hypatia-agent <command> [options]
 | Command | Description | Example |
 |---------|-------------|---------|
 | `generate` | Generate source-grounded documentation | `hypatia-agent generate --doc-title "CN5000 Build Guide" --docs src/build.md` |
+| `confluence-publish` | Publish markdown to Confluence with diagram rendering | `hypatia-agent confluence-publish --input-file docs/PLAN.md --title "My Doc" --space 238190621 --parent-id 656572464` |
 | `list` | List stored documentation records | `hypatia-agent list --project STL` |
 | `get` | Load a stored documentation record | `hypatia-agent get --doc-id abc123` |
 
@@ -119,6 +152,16 @@ hypatia-agent generate \
   --docs docs/user_guide.md \
   --confluence-space ENG --confluence-parent-id 12345 \
   --execute
+
+# Publish an existing markdown file directly to Confluence (dry-run preview)
+hypatia-agent confluence-publish \
+  --input-file agents/drucker/docs/PLAN.md \
+  --title "Drucker Plan" --space 238190621 --parent-id 656572464
+
+# Publish for real (--execute disables dry-run)
+hypatia-agent confluence-publish \
+  --input-file docs/workforce/DEPLOYMENT_GUIDE.md \
+  --title "Deployment Guide" --space 238190621 --parent-id 656572464 --execute
 
 # Generate with strict validation and JSON output
 hypatia-agent generate \

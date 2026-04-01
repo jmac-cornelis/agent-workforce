@@ -412,8 +412,8 @@ def publish_user_doc(c, doc):
         page = resp.json()
         page_id = page['id']
         print(f'  Created page {page_id}')
-    elif resp.status_code == 409:
-        print(f'  Page already exists, searching...')
+    elif resp.status_code in (400, 409):
+        print(f'  Page already exists ({resp.status_code}), searching...')
         search_resp = c.session.get(f'{c.base_url}/api/v2/pages', params={
             'spaceId': SPACE_ID, 'title': doc['title'], 'status': 'current'
         })
