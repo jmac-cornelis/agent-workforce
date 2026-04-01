@@ -49,15 +49,6 @@ FROM python:3.11-slim AS runtime
 
 WORKDIR /app
 
-# Install runtime-only system dependencies.
-# git: optional — used by some version/tagging operations at runtime.
-# dpkg --configure -a: fixes interrupted package installs that can leave
-# the dpkg database in a broken state (observed on Podman/RHEL hosts).
-RUN apt-get update \
-    && dpkg --configure -a || true \
-    && apt-get install -y --no-install-recommends git \
-    && rm -rf /var/lib/apt/lists/*
-
 # --- Copy installed Python packages from builder ---
 COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
 
