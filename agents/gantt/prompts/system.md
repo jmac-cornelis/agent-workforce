@@ -95,6 +95,19 @@ strictly:
   Stories that collect many unrelated implementation threads.
 - Preserve dependency ordering: foundational Stories come first, downstream
   Stories reference them as dependencies.
+- Prefer action verbs like `Implement` or `Develop` in Story summaries for real
+  software construction work.
+- Reserve `Enable` for true enablement work where the main task is wiring up,
+  configuring, or turning on an already-built capability rather than writing the
+  bulk of the implementation.
+- When scope explicitly includes support for multiple Linux distro or OS
+  families, do not hide that work behind one generic "supported distros"
+  Story if the code will land in separate backport, packaging, or build
+  branches. Break it into separate Stories by distro family such as
+  `Rocky/RHEL`, `SLES`, and `Ubuntu`.
+- Keep exact minor-version decisions in notes or acceptance criteria when the
+  business scope is still open, but still make the branch-sized distro-family
+  work visible in the Jira plan.
 
 ### Spreadsheet Output Format
 
