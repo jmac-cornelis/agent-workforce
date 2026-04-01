@@ -657,6 +657,10 @@ class HypatiaDocumentationAgent(BaseAgent):
                 for fact in record.facts[:6]:
                     context_parts.append(f'  - {fact}')
 
+        if request.diff_context:
+            context_parts.append('\n# PR Diff Context')
+            context_parts.append(request.diff_context)
+
         if existing_targets:
             context_parts.append('\n# Existing Target Context')
             if existing_targets.get('repo_markdown'):

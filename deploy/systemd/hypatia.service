@@ -19,8 +19,9 @@ ExecStart=/usr/bin/podman run \
     -p 8203:8203 \
     --env-file %h/agent-workforce/deploy/env/shared.env \
     --env-file %h/agent-workforce/deploy/env/llm.env \
+    --env-file %h/agent-workforce/deploy/env/github.env \
     -v %h/agent-workforce/config:/app/config:ro,Z \
-    -v %h/agent-workforce/data/hypatia:/data/state:Z \
+    -v %h/agent-workforce/data/hypatia:/data/hypatia:Z \
     localhost/cornelis/agent-workforce:latest \
     uvicorn agents.hypatia.api:app --host 0.0.0.0 --port 8203
 

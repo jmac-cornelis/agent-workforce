@@ -1,25 +1,25 @@
-# GitHub Action: Hypatia Documentation Generation
-# Triggers on PRs, calls Hypatia API to detect doc impact and generate docs,
-# then commits generated documentation back to the PR branch.
+# GitHub Action: Hypatia Documentation Generation (Two-Phase)
+# Triggers on PRs and approval comments for doc generation.
 #
 # Copy this workflow to any repo that should get auto-generated docs.
-# Requires: HYPATIA_API_URL secret (e.g., https://hypatia.cn-agents.com)
+# Requires: HYPATIA_API_URL secret (optional — defaults to https://hypatia.cn-agents.com)
 #
 # Flow:
-#   1. PR opened/updated → get changed files
-#   2. Call Hypatia /v1/docs/pr-review with file list
-#   3. If docs generated → commit to PR branch with [skip ci]
-#   4. On merge to main → MkDocs deploys to GitHub Pages (separate workflow)
+#   Phase 1 (automatic): PR opened/updated → call Hypatia dry_run=true → post impact preview comment
+#   Phase 2 (manual):    User comments "/approve-docs" → call Hypatia dry_run=false → commit to PR branch
+#   On merge to main → MkDocs deploys to GitHub Pages (separate workflow)
 
 name: Generate Documentation
 
 on:
   pull_request:
     types: [opened, synchronize]
+  issue_comment:
+    types: [created]
 
-# Prevent concurrent runs on the same PR — cancel in-progress if new push arrives
+# Prevent concurrent runs on the same PR
 concurrency:
-  group: doc-gen-${{ github.event.pull_request.number }}
+  group: doc-gen-${{ github.event.pull_request.number || github.event.issue.number }}
   cancel-in-progress: true
 
 permissions:
@@ -27,37 +27,16 @@ permissions:
   pull-requests: write
 
 jobs:
-  generate-docs:
-    # Skip if the commit was made by this bot (prevents infinite loops)
-    if: github.actor != 'github-actions[bot]'
+  # ---------------------------------------------------------------------------
+  # Phase 1: Dry-run analysis — post impact summary + doc previews as PR comment
+  # ---------------------------------------------------------------------------
+  suggest-docs:
+    if: github.event_name == 'pull_request' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
     steps:
-      - name: Checkout PR branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-
-      - name: Get changed files
-        id: changed
-        run: |
-          # Get list of changed files from PR
-          FILES=$(gh pr view ${{ github.event.pull_request.number }} \
-            --json files --jq '[.files[].path] | join(",")')
-          echo "files=$FILES" >> "$GITHUB_OUTPUT"
-
-          # Count for logging
-          COUNT=$(echo "$FILES" | tr ',' '\n' | wc -l)
-          echo "count=$COUNT" >> "$GITHUB_OUTPUT"
-          echo "::notice::PR #${{ github.event.pull_request.number }} has $COUNT changed files"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Call Hypatia doc review
+      - name: Call Hypatia doc review (dry-run)
         id: hypatia
         run: |
           HYPATIA_URL="${{ secrets.HYPATIA_API_URL }}"
@@ -65,7 +44,6 @@ jobs:
             HYPATIA_URL="https://hypatia.cn-agents.com"
           fi
 
-          # Call Hypatia PR review endpoint
           RESPONSE=$(curl -sf -X POST \
             "${HYPATIA_URL}/v1/docs/pr-review" \
             -H "Content-Type: application/json" \
@@ -73,90 +51,89 @@ jobs:
               "repo": "${{ github.repository }}",
               "pr_number": ${{ github.event.pull_request.number }},
               "target_dir": "docs",
-              "dry_run": false
+              "dry_run": true
             }' \
             --max-time 120 \
             --retry 2 \
             --retry-delay 5 \
             2>/dev/null) || {
-            echo "::warning::Hypatia API call failed — skipping doc generation"
-            echo "generated=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Hypatia API call failed — skipping doc analysis"
+            echo "api_ok=false" >> "$GITHUB_OUTPUT"
             exit 0
           }
 
-          # Check if docs were generated
+          echo "$RESPONSE" > /tmp/hypatia_response.json
+
           OK=$(echo "$RESPONSE" | jq -r '.ok // false')
-          FILES_COUNT=$(echo "$RESPONSE" | jq -r '.data.files_generated | length // 0')
-          SUMMARY=$(echo "$RESPONSE" | jq -r '.data.impact_summary // "no impact detected"')
+          DOC_COUNT=$(echo "$RESPONSE" | jq -r '.data.generated_docs | length // 0')
+          IMPACT_SUMMARY=$(echo "$RESPONSE" | jq -r '.data.impact_summary // "no impact detected"')
 
-          echo "::notice::Hypatia: $SUMMARY"
+          echo "::notice::Hypatia: $IMPACT_SUMMARY"
+          echo "api_ok=$OK" >> "$GITHUB_OUTPUT"
+          echo "doc_count=$DOC_COUNT" >> "$GITHUB_OUTPUT"
 
-          if [ "$OK" = "true" ] && [ "$FILES_COUNT" -gt 0 ]; then
-            echo "generated=true" >> "$GITHUB_OUTPUT"
-            echo "summary=$SUMMARY" >> "$GITHUB_OUTPUT"
-            echo "files_count=$FILES_COUNT" >> "$GITHUB_OUTPUT"
-
-            # Save generated file paths for commit step
-            echo "$RESPONSE" | jq -r '.data.files_generated[].path' > /tmp/generated_files.txt
-          else
-            echo "generated=false" >> "$GITHUB_OUTPUT"
-            echo "summary=$SUMMARY" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Commit generated docs
-        if: steps.hypatia.outputs.generated == 'true'
-        run: |
-          # Check if there are actual file changes to commit
-          git add docs/ || true
-          if git diff --staged --quiet; then
-            echo "::notice::No file changes to commit"
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # Commit with [skip ci] to prevent re-triggering this workflow
-          SUMMARY="${{ steps.hypatia.outputs.summary }}"
-          git commit -m "docs: auto-generate documentation for PR #${{ github.event.pull_request.number }} [skip ci]" \
-                     -m "$SUMMARY"
-          git push origin HEAD:${{ github.head_ref }}
-
-          echo "::notice::Committed ${{ steps.hypatia.outputs.files_count }} generated doc files"
-
-      - name: Post PR comment
-        if: steps.hypatia.outputs.generated == 'true'
+      - name: Post impact preview comment
+        if: steps.hypatia.outputs.api_ok == 'true'
         uses: actions/github-script@v7
+        env:
+          DOC_COUNT: ${{ steps.hypatia.outputs.doc_count }}
         with:
           script: |
-            const summary = '${{ steps.hypatia.outputs.summary }}';
-            const count = '${{ steps.hypatia.outputs.files_count }}';
-            const body = [
-              '## 📝 Documentation Auto-Generated',
-              '',
-              `**Hypatia** detected documentation impact and generated **${count}** doc file(s).`,
-              '',
-              `> ${summary}`,
-              '',
-              'Generated files have been committed to this PR branch.',
-              'They will be published to GitHub Pages when this PR is merged.',
-              '',
-              '*This comment was generated by [Hypatia Documentation Agent](https://github.com/jmac-cornelis/agent-workforce).*'
-            ].join('\n');
+            const fs = require('fs');
+            const response = JSON.parse(fs.readFileSync('/tmp/hypatia_response.json', 'utf8'));
+            const data = response.data;
+            const docCount = parseInt(process.env.DOC_COUNT, 10);
 
-            await github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: body
-            });
+            let body;
 
-      - name: Post no-impact comment
-        if: steps.hypatia.outputs.generated == 'false' && steps.hypatia.outputs.summary != ''
-        uses: actions/github-script@v7
-        with:
-          script: |
-            // Only post once per PR — check for existing bot comment
+            if (docCount === 0) {
+              body = '📝 **Hypatia**: No documentation impact detected for this PR.';
+            } else {
+              const impactRows = (data.impact_details || []).map(d => {
+                const change = `${d.status} (+${d.additions}/-${d.deletions})`;
+                return `| ${d.source} | ${change} | ${d.doc_type} | ${d.target} |`;
+              }).join('\n');
+
+              const impactTable = [
+                '| Source File | Change | Doc Type | Target |',
+                '|-------------|--------|----------|--------|',
+                impactRows
+              ].join('\n');
+
+              const previews = (data.generated_docs || []).map(doc => {
+                const lines = (doc.content_preview || '').split('\n').slice(0, 100).join('\n');
+                const charCount = (doc.content_length || 0).toLocaleString();
+                return [
+                  `<details>`,
+                  `<summary><strong>${doc.path}</strong> (${charCount} chars)</summary>`,
+                  '',
+                  '```markdown',
+                  lines,
+                  '```',
+                  '',
+                  `</details>`
+                ].join('\n');
+              }).join('\n\n');
+
+              body = [
+                '## 📝 Documentation Impact Detected',
+                '',
+                `**Hypatia** analyzed this PR and found **${docCount}** documentation-impacted file(s).`,
+                '',
+                '### Impact Details',
+                impactTable,
+                '',
+                '### Generated Documentation Preview',
+                '',
+                previews,
+                '',
+                '---',
+                '💡 To commit these docs to this PR branch, comment: `/approve-docs`'
+              ].join('\n');
+            }
+
+            const MARKER = 'Documentation Impact Detected';
+            const NO_IMPACT_MARKER = 'No documentation impact detected';
             const comments = await github.rest.issues.listComments({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -165,14 +142,208 @@ jobs:
             });
             const existing = comments.data.find(c =>
               c.user.login === 'github-actions[bot]' &&
-              c.body.includes('Documentation Auto-Generated')
+              (c.body.includes(MARKER) || c.body.includes(NO_IMPACT_MARKER))
             );
-            if (existing) return;  // Don't spam
 
-            // No impact — post lightweight notice
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }
+
+      - name: Post API-unreachable warning
+        if: steps.hypatia.outputs.api_ok == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = '⚠️ **Hypatia**: Documentation analysis unavailable — API did not respond.';
+            const { data: comments } = await github.rest.issues.listComments({
+              issue_number: context.issue.number, owner: context.repo.owner,
+              repo: context.repo.repo, per_page: 100
+            });
+            const existing = comments.find(c =>
+              c.user.login === 'github-actions[bot]' &&
+              (c.body.includes('Documentation Impact') || c.body.includes('documentation impact') || c.body.includes('Documentation analysis'))
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                comment_id: existing.id, body: body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number, owner: context.repo.owner,
+                repo: context.repo.repo, body: body
+              });
+            }
+
+  # ---------------------------------------------------------------------------
+  # Phase 2: Commit docs — triggered by "/approve-docs" comment on the PR
+  # ---------------------------------------------------------------------------
+  commit-docs:
+    if: >-
+      github.event_name == 'issue_comment'
+      && contains(github.event.comment.body, '/approve-docs')
+      && github.event.issue.pull_request
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check commenter has write access
+        id: authz
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: perm } = await github.rest.repos.getCollaboratorPermissionLevel({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              username: context.actor
+            });
+            const level = perm.permission;
+            const allowed = ['admin', 'write', 'maintain'].includes(level);
+            core.setOutput('allowed', allowed.toString());
+            if (!allowed) {
+              core.warning(`User ${context.actor} has '${level}' access — write access required to approve docs.`);
+            }
+
+      - name: Checkout PR branch
+        if: steps.authz.outputs.allowed == 'true'
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Get PR metadata and checkout branch
+        if: steps.authz.outputs.allowed == 'true'
+        id: pr
+        run: |
+          PR_NUMBER=${{ github.event.issue.number }}
+          PR_JSON=$(gh pr view "$PR_NUMBER" --json headRefName,headRepository --jq '{branch: .headRefName, repo: .headRepository.name}')
+          BRANCH=$(echo "$PR_JSON" | jq -r '.branch')
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          git checkout "$BRANCH"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Call Hypatia doc review (commit)
+        if: steps.authz.outputs.allowed == 'true'
+        id: hypatia
+        run: |
+          HYPATIA_URL="${{ secrets.HYPATIA_API_URL }}"
+          if [ -z "$HYPATIA_URL" ]; then
+            HYPATIA_URL="https://hypatia.cn-agents.com"
+          fi
+
+          RESPONSE=$(curl -sf -X POST \
+            "${HYPATIA_URL}/v1/docs/pr-review" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "repo": "${{ github.repository }}",
+              "pr_number": ${{ steps.pr.outputs.number }},
+              "target_dir": "docs",
+              "dry_run": false
+            }' \
+            --max-time 120 \
+            --retry 2 \
+            --retry-delay 5 \
+            2>/dev/null) || {
+            echo "::error::Hypatia API call failed during doc commit"
+            echo "api_ok=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          }
+
+          echo "$RESPONSE" > /tmp/hypatia_response.json
+
+          OK=$(echo "$RESPONSE" | jq -r '.ok // false')
+          COMMITTED=$(echo "$RESPONSE" | jq -r '.data.files_committed // false')
+          COMMIT_SHA=$(echo "$RESPONSE" | jq -r '.data.commit_sha // empty')
+          DOC_COUNT=$(echo "$RESPONSE" | jq -r '.data.generated_docs | length // 0')
+
+          echo "api_ok=$OK" >> "$GITHUB_OUTPUT"
+          echo "committed=$COMMITTED" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=$COMMIT_SHA" >> "$GITHUB_OUTPUT"
+          echo "doc_count=$DOC_COUNT" >> "$GITHUB_OUTPUT"
+
+      - name: Commit generated docs to PR branch
+        if: steps.authz.outputs.allowed == 'true' && steps.hypatia.outputs.api_ok == 'true' && steps.hypatia.outputs.doc_count != '0'
+        run: |
+          git add docs/ || true
+          if git diff --staged --quiet; then
+            echo "::notice::No local file changes to commit (API may have committed directly)"
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git commit -m "docs: auto-generate documentation for PR #${{ steps.pr.outputs.number }} [skip ci]" \
+                     -m "Approved by @${{ github.event.comment.user.login }}"
+          git push origin HEAD:${{ steps.pr.outputs.branch }}
+
+      - name: React and post confirmation
+        if: steps.authz.outputs.allowed == 'true'
+        uses: actions/github-script@v7
+        env:
+          API_OK: ${{ steps.hypatia.outputs.api_ok }}
+          COMMITTED: ${{ steps.hypatia.outputs.committed }}
+          DOC_COUNT: ${{ steps.hypatia.outputs.doc_count }}
+          COMMIT_SHA: ${{ steps.hypatia.outputs.commit_sha }}
+        with:
+          script: |
+            const apiOk = process.env.API_OK === 'true';
+            const committed = process.env.COMMITTED === 'true';
+            const docCount = parseInt(process.env.DOC_COUNT, 10);
+            const commitSha = process.env.COMMIT_SHA;
+
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '+1'
+            });
+
+            let body;
+            if (!apiOk) {
+              body = '❌ **Hypatia**: Documentation generation failed — API did not respond. Please try again later.';
+            } else if (docCount === 0) {
+              body = '✅ **Hypatia**: Docs already up to date — no changes needed.';
+            } else {
+              const shaNote = commitSha ? ` (${commitSha.substring(0, 7)})` : '';
+              body = `✅ **Hypatia**: Committed **${docCount}** generated doc(s) to this PR branch${shaNote}.\n\nGenerated files will be published to GitHub Pages when this PR is merged.`;
+            }
+
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '📝 **Hypatia**: No documentation impact detected for this PR.'
+              body: body
+            });
+
+      - name: Deny unauthorized user
+        if: steps.authz.outputs.allowed != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.reactions.createForIssueComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              comment_id: context.payload.comment.id,
+              content: '-1'
+            });
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `⛔ **Hypatia**: @${context.actor} does not have write access to approve documentation commits.`
             });

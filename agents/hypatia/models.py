@@ -53,6 +53,7 @@ class DocumentationRequest:
     confluence_parent_id: Optional[str] = None
     version_message: Optional[str] = None
     validation_profile: str = 'default'
+    diff_context: str = ''  # PR diff/patch for context during PR-review generation
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -71,6 +72,7 @@ class DocumentationRequest:
             'confluence_parent_id': self.confluence_parent_id,
             'version_message': self.version_message,
             'validation_profile': self.validation_profile,
+            'diff_context': self.diff_context,
         }
 
 

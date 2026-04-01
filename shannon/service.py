@@ -744,9 +744,7 @@ class ShannonService:
                     if is_mutation:
                         json_body['dry_run'] = not execute_requested
                 elif args:
-                    path = f'{path.rstrip("/")}/{args[0]}'
-                    if len(args) > 1:
-                        params = {'args': ' '.join(args[1:])}
+                    path = f'{path.rstrip("/")}/{args[-1]}'
                 result = self._call_agent_api(
                     registration, method, path, params=params, json_body=json_body,
                 )

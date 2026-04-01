@@ -117,11 +117,12 @@ class PublishRequest(BaseModel):
 
 class PRReviewRequest(BaseModel):
     '''Request body for POST /v1/docs/pr-review.'''
-    repo: str  # "owner/repo" format
+    repo: str
     pr_number: int
-    doc_types: Optional[List[str]] = None  # filter which doc types to generate
-    target_dir: Optional[str] = 'docs'  # where to put generated docs in the repo
+    doc_types: Optional[List[str]] = None
+    target_dir: Optional[str] = 'docs'
     dry_run: Optional[bool] = None
+    branch: Optional[str] = None
 
 
 class ConfluencePublishPageRequest(BaseModel):
@@ -503,22 +504,27 @@ def create_app() -> FastAPI:
         ext = posixpath.splitext(filename)[1].lower()
         return ext in _DOC_RELEVANT_EXTENSIONS
 
+    def _extract_filename(entry) -> str:
+        '''Extract filename from a changed-file entry (dict or plain str).'''
+        if isinstance(entry, dict):
+            return str(entry.get('filename', ''))
+        return str(entry)
+
     @app.post('/v1/docs/pr-review')
     def docs_pr_review(body: PRReviewRequest) -> Dict[str, Any]:
         '''
-        Orchestrate the full PR → doc generation → commit pipeline.
+        Two-phase PR doc generation pipeline.
 
-        Accepts a repo + PR number, detects doc impact from changed files,
-        generates documentation, commits the generated docs back to the PR
-        branch, and saves a Hypatia record.
+        Phase 1 (dry_run=True, default): generate docs and return preview.
+        Phase 2 (dry_run=False): generate docs AND commit to PR branch.
         '''
         global _run_count, _last_run_at
 
+        import posixpath
         from config.env_loader import resolve_dry_run
 
         dry_run = resolve_dry_run(body.dry_run)
 
-        # --- input validation ---
         if '/' not in body.repo:
             return {
                 'ok': False,
@@ -530,7 +536,6 @@ def create_app() -> FastAPI:
                 'error': 'pr_number must be a positive integer.',
             }
 
-        # --- import github_utils (may not be installed) ---
         try:
             import github_utils
         except ImportError:
@@ -551,8 +556,11 @@ def create_app() -> FastAPI:
             log.error(f'GitHub API error fetching PR files: {exc}')
             return {'ok': False, 'error': f'GitHub API error: {exc}'}
 
-        # --- filter for doc-relevant files ---
-        relevant_files = [f for f in changed_files if _is_doc_relevant(f)]
+        # --- filter for doc-relevant files (handles dict or str entries) ---
+        relevant_files = [
+            f for f in changed_files
+            if _is_doc_relevant(_extract_filename(f))
+        ]
 
         if not relevant_files:
             return {
@@ -569,49 +577,59 @@ def create_app() -> FastAPI:
                 },
             }
 
-        # --- dry-run gate: preview only ---
-        if dry_run:
-            preview_files = []
-            for fpath in relevant_files:
-                import posixpath
-                base = posixpath.splitext(posixpath.basename(fpath))[0]
-                slug = base.lower().replace('_', '-').replace(' ', '-')
-                target_dir = body.target_dir or 'docs'
-                target = f'{target_dir}/{slug}.md'
-                is_readme = posixpath.basename(fpath).upper().startswith('README')
-                preview_files.append({
-                    'source': fpath,
-                    'target': target,
-                    'doc_type': 'user_guide' if is_readme else 'as_built',
-                })
-            return {
-                'ok': True,
-                'data': {
-                    'dry_run': True,
-                    'pr_number': body.pr_number,
-                    'repo': body.repo,
-                    'impact_summary': (
-                        f'{len(relevant_files)} doc-relevant file(s) detected. '
-                        f'Dry-run — no generation or commit performed.'
-                    ),
-                    'files_planned': preview_files,
-                    'files_committed': False,
-                    'commit_sha': None,
-                    'record_id': None,
-                },
-            }
+        # --- resolve PR head branch early (needed for source fetch) ---
+        head_branch = body.branch
+        if not head_branch:
+            try:
+                pr_info = github_utils.get_pull_request(
+                    body.repo, body.pr_number,
+                )
+                head_branch = str(pr_info.get('head_branch', '') or '')
+            except Exception as exc:
+                log.error(f'GitHub API error fetching PR info: {exc}')
+                return {'ok': False, 'error': f'GitHub API error: {exc}'}
+        if not head_branch:
+            return {'ok': False, 'error': 'Could not determine PR head branch.'}
 
-        # --- build DocumentationRequest per relevant file and run agent ---
+        # --- build impact details ---
         target_dir = body.target_dir or 'docs'
-        all_generated: List[Dict[str, Any]] = []
-        files_to_commit: Dict[str, str] = {}
-        last_record_id: Optional[str] = None
+        impact_details: List[Dict[str, Any]] = []
+        files_planned: List[Dict[str, Any]] = []
 
-        for fpath in relevant_files:
-            import posixpath
-            base = posixpath.splitext(posixpath.basename(fpath))[0]
+        for entry in relevant_files:
+            fname = _extract_filename(entry)
+            base = posixpath.splitext(posixpath.basename(fname))[0]
             slug = base.lower().replace('_', '-').replace(' ', '-')
-            is_readme = posixpath.basename(fpath).upper().startswith('README')
+            is_readme = posixpath.basename(fname).upper().startswith('README')
+            doc_type = 'user_guide' if is_readme else 'as_built'
+            target = f'{target_dir}/{slug}.md'
+
+            detail = {
+                'source': fname,
+                'status': entry.get('status', 'unknown') if isinstance(entry, dict) else 'unknown',
+                'additions': entry.get('additions', 0) if isinstance(entry, dict) else 0,
+                'deletions': entry.get('deletions', 0) if isinstance(entry, dict) else 0,
+                'doc_type': doc_type,
+                'target': target,
+            }
+            impact_details.append(detail)
+            files_planned.append({
+                'source': fname,
+                'target': target,
+                'doc_type': doc_type,
+            })
+
+        # --- Phase 1 & 2: always run agent to generate content ---
+        all_generated: List[Dict[str, Any]] = []
+        generated_docs: List[Dict[str, Any]] = []
+        files_to_commit: Dict[str, str] = {}
+        record_ids: List[str] = []
+
+        for entry in relevant_files:
+            fname = _extract_filename(entry)
+            base = posixpath.splitext(posixpath.basename(fname))[0]
+            slug = base.lower().replace('_', '-').replace(' ', '-')
+            is_readme = posixpath.basename(fname).upper().startswith('README')
             doc_type = 'user_guide' if is_readme else 'as_built'
 
             if body.doc_types and doc_type not in body.doc_types:
@@ -620,22 +638,28 @@ def create_app() -> FastAPI:
             title_label = base.replace('_', ' ').replace('-', ' ').title()
             target_file = f'{target_dir}/{slug}.md'
 
+            patch_text = ''
+            if isinstance(entry, dict) and entry.get('patch'):
+                patch_text = str(entry['patch'])
+
             doc_request = DocumentationRequest(
                 title=f'{title_label} Documentation',
                 doc_type=doc_type,
-                source_paths=[fpath],
+                repo_name=body.repo,
+                source_paths=[fname],
                 target_file=target_file,
+                diff_context=patch_text,
             )
 
             agent = HypatiaDocumentationAgent()
             try:
                 result = agent.run(doc_request)
             except Exception as exc:
-                log.error(f'Hypatia agent run failed for {fpath}: {exc}')
+                log.error(f'Hypatia agent run failed for {fname}: {exc}')
                 continue
 
             if not result.success:
-                log.warning(f'Hypatia agent returned error for {fpath}: {result.error}')
+                log.warning(f'Hypatia agent returned error for {fname}: {result.error}')
                 continue
 
             doc_record_dict = (result.metadata or {}).get('documentation_record', {})
@@ -650,8 +674,15 @@ def create_app() -> FastAPI:
                             'path': p_target,
                             'operation': patch.get('operation', 'create'),
                         })
+                        record_id = doc_record_dict.get('doc_id', '')
+                        generated_docs.append({
+                            'path': p_target,
+                            'title': doc_record_dict.get('title', ''),
+                            'content_preview': p_content[:500],
+                            'content_length': len(p_content),
+                            'record_id': record_id,
+                        })
 
-            # Save record
             record_id = doc_record_dict.get('doc_id', '')
             if doc_record_dict:
                 try:
@@ -673,28 +704,16 @@ def create_app() -> FastAPI:
                         metadata=doc_record_dict.get('metadata', {}),
                     )
                     record_store.save_record(record_obj)
-                    last_record_id = record_id
+                    if record_id:
+                        record_ids.append(record_id)
                 except Exception as exc:
-                    log.warning(f'Failed to save Hypatia record for {fpath}: {exc}')
+                    log.warning(f'Failed to save Hypatia record for {fname}: {exc}')
 
-        # --- commit generated files to PR branch ---
+        # --- Phase 2 only: commit generated files to PR branch ---
         commit_sha: Optional[str] = None
-        head_branch: Optional[str] = None
         files_committed = False
 
-        if files_to_commit:
-            try:
-                pr_info = github_utils.get_pull_request(
-                    body.repo, body.pr_number,
-                )
-                head_branch = str(pr_info.get('head_branch', '') or '')
-            except Exception as exc:
-                log.error(f'GitHub API error fetching PR info: {exc}')
-                return {'ok': False, 'error': f'GitHub API error: {exc}'}
-
-            if not head_branch:
-                return {'ok': False, 'error': 'Could not determine PR head branch.'}
-
+        if not dry_run and files_to_commit:
             try:
                 commit_result = github_utils.batch_commit_files(
                     body.repo,
@@ -722,12 +741,16 @@ def create_app() -> FastAPI:
                 'pr_number': body.pr_number,
                 'repo': body.repo,
                 'head_branch': head_branch,
+                'dry_run': dry_run,
                 'impact_summary': impact_summary,
+                'impact_details': impact_details,
+                'generated_docs': generated_docs,
                 'files_generated': all_generated,
+                'files_planned': files_planned,
                 'files_committed': files_committed,
                 'commit_sha': commit_sha,
-                'record_id': last_record_id,
-                'dry_run': False,
+                'record_ids': record_ids,
+                'record_id': record_ids[-1] if record_ids else None,
             },
         }
 
