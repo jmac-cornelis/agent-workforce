@@ -875,6 +875,64 @@ def build_hypatia_records_card(data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
+def build_hypatia_search_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a Hypatia /search-docs response.
+    '''
+    results = data.get('results', [])
+    count = data.get('count', len(results))
+    query_text = data.get('query', '')
+
+    filters_applied: list[str] = []
+    if query_text:
+        filters_applied.append(f'query="{query_text}"')
+    for key in ('project_key', 'doc_type', 'source_ref', 'confidence'):
+        val = data.get(key)
+        if val:
+            filters_applied.append(f'{key}={val}')
+    if data.get('published_only'):
+        filters_applied.append('published_only=true')
+
+    facts: Dict[str, Any] = {
+        'Results': count,
+    }
+    if query_text:
+        facts['Query'] = query_text
+    if filters_applied:
+        facts['Filters'] = ', '.join(filters_applied)
+
+    body_lines: list[str] = []
+    for record in results[:8]:
+        doc_id = record.get('doc_id', '')
+        title = record.get('title', '')
+        doc_type_val = record.get('doc_type', '')
+        project_key_val = record.get('project_key', '')
+        created_at = record.get('created_at', '')
+        line = f'• **{title}** [{doc_type_val}]'
+        if project_key_val:
+            line += f' ({project_key_val})'
+        line += f' — {created_at}'
+        match_context = record.get('match_context', '')
+        if match_context:
+            preview = match_context[:120]
+            if len(match_context) > 120:
+                preview += '...'
+            line += f'\n  _{preview}_'
+        body_lines.append(line)
+
+    if len(results) > 8:
+        body_lines.append(f'...and {len(results) - 8} more results')
+
+    if not body_lines:
+        body_lines.append('No matching documentation records found.')
+
+    return build_fact_card(
+        title='Documentation Search Results',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
 def build_hypatia_publication_card(data: Dict[str, Any]) -> Dict[str, Any]:
     '''
     Build an Adaptive Card for a Hypatia /publish-doc response.

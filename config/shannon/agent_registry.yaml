@@ -206,4 +206,9 @@ agents:
         api_method: POST
         api_path: /v1/docs/publish
         mutation: true
+      - command: /search-docs
+        description: Search Hypatia documentation records by query, project, type, or source
+        api_method: POST
+        api_path: /v1/docs/search
+        mutation: false
     timeout_seconds: 60

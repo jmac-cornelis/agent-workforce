@@ -47,6 +47,9 @@ try:
         analyze_ci_failures as _analyze_ci_failures,
         analyze_stale_branches as _analyze_stale_branches,
         analyze_extended_hygiene as _analyze_extended_hygiene,
+        get_repo_readme as _get_repo_readme,
+        list_repo_docs as _list_repo_docs,
+        search_repo_docs as _search_repo_docs,
     )
     GITHUB_UTILS_AVAILABLE = True
 except ImportError as e:
@@ -525,6 +528,86 @@ def analyze_extended_hygiene(repo_name: str, stale_days: int = 5, branch_stale_d
 
 
 # ****************************************************************************************
+# Documentation Search Tools
+# ****************************************************************************************
+
+@tool(description='Get the README content for a GitHub repository')
+def get_repo_readme(repo: str) -> ToolResult:
+    '''
+    Get the README content for a GitHub repository.
+
+    Input:
+        repo: Full repository name (e.g., 'org/repo').
+
+    Output:
+        ToolResult with README content and metadata.
+    '''
+    log.debug(f'get_repo_readme(repo={repo})')
+
+    try:
+        get_github()
+        result = _get_repo_readme(repo)
+
+        return ToolResult.success(result, repo=repo)
+
+    except Exception as e:
+        log.error(f'Failed to get repo README: {e}')
+        return ToolResult.failure(f'Failed to get README for {repo}: {e}')
+
+
+@tool(description='List documentation files in a GitHub repository directory')
+def list_repo_docs(repo: str, path: str = 'docs', extensions: Optional[list[str]] = None) -> ToolResult:
+    '''
+    List documentation files in a GitHub repository directory.
+
+    Input:
+        repo: Full repository name (e.g., 'org/repo').
+        path: Directory path to search (default: 'docs').
+        extensions: List of file extensions to include.
+
+    Output:
+        ToolResult with list of documentation file dicts.
+    '''
+    log.debug(f'list_repo_docs(repo={repo}, path={path})')
+
+    try:
+        get_github()
+        docs = _list_repo_docs(repo, path=path, extensions=extensions)
+
+        return ToolResult.success(docs, count=len(docs), repo=repo, path=path)
+
+    except Exception as e:
+        log.error(f'Failed to list repo docs: {e}')
+        return ToolResult.failure(f'Failed to list docs for {repo}: {e}')
+
+
+@tool(description='Search documentation files in a GitHub repository by content query')
+def search_repo_docs(repo: str, query: str, extensions: Optional[list[str]] = None) -> ToolResult:
+    '''
+    Search documentation files in a GitHub repository by content query.
+
+    Input:
+        repo: Full repository name (e.g., 'org/repo').
+        query: Search query string.
+        extensions: List of file extensions to search.
+
+    Output:
+        ToolResult with list of matching documentation file dicts.
+    '''
+    log.debug(f'search_repo_docs(repo={repo}, query={query!r})')
+
+    try:
+        get_github()
+        docs = _search_repo_docs(repo, query, extensions=extensions)
+
+        return ToolResult.success(docs, count=len(docs), repo=repo, query=query)
+
+    except Exception as e:
+        log.error(f'Failed to search repo docs: {e}')
+        return ToolResult.failure(f'Failed to search docs for {repo}: {e}')
+
+
+# ****************************************************************************************
 # Tool Collection Class
 # ****************************************************************************************
 
@@ -606,3 +689,15 @@ class GitHubTools(BaseTool):
     @tool(description='Run comprehensive extended hygiene analysis including all scan types')
     def analyze_extended_hygiene(self, repo_name: str, stale_days: int = 5, branch_stale_days: int = 30) -> ToolResult:
         return analyze_extended_hygiene(repo_name, stale_days, branch_stale_days)
+
+    @tool(description='Get the README content for a GitHub repository')
+    def get_repo_readme(self, repo: str) -> ToolResult:
+        return get_repo_readme(repo)
+
+    @tool(description='List documentation files in a GitHub repository directory')
+    def list_repo_docs(self, repo: str, path: str = 'docs', extensions: Optional[list[str]] = None) -> ToolResult:
+        return list_repo_docs(repo, path, extensions)
+
+    @tool(description='Search documentation files in a GitHub repository by content query')
+    def search_repo_docs(self, repo: str, query: str, extensions: Optional[list[str]] = None) -> ToolResult:
+        return search_repo_docs(repo, query, extensions)

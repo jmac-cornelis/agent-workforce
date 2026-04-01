@@ -32,6 +32,7 @@ from shannon.cards import (
     build_hypatia_impact_card,
     build_hypatia_publication_card,
     build_hypatia_records_card,
+    build_hypatia_search_card,
     build_merge_conflicts_card,
     build_naming_compliance_card,
     build_pr_hygiene_card,
@@ -439,6 +440,7 @@ class ShannonService:
             '/doc-records': build_hypatia_records_card,
             '/doc-record': build_hypatia_records_card,
             '/publish-doc': build_hypatia_publication_card,
+            '/search-docs': build_hypatia_search_card,
         },
     }
 

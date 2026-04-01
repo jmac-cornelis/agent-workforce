@@ -85,6 +85,8 @@ __all__ = [
     'analyze_naming_compliance', 'analyze_merge_conflicts',
     'analyze_ci_failures', 'analyze_stale_branches',
     'analyze_extended_hygiene',
+    # Documentation Search
+    'get_repo_readme', 'list_repo_docs', 'search_repo_docs',
     # Rate Limit
     'get_rate_limit', 'check_rate_limit',
     # Display helpers
@@ -1056,6 +1058,175 @@ def get_pr_review_requests(repo_name, pr_number):
 
 
 # ****************************************************************************************
+# Documentation search — find and retrieve docs from GitHub repos
+# ****************************************************************************************
+
+def get_repo_readme(repo_name):
+    '''
+    Fetch the README content for a repository.
+
+    Input:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+
+    Output:
+        Dict with: repo, filename, content (markdown text), size, sha, url.
+        If no README exists, returns dict with repo and error key.
+
+    Raises:
+        GitHubRepoError: If the repository cannot be found.
+    '''
+    log.debug(f'Entering get_repo_readme(repo_name={repo_name})')
+    gh = get_connection()
+
+    try:
+        repo = gh.get_repo(repo_name)
+        readme = repo.get_readme()
+        content = readme.decoded_content.decode('utf-8')
+        result = {
+            'repo': repo_name,
+            'filename': readme.name,
+            'content': content,
+            'size': readme.size,
+            'sha': readme.sha,
+            'url': readme.html_url,
+        }
+        log.info(f'Retrieved README ({readme.name}) for {repo_name}')
+        return result
+    except UnknownObjectException:
+        raise GitHubRepoError(f'Repository not found: {repo_name}')
+    except GithubException as e:
+        # No README found is a common case — return gracefully
+        log.warning(f'No README found for {repo_name}: {e}')
+        return {'repo': repo_name, 'error': 'No README found'}
+
+
+def list_repo_docs(repo_name, path='docs', extensions=None):
+    '''
+    List documentation files in a repository directory.
+
+    Default: lists all .md, .rst, .txt files under the given path.
+    Recurses into subdirectories.
+
+    Input:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        path: Directory path to search (default: 'docs').
+        extensions: List of file extensions to include
+            (default: ['.md', '.rst', '.txt']).
+
+    Output:
+        List of dicts, each containing: path, name, size, sha, url, type.
+        Sorted alphabetically by path.
+
+    Raises:
+        GitHubRepoError: If the repository cannot be found.
+    '''
+    log.debug(f'Entering list_repo_docs(repo_name={repo_name}, path={path})')
+    gh = get_connection()
+
+    if extensions is None:
+        extensions = ['.md', '.rst', '.txt']
+
+    try:
+        repo = gh.get_repo(repo_name)
+    except UnknownObjectException:
+        raise GitHubRepoError(f'Repository not found: {repo_name}')
+
+    docs = []
+
+    def _recurse(dir_path):
+        '''Recursively collect documentation files from a directory.'''
+        try:
+            contents = repo.get_contents(dir_path)
+        except GithubException:
+            # Path doesn't exist — return gracefully
+            return
+        if not isinstance(contents, list):
+            contents = [contents]
+        for item in contents:
+            if item.type == 'dir':
+                _recurse(item.path)
+            elif item.type == 'file':
+                # Check if file extension matches
+                _, ext = os.path.splitext(item.name)
+                if ext.lower() in extensions:
+                    docs.append({
+                        'path': item.path,
+                        'name': item.name,
+                        'size': item.size,
+                        'sha': item.sha,
+                        'url': item.html_url,
+                        'type': 'file',
+                    })
+
+    _recurse(path)
+    docs.sort(key=lambda d: d['path'])
+
+    log.info(f'Found {len(docs)} doc files in {repo_name}/{path}')
+    return docs
+
+
+def search_repo_docs(repo_name, query, extensions=None):
+    '''
+    Search for documentation files in a repo matching a query string.
+
+    Uses the GitHub code search API scoped to the repository.
+
+    Input:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        query: Search query string to match in file contents.
+        extensions: List of file extensions to search
+            (default: ['.md', '.rst', '.txt']).
+
+    Output:
+        List of dicts (max 20), each containing: path, name, repo, url,
+        score, text_matches.
+
+    Raises:
+        GitHubRepoError: If the repository cannot be found.
+    '''
+    log.debug(f'Entering search_repo_docs(repo_name={repo_name}, query={query!r})')
+    gh = get_connection()
+
+    if extensions is None:
+        extensions = ['.md', '.rst', '.txt']
+
+    # Build search query with repo scope and extension filters
+    ext_parts = ' '.join(f'extension:{ext.lstrip(".")}' for ext in extensions)
+    query_string = f'{query} repo:{repo_name} {ext_parts}'
+
+    try:
+        results = gh.search_code(query_string)
+        docs = []
+        count = 0
+        for item in results:
+            if count >= 20:
+                break
+            text_matches = []
+            if hasattr(item, 'text_matches') and item.text_matches:
+                text_matches = [m.get('fragment', '') if isinstance(m, dict)
+                                else getattr(m, 'fragment', '')
+                                for m in item.text_matches]
+            docs.append({
+                'path': item.path,
+                'name': item.name,
+                'repo': item.repository.full_name,
+                'url': item.html_url,
+                'score': getattr(item, 'score', None),
+                'text_matches': text_matches,
+            })
+            count += 1
+
+        log.info(f'Search found {len(docs)} doc matches for "{query}" in {repo_name}')
+        return docs
+    except RateLimitExceededException:
+        log.warning(f'Rate limit exceeded during doc search in {repo_name}')
+        return []
+    except GithubException as e:
+        log.warning(f'Doc search failed for {repo_name}: {e}')
+        return []
+
+
+# ****************************************************************************************
 # Hygiene analysis — Drucker will call these directly
 # ****************************************************************************************
 
@@ -1980,6 +2151,16 @@ Examples:
     parser.add_argument('--branch-stale-days', type=int, default=30,
                         help='Branch staleness threshold in days (default: 30)')
 
+    # Documentation search
+    parser.add_argument('--get-readme', type=str, metavar='REPO',
+                        help='Get the README content for a repository')
+    parser.add_argument('--list-docs', type=str, metavar='REPO',
+                        help='List documentation files in a repository')
+    parser.add_argument('--search-docs', nargs=2, metavar=('REPO', 'QUERY'),
+                        help='Search documentation files in a repository')
+    parser.add_argument('--docs-path', type=str, default='docs',
+                        help='Directory path for --list-docs (default: docs)')
+
     # Rate limit
     parser.add_argument('--rate-limit', action='store_true',
                         help='Show current API rate limit status')
@@ -2361,6 +2542,72 @@ def main():
                 output('')
                 output(f'Total open PRs scanned: {report.get("total_open_prs")}')
                 output(f'Total findings: {report.get("total_findings")}')
+                output('')
+
+        # --- Documentation search ---
+
+        if args.get_readme:
+            result = get_repo_readme(args.get_readme)
+            if args.json:
+                output(json.dumps(result, indent=2))
+            else:
+                if 'error' in result:
+                    output('')
+                    output(f'README for {result.get("repo")}: {result.get("error")}')
+                    output('')
+                else:
+                    output('')
+                    output(f'README for {result.get("repo")} — {result.get("filename")}')
+                    output(f'Size: {result.get("size")} bytes  |  URL: {result.get("url")}')
+                    output('=' * 80)
+                    output(result.get('content', ''))
+                    output('')
+
+        if args.list_docs:
+            docs = list_repo_docs(args.list_docs, path=args.docs_path)
+            if args.json:
+                output(json.dumps(docs, indent=2))
+            else:
+                output('')
+                output(f'Documentation files in {args.list_docs}/{args.docs_path}:')
+                output('-' * 100)
+                output(f'{"Path":<50} {"Size":<10} {"URL":<40}')
+                output('-' * 100)
+                for d in docs:
+                    path = d.get('path', '')
+                    size = str(d.get('size', 0))
+                    url = d.get('url', '')
+                    if len(path) > 48:
+                        path = path[:48] + '..'
+                    if len(url) > 38:
+                        url = url[:38] + '..'
+                    output(f'{path:<50} {size:<10} {url:<40}')
+                output('=' * 100)
+                output(f'Total: {len(docs)} documentation files')
+                output('')
+
+        if args.search_docs:
+            repo, query = args.search_docs[0], args.search_docs[1]
+            docs = search_repo_docs(repo, query)
+            if args.json:
+                output(json.dumps(docs, indent=2))
+            else:
+                output('')
+                output(f'Documentation search in {repo} for "{query}":')
+                output('-' * 120)
+                output(f'{"Path":<50} {"Score":<10} {"URL":<40}')
+                output('-' * 120)
+                for d in docs:
+                    path = d.get('path', '')
+                    score = str(d.get('score', ''))
+                    url = d.get('url', '')
+                    if len(path) > 48:
+                        path = path[:48] + '..'
+                    if len(url) > 38:
+                        url = url[:38] + '..'
+                    output(f'{path:<50} {score:<10} {url:<40}')
+                output('=' * 120)
+                output(f'Total: {len(docs)} matches')
                 output('')
 
         # --- Rate limit ---

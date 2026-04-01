@@ -79,6 +79,17 @@ class ImpactDetectRequest(BaseModel):
     confluence_page: Optional[str] = None
 
 
+class SearchDocsRequest(BaseModel):
+    '''Request body for POST /v1/docs/search.'''
+    query: Optional[str] = None
+    project_key: Optional[str] = None
+    doc_type: Optional[str] = None
+    source_ref: Optional[str] = None
+    published_only: bool = False
+    confidence: Optional[str] = None
+    limit: Optional[int] = None
+
+
 class PublishRequest(BaseModel):
     '''Request body for POST /v1/docs/publish.'''
     doc_id: str
@@ -290,6 +301,27 @@ def create_app() -> FastAPI:
                 detail=f'Documentation record {doc_id} not found',
             )
         return {'ok': True, 'data': result}
+
+    @app.post('/v1/docs/search')
+    def docs_search(body: SearchDocsRequest) -> Dict[str, Any]:
+        '''Search stored documentation records with multi-field filtering.'''
+        results = record_store.search_records(
+            query=body.query,
+            project_key=body.project_key,
+            doc_type=body.doc_type,
+            source_ref=body.source_ref,
+            published_only=body.published_only,
+            confidence=body.confidence,
+            limit=body.limit,
+        )
+        return {
+            'ok': True,
+            'data': {
+                'results': results,
+                'count': len(results),
+                'query': body.query or '',
+            },
+        }
 
     @app.post('/v1/docs/impact')
     def docs_impact(body: ImpactDetectRequest) -> Dict[str, Any]:

@@ -143,6 +143,45 @@ def list_hypatia_records(
         return ToolResult.failure(f'Failed to list Hypatia records: {e}')
 
 
+@tool(
+    description='Search persisted Hypatia documentation records with multi-field filtering'
+)
+def search_hypatia_records(
+    query: Optional[str] = None,
+    project_key: Optional[str] = None,
+    doc_type: Optional[str] = None,
+    source_ref: Optional[str] = None,
+    published_only: bool = False,
+    confidence: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> ToolResult:
+    '''
+    Search persisted Hypatia documentation records with multi-field filtering.
+    '''
+    log.debug(
+        f'search_hypatia_records(query={query}, project_key={project_key}, '
+        f'doc_type={doc_type}, source_ref={source_ref}, '
+        f'published_only={published_only}, confidence={confidence}, limit={limit})'
+    )
+
+    try:
+        from agents.hypatia.state.record_store import HypatiaRecordStore
+
+        rows = HypatiaRecordStore().search_records(
+            query=query,
+            project_key=project_key,
+            doc_type=doc_type,
+            source_ref=source_ref,
+            published_only=published_only,
+            confidence=confidence,
+            limit=limit,
+        )
+        return ToolResult.success(rows, count=len(rows), query=query or '')
+    except Exception as e:
+        log.error(f'Failed to search Hypatia records: {e}')
+        return ToolResult.failure(f'Failed to search Hypatia records: {e}')
+
+
 class HypatiaTools(BaseTool):
     '''
     Collection of Hypatia documentation tools for agent use.
@@ -196,3 +235,24 @@ class HypatiaTools(BaseTool):
         limit: int = 20,
     ) -> ToolResult:
         return list_hypatia_records(doc_type, limit)
+
+    @tool(description='Search persisted Hypatia documentation records with multi-field filtering')
+    def search_hypatia_records(
+        self,
+        query: Optional[str] = None,
+        project_key: Optional[str] = None,
+        doc_type: Optional[str] = None,
+        source_ref: Optional[str] = None,
+        published_only: bool = False,
+        confidence: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> ToolResult:
+        return search_hypatia_records(
+            query=query,
+            project_key=project_key,
+            doc_type=doc_type,
+            source_ref=source_ref,
+            published_only=published_only,
+            confidence=confidence,
+            limit=limit,
+        )

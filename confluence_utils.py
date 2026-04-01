@@ -85,7 +85,8 @@ __all__ = [
     # Space helpers
     'resolve_space_id', 'resolve_space_key', 'resolve_parent_id',
     # Page operations
-    'search_pages', 'get_page', 'create_page', 'update_page',
+    'search_pages', 'search_pages_fulltext', 'search_pages_by_label',
+    'get_page', 'create_page', 'update_page',
     'append_page', 'update_page_section',
     'list_page_children', 'build_page_tree', 'export_page_to_markdown',
     # Content helpers
@@ -826,6 +827,98 @@ def search_pages(
     else:
         output('')
         output(f'No Confluence pages found matching: {pattern}')
+        output('')
+
+    return pages
+
+
+def search_pages_fulltext(
+    confluence: ConfluenceConnection,
+    query: str,
+    limit: int = 25,
+    space: Optional[str] = None,
+) -> list[dict[str, Any]]:
+    '''
+    Search Confluence pages by full-text body content.
+    Uses CQL: type = page AND text ~ "query"
+    '''
+    log.debug(f'search_pages_fulltext(query={query}, limit={limit}, space={space})')
+
+    escaped = _escape_cql_string(query)
+    cql = f'type = page AND text ~ "{escaped}"'
+    space_key = resolve_space_key(confluence, space)
+    if space_key:
+        cql += f' AND space = "{_escape_cql_string(space_key)}"'
+
+    response = confluence.request(
+        'GET',
+        '/rest/api/content/search',
+        params={
+            'cql': cql,
+            'limit': limit,
+            'expand': 'space',
+        },
+    )
+    payload = _json(response)
+    results = payload.get('results', [])
+
+    pages = []
+    for result in results:
+        page = _normalize_page_search_result(confluence, result)
+        # Include excerpt if the API returned one (Confluence search results
+        # include a text snippet showing where the query matched).
+        excerpt = result.get('excerpt') or result.get('content', {}).get('excerpt')
+        if excerpt:
+            page['excerpt'] = excerpt
+        pages.append(page)
+
+    if pages:
+        _print_page_results(pages, f'Confluence Full-Text Search Results: {query}')
+    else:
+        output('')
+        output(f'No Confluence pages found matching body text: {query}')
+        output('')
+
+    return pages
+
+
+def search_pages_by_label(
+    confluence: ConfluenceConnection,
+    label: str,
+    limit: int = 25,
+    space: Optional[str] = None,
+) -> list[dict[str, Any]]:
+    '''
+    Search Confluence pages by label.
+    Uses CQL: type = page AND label = "label"
+    '''
+    log.debug(f'search_pages_by_label(label={label}, limit={limit}, space={space})')
+
+    escaped = _escape_cql_string(label)
+    cql = f'type = page AND label = "{escaped}"'
+    space_key = resolve_space_key(confluence, space)
+    if space_key:
+        cql += f' AND space = "{_escape_cql_string(space_key)}"'
+
+    response = confluence.request(
+        'GET',
+        '/rest/api/content/search',
+        params={
+            'cql': cql,
+            'limit': limit,
+            'expand': 'space',
+        },
+    )
+    payload = _json(response)
+    results = payload.get('results', [])
+
+    pages = [_normalize_page_search_result(confluence, result) for result in results]
+
+    if pages:
+        _print_page_results(pages, f'Confluence Label Search Results: {label}')
+    else:
+        output('')
+        output(f'No Confluence pages found with label: {label}')
         output('')
 
     return pages

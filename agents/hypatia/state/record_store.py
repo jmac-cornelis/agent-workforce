@@ -151,6 +151,94 @@ class HypatiaRecordStore:
 
         return summaries
 
+    def search_records(
+        self,
+        query: Optional[str] = None,
+        project_key: Optional[str] = None,
+        doc_type: Optional[str] = None,
+        source_ref: Optional[str] = None,
+        published_only: bool = False,
+        confidence: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        '''
+        Search stored documentation records with multi-field filtering.
+
+        Filters:
+          - query: case-insensitive substring match on title, content_markdown,
+                   and summary_markdown
+          - project_key: exact match
+          - doc_type: exact match
+          - source_ref: substring match against any item in source_refs list
+          - published_only: requires at least one publication with status='published'
+          - confidence: exact match
+        '''
+        results: List[Dict[str, Any]] = []
+
+        for json_path in sorted(self.storage_dir.glob('*/record.json')):
+            try:
+                with open(json_path, 'r', encoding='utf-8') as f:
+                    record_data = json.load(f)
+            except Exception as e:
+                log.warning(f'Skipping unreadable Hypatia record {json_path}: {e}')
+                continue
+
+            if project_key and str(record_data.get('project_key') or '') != project_key:
+                continue
+            if doc_type and str(record_data.get('doc_type') or '') != doc_type:
+                continue
+            if confidence and str(record_data.get('confidence') or '') != confidence:
+                continue
+
+            if source_ref:
+                refs = record_data.get('source_refs') or []
+                if not any(source_ref in str(ref) for ref in refs):
+                    continue
+
+            if published_only:
+                publications = record_data.get('publication_records') or []
+                if not any(
+                    str(pub.get('status') or '') == 'published'
+                    for pub in publications
+                ):
+                    continue
+
+            match_context = ''
+            if query:
+                q_lower = query.lower()
+                title_text = str(record_data.get('title') or '')
+                content_text = str(record_data.get('content_markdown') or '')
+                summary_text = str(record_data.get('summary_markdown') or '')
+                combined = f'{title_text} {content_text} {summary_text}'
+                if q_lower not in combined.lower():
+                    continue
+                for field_text in (title_text, content_text, summary_text):
+                    if q_lower in field_text.lower():
+                        match_context = field_text[:200]
+                        break
+
+            summary = self._build_summary(
+                record_data,
+                json_path,
+                json_path.parent / 'summary.md',
+            )
+            if query:
+                summary['match_context'] = match_context
+            results.append(summary)
+
+        results.sort(
+            key=lambda item: (
+                self._sort_timestamp(item.get('created_at')),
+                str(item.get('doc_id') or ''),
+            ),
+            reverse=True,
+        )
+
+        if limit is not None and limit >= 0:
+            results = results[:limit]
+
+        return results
+
     def record_publications(
         self,
         doc_id: str,

@@ -592,6 +592,60 @@ async def search_confluence_pages(
 
 
 @_tool_decorator()
+async def search_confluence_fulltext(
+    query: str,
+    limit: int = 25,
+    space: Optional[str] = None,
+) -> list[Any]:
+    """Search Confluence pages by body content (full-text search).
+
+    Args:
+        query: Full-text search query to match against page body content.
+        limit: Maximum number of results to return.
+        space: Optional Confluence space key or numeric ID.
+    """
+    try:
+        confluence = confluence_utils.get_connection()
+        pages = confluence_utils.search_pages_fulltext(
+            confluence,
+            query=query,
+            limit=limit,
+            space=space,
+        )
+        return _json_result([_page_to_dict(page) for page in pages])
+    except Exception as e:
+        log.error(f'search_confluence_fulltext failed: {e}')
+        return _error_result(str(e))
+
+
+@_tool_decorator()
+async def search_confluence_by_label(
+    label: str,
+    limit: int = 25,
+    space: Optional[str] = None,
+) -> list[Any]:
+    """Search Confluence pages by label.
+
+    Args:
+        label: Label name to search for.
+        limit: Maximum number of results to return.
+        space: Optional Confluence space key or numeric ID.
+    """
+    try:
+        confluence = confluence_utils.get_connection()
+        pages = confluence_utils.search_pages_by_label(
+            confluence,
+            label=label,
+            limit=limit,
+            space=space,
+        )
+        return _json_result([_page_to_dict(page) for page in pages])
+    except Exception as e:
+        log.error(f'search_confluence_by_label failed: {e}')
+        return _error_result(str(e))
+
+
+@_tool_decorator()
 async def get_confluence_page(
     page_id_or_title: str,
     space: Optional[str] = None,
@@ -2731,6 +2785,72 @@ async def analyze_extended_hygiene(repo_full_name: str, stale_days: int = 5, bra
         return _json_result(result)
     except Exception as e:
         log.error(f'analyze_extended_hygiene failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 42: get_github_repo_readme — Get README for a GitHub repository
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def get_github_repo_readme(repo_name: str) -> list[Any]:
+    '''Get the README content for a GitHub repository.
+
+    Args:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+    '''
+    try:
+        github_utils.get_connection()
+        result = github_utils.get_repo_readme(repo_name)
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'get_github_repo_readme failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 43: list_github_repo_docs — List documentation files in a repository
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def list_github_repo_docs(repo_name: str, path: str = 'docs', extensions: Optional[str] = None) -> list[Any]:
+    '''List documentation files in a GitHub repository directory.
+
+    Args:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        path: Directory path to search (default: 'docs').
+        extensions: Comma-separated file extensions to include (default: '.md,.rst,.txt').
+    '''
+    try:
+        github_utils.get_connection()
+        ext_list = [e.strip() for e in extensions.split(',') if e.strip()] if extensions else None
+        result = github_utils.list_repo_docs(repo_name, path=path, extensions=ext_list)
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'list_github_repo_docs failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 44: search_github_repo_docs — Search documentation files in a repository
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def search_github_repo_docs(repo_name: str, query: str, extensions: Optional[str] = None) -> list[Any]:
+    '''Search documentation files in a GitHub repository by content query.
+
+    Args:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        query: Search query string to match in file contents.
+        extensions: Comma-separated file extensions to search (default: '.md,.rst,.txt').
+    '''
+    try:
+        github_utils.get_connection()
+        ext_list = [e.strip() for e in extensions.split(',') if e.strip()] if extensions else None
+        result = github_utils.search_repo_docs(repo_name, query, extensions=ext_list)
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'search_github_repo_docs failed: {e}')
         return _error_result(str(e))
 
 
