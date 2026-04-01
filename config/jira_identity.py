@@ -48,6 +48,28 @@ class JiraCredentialProfile:
     source: str
 
 
+def _env_flag_enabled(name: str, default: bool = True) -> bool:
+    '''
+    Parse a boolean feature flag from the environment.
+    '''
+    raw = os.getenv(name)
+    if raw is None or not str(raw).strip():
+        return default
+    normalized = str(raw).strip().lower()
+    if normalized in ('1', 'true', 'yes', 'on'):
+        return True
+    if normalized in ('0', 'false', 'no', 'off'):
+        return False
+    return default
+
+
+def is_legacy_fallback_enabled() -> bool:
+    '''
+    Return True when legacy JIRA_EMAIL/JIRA_API_TOKEN fallback is allowed.
+    '''
+    return _env_flag_enabled('JIRA_ENABLE_LEGACY_FALLBACK', default=True)
+
+
 def normalize_actor_mode(actor_mode: Optional[str]) -> str:
     '''
     Normalize an actor mode to a supported value.
@@ -83,6 +105,16 @@ def _resolve_profile(
             email_env=explicit_email_key,
             token_env=explicit_token_key,
             source=source,
+        )
+
+    if not is_legacy_fallback_enabled():
+        return JiraCredentialProfile(
+            actor_mode=normalized,
+            email=None,
+            api_token=None,
+            email_env=explicit_email_key,
+            token_env=explicit_token_key,
+            source=f'{explicit_email_key}/{explicit_token_key} (legacy fallback disabled)',
         )
 
     return JiraCredentialProfile(

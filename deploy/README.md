@@ -34,7 +34,7 @@ deploy/
 ├── env/
 │   ├── shared.env             # Non-sensitive: log level, state backend, paths
 │   ├── teams.env              # Teams webhook credentials (Shannon)
-│   ├── jira.env               # Jira service account (Drucker)
+│   ├── jira.env               # Jira service account / actor routing policy
 │   └── github.env             # GitHub PAT (Drucker, optional)
 ├── scripts/
 │   ├── deploy-shannon.sh      # One-shot Shannon deployment
@@ -76,7 +76,7 @@ mkdir -p data/shannon data/drucker
 
 # 5. Configure environment files (edit with real credentials)
 vim deploy/env/teams.env   # Teams webhook secrets
-vim deploy/env/jira.env    # Jira service account
+vim deploy/env/jira.env    # Jira service account / actor routing
 vim deploy/env/github.env  # GitHub PAT (optional)
 
 # 6. Start both agents
@@ -142,11 +142,23 @@ SHANNON_TEAMS_BOT_NAME=Shannon
 ### `jira.env` — Drucker (and any Jira-accessing agent)
 
 ```bash
-JIRA_EMAIL=scm@cornelisnetworks.com
-JIRA_API_TOKEN=<api-token>
 JIRA_URL=https://cornelisnetworks.atlassian.net
-JIRA_DEFAULT_PROJECT=ONECLI
+JIRA_DEFAULT_PROJECT=STL
+JIRA_SERVICE_EMAIL=scm@cornelisnetworks.com
+JIRA_SERVICE_API_TOKEN=<api-token>
+JIRA_ENABLE_LEGACY_FALLBACK=false
+
+# Optional compatibility bridge for older callers:
+# JIRA_EMAIL=scm@cornelisnetworks.com
+# JIRA_API_TOKEN=<api-token>
 ```
+
+Shared deployment guidance:
+
+- Use the service account as the standing deployed identity.
+- Do not place personal requester credentials in shared server env files.
+- Leave `JIRA_REQUESTER_EMAIL` / `JIRA_REQUESTER_API_TOKEN` unset in shared deployment.
+- Only use the legacy `JIRA_EMAIL` / `JIRA_API_TOKEN` bridge when older code still requires it, and if you do, point it at the same service account.
 
 ### `github.env` — Drucker (optional, for PR hygiene)
 

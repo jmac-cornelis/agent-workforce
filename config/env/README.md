@@ -34,6 +34,18 @@ services:
       - config/env/github.env
 ```
 
+### Jira Identity Guidance
+
+For shared deployment, prefer this split:
+
+- `JIRA_SERVICE_EMAIL` / `JIRA_SERVICE_API_TOKEN`: the standing automation identity
+- `JIRA_REQUESTER_EMAIL` / `JIRA_REQUESTER_API_TOKEN`: only for per-user or interactive execution, not for shared containers
+- `JIRA_EMAIL` / `JIRA_API_TOKEN`: legacy local-development compatibility only
+
+Use `JIRA_ENABLE_LEGACY_FALLBACK=false` in shared deployment to prevent
+requester-mode execution from silently falling back to the legacy single-profile
+credentials.
+
 ## Security
 
 > **NEVER commit actual credentials.** The `.gitignore` is configured to block

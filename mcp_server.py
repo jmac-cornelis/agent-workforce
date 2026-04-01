@@ -37,6 +37,7 @@ from typing import Any, Optional, cast
 from dotenv import load_dotenv
 
 from config.env_loader import resolve_dry_run
+from config.jira_identity import get_jira_actor_email
 
 # Load environment variables before importing jira_utils
 load_dotenv()
@@ -2743,7 +2744,11 @@ def main():
     log.info('Starting Cornelis Jira MCP server...')
 
     jira_url = os.environ.get('JIRA_URL', '')
-    jira_email = os.environ.get('JIRA_EMAIL', '')
+    jira_email = (
+        get_jira_actor_email('service_account')
+        or get_jira_actor_email('requester')
+        or os.environ.get('JIRA_EMAIL', '')
+    )
     if not jira_url or not jira_email:
         log.warning('JIRA_URL or JIRA_EMAIL not set — tools will fail until configured')
     else:

@@ -142,8 +142,8 @@ Required environment variables for full functionality:
 
 *   `GITHUB_TOKEN`: GitHub personal access token.
 *   `GITHUB_API_URL`: (Optional) URL for GitHub Enterprise.
-*   `JIRA_EMAIL`: Email address for Jira authentication.
-*   `JIRA_API_TOKEN`: Jira API token.
+*   `JIRA_SERVICE_EMAIL`: Jira service account email for deployed/shared execution.
+*   `JIRA_SERVICE_API_TOKEN`: Jira service account API token.
 *   `JIRA_URL`: Base URL for the Jira instance.
 *   `DRY_RUN`: Controls mutation safety (defaults to `true`).
 
@@ -182,10 +182,15 @@ Drucker needs Jira credentials and optionally GitHub:
 
 **`deploy/env/jira.env`** — Jira authentication (required):
 ```bash
-JIRA_EMAIL=scm@cornelisnetworks.com
-JIRA_API_TOKEN=<your-jira-api-token>
 JIRA_URL=https://cornelisnetworks.atlassian.net
-JIRA_DEFAULT_PROJECT=ONECLI
+JIRA_DEFAULT_PROJECT=STL
+JIRA_SERVICE_EMAIL=scm@cornelisnetworks.com
+JIRA_SERVICE_API_TOKEN=<your-jira-api-token>
+JIRA_ENABLE_LEGACY_FALLBACK=false
+
+# Optional compatibility bridge for older callers:
+# JIRA_EMAIL=scm@cornelisnetworks.com
+# JIRA_API_TOKEN=<same-service-token>
 ```
 
 **`deploy/env/github.env`** — GitHub authentication (optional, for PR hygiene):
