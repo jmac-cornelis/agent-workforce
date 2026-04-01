@@ -474,8 +474,14 @@ class HypatiaDocumentationAgent(BaseAgent):
                 source_materials.append(material)
 
         if not source_materials and request.repo_name and request.source_paths:
+            fetch_ref = None
+            if request.pr_number:
+                fetch_ref = f'refs/pull/{request.pr_number}/head'
+            elif request.branch:
+                fetch_ref = request.branch
             github_materials = self._fetch_github_sources(
                 request.repo_name, request.source_paths,
+                branch=fetch_ref,
             )
             source_materials.extend(github_materials)
 
@@ -562,10 +568,17 @@ class HypatiaDocumentationAgent(BaseAgent):
         for path in paths:
             try:
                 if path.endswith('/'):
-                    # Directory listing — fetch each file within
+                    dir_path = path.rstrip('/') or '.'
+                    source_extensions = [
+                        '.c', '.h', '.py', '.go', '.rs', '.java', '.cpp', '.hpp',
+                        '.sh', '.bash', '.pl', '.rb', '.ts', '.js',
+                        '.md', '.rst', '.txt', '.yaml', '.yml', '.json',
+                        '.mk', '.cmake',
+                    ]
                     dir_files = github_utils.list_repo_docs(
-                        repo_name, path.rstrip('/'),
-                        extensions=['.md', '.rst', '.txt', '.py', '.c', '.h', '.go'],
+                        repo_name, dir_path,
+                        extensions=source_extensions,
+                        ref=branch_arg,
                     )
                     for file_info in (dir_files or []):
                         file_path = str(file_info.get('path') or '')
@@ -630,24 +643,26 @@ class HypatiaDocumentationAgent(BaseAgent):
             return None
 
         title = request.title or self._derive_title(request)
+        repo_label = request.repo_name or request.project_key or 'unspecified'
         context_parts = [
-            f'# Documentation Request',
-            f'- Title: {title}',
-            f'- Type: {request.doc_type}',
-            f'- Project: {request.project_key or "unspecified"}',
+            f'Repository: {repo_label}',
+            f'Document title: {title}',
         ]
         if request.summary:
-            context_parts.append(f'- Summary: {request.summary}')
+            context_parts.append(f'Summary: {request.summary}')
 
         context_parts.append('\n# Source Files')
         for material in source_materials:
             content = material.get('content') or ''
             if content:
-                context_parts.append(f'\n## File: {material["path"]}')
+                path_label = material['path']
+                if ':' in path_label:
+                    path_label = path_label.split(':', 1)[1]
+                context_parts.append(f'\n## {path_label}')
                 context_parts.append(content)
 
         if evidence_bundle.records:
-            context_parts.append('\n# Evidence')
+            context_parts.append('\n# Additional Context')
             for record in evidence_bundle.records:
                 context_parts.append(
                     f'- {record.evidence_type}: {record.title} ({record.source_ref})'
@@ -658,19 +673,18 @@ class HypatiaDocumentationAgent(BaseAgent):
                     context_parts.append(f'  - {fact}')
 
         if request.diff_context:
-            context_parts.append('\n# PR Diff Context')
+            context_parts.append('\n# Recent Changes (PR diff)')
             context_parts.append(request.diff_context)
 
         if existing_targets:
-            context_parts.append('\n# Existing Target Context')
             if existing_targets.get('repo_markdown'):
                 repo_target = existing_targets['repo_markdown']
-                context_parts.append(f'- Existing repo doc: {repo_target["target_ref"]}')
+                context_parts.append(f'\n# Existing documentation: {repo_target["target_ref"]}')
                 for fact in repo_target.get('facts') or []:
                     context_parts.append(f'  - {fact}')
             if existing_targets.get('confluence_page'):
                 conf_target = existing_targets['confluence_page']
-                context_parts.append(f'- Existing Confluence page: {conf_target.get("title")}')
+                context_parts.append(f'\n# Existing Confluence page: {conf_target.get("title")}')
 
         if impact.affected_targets:
             context_parts.append('\n# Publication Targets')

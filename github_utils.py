@@ -1105,7 +1105,7 @@ def get_repo_readme(repo_name):
         return {'repo': repo_name, 'error': 'No README found'}
 
 
-def list_repo_docs(repo_name, path='docs', extensions=None):
+def list_repo_docs(repo_name, path='docs', extensions=None, ref=None):
     '''
     List documentation files in a repository directory.
 
@@ -1117,6 +1117,8 @@ def list_repo_docs(repo_name, path='docs', extensions=None):
         path: Directory path to search (default: 'docs').
         extensions: List of file extensions to include
             (default: ['.md', '.rst', '.txt']).
+        ref: Git ref (branch, tag, or commit SHA) to list from.
+            Default: repository default branch.
 
     Output:
         List of dicts, each containing: path, name, size, sha, url, type.
@@ -1125,7 +1127,7 @@ def list_repo_docs(repo_name, path='docs', extensions=None):
     Raises:
         GitHubRepoError: If the repository cannot be found.
     '''
-    log.debug(f'Entering list_repo_docs(repo_name={repo_name}, path={path})')
+    log.debug(f'Entering list_repo_docs(repo_name={repo_name}, path={path}, ref={ref})')
     gh = get_connection()
 
     if extensions is None:
@@ -1141,7 +1143,8 @@ def list_repo_docs(repo_name, path='docs', extensions=None):
     def _recurse(dir_path):
         '''Recursively collect documentation files from a directory.'''
         try:
-            contents = repo.get_contents(dir_path)
+            # Pass ref so we list files on the correct branch / commit
+            contents = repo.get_contents(dir_path, ref=ref) if ref else repo.get_contents(dir_path)
         except GithubException:
             # Path doesn't exist — return gracefully
             return
@@ -2177,7 +2180,7 @@ def batch_commit_files(repo_name, files, message, branch='main', dry_run=None):
 
     Input:
         repo_name: Full repository name (e.g., 'org/repo').
-        files: List of dicts, each with 'path' (str) and 'content' (str).
+        files: Dict[str, str] mapping path→content, or List of dicts with 'path' and 'content' keys.
         message: Commit message.
         branch: Target branch (default: 'main').
         dry_run: If True (default), preview only — no changes made.
@@ -2189,6 +2192,10 @@ def batch_commit_files(repo_name, files, message, branch='main', dry_run=None):
     Raises:
         GitHubRepoError: If the repository is not accessible or the commit fails.
     '''
+    # Normalize files: accept Dict[str,str] (path→content) or List[Dict] with path+content keys
+    if isinstance(files, dict):
+        files = [{'path': p, 'content': c} for p, c in files.items()]
+
     log.debug(f'Entering batch_commit_files(repo_name={repo_name}, file_count={len(files)}, '
               f'branch={branch}, dry_run={dry_run})')
     gh = get_connection()

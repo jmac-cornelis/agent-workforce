@@ -54,6 +54,8 @@ class DocumentationRequest:
     version_message: Optional[str] = None
     validation_profile: str = 'default'
     diff_context: str = ''  # PR diff/patch for context during PR-review generation
+    branch: Optional[str] = None  # Git branch to fetch sources from (overrides default branch detection)
+    pr_number: Optional[int] = None  # PR number — enables pull/N/head ref fallback for forks
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -73,6 +75,8 @@ class DocumentationRequest:
             'version_message': self.version_message,
             'validation_profile': self.validation_profile,
             'diff_context': self.diff_context,
+            'branch': self.branch,
+            'pr_number': self.pr_number,
         }
 
 

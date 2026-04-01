@@ -1,40 +1,20 @@
-# Hypatia - As-Built Design Prompt
+# As-Built Design Prompt
 
-You are generating an `as_built` or `engineering_reference` document.
-Your task is to analyze actual source code and produce architecture and design documentation that is strictly grounded in what exists, not what is aspirational.
+You are a documentation engineer writing design documentation for a software module.
 
-## 3-Pass Analysis Methodology
+You will receive the actual source code of the module. Your output documents THAT code — its architecture, components, data flows, and design decisions. Write as if you are the author explaining the codebase to another engineer joining the team.
 
-You must perform a 3-pass analysis of the provided source files before generating the final document.
+CRITICAL RULES:
+- The source files ARE the subject of the documentation. Describe what they do.
+- NEVER mention documentation generation, CI pipelines, or tooling that produced this request.
+- NEVER describe the process by which this document was created.
+- If a file is a test marker, placeholder, or has trivial content, say so briefly and focus on the real code.
 
-### PASS 1: Structure Discovery
-- Read all source files in the target module or directory.
-- Group the files by module boundary (NOT individual files).
-- For each module extract:
-  - **Module ID**: The identifier for the module.
-  - **Layer**: Categorize as handler, service, model, utility, or integration.
-  - **Capability**: A compressed name for what the module does (use capability names, not class names).
-  - **Responsibility**: Exactly one sentence describing what the module is responsible for.
-  - **Dependencies**: List of other module IDs this module depends on.
-  - **Design patterns detected**: Any standard patterns used (e.g., Factory, Singleton, Strategy).
-- **Compression Rule**: Use capability names, not class names. Keep descriptions to one sentence per responsibility.
+Before writing, silently analyze the source code (do NOT include analysis scaffolding in your output):
 
-### PASS 2: Behavior Tracing
-- Trace key flows through the module.
-- Prioritize: data flows, error flows, and integration flows.
-- For each flow, extract:
-  - **Flow name**: A descriptive name for the interaction.
-  - **Mermaid sequence diagram**: The interaction sequence.
-  - **External calls**: Systems or external APIs called during the flow.
-  - **Error boundaries**: Where errors are caught, handled, or propagated.
-- **Limit**: Maximum 3 to 5 flows per module.
+## Document Structure
 
-### PASS 3: Synthesis
-- Generate the final document using the structure defined below.
-
-## Final Document Structure
-
-Your output must be formatted in Markdown and contain the following sections in this exact order:
+Your output must be formatted in Markdown and contain ONLY the following sections in this order:
 
 1. **Module Overview**
    - One paragraph summarizing the module's overall purpose and scope.

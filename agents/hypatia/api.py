@@ -571,10 +571,11 @@ def create_app() -> FastAPI:
             log.error(f'GitHub API error fetching PR files: {exc}')
             return {'ok': False, 'error': f'GitHub API error: {exc}'}
 
-        # --- filter for doc-relevant files (handles dict or str entries) ---
+        target_dir = body.target_dir or 'docs'
         relevant_files = [
             f for f in changed_files
             if _is_doc_relevant(_extract_filename(f))
+            and not _extract_filename(f).startswith(f'{target_dir}/')
         ]
 
         if not relevant_files:
@@ -611,70 +612,99 @@ def create_app() -> FastAPI:
         impact_details: List[Dict[str, Any]] = []
         files_planned: List[Dict[str, Any]] = []
 
+        module_map: Dict[str, List[Dict[str, Any]]] = {}
         for entry in relevant_files:
             fname = _extract_filename(entry)
-            base = posixpath.splitext(posixpath.basename(fname))[0]
-            slug = base.lower().replace('_', '-').replace(' ', '-')
-            is_readme = posixpath.basename(fname).upper().startswith('README')
-            doc_type = 'user_guide' if is_readme else 'as_built'
-            target = f'{target_dir}/{slug}.md'
+            parent = posixpath.dirname(fname) or '.'
+            module_map.setdefault(parent, []).append(entry)
 
+        for module_dir, entries in module_map.items():
+            if module_dir == '.':
+                repo_short = body.repo.split('/')[-1] if '/' in body.repo else body.repo
+                slug = repo_short.lower().replace('_', '-').replace(' ', '-')
+            else:
+                slug = module_dir.lower().replace('/', '-').replace('_', '-').replace(' ', '-')
+            target = f'{target_dir}/{slug}.md'
+            first_entry = entries[0]
+            is_readme = any(
+                posixpath.basename(_extract_filename(e)).upper().startswith('README')
+                for e in entries
+            )
+            doc_type = 'user_guide' if is_readme else 'as_built'
+
+            source_names = [_extract_filename(e) for e in entries]
             detail = {
-                'source': fname,
-                'status': entry.get('status', 'unknown') if isinstance(entry, dict) else 'unknown',
-                'additions': entry.get('additions', 0) if isinstance(entry, dict) else 0,
-                'deletions': entry.get('deletions', 0) if isinstance(entry, dict) else 0,
+                'source': ', '.join(source_names),
+                'status': first_entry.get('status', 'unknown') if isinstance(first_entry, dict) else 'unknown',
+                'additions': sum(e.get('additions', 0) for e in entries if isinstance(e, dict)),
+                'deletions': sum(e.get('deletions', 0) for e in entries if isinstance(e, dict)),
                 'doc_type': doc_type,
                 'target': target,
             }
             impact_details.append(detail)
             files_planned.append({
-                'source': fname,
+                'source': ', '.join(source_names),
                 'target': target,
                 'doc_type': doc_type,
             })
 
-        # --- Phase 1 & 2: always run agent to generate content ---
+        # --- Phase 1 & 2: generate one doc per module directory ---
         all_generated: List[Dict[str, Any]] = []
         generated_docs: List[Dict[str, Any]] = []
         files_to_commit: Dict[str, str] = {}
         record_ids: List[str] = []
 
-        for entry in relevant_files:
-            fname = _extract_filename(entry)
-            base = posixpath.splitext(posixpath.basename(fname))[0]
-            slug = base.lower().replace('_', '-').replace(' ', '-')
-            is_readme = posixpath.basename(fname).upper().startswith('README')
+        for module_dir, entries in module_map.items():
+            if module_dir == '.':
+                repo_short = body.repo.split('/')[-1] if '/' in body.repo else body.repo
+                slug = repo_short.lower().replace('_', '-').replace(' ', '-')
+                title_label = repo_short.replace('_', ' ').replace('-', ' ').title()
+            else:
+                slug = module_dir.lower().replace('/', '-').replace('_', '-').replace(' ', '-')
+                title_label = posixpath.basename(module_dir).replace('_', ' ').replace('-', ' ').title()
+
+            is_readme = any(
+                posixpath.basename(_extract_filename(e)).upper().startswith('README')
+                for e in entries
+            )
             doc_type = 'user_guide' if is_readme else 'as_built'
+            target_file = f'{target_dir}/{slug}.md'
 
             if body.doc_types and doc_type not in body.doc_types:
                 continue
 
-            title_label = base.replace('_', ' ').replace('-', ' ').title()
-            target_file = f'{target_dir}/{slug}.md'
+            changed_names = [_extract_filename(e) for e in entries]
+            if module_dir == '.':
+                source_paths_for_agent = ['/']
+            else:
+                source_paths_for_agent = [module_dir + '/']
 
-            patch_text = ''
-            if isinstance(entry, dict) and entry.get('patch'):
-                patch_text = str(entry['patch'])
+            patch_parts = []
+            for e in entries:
+                if isinstance(e, dict) and e.get('patch'):
+                    patch_parts.append(f'--- {_extract_filename(e)} ---\n{e["patch"]}')
+            patch_text = '\n'.join(patch_parts)
 
             doc_request = DocumentationRequest(
-                title=f'{title_label} Documentation',
+                title=f'{title_label} — Design Reference',
                 doc_type=doc_type,
                 repo_name=body.repo,
-                source_paths=[fname],
+                source_paths=source_paths_for_agent,
                 target_file=target_file,
                 diff_context=patch_text,
+                branch=head_branch,
+                pr_number=body.pr_number,
             )
 
             agent = HypatiaDocumentationAgent()
             try:
                 result = agent.run(doc_request)
             except Exception as exc:
-                log.error(f'Hypatia agent run failed for {fname}: {exc}')
+                log.error(f'Hypatia agent run failed for {module_dir}: {exc}')
                 continue
 
             if not result.success:
-                log.warning(f'Hypatia agent returned error for {fname}: {result.error}')
+                log.warning(f'Hypatia agent returned error for {module_dir}: {result.error}')
                 continue
 
             doc_record_dict = (result.metadata or {}).get('documentation_record', {})
@@ -735,8 +765,9 @@ def create_app() -> FastAPI:
                     files_to_commit,
                     f'docs: auto-generate documentation for PR #{body.pr_number} [skip ci]',
                     head_branch,
+                    dry_run=False,
                 )
-                commit_sha = str(commit_result.get('sha', '')) if isinstance(commit_result, dict) else str(commit_result)
+                commit_sha = str(commit_result.get('commit_sha', '')) if isinstance(commit_result, dict) else str(commit_result)
                 files_committed = True
             except Exception as exc:
                 log.error(f'GitHub commit failed: {exc}')
