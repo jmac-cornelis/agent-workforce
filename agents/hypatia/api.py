@@ -490,19 +490,34 @@ def create_app() -> FastAPI:
     # PR review → doc generation → commit pipeline
     # ------------------------------------------------------------------
 
-    # File-extension patterns considered doc-relevant in a PR diff.
-    _DOC_RELEVANT_EXTENSIONS = {
-        '.md', '.rst', '.txt', '.h', '.py', '.c', '.go', '.java', '.rs',
+    # Binary / generated extensions to SKIP — everything else is doc-worthy.
+    # Intent: any source code change should get documentation generated.
+    _BINARY_EXTENSIONS = {
+        '.o', '.so', '.a', '.dylib', '.dll', '.exe', '.bin', '.elf',
+        '.png', '.jpg', '.jpeg', '.gif', '.bmp', '.ico', '.svg', '.webp',
+        '.pdf', '.zip', '.tar', '.gz', '.bz2', '.xz', '.7z', '.jar', '.war',
+        '.whl', '.egg', '.pyc', '.pyo', '.class', '.obj',
+        '.ttf', '.otf', '.woff', '.woff2', '.eot',
+        '.mp3', '.mp4', '.wav', '.avi', '.mov',
+        '.lock',
     }
-    _DOC_RELEVANT_PREFIXES = ('docs/', 'doc/', 'README',)
+    # Files/directories to always skip regardless of extension.
+    _SKIP_PATTERNS = (
+        '.gitignore', '.gitattributes', '.git/',
+        'node_modules/', '__pycache__/', '.tox/',
+    )
 
     def _is_doc_relevant(filename: str) -> bool:
-        '''Return True if *filename* is likely to affect documentation.'''
+        '''Return True unless the file is binary, generated, or trivial.'''
         import posixpath
-        if any(filename.startswith(p) for p in _DOC_RELEVANT_PREFIXES):
-            return True
-        ext = posixpath.splitext(filename)[1].lower()
-        return ext in _DOC_RELEVANT_EXTENSIONS
+        lower = filename.lower()
+        # Skip known non-doc patterns
+        if any(lower.endswith(p) or (p.endswith('/') and p in lower)
+               for p in _SKIP_PATTERNS):
+            return False
+        ext = posixpath.splitext(lower)[1]
+        # Skip binary / generated extensions
+        return ext not in _BINARY_EXTENSIONS
 
     def _extract_filename(entry) -> str:
         '''Extract filename from a changed-file entry (dict or plain str).'''
