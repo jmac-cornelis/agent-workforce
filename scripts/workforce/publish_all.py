@@ -21,7 +21,7 @@ REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..')
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-from confluence_utils import connect_to_confluence
+from confluence_utils import connect_to_confluence, _inline_markdown_to_storage
 from PIL import Image, ImageChops
 
 # Diagrams live under docs/diagrams/workforce/ after the repo consolidation.
@@ -56,6 +56,29 @@ AGENTS = [
     {'name': 'Shannon', 'title': 'Shannon — Communications Agent', 'plan': 'agents/shannon/docs/PLAN.md', 'diagram': None, 'zone': 'Service Infrastructure', 'role': 'Communications', 'wave': 0, 'sprint': 'S1'},
     {'name': 'Brandeis', 'title': 'Brandeis — Legal Compliance Agent', 'plan': 'agents/brandeis/docs/PLAN.md', 'diagram': None, 'zone': 'Execution Spine', 'role': 'Legal Compliance', 'wave': 6, 'sprint': 'S9'},
 ]
+
+
+def inline_md_to_storage(text):
+    '''Render inline Markdown for Confluence user-doc publishing.
+
+    Local repo markdown links do not resolve usefully in Confluence, so we
+    degrade them to plain text (or inline code for path-like labels) before
+    running the shared inline Markdown renderer.
+    '''
+
+    def _replace_local_link(match):
+        label = match.group(1).strip()
+        target = match.group(2).strip()
+        if re.match(r'^[a-z]+://', target):
+            return match.group(0)
+        if target.startswith('#'):
+            return match.group(0)
+        if '/' in label or label.endswith('.md') or label == target:
+            return f'`{label}`'
+        return label
+
+    normalized = re.sub(r'(?<!\!)\[([^\]]+)\]\(([^)]+)\)', _replace_local_link, text)
+    return _inline_markdown_to_storage(normalized)
 
 
 def get_diagram_tab_names(drawio_path):
@@ -105,9 +128,9 @@ def md_to_storage(plan_path, agent):
             elif in_table:
                 header = table_rows[0]
                 html_parts.append('<table data-layout="default"><tbody>')
-                html_parts.append('<tr>' + ''.join(f'<th><p>{c}</p></th>' for c in header) + '</tr>')
+                html_parts.append('<tr>' + ''.join(f'<th><p>{inline_md_to_storage(c)}</p></th>' for c in header) + '</tr>')
                 for row in table_rows[1:]:
-                    html_parts.append('<tr>' + ''.join(f'<td><p>{c}</p></td>' for c in row) + '</tr>')
+                    html_parts.append('<tr>' + ''.join(f'<td><p>{inline_md_to_storage(c)}</p></td>' for c in row) + '</tr>')
                 html_parts.append('</tbody></table>')
                 table_rows = []
                 in_table = False
@@ -116,9 +139,7 @@ def md_to_storage(plan_path, agent):
                 if not in_list:
                     html_parts.append('<ul>')
                     in_list = True
-                item = stripped[2:]
-                item = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', item)
-                item = re.sub(r'`(.+?)`', r'<code>\1</code>', item)
+                item = inline_md_to_storage(stripped[2:])
                 html_parts.append(f'<li>{item}</li>')
             else:
                 if in_list:
@@ -129,8 +150,7 @@ def md_to_storage(plan_path, agent):
                 elif stripped == '---':
                     html_parts.append('<hr/>')
                 elif stripped:
-                    p = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', stripped)
-                    p = re.sub(r'`(.+?)`', r'<code>\1</code>', p)
+                    p = inline_md_to_storage(stripped)
                     html_parts.append(f'<p>{p}</p>')
 
         if in_list:
@@ -138,9 +158,9 @@ def md_to_storage(plan_path, agent):
         if in_table and table_rows:
             header = table_rows[0]
             html_parts.append('<table data-layout="default"><tbody>')
-            html_parts.append('<tr>' + ''.join(f'<th><p>{c}</p></th>' for c in header) + '</tr>')
+            html_parts.append('<tr>' + ''.join(f'<th><p>{inline_md_to_storage(c)}</p></th>' for c in header) + '</tr>')
             for row in table_rows[1:]:
-                html_parts.append('<tr>' + ''.join(f'<td><p>{c}</p></td>' for c in row) + '</tr>')
+                html_parts.append('<tr>' + ''.join(f'<td><p>{inline_md_to_storage(c)}</p></td>' for c in row) + '</tr>')
             html_parts.append('</tbody></table>')
 
         return '\n'.join(html_parts)
@@ -339,9 +359,9 @@ def publish_user_doc(c, doc):
             elif in_table:
                 header = table_rows[0]
                 html_parts.append('<table data-layout="default"><tbody>')
-                html_parts.append('<tr>' + ''.join(f'<th><p>{c}</p></th>' for c in header) + '</tr>')
+                html_parts.append('<tr>' + ''.join(f'<th><p>{inline_md_to_storage(c)}</p></th>' for c in header) + '</tr>')
                 for row in table_rows[1:]:
-                    html_parts.append('<tr>' + ''.join(f'<td><p>{c}</p></td>' for c in row) + '</tr>')
+                    html_parts.append('<tr>' + ''.join(f'<td><p>{inline_md_to_storage(c)}</p></td>' for c in row) + '</tr>')
                 html_parts.append('</tbody></table>')
                 table_rows = []
                 in_table = False
@@ -350,9 +370,7 @@ def publish_user_doc(c, doc):
                 if not in_list:
                     html_parts.append('<ul>')
                     in_list = True
-                item = stripped[2:]
-                item = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', item)
-                item = re.sub(r'`(.+?)`', r'<code>\1</code>', item)
+                item = inline_md_to_storage(stripped[2:])
                 html_parts.append(f'<li>{item}</li>')
             else:
                 if in_list:
@@ -365,8 +383,7 @@ def publish_user_doc(c, doc):
                 elif stripped == '---':
                     html_parts.append('<hr/>')
                 elif stripped:
-                    p = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', stripped)
-                    p = re.sub(r'`(.+?)`', r'<code>\1</code>', p)
+                    p = inline_md_to_storage(stripped)
                     html_parts.append(f'<p>{p}</p>')
 
         if in_list:
@@ -374,9 +391,9 @@ def publish_user_doc(c, doc):
         if in_table and table_rows:
             header = table_rows[0]
             html_parts.append('<table data-layout="default"><tbody>')
-            html_parts.append('<tr>' + ''.join(f'<th><p>{c}</p></th>' for c in header) + '</tr>')
+            html_parts.append('<tr>' + ''.join(f'<th><p>{inline_md_to_storage(c)}</p></th>' for c in header) + '</tr>')
             for row in table_rows[1:]:
-                html_parts.append('<tr>' + ''.join(f'<td><p>{c}</p></td>' for c in row) + '</tr>')
+                html_parts.append('<tr>' + ''.join(f'<td><p>{inline_md_to_storage(c)}</p></td>' for c in row) + '</tr>')
             html_parts.append('</tbody></table>')
         if in_code and code_lines:
             html_parts.append('<ac:structured-macro ac:name="code" ac:schema-version="1">')
