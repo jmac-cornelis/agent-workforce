@@ -41,6 +41,7 @@ class DocumentationRequest:
     title: str = ''
     doc_type: str = 'engineering_reference'
     project_key: str = ''
+    repo_name: Optional[str] = None
     summary: str = ''
     source_paths: List[str] = field(default_factory=list)
     source_refs: List[str] = field(default_factory=list)
@@ -58,6 +59,7 @@ class DocumentationRequest:
             'title': self.title,
             'doc_type': self.doc_type,
             'project_key': self.project_key,
+            'repo_name': self.repo_name,
             'summary': self.summary,
             'source_paths': self.source_paths,
             'source_refs': self.source_refs,

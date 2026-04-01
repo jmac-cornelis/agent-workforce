@@ -80,6 +80,7 @@ class GenerateDocRequest(BaseModel):
     confluence_space: Optional[str] = None
     confluence_parent_id: Optional[str] = None
     version_message: Optional[str] = None
+    repo_name: Optional[str] = None
     validation_profile: str = 'default'
     persist: bool = True
     dry_run: Optional[bool] = None
@@ -274,6 +275,7 @@ def create_app() -> FastAPI:
             title=body.doc_title,
             doc_type=body.doc_type,
             project_key=body.project_key or '',
+            repo_name=body.repo_name,
             summary=body.doc_summary or '',
             source_paths=body.source_paths,
             source_refs=body.source_refs,

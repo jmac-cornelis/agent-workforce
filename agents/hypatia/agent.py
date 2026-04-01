@@ -91,6 +91,32 @@ class HypatiaDocumentationAgent(BaseAgent):
                 log.warning(f'Failed to load Hypatia agent prompt: {e}')
         return None
 
+    _DOC_TYPE_PROMPT_MAP = {
+        'as_built': 'as-built-design.md',
+        'engineering_reference': 'as-built-design.md',
+        'user_guide': 'user-guide.md',
+        'how_to': 'user-guide.md',
+        'release_note_support': 'traceability.md',
+    }
+
+    def _load_doc_type_prompt(self, doc_type: str) -> str:
+        '''
+        Load the doc-type-specific prompt file for LLM synthesis.
+
+        Falls back to as-built-design.md for unknown doc types.
+        Returns the prompt text, or empty string on failure.
+        '''
+        filename = self._DOC_TYPE_PROMPT_MAP.get(doc_type, 'as-built-design.md')
+        prompt_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), 'prompts', filename
+        )
+        try:
+            with open(prompt_path, 'r', encoding='utf-8') as f:
+                return f.read()
+        except Exception as e:
+            log.warning(f'Failed to load doc-type prompt {filename}: {e}')
+            return ''
+
     @property
     def review_agent(self) -> ReviewAgent:
         if self._review_agent is None:
@@ -365,6 +391,7 @@ class HypatiaDocumentationAgent(BaseAgent):
                 project_key=str(
                     input_data.get('project_key') or self.project_key or ''
                 ).strip(),
+                repo_name=input_data.get('repo_name'),
                 summary=str(input_data.get('summary') or '').strip(),
                 source_paths=[
                     str(path) for path in (input_data.get('source_paths') or [])
@@ -446,6 +473,12 @@ class HypatiaDocumentationAgent(BaseAgent):
             if material is not None:
                 source_materials.append(material)
 
+        if not source_materials and request.repo_name and request.source_paths:
+            github_materials = self._fetch_github_sources(
+                request.repo_name, request.source_paths,
+            )
+            source_materials.extend(github_materials)
+
         if request.target_file and Path(request.target_file).exists():
             existing_doc = self._read_source_file(request.target_file, role='existing_repo_doc')
             if existing_doc is not None:
@@ -497,6 +530,161 @@ class HypatiaDocumentationAgent(BaseAgent):
             'lines': int((result.data or {}).get('lines') or 0),
         }
 
+    def _fetch_github_sources(
+        self,
+        repo_name: str,
+        paths: List[str],
+        branch: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        '''
+        Fetch source files from a GitHub repository for documentation generation.
+        '''
+        try:
+            import github_utils
+        except ImportError:
+            log.warning('github_utils not available — cannot fetch GitHub sources')
+            return []
+
+        materials: List[Dict[str, Any]] = []
+
+        # Resolve branch — caller can override, otherwise detect the repo
+        # default branch via PyGithub (ifs-all uses 'opa-dev', not 'main').
+        if branch:
+            branch_arg = branch
+        else:
+            try:
+                repo_info = github_utils.get_repo_info(repo_name)
+                branch_arg = str(repo_info.get('default_branch') or 'main')
+                log.debug(f'Detected default branch for {repo_name}: {branch_arg}')
+            except Exception:
+                branch_arg = 'main'
+
+        for path in paths:
+            try:
+                if path.endswith('/'):
+                    # Directory listing — fetch each file within
+                    dir_files = github_utils.list_repo_docs(
+                        repo_name, path.rstrip('/'),
+                        extensions=['.md', '.rst', '.txt', '.py', '.c', '.h', '.go'],
+                    )
+                    for file_info in (dir_files or []):
+                        file_path = str(file_info.get('path') or '')
+                        if not file_path:
+                            continue
+                        try:
+                            result = github_utils.get_file_content(
+                                repo_name, file_path, branch_arg,
+                            )
+                            if result and result.get('content'):
+                                content = str(result['content'])[:15000]
+                                materials.append({
+                                    'path': f'{repo_name}:{file_path}',
+                                    'role': 'source',
+                                    'content': content,
+                                    'lines': content.count('\n') + 1,
+                                    'facts': self._extract_fact_lines(content, limit=10),
+                                    'excerpt': content[:500],
+                                })
+                        except Exception as e:
+                            log.warning(f'Failed to fetch {file_path} from {repo_name}: {e}')
+                else:
+                    # Single file fetch
+                    result = github_utils.get_file_content(
+                        repo_name, path, branch_arg,
+                    )
+                    if result and result.get('content'):
+                        content = str(result['content'])[:15000]
+                        materials.append({
+                            'path': f'{repo_name}:{path}',
+                            'role': 'source',
+                            'content': content,
+                            'lines': content.count('\n') + 1,
+                            'facts': self._extract_fact_lines(content, limit=10),
+                            'excerpt': content[:500],
+                        })
+                    else:
+                        log.warning(f'No content returned for {path} from {repo_name}')
+            except Exception as e:
+                log.warning(f'GitHub fetch failed for {path} in {repo_name}: {e}')
+
+        return materials
+
+    def _generate_content_via_llm(
+        self,
+        request: DocumentationRequest,
+        impact: DocumentationImpactRecord,
+        source_materials: List[Dict[str, Any]],
+        existing_targets: Dict[str, Any],
+        evidence_bundle: EvidenceBundle,
+    ) -> Optional[str]:
+        '''
+        Synthesize documentation content via LLM using doc-type-specific prompts.
+
+        Returns the generated Markdown string, or None if the prompt cannot
+        be loaded or the LLM returns empty content.
+        '''
+        from llm.base import Message
+
+        doc_type_prompt = self._load_doc_type_prompt(request.doc_type)
+        if not doc_type_prompt:
+            return None
+
+        title = request.title or self._derive_title(request)
+        context_parts = [
+            f'# Documentation Request',
+            f'- Title: {title}',
+            f'- Type: {request.doc_type}',
+            f'- Project: {request.project_key or "unspecified"}',
+        ]
+        if request.summary:
+            context_parts.append(f'- Summary: {request.summary}')
+
+        context_parts.append('\n# Source Files')
+        for material in source_materials:
+            content = material.get('content') or ''
+            if content:
+                context_parts.append(f'\n## File: {material["path"]}')
+                context_parts.append(content)
+
+        if evidence_bundle.records:
+            context_parts.append('\n# Evidence')
+            for record in evidence_bundle.records:
+                context_parts.append(
+                    f'- {record.evidence_type}: {record.title} ({record.source_ref})'
+                )
+                if record.summary:
+                    context_parts.append(f'  {record.summary}')
+                for fact in record.facts[:6]:
+                    context_parts.append(f'  - {fact}')
+
+        if existing_targets:
+            context_parts.append('\n# Existing Target Context')
+            if existing_targets.get('repo_markdown'):
+                repo_target = existing_targets['repo_markdown']
+                context_parts.append(f'- Existing repo doc: {repo_target["target_ref"]}')
+                for fact in repo_target.get('facts') or []:
+                    context_parts.append(f'  - {fact}')
+            if existing_targets.get('confluence_page'):
+                conf_target = existing_targets['confluence_page']
+                context_parts.append(f'- Existing Confluence page: {conf_target.get("title")}')
+
+        if impact.affected_targets:
+            context_parts.append('\n# Publication Targets')
+            for target in impact.affected_targets:
+                context_parts.append(
+                    f'- {target["target_type"]} -> {target["target_ref"]} ({target["operation"]})'
+                )
+
+        context_payload = '\n'.join(context_parts)
+
+        messages = [
+            Message.system(doc_type_prompt),
+            Message.user(context_payload),
+        ]
+        response = self.llm.chat(messages=messages)
+        result = response.content.strip()
+        return result if result else None
+
     def _generate_content(
         self,
         request: DocumentationRequest,
@@ -507,7 +695,23 @@ class HypatiaDocumentationAgent(BaseAgent):
     ) -> str:
         '''
         Generate a source-grounded Markdown documentation candidate.
+
+        Attempts LLM synthesis when self.llm is available and source materials
+        contain content. Falls back to deterministic template assembly on
+        LLM failure or when no source content is available.
         '''
+        has_source_content = any(m.get('content') for m in source_materials)
+        if self.llm is not None and has_source_content:
+            try:
+                llm_result = self._generate_content_via_llm(
+                    request, impact, source_materials,
+                    existing_targets, evidence_bundle,
+                )
+                if llm_result:
+                    return llm_result
+            except Exception as e:
+                log.warning(f'LLM synthesis failed, falling back to template: {e}')
+
         title = request.title or self._derive_title(request)
         now_utc = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')
 
