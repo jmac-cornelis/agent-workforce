@@ -79,12 +79,16 @@ from agents.hemingway.tools import (
     generate_hemingway_documentation,
     get_hemingway_record,
     list_hemingway_records,
+    search_hemingway_records,
     HemingwayTools,
-    generate_hypatia_documentation,
-    get_hypatia_record,
-    list_hypatia_records,
-    HypatiaTools,
 )
+
+# Legacy backward-compat aliases
+generate_hypatia_documentation = generate_hemingway_documentation
+get_hypatia_record = get_hemingway_record
+list_hypatia_records = list_hemingway_records
+search_hypatia_records = search_hemingway_records
+HypatiaTools = HemingwayTools
 from tools.drawio_tools import (
     parse_org_chart,
     get_responsibilities,
@@ -206,15 +210,17 @@ __all__ = [
     'get_drucker_report',
     'list_drucker_reports',
     'DruckerTools',
-    # Hypatia
-    'generate_hypatia_documentation',
+    # Hemingway (legacy aliases: Hypatia)
     'generate_hemingway_documentation',
-    'get_hypatia_record',
+    'generate_hypatia_documentation',
     'get_hemingway_record',
-    'list_hypatia_records',
+    'get_hypatia_record',
     'list_hemingway_records',
-    'HypatiaTools',
+    'list_hypatia_records',
+    'search_hemingway_records',
+    'search_hypatia_records',
     'HemingwayTools',
+    'HypatiaTools',
     # Draw.io
     'parse_org_chart',
     'get_responsibilities',

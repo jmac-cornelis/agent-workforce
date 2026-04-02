@@ -1,6 +1,6 @@
 ##########################################################################################
 #
-# Module: tools/hemingway_tools.py
+# Module: agents/hemingway/tools.py
 #
 # Description: Hemingway documentation tools for agent use.
 #              Wraps the Hemingway documentation workflow as agent-callable tools.
@@ -143,6 +143,51 @@ def list_hemingway_records(
         return ToolResult.failure(f'Failed to list Hemingway records: {e}')
 
 
+@tool(
+    description='Search persisted Hemingway documentation records with multi-field filtering'
+)
+def search_hemingway_records(
+    query: Optional[str] = None,
+    project_key: Optional[str] = None,
+    doc_type: Optional[str] = None,
+    source_ref: Optional[str] = None,
+    published_only: bool = False,
+    confidence: Optional[str] = None,
+    limit: Optional[int] = None,
+) -> ToolResult:
+    '''
+    Search persisted Hemingway documentation records with multi-field filtering.
+    '''
+    log.debug(
+        f'search_hemingway_records(query={query}, project_key={project_key}, '
+        f'doc_type={doc_type}, source_ref={source_ref}, '
+        f'published_only={published_only}, confidence={confidence}, limit={limit})'
+    )
+
+    try:
+        from agents.hemingway.state.record_store import HemingwayRecordStore
+
+        rows = HemingwayRecordStore().search_records(
+            query=query,
+            project_key=project_key,
+            doc_type=doc_type,
+            source_ref=source_ref,
+            published_only=published_only,
+            confidence=confidence,
+            limit=limit,
+        )
+        return ToolResult.success(rows, count=len(rows), query=query or '')
+    except Exception as e:
+        log.error(f'Failed to search Hemingway records: {e}')
+        return ToolResult.failure(f'Failed to search Hemingway records: {e}')
+
+
+generate_hypatia_documentation = generate_hemingway_documentation
+get_hypatia_record = get_hemingway_record
+list_hypatia_records = list_hemingway_records
+search_hypatia_records = search_hemingway_records
+
+
 class HemingwayTools(BaseTool):
     '''
     Collection of Hemingway documentation tools for agent use.
@@ -197,9 +242,26 @@ class HemingwayTools(BaseTool):
     ) -> ToolResult:
         return list_hemingway_records(doc_type, limit)
 
+    @tool(description='Search persisted Hemingway documentation records with multi-field filtering')
+    def search_hemingway_records(
+        self,
+        query: Optional[str] = None,
+        project_key: Optional[str] = None,
+        doc_type: Optional[str] = None,
+        source_ref: Optional[str] = None,
+        published_only: bool = False,
+        confidence: Optional[str] = None,
+        limit: Optional[int] = None,
+    ) -> ToolResult:
+        return search_hemingway_records(
+            query=query,
+            project_key=project_key,
+            doc_type=doc_type,
+            source_ref=source_ref,
+            published_only=published_only,
+            confidence=confidence,
+            limit=limit,
+        )
 
-# Legacy compatibility aliases during the rename transition.
-generate_hypatia_documentation = generate_hemingway_documentation
-get_hypatia_record = get_hemingway_record
-list_hypatia_records = list_hemingway_records
+
 HypatiaTools = HemingwayTools

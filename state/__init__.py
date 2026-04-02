@@ -53,14 +53,9 @@ def __getattr__(name: str) -> Any:
 
         return GanttSnapshotStore
     if name in ('HemingwayRecordStore', 'HypatiaRecordStore'):
-        from agents.hemingway.state.record_store import (
-            HemingwayRecordStore,
-            HypatiaRecordStore,
-        )
+        from agents.hemingway.state.record_store import HemingwayRecordStore
 
-        if name == 'HemingwayRecordStore':
-            return HemingwayRecordStore
-        return HypatiaRecordStore
+        return HemingwayRecordStore
     if name == 'ShannonStateStore':
         from agents.shannon.state_store import ShannonStateStore
 

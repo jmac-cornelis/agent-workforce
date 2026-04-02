@@ -304,7 +304,7 @@ Use `/help` in any agent channel to see the full parameter syntax for all comman
 | Shannon | Communications | 8200 | 6 built-in |
 | Drucker | Engineering Hygiene | 8201 | 15 commands (Jira + GitHub) |
 | Gantt | Project Planning | 8202 | 8 commands |
-| Hypatia | Documentation | 8203 | 7 commands (generate, search, publish) |
+| Hemingway | Documentation | 8203 | 7 commands (generate, search, publish) |
 
 ## Approval Workflows
 

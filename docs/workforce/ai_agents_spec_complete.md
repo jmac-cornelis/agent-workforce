@@ -501,7 +501,7 @@ flowchart TB
     TESLA["Tesla<br/>Test Environment Manager"]
 
     %% Support Agents
-    HYPATIA["Hemingway<br/>Documentation Agent"]
+    HEMINGWAY["Hemingway<br/>Documentation Agent"]
     BABBAGE["Mercator<br/>Version Mapping Agent"]
     LINNAEUS["Berners-Lee<br/>Traceability Agent"]
     HERODOTUS["Pliny<br/>Knowledge Capture Agent"]
@@ -528,10 +528,10 @@ flowchart TB
     FARADAY --> LINNAEUS
     LINNAEUS --> JIRA
 
-    JOSEPHINE --> HYPATIA
-    LINUS --> HYPATIA
-    FARADAY --> HYPATIA
-    HYPATIA --> GH
+    JOSEPHINE --> HEMINGWAY
+    LINUS --> HEMINGWAY
+    FARADAY --> HEMINGWAY
+    HEMINGWAY --> GH
 
     TEAMS --> HERODOTUS
     HERODOTUS --> JIRA
@@ -588,7 +588,7 @@ flowchart TB
     CURIE["Curie<br/>Test Generator"]
     FARADAY["Faraday<br/>Test Executor"]
     TESLA["Tesla<br/>Test Environment"]
-    HYPATIA["Hemingway<br/>Documentation"]
+    HEMINGWAY["Hemingway<br/>Documentation"]
     BABBAGE["Mercator<br/>Version Mapping"]
     LINNAEUS["Berners-Lee<br/>Traceability"]
     HERODOTUS["Pliny<br/>Knowledge Capture"]
@@ -623,11 +623,11 @@ flowchart TB
     LINNAEUS --> JIRA
 
     %% Documentation Flow
-    GH --> HYPATIA
-    JOSEPHINE --> HYPATIA
-    FARADAY --> HYPATIA
-    HYPATIA --> DOCS
-    HYPATIA --> GH
+    GH --> HEMINGWAY
+    JOSEPHINE --> HEMINGWAY
+    FARADAY --> HEMINGWAY
+    HEMINGWAY --> DOCS
+    HEMINGWAY --> GH
 
     %% Bug / Traceability Flow
     JIRA --> LINNAEUS

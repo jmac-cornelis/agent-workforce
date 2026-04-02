@@ -128,7 +128,7 @@ def cmd_generate(args: argparse.Namespace) -> None:
     # -- Step 1: plan documentation ------------------------------------------
     if not use_json:
         print('=' * 60)
-        print('HEMINGWAY: generate')
+        print('HYPATIA: generate')
         print('=' * 60)
         print()
         print(f'Document title : {args.doc_title or args.confluence_title or "auto"}')
@@ -252,6 +252,125 @@ def cmd_generate(args: argparse.Namespace) -> None:
         for path, desc in created_files:
             print(f'  {path}  ({desc})')
         print('-' * 60)
+
+    sys.exit(0)
+
+
+# ---------------------------------------------------------------------------
+# Subcommand: confluence-publish
+# ---------------------------------------------------------------------------
+
+def cmd_confluence_publish(args: argparse.Namespace) -> None:
+    '''
+    Publish a Markdown file to Confluence with optional diagram rendering.
+    Uses confluence tools for create/update/append/section-update operations.
+    '''
+    from dotenv import load_dotenv
+    load_dotenv(args.env if hasattr(args, 'env') and args.env else None)
+
+    # Lazy imports — keep CLI startup fast
+    from tools.confluence_tools import (
+        create_confluence_page,
+        update_confluence_page,
+        append_to_confluence_page,
+        update_confluence_section,
+    )
+
+    use_json = getattr(args, 'json', False)
+    dry_run = not args.execute
+    render_diagrams = not args.no_diagrams
+
+    # Map operation to tool function
+    op_map = {
+        'create': create_confluence_page,
+        'update': update_confluence_page,
+        'append': append_to_confluence_page,
+        'update_section': update_confluence_section,
+    }
+    tool_fn = op_map.get(args.operation)
+    if tool_fn is None:
+        msg = f'Unknown operation: {args.operation}'
+        if use_json:
+            _print_json({'error': msg})
+        else:
+            print(msg, file=sys.stderr)
+        sys.exit(1)
+
+    if not use_json:
+        print('=' * 60)
+        print('HYPATIA: confluence-publish')
+        print('=' * 60)
+        print()
+        print(f'Input file     : {args.input_file}')
+        print(f'Title          : {args.title}')
+        print(f'Operation      : {args.operation}')
+        print(f'Space          : {args.space or "default"}')
+        print(f'Render diagrams: {"yes" if render_diagrams else "no"}')
+        print(f'Dry run        : {"yes" if dry_run else "no"}')
+        print()
+
+    # Build keyword arguments based on operation
+    kwargs: Dict[str, Any] = {
+        'input_file': args.input_file,
+        'dry_run': dry_run,
+    }
+
+    if args.operation == 'create':
+        kwargs['title'] = args.title
+        if args.space:
+            kwargs['space'] = args.space
+        if args.parent_id:
+            kwargs['parent_id'] = args.parent_id
+        if args.version_message:
+            kwargs['version_message'] = args.version_message
+    elif args.operation in ('update', 'append'):
+        kwargs['page_id_or_title'] = args.page_id or args.title
+        if args.space:
+            kwargs['space'] = args.space
+        if args.version_message:
+            kwargs['version_message'] = args.version_message
+    elif args.operation == 'update_section':
+        kwargs['page_id_or_title'] = args.page_id or args.title
+        kwargs['heading'] = args.heading or ''
+        if args.space:
+            kwargs['space'] = args.space
+        if args.version_message:
+            kwargs['version_message'] = args.version_message
+
+    # Execute the tool function
+    result = tool_fn(**kwargs)
+
+    # Extract result data from ToolResult
+    if hasattr(result, 'data'):
+        data = result.data if result.data is not None else {}
+    elif isinstance(result, dict):
+        data = result
+    else:
+        data = {}
+
+    if use_json:
+        _print_json({
+            'operation': args.operation,
+            'title': args.title,
+            'input_file': args.input_file,
+            'dry_run': dry_run,
+            'render_diagrams': render_diagrams,
+            'result': data,
+        })
+    else:
+        if hasattr(result, 'success') and not result.success:
+            print(f'ERROR: {result.error or "unknown error"}', file=sys.stderr)
+            sys.exit(1)
+
+        print('Result:')
+        if isinstance(data, dict):
+            for key, value in data.items():
+                print(f'  {key}: {value}')
+        else:
+            print(f'  {data}')
+        print()
+        if dry_run:
+            print('This was a dry-run preview. Use --execute to publish.')
 
     sys.exit(0)
 
@@ -407,6 +526,35 @@ def register_subcommands(subparsers) -> None:
     p.add_argument('--json', action='store_true', default=False, help='JSON output format')
     p.add_argument('--env', default=None, help='Alternate .env file')
     p.set_defaults(func=cmd_generate)
+
+    # --- confluence-publish --------------------------------------------------
+    p = subparsers.add_parser(
+        'confluence-publish',
+        help='Publish a Markdown file to Confluence with diagram rendering',
+    )
+    p.add_argument('--input-file', required=True, help='Path to Markdown file')
+    p.add_argument('--title', required=True, help='Confluence page title')
+    p.add_argument('--space', default=None, help='Confluence space key or ID')
+    p.add_argument('--parent-id', default=None, help='Parent page ID (for create)')
+    p.add_argument('--page-id', default=None, help='Page ID or title (for update/append/section-update)')
+    p.add_argument(
+        '--operation',
+        default='create',
+        choices=['create', 'update', 'append', 'update_section'],
+        help='Publish operation (default: create)',
+    )
+    p.add_argument('--heading', default=None, help='Section heading (for update_section operation)')
+    p.add_argument('--version-message', default=None, help='Version comment')
+    p.add_argument('--no-diagrams', action='store_true', default=False, help='Skip diagram rendering')
+    p.add_argument(
+        '--execute',
+        action='store_true',
+        default=False,
+        help='Actually publish (default: dry-run preview)',
+    )
+    p.add_argument('--json', action='store_true', default=False, help='JSON output')
+    p.add_argument('--env', default=None, help='Alternate .env file')
+    p.set_defaults(func=cmd_confluence_publish)
 
     # --- list ---------------------------------------------------------------
     p = subparsers.add_parser('list', help='List stored documentation records')

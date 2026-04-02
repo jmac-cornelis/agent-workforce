@@ -1,8 +1,8 @@
 ##########
-# Module:      test_hypatia_search_char.py
-# Description: Characterization tests for Hypatia search capabilities.
-#              Covers HypatiaRecordStore.search_records(), the POST /v1/docs/search
-#              API endpoint, and the search_hypatia_records() tool wrapper.
+# Module:      test_hemingway_search_char.py
+# Description: Characterization tests for Hemingway search capabilities.
+#              Covers HemingwayRecordStore.search_records(), the POST /v1/docs/search
+#              API endpoint, and the search_hemingway_records() tool wrapper.
 # Author:      Cornelis Networks Engineering Tools
 ##########
 
@@ -15,7 +15,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from agents.hypatia.state.record_store import HypatiaRecordStore
+from agents.hemingway.state.record_store import HemingwayRecordStore
 
 
 # ---------------------------------------------------------------------------
@@ -36,7 +36,7 @@ def _make_record(
     warnings: Optional[List[str]] = None,
     publication_records: Optional[List[Dict]] = None,
 ) -> Dict[str, Any]:
-    '''Build a record dict suitable for HypatiaRecordStore.save_record().'''
+    '''Build a record dict suitable for HemingwayRecordStore.save_record().'''
     return {
         'doc_id': doc_id,
         'title': title,
@@ -53,16 +53,16 @@ def _make_record(
     }
 
 
-def _store_with_records(tmp_path, records: List[Dict[str, Any]]) -> HypatiaRecordStore:
-    '''Create a HypatiaRecordStore in tmp_path and save the given records.'''
-    store = HypatiaRecordStore(storage_dir=str(tmp_path))
+def _store_with_records(tmp_path, records: List[Dict[str, Any]]) -> HemingwayRecordStore:
+    '''Create a HemingwayRecordStore in tmp_path and save the given records.'''
+    store = HemingwayRecordStore(storage_dir=str(tmp_path))
     for rec in records:
         store.save_record(rec)
     return store
 
 
 # ===========================================================================
-# A) HypatiaRecordStore.search_records() — direct store tests
+# A) HemingwayRecordStore.search_records() — direct store tests
 # ===========================================================================
 
 class TestSearchRecordsByQuery:
@@ -283,7 +283,7 @@ class TestSearchApiEndpoint:
 
     @pytest.fixture
     def mock_record_store(self):
-        '''Provide a MagicMock standing in for HypatiaRecordStore.'''
+        '''Provide a MagicMock standing in for HemingwayRecordStore.'''
         return MagicMock()
 
     @pytest.fixture
@@ -291,7 +291,7 @@ class TestSearchApiEndpoint:
         '''Create a Starlette TestClient with record_store stubbed.'''
         monkeypatch.setenv('DRY_RUN', '1')
 
-        import agents.hypatia.api as api_mod
+        import agents.hemingway.api as api_mod
         monkeypatch.setattr(api_mod, 'record_store', mock_record_store)
         monkeypatch.setattr(api_mod, '_run_count', 0)
         monkeypatch.setattr(api_mod, '_total_docs_generated', 0)
@@ -352,26 +352,26 @@ class TestSearchApiEndpoint:
 
 
 # ===========================================================================
-# C) Tool wrapper — search_hypatia_records()
+# C) Tool wrapper — search_hemingway_records()
 # ===========================================================================
 
 class TestSearchTool:
-    '''Tests for the search_hypatia_records() tool function.'''
+    '''Tests for the search_hemingway_records() tool function.'''
 
     def test_search_tool_returns_success(self, tmp_path, monkeypatch):
-        '''search_hypatia_records() returns ToolResult with success status.'''
+        '''search_hemingway_records() returns ToolResult with success status.'''
         rec = _make_record(doc_id='tool-1', title='PSM2 Architecture')
         store = _store_with_records(tmp_path, [rec])
 
         monkeypatch.setattr(
-            'agents.hypatia.state.record_store.HypatiaRecordStore',
+            'agents.hemingway.state.record_store.HemingwayRecordStore',
             lambda **kw: store,
         )
 
-        from agents.hypatia.tools import search_hypatia_records
+        from agents.hemingway.tools import search_hemingway_records
         from tools.base import ToolStatus
 
-        result = search_hypatia_records(query='PSM2')
+        result = search_hemingway_records(query='PSM2')
 
         assert result.is_success
         assert result.status == ToolStatus.SUCCESS
@@ -381,7 +381,7 @@ class TestSearchTool:
         assert result.metadata.get('query') == 'PSM2'
 
     def test_search_tool_returns_empty_on_no_match(self, tmp_path, monkeypatch):
-        '''search_hypatia_records() returns empty list when nothing matches.'''
+        '''search_hemingway_records() returns empty list when nothing matches.'''
         rec = _make_record(
             doc_id='tool-2', title='CN5000 Guide',
             content_markdown='# CN5000\nSwitch management...',
@@ -390,13 +390,13 @@ class TestSearchTool:
         store = _store_with_records(tmp_path, [rec])
 
         monkeypatch.setattr(
-            'agents.hypatia.state.record_store.HypatiaRecordStore',
+            'agents.hemingway.state.record_store.HemingwayRecordStore',
             lambda **kw: store,
         )
 
-        from agents.hypatia.tools import search_hypatia_records
+        from agents.hemingway.tools import search_hemingway_records
 
-        result = search_hypatia_records(query='nonexistent-xyz')
+        result = search_hemingway_records(query='nonexistent-xyz')
 
         assert result.is_success
         assert result.data == []

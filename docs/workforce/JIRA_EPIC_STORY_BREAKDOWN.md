@@ -226,7 +226,7 @@ All agents depend on this. Must be complete before any agent work begins.
 
 ---
 
-### Epic: HYPATIA — Documentation Agent
+### Epic: HEMINGWAY — Documentation Agent
 
 > Generates documentation from authoritative system records.
 

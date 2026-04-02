@@ -109,7 +109,7 @@ The repo implements specialized agents that automate engineering workflows. Each
 | **Shannon** | `shannon/` + `agents/shannon/` | Microsoft Teams communications service. Routes commands from Teams to backend agents, renders Adaptive Card responses, and posts proactive notifications. Deployed at `shannon.cn-agents.com` via Cloudflare tunnel. | 8200 |
 | **Drucker** | `agents/drucker/` | Engineering hygiene agent. Jira ticket quality scans, GitHub PR lifecycle monitoring (6 scan types), and remediation reports. | 8201 |
 | **Gantt** | `agents/gantt/` | Project planning service. Builds Jira-grounded planning snapshots, release-health reports, and scheduled PM polling outputs. | 8202 |
-| **Hemingway** | `agents/hemingway/` | Documentation agent. Produces source-grounded documentation candidates for repo Markdown and optional Confluence publication. Legacy alias: `Hypatia` / `agents/hypatia/`. | — |
+| **Hemingway** | `agents/hemingway/` | Documentation agent. Produces source-grounded documentation candidates for repo Markdown and optional Confluence publication. | — |
 
 ### Agent Communication
 
@@ -147,7 +147,7 @@ Agentic workflows are multi-step operator flows orchestrated by [`agent_cli.py`]
 | **Feature Plan** | `agent-cli feature-plan` | Scope document → Initiative → Epics → Stories in Jira |
 | **Drucker Hygiene** | `agent-cli drucker hygiene` | Ticket hygiene reports with remediation suggestions |
 | **Drucker Poller** | `agent-cli drucker poll` | Scheduled Drucker hygiene scans with optional Shannon notifications |
-| **Hemingway Docs** | `agent-cli hemingway generate` | Source-grounded documentation drafts for repo Markdown or Confluence. Legacy alias: `agent-cli hypatia generate` |
+| **Hemingway Docs** | `agent-cli hemingway generate` | Source-grounded documentation drafts for repo Markdown or Confluence |
 | **Bug Report** | `agent-cli bug-report` | Enriched bug reports from Jira filters, exported to styled Excel |
 
 All workflows are **dry-run by default** — no Jira tickets are created or modified until `--execute` is passed.
@@ -337,7 +337,7 @@ agent-workforce/
 │   ├── base.py                  # BaseAgent abstract class
 │   ├── drucker_api.py           # Drucker hygiene agent service (port 8201)
 │   ├── gantt_agent.py           # Gantt planning agent
-│   ├── hypatia_agent.py         # Documentation agent
+│   ├── hemingway_agent.py       # Documentation agent
 │   ├── feature_planning_orchestrator.py
 │   ├── research_agent.py
 │   ├── hardware_analyst.py

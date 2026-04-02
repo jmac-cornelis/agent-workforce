@@ -232,7 +232,7 @@
         <mxCell id="t4_a_drucker" value="Drucker&lt;br&gt;(Jira Agent)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
           <mxGeometry x="830" y="220" width="30" height="50" as="geometry"/>
         </mxCell>
-        <mxCell id="t4_a_hypatia" value="Hemingway&lt;br&gt;(Doc Agent)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="t4_a_hemingway" value="Hemingway&lt;br&gt;(Doc Agent)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
           <mxGeometry x="830" y="340" width="30" height="50" as="geometry"/>
         </mxCell>
         <mxCell id="t4_a_brooks" value="Shackleton&lt;br&gt;(Planning)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#f8cecc;strokeColor=#b85450;" vertex="1" parent="1">
@@ -266,7 +266,7 @@
         <mxCell id="t4_e3" style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" source="t4_uc2" target="t4_a_drucker" parent="1">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
-        <mxCell id="t4_e4" style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" source="t4_uc3" target="t4_a_hypatia" parent="1">
+        <mxCell id="t4_e4" style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" source="t4_uc3" target="t4_a_hemingway" parent="1">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
         <mxCell id="t4_e5" style="endArrow=none;html=1;strokeColor=#b85450;" edge="1" source="t4_uc4" target="t4_a_brooks" parent="1">

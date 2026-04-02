@@ -20,7 +20,7 @@
 #
 # Profiles:
 #   default  — starts infrastructure + implemented agents (shannon, drucker,
-#              gantt, hypatia)
+#              gantt, hemingway)
 #   future   — reserved slots for agents not yet implemented; start
 #              explicitly: docker compose --profile future up josephine
 # ==========================================================================
@@ -127,7 +127,7 @@ services:
       - shannon
       - drucker
       - gantt
-      - hypatia
+      - hemingway
 
   # =========================================================================
   # Implemented agent services (started by default)
@@ -177,15 +177,15 @@ services:
       - config/env/jira.env
       - config/env/llm.env
 
-  hypatia:
+  hemingway:
     <<: *agent-base
-    container_name: hypatia
-    command: ["uvicorn", "agents.hypatia.api:app", "--host", "0.0.0.0", "--port", "8203"]
+    container_name: hemingway
+    command: ["uvicorn", "agents.hemingway.api:app", "--host", "0.0.0.0", "--port", "8203"]
     ports:
       - "8203:8203"
     environment:
       - PORT=8203
-      - AGENT_ID=hypatia
+      - AGENT_ID=hemingway
     env_file:
       - config/env/shared.env
       - config/env/llm.env

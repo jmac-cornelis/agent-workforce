@@ -118,7 +118,7 @@ agent_defaults:
     release_stage_transition:
       actor: requester
 
-  hypatia:
+  hemingway:
     jira_doc_bookkeeping:
       actor: service_account
     human_commitment_comment:

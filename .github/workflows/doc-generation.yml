@@ -1,11 +1,11 @@
-# GitHub Action: Hypatia Documentation Generation
+# GitHub Action: Hemingway Documentation Generation
 #
 # Copy this workflow to any repo that should get auto-generated docs.
-# Requires: HYPATIA_API_URL secret (optional — defaults to https://hypatia.cn-agents.com)
+# Requires: HEMINGWAY_API_URL secret (optional — defaults to https://hemingway.cn-agents.com)
 #
 # Flow:
-#   PR opened/updated → Hypatia generates docs → commits to PR branch →
-#   sets hypatia/documentation status to pending → posts full content in PR comment.
+#   PR opened/updated → Hemingway generates docs → commits to PR branch →
+#   sets hemingway/documentation status to pending → posts full content in PR comment.
 #   PR review approved → sets status to success → merge unblocked.
 
 name: Generate Documentation
@@ -38,14 +38,14 @@ jobs:
       - name: Submit doc generation job
         id: submit
         run: |
-          HYPATIA_URL="${{ secrets.HYPATIA_API_URL }}"
-          if [ -z "$HYPATIA_URL" ]; then
-            HYPATIA_URL="https://hypatia.cn-agents.com"
+          HEMINGWAY_URL="${{ secrets.HEMINGWAY_API_URL }}"
+          if [ -z "$HEMINGWAY_URL" ]; then
+            HEMINGWAY_URL="https://hemingway.cn-agents.com"
           fi
-          echo "hypatia_url=$HYPATIA_URL" >> "$GITHUB_OUTPUT"
+          echo "hemingway_url=$HEMINGWAY_URL" >> "$GITHUB_OUTPUT"
 
           RESPONSE=$(curl -sf -X POST \
-            "${HYPATIA_URL}/v1/docs/pr-review" \
+            "${HEMINGWAY_URL}/v1/docs/pr-review" \
             -H "Content-Type: application/json" \
             -d '{
               "repo": "${{ github.repository }}",
@@ -56,7 +56,7 @@ jobs:
             --max-time 30 \
             --retry 1 \
             2>/dev/null) || {
-            echo "::warning::Hypatia API unreachable"
+            echo "::warning::Hemingway API unreachable"
             echo "api_ok=false" >> "$GITHUB_OUTPUT"
             exit 0
           }
@@ -70,9 +70,9 @@ jobs:
         if: steps.submit.outputs.api_ok == 'true' && steps.submit.outputs.job_id != ''
         id: poll
         run: |
-          HYPATIA_URL="${{ steps.submit.outputs.hypatia_url }}"
+          HEMINGWAY_URL="${{ steps.submit.outputs.hemingway_url }}"
           JOB_ID="${{ steps.submit.outputs.job_id }}"
-          POLL_URL="${HYPATIA_URL}/v1/docs/pr-review/${JOB_ID}"
+          POLL_URL="${HEMINGWAY_URL}/v1/docs/pr-review/${JOB_ID}"
 
           for i in $(seq 1 60); do
             sleep 15
@@ -82,7 +82,7 @@ jobs:
             echo "Poll $i: status=$STATUS"
 
             if [ "$STATUS" = "completed" ] || [ "$STATUS" = "failed" ]; then
-              echo "$RESULT" > /tmp/hypatia_response.json
+              echo "$RESULT" > /tmp/hemingway_response.json
 
               OK=$(echo "$RESULT" | jq -r '.ok // false')
               DOC_COUNT=$(echo "$RESULT" | jq -r '.data.generated_docs | length // 0')
@@ -100,7 +100,7 @@ jobs:
             fi
           done
 
-          echo "::warning::Hypatia job timed out after 15 minutes"
+          echo "::warning::Hemingway job timed out after 15 minutes"
           echo "api_ok=false" >> "$GITHUB_OUTPUT"
           echo "done=true" >> "$GITHUB_OUTPUT"
 
@@ -114,7 +114,7 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const response = JSON.parse(fs.readFileSync('/tmp/hypatia_response.json', 'utf8'));
+            const response = JSON.parse(fs.readFileSync('/tmp/hemingway_response.json', 'utf8'));
             const data = response.data;
             const docCount = parseInt(process.env.DOC_COUNT, 10);
             const committed = process.env.COMMITTED === 'true';
@@ -123,7 +123,7 @@ jobs:
             let body;
 
             if (docCount === 0) {
-              body = '**Hypatia**: No documentation impact detected for this PR.';
+              body = '**Hemingway**: No documentation impact detected for this PR.';
             } else {
               const impactRows = (data.impact_details || []).map(d => {
                 const change = `${d.status} (+${d.additions}/-${d.deletions})`;
@@ -177,7 +177,7 @@ jobs:
                 docSections,
                 '',
                 '---',
-                '> **Review required**: The `hypatia/documentation` status check is pending.',
+                '> **Review required**: The `hemingway/documentation` status check is pending.',
                 '> Approve this PR to mark documentation as accepted and unblock merge.'
               ].join('\n');
             }
@@ -220,7 +220,7 @@ jobs:
           script: |
             const errorMsg = process.env.ERROR_MSG;
             const detail = errorMsg ? `: ${errorMsg}` : ' — API did not respond.';
-            const body = `**Hypatia**: Documentation generation unavailable${detail}`;
+            const body = `**Hemingway**: Documentation generation unavailable${detail}`;
             const { data: comments } = await github.rest.issues.listComments({
               issue_number: context.issue.number, owner: context.repo.owner,
               repo: context.repo.repo, per_page: 100
@@ -261,8 +261,8 @@ jobs:
               repo: context.repo.repo,
               sha: sha,
               state: 'success',
-              context: 'hypatia/documentation',
+              context: 'hemingway/documentation',
               description: 'Documentation reviewed and approved'
             });
 
-            core.notice(`Set hypatia/documentation status to success on ${sha.substring(0, 7)}`);
+            core.notice(`Set hemingway/documentation status to success on ${sha.substring(0, 7)}`);

@@ -27,4 +27,4 @@ You map internal Fuze build identities (FuzeID) to external customer-facing rele
 - Josephine supplies FuzeID and build metadata.
 - Hedy supplies release context and target scope.
 - Linnaeus consumes accepted mappings for traceability.
-- Hypatia may consume mappings for release notes and version tables.
+- Hemingway may consume mappings for release notes and version tables.

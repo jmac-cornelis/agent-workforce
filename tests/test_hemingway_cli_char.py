@@ -1,8 +1,8 @@
 ##########################################################################################
 #
-# Module: tests/test_hypatia_cli_char.py
+# Module: tests/test_hemingway_cli_char.py
 #
-# Description: Characterization tests for agents/hypatia/cli.py.
+# Description: Characterization tests for agents/hemingway/cli.py.
 #              Covers all three subcommands (cmd_generate, cmd_list, cmd_get)
 #              with monkeypatched agent and store stubs — no live API calls.
 #
@@ -15,7 +15,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from agents.hypatia.models import (
+from agents.hemingway.models import (
     DocumentationPatch,
     DocumentationRecord,
     PublicationRecord,
@@ -109,7 +109,7 @@ class _FakeReviewAgent:
         return len(session.items)
 
 
-class _FakeHypatiaAgent:
+class _FakeHemingwayAgent:
     '''Stub that returns a canned record + review session.'''
 
     def __init__(self, project_key=None, **kwargs):
@@ -148,20 +148,20 @@ class TestCmdGenerate:
     '''Tests for the generate subcommand.'''
 
     def _patch_agent(self, monkeypatch):
-        '''Monkeypatch HypatiaDocumentationAgent in the cli module's import target.'''
-        from agents.hypatia import agent as hypatia_agent_module
+        '''Monkeypatch HemingwayDocumentationAgent in the cli module's import target.'''
+        from agents.hemingway import agent as hemingway_agent_module
         monkeypatch.setattr(
-            hypatia_agent_module,
-            'HypatiaDocumentationAgent',
-            _FakeHypatiaAgent,
+            hemingway_agent_module,
+            'HemingwayDocumentationAgent',
+            _FakeHemingwayAgent,
         )
 
     def test_generate_dry_run_writes_artifacts(self, monkeypatch, tmp_path):
         '''Dry-run generate writes record JSON, markdown, and review files.'''
         self._patch_agent(monkeypatch)
-        monkeypatch.setenv('HYPATIA_DOC_DIR', str(tmp_path / 'store'))
+        monkeypatch.setenv('HEMINGWAY_DOC_DIR', str(tmp_path / 'store'))
 
-        from agents.hypatia.cli import cmd_generate
+        from agents.hemingway.cli import cmd_generate
 
         args = _base_generate_args(tmp_path)
 
@@ -184,9 +184,9 @@ class TestCmdGenerate:
     ):
         '''--execute path approves, publishes, and writes publications file.'''
         self._patch_agent(monkeypatch)
-        monkeypatch.setenv('HYPATIA_DOC_DIR', str(tmp_path / 'store'))
+        monkeypatch.setenv('HEMINGWAY_DOC_DIR', str(tmp_path / 'store'))
 
-        from agents.hypatia.cli import cmd_generate
+        from agents.hemingway.cli import cmd_generate
 
         args = _base_generate_args(tmp_path, execute=True)
 
@@ -204,9 +204,9 @@ class TestCmdGenerate:
     def test_generate_json_output(self, monkeypatch, tmp_path, capsys):
         '''--json flag produces structured JSON summary to stdout.'''
         self._patch_agent(monkeypatch)
-        monkeypatch.setenv('HYPATIA_DOC_DIR', str(tmp_path / 'store'))
+        monkeypatch.setenv('HEMINGWAY_DOC_DIR', str(tmp_path / 'store'))
 
-        from agents.hypatia.cli import cmd_generate
+        from agents.hemingway.cli import cmd_generate
 
         args = _base_generate_args(tmp_path, json=True)
 
@@ -230,9 +230,9 @@ class TestCmdGenerate:
         self, monkeypatch, tmp_path,
     ):
         '''--execute with invalid validation exits 1 and refuses to publish.'''
-        from agents.hypatia import agent as hypatia_agent_module
+        from agents.hemingway import agent as hemingway_agent_module
 
-        class _BlockedAgent(_FakeHypatiaAgent):
+        class _BlockedAgent(_FakeHemingwayAgent):
             def plan_documentation(self, request):
                 record = _make_record()
                 record.validation = {'valid': False, 'blocking_issues': ['missing refs']}
@@ -240,13 +240,13 @@ class TestCmdGenerate:
                 return record, session
 
         monkeypatch.setattr(
-            hypatia_agent_module,
-            'HypatiaDocumentationAgent',
+            hemingway_agent_module,
+            'HemingwayDocumentationAgent',
             _BlockedAgent,
         )
-        monkeypatch.setenv('HYPATIA_DOC_DIR', str(tmp_path / 'store'))
+        monkeypatch.setenv('HEMINGWAY_DOC_DIR', str(tmp_path / 'store'))
 
-        from agents.hypatia.cli import cmd_generate
+        from agents.hemingway.cli import cmd_generate
 
         args = _base_generate_args(tmp_path, execute=True)
 
@@ -260,9 +260,9 @@ class TestCmdGenerate:
         self, monkeypatch, tmp_path, capsys,
     ):
         '''--execute + --json with invalid validation emits error JSON and exits 1.'''
-        from agents.hypatia import agent as hypatia_agent_module
+        from agents.hemingway import agent as hemingway_agent_module
 
-        class _BlockedAgent(_FakeHypatiaAgent):
+        class _BlockedAgent(_FakeHemingwayAgent):
             def plan_documentation(self, request):
                 record = _make_record()
                 record.validation = {'valid': False, 'blocking_issues': ['missing refs']}
@@ -270,13 +270,13 @@ class TestCmdGenerate:
                 return record, session
 
         monkeypatch.setattr(
-            hypatia_agent_module,
-            'HypatiaDocumentationAgent',
+            hemingway_agent_module,
+            'HemingwayDocumentationAgent',
             _BlockedAgent,
         )
-        monkeypatch.setenv('HYPATIA_DOC_DIR', str(tmp_path / 'store'))
+        monkeypatch.setenv('HEMINGWAY_DOC_DIR', str(tmp_path / 'store'))
 
-        from agents.hypatia.cli import cmd_generate
+        from agents.hemingway.cli import cmd_generate
 
         args = _base_generate_args(tmp_path, execute=True, json=True)
 
@@ -300,7 +300,7 @@ class TestCmdList:
 
     def test_list_returns_records(self, monkeypatch, capsys):
         '''cmd_list prints tabular output for stored records.'''
-        from agents.hypatia.state import record_store as rs_module
+        from agents.hemingway.state import record_store as rs_module
 
         class _FakeStore:
             def __init__(self, **kwargs):
@@ -324,9 +324,9 @@ class TestCmdList:
                     },
                 ]
 
-        monkeypatch.setattr(rs_module, 'HypatiaRecordStore', _FakeStore)
+        monkeypatch.setattr(rs_module, 'HemingwayRecordStore', _FakeStore)
 
-        from agents.hypatia.cli import cmd_list
+        from agents.hemingway.cli import cmd_list
 
         args = SimpleNamespace(project=None, limit=20, json=False)
 
@@ -342,7 +342,7 @@ class TestCmdList:
 
     def test_list_json_output(self, monkeypatch, capsys):
         '''cmd_list --json emits structured JSON with count.'''
-        from agents.hypatia.state import record_store as rs_module
+        from agents.hemingway.state import record_store as rs_module
 
         class _FakeStore:
             def __init__(self, **kwargs):
@@ -359,9 +359,9 @@ class TestCmdList:
                     },
                 ]
 
-        monkeypatch.setattr(rs_module, 'HypatiaRecordStore', _FakeStore)
+        monkeypatch.setattr(rs_module, 'HemingwayRecordStore', _FakeStore)
 
-        from agents.hypatia.cli import cmd_list
+        from agents.hemingway.cli import cmd_list
 
         args = SimpleNamespace(project=None, limit=20, json=True)
 
@@ -377,7 +377,7 @@ class TestCmdList:
 
     def test_list_empty_records(self, monkeypatch, capsys):
         '''cmd_list with no stored records prints informational message.'''
-        from agents.hypatia.state import record_store as rs_module
+        from agents.hemingway.state import record_store as rs_module
 
         class _FakeStore:
             def __init__(self, **kwargs):
@@ -386,9 +386,9 @@ class TestCmdList:
             def list_records(self, **kwargs):
                 return []
 
-        monkeypatch.setattr(rs_module, 'HypatiaRecordStore', _FakeStore)
+        monkeypatch.setattr(rs_module, 'HemingwayRecordStore', _FakeStore)
 
-        from agents.hypatia.cli import cmd_list
+        from agents.hemingway.cli import cmd_list
 
         args = SimpleNamespace(project=None, limit=20, json=False)
 
@@ -402,7 +402,7 @@ class TestCmdList:
 
     def test_list_project_filter(self, monkeypatch, capsys):
         '''cmd_list --project filters records by project_key.'''
-        from agents.hypatia.state import record_store as rs_module
+        from agents.hemingway.state import record_store as rs_module
 
         class _FakeStore:
             def __init__(self, **kwargs):
@@ -426,9 +426,9 @@ class TestCmdList:
                     },
                 ]
 
-        monkeypatch.setattr(rs_module, 'HypatiaRecordStore', _FakeStore)
+        monkeypatch.setattr(rs_module, 'HemingwayRecordStore', _FakeStore)
 
-        from agents.hypatia.cli import cmd_list
+        from agents.hemingway.cli import cmd_list
 
         args = SimpleNamespace(project='STL', limit=20, json=True)
 
@@ -452,7 +452,7 @@ class TestCmdGet:
 
     def test_get_returns_record(self, monkeypatch, capsys):
         '''cmd_get prints summary markdown for an existing record.'''
-        from agents.hypatia.state import record_store as rs_module
+        from agents.hemingway.state import record_store as rs_module
 
         class _FakeStore:
             def __init__(self, **kwargs):
@@ -470,9 +470,9 @@ class TestCmdGet:
                     'summary': {'doc_id': doc_id},
                 }
 
-        monkeypatch.setattr(rs_module, 'HypatiaRecordStore', _FakeStore)
+        monkeypatch.setattr(rs_module, 'HemingwayRecordStore', _FakeStore)
 
-        from agents.hypatia.cli import cmd_get
+        from agents.hemingway.cli import cmd_get
 
         args = SimpleNamespace(
             doc_id='doc-001', project=None, output=None, json=False,
@@ -489,7 +489,7 @@ class TestCmdGet:
 
     def test_get_not_found_exits_1(self, monkeypatch, capsys):
         '''cmd_get with unknown doc_id exits 1 with error message.'''
-        from agents.hypatia.state import record_store as rs_module
+        from agents.hemingway.state import record_store as rs_module
 
         class _FakeStore:
             def __init__(self, **kwargs):
@@ -498,9 +498,9 @@ class TestCmdGet:
             def get_record(self, doc_id):
                 return None
 
-        monkeypatch.setattr(rs_module, 'HypatiaRecordStore', _FakeStore)
+        monkeypatch.setattr(rs_module, 'HemingwayRecordStore', _FakeStore)
 
-        from agents.hypatia.cli import cmd_get
+        from agents.hemingway.cli import cmd_get
 
         args = SimpleNamespace(
             doc_id='nonexistent', project=None, output=None, json=False,
@@ -516,7 +516,7 @@ class TestCmdGet:
 
     def test_get_json_output(self, monkeypatch, capsys):
         '''cmd_get --json emits the record dict as JSON.'''
-        from agents.hypatia.state import record_store as rs_module
+        from agents.hemingway.state import record_store as rs_module
 
         class _FakeStore:
             def __init__(self, **kwargs):
@@ -534,9 +534,9 @@ class TestCmdGet:
                     'summary': {'doc_id': doc_id},
                 }
 
-        monkeypatch.setattr(rs_module, 'HypatiaRecordStore', _FakeStore)
+        monkeypatch.setattr(rs_module, 'HemingwayRecordStore', _FakeStore)
 
-        from agents.hypatia.cli import cmd_get
+        from agents.hemingway.cli import cmd_get
 
         args = SimpleNamespace(
             doc_id='doc-json', project=None, output=None, json=True,
@@ -554,7 +554,7 @@ class TestCmdGet:
 
     def test_get_export_to_file(self, monkeypatch, tmp_path):
         '''cmd_get --output exports the record JSON to a file.'''
-        from agents.hypatia.state import record_store as rs_module
+        from agents.hemingway.state import record_store as rs_module
 
         class _FakeStore:
             def __init__(self, **kwargs):
@@ -572,9 +572,9 @@ class TestCmdGet:
                     'summary': {'doc_id': doc_id},
                 }
 
-        monkeypatch.setattr(rs_module, 'HypatiaRecordStore', _FakeStore)
+        monkeypatch.setattr(rs_module, 'HemingwayRecordStore', _FakeStore)
 
-        from agents.hypatia.cli import cmd_get
+        from agents.hemingway.cli import cmd_get
 
         output_file = tmp_path / 'exported.json'
         args = SimpleNamespace(
@@ -593,7 +593,7 @@ class TestCmdGet:
 
     def test_get_project_mismatch_exits_1(self, monkeypatch, capsys):
         '''cmd_get --project with mismatched project_key exits 1.'''
-        from agents.hypatia.state import record_store as rs_module
+        from agents.hemingway.state import record_store as rs_module
 
         class _FakeStore:
             def __init__(self, **kwargs):
@@ -611,9 +611,9 @@ class TestCmdGet:
                     'summary': {'doc_id': doc_id},
                 }
 
-        monkeypatch.setattr(rs_module, 'HypatiaRecordStore', _FakeStore)
+        monkeypatch.setattr(rs_module, 'HemingwayRecordStore', _FakeStore)
 
-        from agents.hypatia.cli import cmd_get
+        from agents.hemingway.cli import cmd_get
 
         args = SimpleNamespace(
             doc_id='doc-wrong', project='STL', output=None, json=False,

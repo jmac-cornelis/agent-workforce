@@ -1,8 +1,8 @@
 ##########
-# Module:      test_hypatia_api_char.py
-# Description: Characterization tests for the Hypatia Documentation Agent REST API.
+# Module:      test_hemingway_api_char.py
+# Description: Characterization tests for the Hemingway Documentation Agent REST API.
 #              Covers health, status, record retrieval, documentation generation,
-#              impact detection, and publication endpoints in agents/hypatia/api.py.
+#              impact detection, and publication endpoints in agents/hemingway/api.py.
 # Author:      Cornelis Networks Engineering Tools
 ##########
 
@@ -106,7 +106,7 @@ def _fake_publication_record(**overrides):
 
 @pytest.fixture
 def mock_record_store():
-    '''Provide a MagicMock standing in for HypatiaRecordStore.'''
+    '''Provide a MagicMock standing in for HemingwayRecordStore.'''
     return MagicMock()
 
 
@@ -115,14 +115,14 @@ def client(monkeypatch, mock_record_store):
     '''
     Create a Starlette TestClient with record_store and agent stubbed out.
 
-    We monkeypatch the module-level record_store in agents.hypatia.api so
+    We monkeypatch the module-level record_store in agents.hemingway.api so
     every endpoint uses our mock.  DRY_RUN defaults to '1' for safety.
     '''
     # Ensure DRY_RUN defaults to '1' unless a test overrides it
     monkeypatch.setenv('DRY_RUN', '1')
 
     # Import after env is set so load_env() picks up our value
-    import agents.hypatia.api as api_mod
+    import agents.hemingway.api as api_mod
     monkeypatch.setattr(api_mod, 'record_store', mock_record_store)
 
     # Reset session counters so tests are isolated
@@ -148,7 +148,7 @@ class TestHealth:
         resp = client.get('/v1/health')
         assert resp.status_code == 200
         body = resp.json()
-        assert body['service'] == 'hypatia'
+        assert body['service'] == 'hemingway'
         assert body['ok'] is True
 
 
@@ -296,7 +296,7 @@ class TestDocsGenerate:
 
         # Patch the agent constructor to return our mock
         monkeypatch.setattr(
-            'agents.hypatia.api.HypatiaDocumentationAgent',
+            'agents.hemingway.api.HemingwayDocumentationAgent',
             lambda **kwargs: mock_agent,
         )
 
@@ -321,7 +321,7 @@ class TestDocsGenerate:
         mock_agent.plan_documentation.side_effect = RuntimeError('LLM unavailable')
 
         monkeypatch.setattr(
-            'agents.hypatia.api.HypatiaDocumentationAgent',
+            'agents.hemingway.api.HemingwayDocumentationAgent',
             lambda **kwargs: mock_agent,
         )
 
@@ -350,7 +350,7 @@ class TestDocsImpact:
         mock_agent.detect_documentation_impact.return_value = fake_impact
 
         monkeypatch.setattr(
-            'agents.hypatia.api.HypatiaDocumentationAgent',
+            'agents.hemingway.api.HemingwayDocumentationAgent',
             lambda **kwargs: mock_agent,
         )
 
@@ -445,7 +445,7 @@ class TestDocsPublish:
         mock_agent.publish_approved.return_value = [fake_pub]
 
         monkeypatch.setattr(
-            'agents.hypatia.api.HypatiaDocumentationAgent',
+            'agents.hemingway.api.HemingwayDocumentationAgent',
             lambda **kwargs: mock_agent,
         )
         mock_record_store.record_publications.return_value = None

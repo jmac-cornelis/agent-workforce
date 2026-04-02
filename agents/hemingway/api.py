@@ -1,8 +1,8 @@
 ##########################################################################################
 #
-# Module: agents/hypatia/api.py
+# Module: agents/hemingway/api.py
 #
-# Description: Hypatia Documentation Agent REST API.
+# Description: Hemingway Documentation Agent REST API.
 #              FastAPI service exposing documentation generation, impact analysis,
 #              record retrieval, and review-gated publication.
 #
@@ -28,15 +28,15 @@ load_env()
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 
-from agents.hypatia.agent import HypatiaDocumentationAgent
-from agents.hypatia.models import (
+from agents.hemingway.agent import HemingwayDocumentationAgent
+from agents.hemingway.models import (
     DOC_TYPES,
     DocumentationImpactRecord,
     DocumentationRecord,
     DocumentationRequest,
     PublicationRecord,
 )
-from agents.hypatia.state.record_store import HypatiaRecordStore
+from agents.hemingway.state.record_store import HemingwayRecordStore
 
 import re
 
@@ -56,7 +56,7 @@ def _parse_confluence_url(url: str) -> Dict[str, str]:
         return {'space': m.group(1), 'page_id': m.group(2)}
     return {}
 
-record_store = HypatiaRecordStore()
+record_store = HemingwayRecordStore()
 
 _run_count = 0
 _total_docs_generated = 0
@@ -148,8 +148,8 @@ class ConfluencePublishPageRequest(BaseModel):
 # ---------------------------------------------------------------------------
 
 def create_app() -> FastAPI:
-    '''Build and return the Hypatia FastAPI application.'''
-    app = FastAPI(title='Hypatia Documentation Agent API', version='1.0.0')
+    '''Build and return the Hemingway FastAPI application.'''
+    app = FastAPI(title='Hemingway Documentation Agent API', version='1.0.0')
 
     # ------------------------------------------------------------------
     # Health & status endpoints (match Shannon expected contract)
@@ -157,7 +157,7 @@ def create_app() -> FastAPI:
 
     @app.get('/v1/health')
     def health() -> Dict[str, Any]:
-        return {'service': 'hypatia', 'ok': True}
+        return {'service': 'hemingway', 'ok': True}
 
     @app.get('/v1/status/stats')
     def status_stats() -> Dict[str, Any]:
@@ -210,7 +210,7 @@ def create_app() -> FastAPI:
                 'llm_enabled': True,
                 'token_usage_today': 0,
                 'token_usage_cumulative': 0,
-                'notes': 'Hypatia uses LLM for content generation; token tracking is placeholder.',
+                'notes': 'Hemingway uses LLM for content generation; token tracking is placeholder.',
             },
         }
 
@@ -304,12 +304,12 @@ def create_app() -> FastAPI:
                 },
             }
 
-        agent = HypatiaDocumentationAgent(project_key=body.project_key)
+        agent = HemingwayDocumentationAgent(project_key=body.project_key)
 
         try:
             record, review_session = agent.plan_documentation(request)
         except Exception as e:
-            log.error(f'Hypatia documentation generation failed: {e}')
+            log.error(f'Hemingway documentation generation failed: {e}')
             return {'ok': False, 'error': str(e)}
 
         save_result = None
@@ -388,12 +388,12 @@ def create_app() -> FastAPI:
             confluence_page=body.confluence_page,
         )
 
-        agent = HypatiaDocumentationAgent(project_key=body.project_key)
+        agent = HemingwayDocumentationAgent(project_key=body.project_key)
 
         try:
             impact = agent.detect_documentation_impact(request)
         except Exception as e:
-            log.error(f'Hypatia impact detection failed: {e}')
+            log.error(f'Hemingway impact detection failed: {e}')
             return {'ok': False, 'error': str(e)}
 
         _run_count += 1
@@ -443,7 +443,7 @@ def create_app() -> FastAPI:
                 },
             }
 
-        agent = HypatiaDocumentationAgent(project_key=body.project_key)
+        agent = HemingwayDocumentationAgent(project_key=body.project_key)
         record_data = stored.get('record', {})
         record = DocumentationRecord(
             title=record_data.get('title', ''),
@@ -468,7 +468,7 @@ def create_app() -> FastAPI:
         try:
             publications = agent.publish_approved(review_session)
         except Exception as e:
-            log.error(f'Hypatia publication failed: {e}')
+            log.error(f'Hemingway publication failed: {e}')
             return {'ok': False, 'error': str(e)}
 
         record_store.record_publications(
@@ -708,15 +708,15 @@ def create_app() -> FastAPI:
                 pr_number=body.pr_number,
             )
 
-            agent = HypatiaDocumentationAgent()
+            agent = HemingwayDocumentationAgent()
             try:
                 result = agent.run(doc_request)
             except Exception as exc:
-                log.error(f'Hypatia agent run failed for {module_dir}: {exc}')
+                log.error(f'Hemingway agent run failed for {module_dir}: {exc}')
                 continue
 
             if not result.success:
-                log.warning(f'Hypatia agent returned error for {module_dir}: {result.error}')
+                log.warning(f'Hemingway agent returned error for {module_dir}: {result.error}')
                 continue
 
             doc_record_dict = (result.metadata or {}).get('documentation_record', {})
@@ -765,7 +765,7 @@ def create_app() -> FastAPI:
                     if record_id:
                         record_ids.append(record_id)
                 except Exception as exc:
-                    log.warning(f'Failed to save Hypatia record for {fname}: {exc}')
+                    log.warning(f'Failed to save Hemingway record for {fname}: {exc}')
 
         # --- Phase 2 only: commit generated files to PR branch ---
         commit_sha: Optional[str] = None
@@ -791,7 +791,7 @@ def create_app() -> FastAPI:
                 try:
                     github_utils.post_commit_status(
                         body.repo, commit_sha, 'pending',
-                        context='hypatia/documentation',
+                        context='hemingway/documentation',
                         description=f'{len(all_generated)} doc(s) generated — review required',
                     )
                 except Exception as exc:
@@ -1017,9 +1017,9 @@ app = create_app()
 
 def run() -> None:
     import uvicorn
-    host = str(os.getenv('HYPATIA_HOST', '0.0.0.0') or '0.0.0.0').strip()
-    port = int(os.getenv('HYPATIA_PORT', '8203') or '8203')
-    uvicorn.run('agents.hypatia.api:app', host=host, port=port, log_level='info')
+    host = str(os.getenv('HEMINGWAY_HOST', '0.0.0.0') or '0.0.0.0').strip()
+    port = int(os.getenv('HEMINGWAY_PORT', '8203') or '8203')
+    uvicorn.run('agents.hemingway.api:app', host=host, port=port, log_level='info')
 
 
 if __name__ == '__main__':

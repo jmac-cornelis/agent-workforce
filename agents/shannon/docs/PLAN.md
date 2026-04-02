@@ -265,7 +265,7 @@ Exit criteria:
 - Approval status query API (`/v1/bot/approvals/{id}`)
 
 Exit criteria:
-- Hedy, Linus, Linnaeus, and Hypatia can request human approvals via the Bot API
+- Hedy, Linus, Linnaeus, and Hemingway can request human approvals via the Bot API
 - Users can approve/reject via Adaptive Card buttons with identity verification
 - Timeouts trigger escalation with @mentions
 - All approval actions are audited with user identity

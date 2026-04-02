@@ -12,12 +12,12 @@ Herodotus should not become a generic chatbot for meetings. It should produce du
 - generate structured technical summaries
 - extract decisions, action items, open questions, and follow-up candidates
 - publish durable meeting summary records to an internal knowledge store
-- emit structured signals that Drucker, Gantt, Brooks, Hypatia, and humans can consume
+- emit structured signals that Drucker, Gantt, Brooks, Hemingway, and humans can consume
 
 ### Non-goals for v1
 - replacing Jira as the action-tracking system of record
 - replacing Drucker as the Jira workflow owner
-- replacing Hypatia as the documentation owner
+- replacing Hemingway as the documentation owner
 - automatic ticket creation without approval
 - summarizing meetings with no transcript or authorized access path
 
@@ -26,7 +26,7 @@ Herodotus should not become a generic chatbot for meetings. It should produce du
 - Herodotus preserves meeting knowledge and intent
 - Drucker may consume action-item suggestions for Jira follow-up
 - Gantt and Brooks may consume decisions and blockers as planning or delivery evidence
-- Hypatia may consume meeting-derived clarification or documentation suggestions
+- Hemingway may consume meeting-derived clarification or documentation suggestions
 
 
 ## Triggering model
@@ -89,7 +89,7 @@ sequenceDiagram
     participant H as Herodotus
     participant E as Engineer
     participant D as Drucker
-    participant Hy as Hypatia
+    participant Hy as Hemingway
     H->>E: Post action drafts (Teams)
     E-->>H: Accept / reject items
     H->>D: Suggest Jira follow-ups
@@ -133,7 +133,7 @@ Recommended options:
 ### Secondary outputs
 Herodotus may also emit:
 - Jira follow-up suggestions for Drucker or humans
-- documentation-update suggestions for Hypatia
+- documentation-update suggestions for Hemingway
 - delivery/planning signals for Brooks and Gantt
 
 ### Publication rules
@@ -194,9 +194,9 @@ Action items should include:
 - Herodotus provides structured signals about commitments, blockers, and decisions
 - Gantt and Brooks decide whether those signals affect planning or delivery views
 
-### With Hypatia
+### With Hemingway
 - Herodotus provides documentation-update suggestions and context excerpts
-- Hypatia decides what becomes durable product or engineering documentation
+- Hemingway decides what becomes durable product or engineering documentation
 
 ### With Linnaeus
 - Herodotus may emit references to issues, builds, tests, or releases mentioned in meetings
@@ -343,7 +343,7 @@ Exit criteria:
 
 ### Phase 3. Controlled publishing
 - publish approved summaries to one canonical internal destination
-- emit downstream suggestion events for Drucker, Gantt, Brooks, or Hypatia
+- emit downstream suggestion events for Drucker, Gantt, Brooks, or Hemingway
 
 Exit criteria:
 - one internal team can rely on published meeting summaries

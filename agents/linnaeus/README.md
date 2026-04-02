@@ -32,7 +32,7 @@ Linnaeus is not a vague reporting layer. It is the system that establishes and s
 | Hedy | Receives release-state transitions |
 | Babbage | Receives version mapping records |
 | Drucker | Receives Jira issue state |
-| Hypatia | Provides traceability context for documentation |
+| Hemingway | Provides traceability context for documentation |
 
 ## Zone
 

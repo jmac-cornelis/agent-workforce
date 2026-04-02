@@ -755,9 +755,9 @@ def build_dry_run_preview_card(
     }
 
 
-def build_hypatia_pr_review_card(data: Dict[str, Any]) -> Dict[str, Any]:
+def build_hemingway_pr_review_card(data: Dict[str, Any]) -> Dict[str, Any]:
     '''
-    Build an Adaptive Card for a Hypatia /pr-review response.
+    Build an Adaptive Card for a Hemingway /pr-review response.
     '''
     repo = data.get('repo', '')
     pr_number = data.get('pr_number', '')
@@ -768,7 +768,7 @@ def build_hypatia_pr_review_card(data: Dict[str, Any]) -> Dict[str, Any]:
     commit_sha = data.get('commit_sha', '')
     dry_run = data.get('dry_run', False)
 
-    card_title = f'Hypatia PR Review — {repo} #{pr_number}'
+    card_title = f'Hemingway PR Review — {repo} #{pr_number}'
     if dry_run:
         card_title += ' (Dry-Run)'
 
@@ -813,9 +813,9 @@ def build_hypatia_pr_review_card(data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
-def build_hypatia_doc_card(data: Dict[str, Any]) -> Dict[str, Any]:
+def build_hemingway_doc_card(data: Dict[str, Any]) -> Dict[str, Any]:
     '''
-    Build an Adaptive Card for a Hypatia /generate-doc response.
+    Build an Adaptive Card for a Hemingway /generate-doc response.
     '''
     doc_id = data.get('doc_id', '')
     title = data.get('title', '')
@@ -850,16 +850,16 @@ def build_hypatia_doc_card(data: Dict[str, Any]) -> Dict[str, Any]:
         body_lines.append(f'**Preview:** {preview}')
 
     return build_fact_card(
-        title=f'Hypatia Doc — {title}',
+        title=f'Hemingway Doc — {title}',
         subtitle=f'{created_at} | {doc_id}',
         facts=facts,
         body_lines=body_lines,
     )
 
 
-def build_hypatia_impact_card(data: Dict[str, Any]) -> Dict[str, Any]:
+def build_hemingway_impact_card(data: Dict[str, Any]) -> Dict[str, Any]:
     '''
-    Build an Adaptive Card for a Hypatia /impact-detect response.
+    Build an Adaptive Card for a Hemingway /impact-detect response.
     '''
     impact_id = data.get('impact_id', '')
     title = data.get('title', '')
@@ -898,16 +898,16 @@ def build_hypatia_impact_card(data: Dict[str, Any]) -> Dict[str, Any]:
         body_lines.append('No impact detected.')
 
     return build_fact_card(
-        title=f'Hypatia Impact — {title}',
+        title=f'Hemingway Impact — {title}',
         subtitle=impact_id or None,
         facts=facts,
         body_lines=body_lines,
     )
 
 
-def build_hypatia_records_card(data: Dict[str, Any]) -> Dict[str, Any]:
+def build_hemingway_records_card(data: Dict[str, Any]) -> Dict[str, Any]:
     '''
-    Build an Adaptive Card for a Hypatia /doc-records or /doc-record response.
+    Build an Adaptive Card for a Hemingway /doc-records or /doc-record response.
     '''
     records = data.get('records', [])
     total = data.get('total', len(records))
@@ -931,15 +931,15 @@ def build_hypatia_records_card(data: Dict[str, Any]) -> Dict[str, Any]:
         body_lines.append('No documentation records found.')
 
     return build_fact_card(
-        title='Hypatia Documentation Records',
+        title='Hemingway Documentation Records',
         facts=facts,
         body_lines=body_lines,
     )
 
 
-def build_hypatia_search_card(data: Dict[str, Any]) -> Dict[str, Any]:
+def build_hemingway_search_card(data: Dict[str, Any]) -> Dict[str, Any]:
     '''
-    Build an Adaptive Card for a Hypatia /search-docs response.
+    Build an Adaptive Card for a Hemingway /search-docs response.
     '''
     results = data.get('results', [])
     count = data.get('count', len(results))
@@ -995,9 +995,9 @@ def build_hypatia_search_card(data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
-def build_hypatia_publication_card(data: Dict[str, Any]) -> Dict[str, Any]:
+def build_hemingway_publication_card(data: Dict[str, Any]) -> Dict[str, Any]:
     '''
-    Build an Adaptive Card for a Hypatia /publish-doc response.
+    Build an Adaptive Card for a Hemingway /publish-doc response.
     '''
     doc_id = data.get('doc_id', '')
     title = data.get('title', '')
@@ -1020,16 +1020,16 @@ def build_hypatia_publication_card(data: Dict[str, Any]) -> Dict[str, Any]:
         body_lines.append('No publication results.')
 
     return build_fact_card(
-        title=f'Hypatia Publication — {title}',
+        title=f'Hemingway Publication — {title}',
         subtitle=doc_id or None,
         facts=facts,
         body_lines=body_lines,
     )
 
 
-def build_hypatia_confluence_publish_card(data: Dict[str, Any]) -> Dict[str, Any]:
+def build_hemingway_confluence_publish_card(data: Dict[str, Any]) -> Dict[str, Any]:
     '''
-    Build an Adaptive Card for a Hypatia /confluence-publish response.
+    Build an Adaptive Card for a Hemingway /confluence-publish response.
     '''
     dry_run = data.get('dry_run', False)
     page_id = data.get('page_id', '')
