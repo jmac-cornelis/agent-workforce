@@ -2,11 +2,12 @@
 # Module:      test_hypatia_pr_review_char.py
 # Description: Characterization tests for the Hypatia POST /v1/docs/pr-review endpoint.
 #              Covers input validation, dry-run, doc-relevant filtering, agent run,
-#              batch commit, and record persistence.
+#              batch commit, and record persistence. Updated for async job pattern.
 # Author:      Cornelis Networks Engineering Tools
 ##########
 
 import sys
+import time
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
@@ -56,6 +57,30 @@ def client(mock_github_utils, monkeypatch):
     return TestClient(app)
 
 
+def _submit_and_poll(client, payload, max_wait=5.0):
+    '''Submit a pr-review job and poll until completion.'''
+    resp = client.post('/v1/docs/pr-review', json=payload)
+    assert resp.status_code == 200
+    submit_body = resp.json()
+    assert submit_body.get('ok') is True
+    job_id = submit_body.get('job_id')
+    assert job_id
+
+    poll_url = f'/v1/docs/pr-review/{job_id}'
+    deadline = time.time() + max_wait
+    while time.time() < deadline:
+        poll_resp = client.get(poll_url)
+        assert poll_resp.status_code == 200
+        poll_body = poll_resp.json()
+        if poll_body.get('status') in ('completed', 'failed'):
+            return poll_body
+        time.sleep(0.05)
+
+    # Final attempt
+    poll_resp = client.get(poll_url)
+    return poll_resp.json()
+
+
 def _make_changed_files(*filenames):
     '''Return a list of filename strings.
 
@@ -68,22 +93,20 @@ def _make_changed_files(*filenames):
 class TestPRReviewValidation:
 
     def test_pr_review_validates_repo_format(self, client, mock_github_utils):
-        resp = client.post(
-            '/v1/docs/pr-review',
-            json={'repo': 'no-slash', 'pr_number': 1},
+        body = _submit_and_poll(
+            client,
+            {'repo': 'no-slash', 'pr_number': 1},
         )
-        body = resp.json()
         assert body['ok'] is False
-        assert 'owner/repo' in body['error']
+        assert 'owner/repo' in body.get('error', '')
 
     def test_pr_review_validates_pr_number(self, client, mock_github_utils):
-        resp = client.post(
-            '/v1/docs/pr-review',
-            json={'repo': 'org/repo', 'pr_number': 0},
+        body = _submit_and_poll(
+            client,
+            {'repo': 'org/repo', 'pr_number': 0},
         )
-        body = resp.json()
         assert body['ok'] is False
-        assert 'positive' in body['error']
+        assert 'positive' in body.get('error', '')
 
 
 class TestPRReviewDryRun:
@@ -103,13 +126,11 @@ class TestPRReviewDryRun:
             'src/main.py', 'docs/guide.md',
         )
 
-        resp = dry_client.post(
-            '/v1/docs/pr-review',
-            json={'repo': 'org/repo', 'pr_number': 5, 'dry_run': True},
+        body = _submit_and_poll(
+            dry_client,
+            {'repo': 'org/repo', 'pr_number': 5, 'dry_run': True},
         )
 
-        assert resp.status_code == 200
-        body = resp.json()
         assert body['ok'] is True
         data = body['data']
         assert data['dry_run'] is True
@@ -125,13 +146,11 @@ class TestPRReviewFiltering:
             'build/output.o', 'dist/app.bin', 'image.png',
         )
 
-        resp = client.post(
-            '/v1/docs/pr-review',
-            json={'repo': 'org/repo', 'pr_number': 3},
+        body = _submit_and_poll(
+            client,
+            {'repo': 'org/repo', 'pr_number': 3},
         )
 
-        assert resp.status_code == 200
-        body = resp.json()
         assert body['ok'] is True
         data = body['data']
         assert data['files_generated'] == []
@@ -157,28 +176,26 @@ class TestPRReviewGitHubErrors:
         app = create_app()
         err_client = TestClient(app)
 
-        resp = err_client.post(
-            '/v1/docs/pr-review',
-            json={'repo': 'org/repo', 'pr_number': 1},
+        body = _submit_and_poll(
+            err_client,
+            {'repo': 'org/repo', 'pr_number': 1},
         )
 
-        body = resp.json()
         assert body['ok'] is False
-        assert 'not available' in body['error']
+        assert 'not available' in body.get('error', '')
 
     def test_pr_review_github_api_error(self, client, mock_github_utils):
         mock_github_utils.get_pr_changed_files.side_effect = RuntimeError(
             'API rate limit exceeded'
         )
 
-        resp = client.post(
-            '/v1/docs/pr-review',
-            json={'repo': 'org/repo', 'pr_number': 10},
+        body = _submit_and_poll(
+            client,
+            {'repo': 'org/repo', 'pr_number': 10},
         )
 
-        body = resp.json()
         assert body['ok'] is False
-        assert 'GitHub API error' in body['error']
+        assert 'GitHub API error' in body.get('error', '')
 
 
 class TestPRReviewFullFlow:
@@ -192,7 +209,7 @@ class TestPRReviewFullFlow:
             'number': 42,
         }
         mock_github_utils.batch_commit_files.return_value = {
-            'sha': 'commit_sha_abc',
+            'commit_sha': 'commit_sha_abc',
             'file_count': 1,
         }
 
@@ -239,13 +256,11 @@ class TestPRReviewFullFlow:
             lambda **kw: mock_agent_instance,
         )
 
-        resp = client.post(
-            '/v1/docs/pr-review',
-            json={'repo': 'org/repo', 'pr_number': 42},
+        body = _submit_and_poll(
+            client,
+            {'repo': 'org/repo', 'pr_number': 42},
         )
 
-        assert resp.status_code == 200
-        body = resp.json()
         assert body['ok'] is True
         data = body['data']
         assert len(data['files_generated']) > 0
@@ -261,9 +276,9 @@ class TestPRReviewFullFlow:
             lambda **kw: mock_agent_instance,
         )
 
-        client.post(
-            '/v1/docs/pr-review',
-            json={'repo': 'org/repo', 'pr_number': 42},
+        _submit_and_poll(
+            client,
+            {'repo': 'org/repo', 'pr_number': 42},
         )
 
         mock_github_utils.batch_commit_files.assert_called_once()
@@ -281,9 +296,9 @@ class TestPRReviewFullFlow:
             lambda **kw: mock_agent_instance,
         )
 
-        client.post(
-            '/v1/docs/pr-review',
-            json={'repo': 'org/repo', 'pr_number': 42},
+        _submit_and_poll(
+            client,
+            {'repo': 'org/repo', 'pr_number': 42},
         )
 
         call_args = mock_github_utils.batch_commit_files.call_args
@@ -307,12 +322,12 @@ class TestPRReviewFullFlow:
             'agents.hypatia.api.record_store', mock_store,
         )
 
-        resp = client.post(
-            '/v1/docs/pr-review',
-            json={'repo': 'org/repo', 'pr_number': 42},
+        body = _submit_and_poll(
+            client,
+            {'repo': 'org/repo', 'pr_number': 42},
         )
 
-        assert resp.status_code == 200
+        assert body['ok'] is True
         mock_store.save_record.assert_called_once()
         saved_record = mock_store.save_record.call_args[0][0]
         assert saved_record.doc_id == 'hyp_001'

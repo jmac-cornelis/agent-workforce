@@ -98,6 +98,55 @@ def create_app() -> FastAPI:
     def health() -> Dict[str, Any]:
         return {'service': 'gantt', 'ok': True}
 
+    @app.get('/v1/info')
+    def info() -> Dict[str, Any]:
+        return {
+            'agent_id': 'gantt',
+            'name': 'Gantt Project Planner Agent',
+            'version': '1.0.0',
+            'description': (
+                'Planning snapshots and release-health monitoring for '
+                'Jira-backed delivery work. Deterministic-first with '
+                'optional LLM for roadmap gap analysis.'
+            ),
+            'capabilities': [
+                'Create planning snapshots from Jira backlogs',
+                'Release health monitoring with gap analysis and velocity tracking',
+                'Release execution surveys',
+                'Scheduled poller for automated snapshot/monitor cycles',
+            ],
+            'endpoints': [
+                {'method': 'GET', 'path': '/v1/health', 'description': 'Service liveness check'},
+                {'method': 'GET', 'path': '/v1/info', 'description': 'Agent identity and capabilities'},
+                {'method': 'GET', 'path': '/v1/status/stats', 'description': 'Snapshot and report counts'},
+                {'method': 'GET', 'path': '/v1/status/load', 'description': 'Current load state'},
+                {'method': 'GET', 'path': '/v1/status/work-summary', 'description': 'Activity generated today'},
+                {'method': 'GET', 'path': '/v1/status/tokens', 'description': 'LLM token usage'},
+                {'method': 'GET', 'path': '/v1/status/decisions', 'description': 'Recent planning records'},
+                {'method': 'GET', 'path': '/v1/status/decisions/{record_id}', 'description': 'Detail for one record'},
+                {'method': 'POST', 'path': '/v1/planning/snapshot', 'description': 'Create a planning snapshot'},
+                {'method': 'GET', 'path': '/v1/planning/snapshots', 'description': 'List stored snapshots'},
+                {'method': 'GET', 'path': '/v1/planning/snapshots/{snapshot_id}', 'description': 'Get a specific snapshot'},
+                {'method': 'POST', 'path': '/v1/release-monitor/run', 'description': 'Create a release monitor report'},
+                {'method': 'GET', 'path': '/v1/release-monitor/reports', 'description': 'List release monitor reports'},
+                {'method': 'GET', 'path': '/v1/release-monitor/report/{report_id}', 'description': 'Get a specific report'},
+                {'method': 'POST', 'path': '/v1/release-survey/run', 'description': 'Create a release execution survey'},
+                {'method': 'GET', 'path': '/v1/release-survey/reports', 'description': 'List release surveys'},
+                {'method': 'GET', 'path': '/v1/release-survey/report/{survey_id}', 'description': 'Get a specific survey'},
+                {'method': 'POST', 'path': '/v1/poller/tick', 'description': 'Scheduled poller entrypoint'},
+            ],
+            'shannon_commands': [
+                {'command': '/planning-snapshot', 'description': 'Create a planning snapshot'},
+                {'command': '/planning-snapshots', 'description': 'List stored planning snapshots'},
+                {'command': '/release-monitor', 'description': 'Create a release monitor report'},
+                {'command': '/release-survey', 'description': 'Create a release execution survey'},
+                {'command': '/release-report', 'description': 'Get a stored release monitor report'},
+                {'command': '/release-reports', 'description': 'List stored release monitor reports'},
+                {'command': '/release-survey-report', 'description': 'Get a stored release survey'},
+                {'command': '/release-survey-reports', 'description': 'List stored release surveys'},
+            ],
+        }
+
     @app.get('/v1/status/stats')
     def status_stats() -> Dict[str, Any]:
         snapshots = snapshot_store.list_snapshots(limit=200)

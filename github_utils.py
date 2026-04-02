@@ -91,7 +91,7 @@ __all__ = [
     # Write Operations
     'get_pr_changed_files', 'get_file_content',
     'create_or_update_file', 'batch_commit_files',
-    'post_pr_comment',
+    'post_pr_comment', 'post_commit_status',
     # Rate Limit
     'get_rate_limit', 'check_rate_limit',
     # Display helpers
@@ -2304,6 +2304,75 @@ def post_pr_comment(repo_name, pr_number, body, dry_run=None):
         raise GitHubPRError(
             f'Failed to post comment on PR #{pr_number} in {repo_name}: {e}'
         )
+
+
+# ****************************************************************************************
+# Commit status
+# ****************************************************************************************
+
+def post_commit_status(repo_name, sha, state, context='default', description='',
+                       target_url=None, dry_run=None):
+    '''
+    Set a commit status check on a specific SHA.
+
+    MUTATION — dry-run by default.
+
+    Input:
+        repo_name: Full repository name (e.g., 'org/repo').
+        sha: Full commit SHA to set status on.
+        state: One of 'pending', 'success', 'failure', 'error'.
+        context: Status check name (e.g., 'hypatia/documentation').
+        description: Short human-readable description.
+        target_url: Optional URL linking to details.
+        dry_run: If True (default), preview only.
+
+    Output:
+        Dict with status result or dry-run preview.
+    '''
+    log.debug(f'Entering post_commit_status(repo_name={repo_name}, sha={sha[:8]}, '
+              f'state={state}, context={context}, dry_run={dry_run})')
+    gh = get_connection()
+
+    valid_states = ('pending', 'success', 'failure', 'error')
+    if state not in valid_states:
+        raise GitHubPRError(f'Invalid state {state!r}. Must be one of: {valid_states}')
+
+    try:
+        repo = gh.get_repo(repo_name)
+    except GithubException as e:
+        raise GitHubRepoError(f'Cannot access repository {repo_name}: {e}')
+
+    if _resolve_dry_run(dry_run):
+        return {
+            'dry_run': True,
+            'repo': repo_name,
+            'sha': sha,
+            'state': state,
+            'context': context,
+            'description': description,
+        }
+
+    try:
+        commit = repo.get_commit(sha)
+        kwargs = {
+            'state': state,
+            'context': context,
+            'description': description[:140],
+        }
+        if target_url:
+            kwargs['target_url'] = target_url
+        status = commit.create_status(**kwargs)
+        log.info(f'Set status {state!r} on {sha[:8]} in {repo_name} (context={context})')
+        return {
+            'repo': repo_name,
+            'sha': sha,
+            'state': state,
+            'context': context,
+            'status_id': status.id,
+            'url': status.url,
+        }
+    except GithubException as e:
+        raise GitHubPRError(f'Failed to set commit status on {sha[:8]} in {repo_name}: {e}')
 
 
 # ****************************************************************************************

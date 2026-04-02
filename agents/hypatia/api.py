@@ -16,6 +16,8 @@ import logging
 import os
 import sys
 import tempfile
+import threading
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
@@ -525,42 +527,47 @@ def create_app() -> FastAPI:
             return str(entry.get('filename', ''))
         return str(entry)
 
-    @app.post('/v1/docs/pr-review')
-    def docs_pr_review(body: PRReviewRequest) -> Dict[str, Any]:
-        '''
-        Two-phase PR doc generation pipeline.
+    # ------------------------------------------------------------------
+    # Async PR review — job store
+    # ------------------------------------------------------------------
 
-        Phase 1 (dry_run=True, default): generate docs and return preview.
-        Phase 2 (dry_run=False): generate docs AND commit to PR branch.
-        '''
+    _pr_review_jobs: Dict[str, Dict[str, Any]] = {}
+    _pr_review_lock = threading.Lock()
+
+    def _run_pr_review_job(job_id: str, body: PRReviewRequest) -> None:
+        '''Background thread for PR doc generation.'''
+        def _set_result(result: Dict[str, Any]) -> None:
+            with _pr_review_lock:
+                _pr_review_jobs[job_id].update({
+                    'status': 'completed' if result.get('ok') else 'failed',
+                    'completed_at': datetime.now(timezone.utc).isoformat(),
+                    **result,
+                })
+
         global _run_count, _last_run_at
-
         import posixpath
         from config.env_loader import resolve_dry_run
 
         dry_run = resolve_dry_run(body.dry_run)
 
         if '/' not in body.repo:
-            return {
-                'ok': False,
-                'error': 'repo must be in "owner/repo" format.',
-            }
+            _set_result({'ok': False, 'error': 'repo must be in "owner/repo" format.'})
+            return
         if body.pr_number < 1:
-            return {
-                'ok': False,
-                'error': 'pr_number must be a positive integer.',
-            }
+            _set_result({'ok': False, 'error': 'pr_number must be a positive integer.'})
+            return
 
         try:
             import github_utils
         except ImportError:
-            return {
+            _set_result({
                 'ok': False,
                 'error': (
                     'github_utils is not available. '
                     'Install the github integration package to use /pr-review.'
                 ),
-            }
+            })
+            return
 
         # --- fetch PR changed files ---
         try:
@@ -569,7 +576,8 @@ def create_app() -> FastAPI:
             )
         except Exception as exc:
             log.error(f'GitHub API error fetching PR files: {exc}')
-            return {'ok': False, 'error': f'GitHub API error: {exc}'}
+            _set_result({'ok': False, 'error': f'GitHub API error: {exc}'})
+            return
 
         target_dir = body.target_dir or 'docs'
         relevant_files = [
@@ -579,7 +587,7 @@ def create_app() -> FastAPI:
         ]
 
         if not relevant_files:
-            return {
+            _set_result({
                 'ok': True,
                 'data': {
                     'pr_number': body.pr_number,
@@ -591,7 +599,8 @@ def create_app() -> FastAPI:
                     'record_id': None,
                     'dry_run': dry_run,
                 },
-            }
+            })
+            return
 
         # --- resolve PR head branch early (needed for source fetch) ---
         head_branch = body.branch
@@ -603,9 +612,11 @@ def create_app() -> FastAPI:
                 head_branch = str(pr_info.get('head_branch', '') or '')
             except Exception as exc:
                 log.error(f'GitHub API error fetching PR info: {exc}')
-                return {'ok': False, 'error': f'GitHub API error: {exc}'}
+                _set_result({'ok': False, 'error': f'GitHub API error: {exc}'})
+                return
         if not head_branch:
-            return {'ok': False, 'error': 'Could not determine PR head branch.'}
+            _set_result({'ok': False, 'error': 'Could not determine PR head branch.'})
+            return
 
         # --- build impact details ---
         target_dir = body.target_dir or 'docs'
@@ -771,7 +782,28 @@ def create_app() -> FastAPI:
                 files_committed = True
             except Exception as exc:
                 log.error(f'GitHub commit failed: {exc}')
-                return {'ok': False, 'error': f'GitHub commit failed: {exc}'}
+                _set_result({'ok': False, 'error': f'GitHub commit failed: {exc}'})
+                return
+
+            if commit_sha and files_committed:
+                try:
+                    github_utils.post_commit_status(
+                        body.repo, commit_sha, 'pending',
+                        context='hypatia/documentation',
+                        description=f'{len(all_generated)} doc(s) generated — review required',
+                    )
+                except Exception as exc:
+                    log.warning(f'Failed to set commit status: {exc}')
+
+        for doc in generated_docs:
+            rec_id = doc.get('record_id', '')
+            if rec_id:
+                try:
+                    rec = record_store.get_record(rec_id)
+                    if rec:
+                        doc['content'] = rec.content_markdown
+                except Exception:
+                    pass
 
         _run_count += 1
         _last_run_at = datetime.now(timezone.utc).isoformat()
@@ -781,7 +813,7 @@ def create_app() -> FastAPI:
             f'{len(all_generated)} doc(s) generated'
         )
 
-        return {
+        _set_result({
             'ok': True,
             'data': {
                 'pr_number': body.pr_number,
@@ -798,6 +830,39 @@ def create_app() -> FastAPI:
                 'record_ids': record_ids,
                 'record_id': record_ids[-1] if record_ids else None,
             },
+        })
+
+    @app.post('/v1/docs/pr-review')
+    def docs_pr_review_submit(body: PRReviewRequest) -> Dict[str, Any]:
+        job_id = uuid.uuid4().hex[:12]
+        with _pr_review_lock:
+            _pr_review_jobs[job_id] = {
+                'status': 'running',
+                'started_at': datetime.now(timezone.utc).isoformat(),
+            }
+        t = threading.Thread(target=_run_pr_review_job, args=(job_id, body), daemon=True)
+        t.start()
+        return {
+            'ok': True,
+            'job_id': job_id,
+            'status': 'running',
+            'poll_url': f'/v1/docs/pr-review/{job_id}',
+        }
+
+    @app.get('/v1/docs/pr-review/{job_id}')
+    def docs_pr_review_status(job_id: str) -> Dict[str, Any]:
+        with _pr_review_lock:
+            job = _pr_review_jobs.get(job_id)
+        if not job:
+            raise HTTPException(status_code=404, detail=f'Job {job_id} not found.')
+        return {
+            'ok': job.get('ok', True),
+            'job_id': job_id,
+            'status': job.get('status', 'unknown'),
+            'started_at': job.get('started_at'),
+            'completed_at': job.get('completed_at'),
+            'data': job.get('data'),
+            'error': job.get('error'),
         }
 
     # ------------------------------------------------------------------
