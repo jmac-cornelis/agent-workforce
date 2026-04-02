@@ -26,6 +26,7 @@ from openpyxl.styles import Font, PatternFill
 from openpyxl.utils import get_column_letter
 
 from agents.base import BaseAgent, AgentConfig, AgentResponse
+from llm.base import Message
 from agents.gantt.components import (
     BacklogInterpreter,
     DependencyMapper,
@@ -986,28 +987,43 @@ class GanttProjectPlannerAgent(BaseAgent):
         '''
         Run LLM gap analysis on the current roadmap sections.
 
-        Builds a text summary of all sections and items, sends to the LLM
-        via _run_with_tools(), parses the JSON response, and assigns
-        RoadmapGap objects to the appropriate sections.
+        Uses direct llm.chat() — _run_with_tools() sent tool schemas
+        which caused the LLM to make tool calls instead of returning JSON.
         '''
-        # Build the roadmap summary for the LLM
         roadmap_text = self._build_gap_analysis_prompt(request, sections)
 
-        log.info('Running LLM gap analysis...')
+        system_prompt = (
+            'You are a project planning analyst. '
+            'Analyze the Jira roadmap provided by the user and identify gaps — '
+            'missing Epics or Stories that should exist but do not yet have '
+            'Jira tickets. Return ONLY a JSON block fenced with ```json and ```. '
+            'Do not call any tools. Do not include commentary outside the JSON block.'
+        )
+
+        messages = [
+            Message.system(system_prompt),
+            Message.user(roadmap_text),
+        ]
+
+        log.info('Running LLM gap analysis (direct chat, no tools)...')
         try:
-            response = self._run_with_tools(roadmap_text)
-            if not response.success:
-                log.warning(f'Gap analysis LLM call failed: {response.error}')
-                return
+            llm_response = self.llm.chat(
+                messages=messages,
+                temperature=0.3,
+                max_tokens=self.config.max_tokens,
+            )
 
-            # Parse the JSON response
-            gaps_json = self._extract_json_block(response.content or '')
+            gaps_json = self._extract_json_block(llm_response.content or '')
             if not gaps_json:
-                log.warning('No JSON block found in gap analysis response')
+                log.warning(
+                    'No JSON block found in gap analysis response '
+                    f'({len(llm_response.content or "")} chars returned)'
+                )
                 return
 
-            # Convert to RoadmapGap objects and assign to sections
             self._assign_gaps_to_sections(gaps_json, sections)
+            gap_count = sum(len(s.gaps) for s in sections)
+            log.info(f'Gap analysis complete — {gap_count} gaps identified')
 
         except Exception as e:
             log.error(f'Gap analysis failed: {e}')

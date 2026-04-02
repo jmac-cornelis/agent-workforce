@@ -44,7 +44,7 @@ agents:
     channel_name: agent-drucker
     channel_id: "19:966aaabccc2a4ecd879d427edc83aaf0@thread.tacv2"
     team_id: "19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2"
-    api_base_url: http://localhost:8201
+    api_base_url: http://host.containers.internal:8201
     notifications_webhook_url: "https://default4dbdb7da74ee4b458747ef5ce5ebe6.8a.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/7346f433283a433fb6a530451879227b/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=DX5rVpdRL5wpv_H9huN668nWIvrhGTWwe97q6NGpxh4"
     approval_types: []
     custom_commands:
@@ -228,7 +228,7 @@ agents:
     channel_name: agent-gantt
     channel_id: ""
     team_id: "19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2"
-    api_base_url: http://localhost:8202
+    api_base_url: http://host.containers.internal:8202
     approval_types: []
     custom_commands:
       - command: /planning-snapshot

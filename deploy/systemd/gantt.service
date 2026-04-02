@@ -1,0 +1,36 @@
+[Unit]
+Description=Gantt Project Planner Agent
+Documentation=https://github.com/jmac-cornelis/agent-workforce
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=on-failure
+RestartSec=10
+TimeoutStartSec=60
+
+ExecStartPre=-/usr/bin/podman stop -t 10 gantt
+ExecStartPre=-/usr/bin/podman rm -f gantt
+
+ExecStart=/usr/bin/podman run \
+    --name gantt \
+    --rm \
+    --network host \
+    --env-file %h/agent-workforce/deploy/env/shared.env \
+    --env-file %h/agent-workforce/deploy/env/jira.env \
+    --env-file %h/agent-workforce/deploy/env/llm.env \
+    -v %h/agent-workforce/config:/app/config:ro,Z \
+    -v %h/agent-workforce/data/gantt:/data/gantt:Z \
+    -v %h/agent-workforce/agents/gantt/api.py:/app/agents/gantt/api.py:ro,Z \
+    -v %h/agent-workforce/agents/gantt/agent.py:/app/agents/gantt/agent.py:ro,Z \
+    localhost/cornelis/agent-workforce:latest \
+    uvicorn agents.gantt.api:app --host 0.0.0.0 --port 8202
+
+ExecStop=/usr/bin/podman stop -t 10 gantt
+
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+[Install]
+WantedBy=default.target
