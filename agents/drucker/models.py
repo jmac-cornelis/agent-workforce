@@ -38,6 +38,10 @@ class DruckerRequest:
     since: Optional[str] = None
     recent_only: bool = False
     label_prefix: str = 'drucker'
+    requested_by: Optional[str] = None
+    approved_by: Optional[str] = None
+    correlation_id: Optional[str] = None
+    trigger: str = 'interactive'
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -50,6 +54,10 @@ class DruckerRequest:
             'since': self.since,
             'recent_only': self.recent_only,
             'label_prefix': self.label_prefix,
+            'requested_by': self.requested_by,
+            'approved_by': self.approved_by,
+            'correlation_id': self.correlation_id,
+            'trigger': self.trigger,
         }
 
 

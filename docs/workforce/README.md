@@ -72,6 +72,9 @@ These agents support project management and delivery tracking.
 Planning backlog for the current Gantt + Drucker convergence work:
 [`GANTT_DRUCKER_PM_IMPLEMENTATION_BACKLOG.md`](GANTT_DRUCKER_PM_IMPLEMENTATION_BACKLOG.md)
 
+Jira automation identity policy for choosing between service-account and human-attributed writes:
+[`JIRA_ACTOR_IDENTITY_POLICY.md`](JIRA_ACTOR_IDENTITY_POLICY.md)
+
 ### Service Infrastructure
 
 This agent provides the shared communications layer for all other agents.

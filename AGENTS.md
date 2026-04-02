@@ -48,6 +48,7 @@ All three surfaces must stay aligned — same capabilities, same parameters, sam
 
 - Default to dry-run/analysis-only. Jira and Confluence writes require explicit user request.
 - Validate identifiers, scope, and destination before any mutation.
+- Always use this repo's local Confluence publishing tools for Confluence writes and updates. Prefer the existing publisher scripts and `confluence_utils.py` over ad hoc API calls or one-off publish code.
 - Never commit `.env`, `*.log`, or scratch files listed in `.gitignore`.
 
 ## Testing Patterns

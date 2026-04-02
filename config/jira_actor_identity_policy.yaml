@@ -1,0 +1,154 @@
+version: 1
+
+defaults:
+  interactive_mode: draft_only
+  background_mode: service_account
+  fallback_no_requester_credentials:
+    sensitive_actions: draft_only
+    low_risk_actions: service_account
+
+actors:
+  draft_only:
+    description: Analysis or preview only. No Jira mutation.
+  service_account:
+    description: Shared automation identity for deterministic, auditable system writes.
+  requester:
+    description: Human who initiated or approved a judgment-bearing Jira action.
+
+audit_fields:
+  required:
+    - actor_mode
+    - requested_by
+    - approved_by
+    - executed_by
+    - policy_rule
+    - correlation_id
+    - timestamp
+
+rules:
+  - id: poller_hygiene_scan
+    match:
+      trigger: polling
+      action_class:
+        - scan
+        - report
+        - evidence_comment
+        - metadata_hygiene
+    actor: service_account
+    rationale: Background automation owns the action.
+
+  - id: deterministic_low_risk_write
+    match:
+      trigger:
+        - polling
+        - interactive
+      risk: low
+      action_class:
+        - label_update
+        - link_update
+        - machine_comment
+        - evidence_write
+        - metadata_sync
+    actor: service_account
+    rationale: Deterministic, repetitive, auditable system write.
+
+  - id: approved_system_batch_apply
+    match:
+      approval_required: true
+      approved: true
+      action_class:
+        - bulk_create
+        - bulk_metadata_update
+        - ticket_tree_create
+    actor: service_account
+    rationale: Human approved, but still fundamentally a system-applied batch.
+
+  - id: human_judgment_change
+    match:
+      action_class:
+        - priority_change
+        - fix_version_change
+        - ownership_change
+        - commitment_comment
+        - release_decision
+    actor: requester
+    rationale: These represent human intent, tradeoff, or commitment.
+
+  - id: sensitive_workflow_transition
+    match:
+      action_class:
+        - status_transition
+        - close_issue
+        - reopen_issue
+      risk: sensitive
+    actor: requester
+    rationale: Workflow state changes usually imply human ownership and intent.
+
+  - id: unapproved_nontrivial_write
+    match:
+      approval_required: true
+      approved: false
+    actor: draft_only
+    rationale: Non-trivial writes should remain previews until approved.
+
+agent_defaults:
+  drucker:
+    polling:
+      actor: service_account
+    suggested_metadata_remediation:
+      actor: draft_only
+    approved_low_risk_metadata_remediation:
+      actor: service_account
+    priority_or_status_change:
+      actor: requester
+
+  gantt:
+    planning_analysis:
+      actor: draft_only
+    approved_bulk_ticket_creation:
+      actor: service_account
+    release_scope_or_fix_version_decision:
+      actor: requester
+
+  hedy:
+    release_analysis:
+      actor: draft_only
+    release_bookkeeping:
+      actor: service_account
+    release_stage_transition:
+      actor: requester
+
+  hypatia:
+    jira_doc_bookkeeping:
+      actor: service_account
+    human_commitment_comment:
+      actor: requester
+
+comment_voice:
+  service_account:
+    style:
+      - factual
+      - machine_attributed
+      - auditable
+    avoid:
+      - first_person_human_voice
+      - implied_personal_commitment
+  requester:
+    style:
+      - human_decision
+      - explicit_ownership
+      - intent_bearing
+
+examples:
+  - action: Add missing metadata labels during a Drucker polling scan
+    actor: service_account
+  - action: Add a machine-generated comment summarizing missing fields
+    actor: service_account
+  - action: Create an approved Gantt ticket tree in bulk
+    actor: service_account
+  - action: Change fixVersion after PM review
+    actor: requester
+  - action: Move a ticket to Closed after a human confirms the fix
+    actor: requester
+  - action: Suggest a priority change without applying it
+    actor: draft_only

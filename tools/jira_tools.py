@@ -12,12 +12,14 @@
 import logging
 import os
 import sys
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 from dotenv import load_dotenv
 
 from tools.base import BaseTool, ToolResult, tool
 from config.env_loader import resolve_dry_run
+from config.jira_identity import get_jira_actor_email, normalize_actor_mode
 from core.tickets import issue_to_dict
 from core.utils import extract_text_from_adf
 
@@ -71,7 +73,7 @@ except ImportError as e:
     log.warning(f'jira_utils.py not available: {e}')
     JIRA_URL = os.getenv('JIRA_URL', 'https://cornelisnetworks.atlassian.net')
 
-def get_jira():
+def get_jira(actor_mode: Optional[str] = None):
     '''
     Get or create Jira connection using jira_utils.
 
@@ -86,7 +88,42 @@ def get_jira():
     if not JIRA_UTILS_AVAILABLE:
         raise RuntimeError('jira_utils.py is required but not available')
 
-    return jira_utils.get_connection()
+    normalized = normalize_actor_mode(actor_mode)
+    if normalized == 'requester':
+        return jira_utils.get_connection()
+    return jira_utils.get_connection(normalized)
+
+
+def _get_jira_for_actor(actor_mode: Optional[str] = None):
+    '''
+    Preserve no-arg get_jira() behavior for the default requester path.
+    '''
+    normalized = normalize_actor_mode(actor_mode)
+    if normalized == 'requester':
+        return get_jira()
+    return get_jira(actor_mode=normalized)
+
+
+def _build_audit_payload(
+    actor_mode: Optional[str] = None,
+    requested_by: Optional[str] = None,
+    approved_by: Optional[str] = None,
+    policy_rule: Optional[str] = None,
+    correlation_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    '''
+    Build a normalized Jira write audit payload.
+    '''
+    normalized = normalize_actor_mode(actor_mode)
+    return {
+        'actor_mode': normalized,
+        'requested_by': requested_by,
+        'approved_by': approved_by,
+        'executed_by': get_jira_actor_email(normalized),
+        'policy_rule': policy_rule,
+        'correlation_id': correlation_id,
+        'timestamp': datetime.now(timezone.utc).isoformat(),
+    }
 
 
 def _normalize_transition(transition: dict[str, Any]) -> dict[str, Any]:
@@ -590,6 +627,11 @@ def transition_ticket(
     comment: Optional[str] = None,
     fields: Optional[Dict[str, Any]] = None,
     dry_run: Optional[bool] = None,
+    actor_mode: Optional[str] = None,
+    requested_by: Optional[str] = None,
+    approved_by: Optional[str] = None,
+    policy_rule: Optional[str] = None,
+    correlation_id: Optional[str] = None,
 ) -> ToolResult:
     '''
     Transition a Jira ticket to a new status.
@@ -613,7 +655,14 @@ def transition_ticket(
     )
 
     try:
-        jira = get_jira()
+        audit = _build_audit_payload(
+            actor_mode=actor_mode,
+            requested_by=requested_by,
+            approved_by=approved_by,
+            policy_rule=policy_rule,
+            correlation_id=correlation_id,
+        )
+        jira = _get_jira_for_actor(actor_mode)
         issue = jira.issue(ticket_key)
         transitions = jira.transitions(issue, expand='transitions.fields')
         target = _match_transition(transitions, to_status)
@@ -632,6 +681,7 @@ def transition_ticket(
                 'transition': _normalize_transition(target),
                 'comment_would_add': comment is not None,
                 'fields_would_set': fields is not None,
+                'audit': audit,
             }
             return ToolResult.success(preview)
 
@@ -647,6 +697,7 @@ def transition_ticket(
         updated['transition'] = _normalize_transition(target)
         if comment:
             updated['comment_added'] = True
+        updated['audit'] = audit
         return ToolResult.success(updated)
     except Exception as e:
         log.error(f'Failed to transition ticket: {e}')
@@ -656,7 +707,16 @@ def transition_ticket(
 @tool(
     description='Add a comment to a Jira ticket'
 )
-def add_ticket_comment(ticket_key: str, body: str, dry_run: Optional[bool] = None) -> ToolResult:
+def add_ticket_comment(
+    ticket_key: str,
+    body: str,
+    dry_run: Optional[bool] = None,
+    actor_mode: Optional[str] = None,
+    requested_by: Optional[str] = None,
+    approved_by: Optional[str] = None,
+    policy_rule: Optional[str] = None,
+    correlation_id: Optional[str] = None,
+) -> ToolResult:
     '''
     Add a comment to a Jira ticket.
 
@@ -668,7 +728,14 @@ def add_ticket_comment(ticket_key: str, body: str, dry_run: Optional[bool] = Non
     log.debug(f'add_ticket_comment(ticket_key={ticket_key}, dry_run={dry_run})')
 
     try:
-        jira = get_jira()
+        audit = _build_audit_payload(
+            actor_mode=actor_mode,
+            requested_by=requested_by,
+            approved_by=approved_by,
+            policy_rule=policy_rule,
+            correlation_id=correlation_id,
+        )
+        jira = _get_jira_for_actor(actor_mode)
 
         if resolve_dry_run(dry_run):
             return ToolResult.success({
@@ -676,6 +743,7 @@ def add_ticket_comment(ticket_key: str, body: str, dry_run: Optional[bool] = Non
                 'ticket_key': ticket_key,
                 'comment_body_length': len(body),
                 'comment_body_preview': body[:200],
+                'audit': audit,
             })
 
         issue = jira.issue(ticket_key)
@@ -683,6 +751,7 @@ def add_ticket_comment(ticket_key: str, body: str, dry_run: Optional[bool] = Non
         result = {
             'ticket_key': ticket_key,
             'comment': _normalize_comment(comment),
+            'audit': audit,
         }
         return ToolResult.success(result)
     except Exception as e:
@@ -706,6 +775,11 @@ def create_ticket(
     product_family: Optional[List[str]] = None,
     custom_fields: Optional[Dict[str, Any]] = None,
     dry_run: Optional[bool] = None,
+    actor_mode: Optional[str] = None,
+    requested_by: Optional[str] = None,
+    approved_by: Optional[str] = None,
+    policy_rule: Optional[str] = None,
+    correlation_id: Optional[str] = None,
 ) -> ToolResult:
     '''
     Create a new Jira ticket.
@@ -731,7 +805,14 @@ def create_ticket(
     log.debug(f'create_ticket(project={project_key}, summary={summary}, type={issue_type})')
     
     try:
-        jira = get_jira()
+        audit = _build_audit_payload(
+            actor_mode=actor_mode,
+            requested_by=requested_by,
+            approved_by=approved_by,
+            policy_rule=policy_rule,
+            correlation_id=correlation_id,
+        )
+        jira = _get_jira_for_actor(actor_mode)
         
         # Build issue fields
         fields = {
@@ -810,6 +891,7 @@ def create_ticket(
                 'issue_type': issue_type,
                 'fields': {k: v for k, v in fields.items()
                            if k not in ('project', 'summary', 'issuetype')},
+                'audit': audit,
             })
 
         log.info(f'Creating ticket: {summary}')
@@ -879,7 +961,8 @@ def create_ticket(
             'key': issue.key,
             'id': issue.id,
             'summary': summary,
-            'url': f'{JIRA_URL}/browse/{issue.key}'
+            'url': f'{JIRA_URL}/browse/{issue.key}',
+            'audit': audit,
         }
         
         log.info(f'Created ticket: {issue.key}')
@@ -905,6 +988,11 @@ def update_ticket(
     labels: Optional[List[str]] = None,
     custom_fields: Optional[Dict[str, Any]] = None,
     dry_run: Optional[bool] = None,
+    actor_mode: Optional[str] = None,
+    requested_by: Optional[str] = None,
+    approved_by: Optional[str] = None,
+    policy_rule: Optional[str] = None,
+    correlation_id: Optional[str] = None,
 ) -> ToolResult:
     '''
     Update an existing Jira ticket.
@@ -928,7 +1016,14 @@ def update_ticket(
     log.debug(f'update_ticket(ticket_key={ticket_key}, dry_run={dry_run})')
 
     try:
-        jira = get_jira()
+        audit = _build_audit_payload(
+            actor_mode=actor_mode,
+            requested_by=requested_by,
+            approved_by=approved_by,
+            policy_rule=policy_rule,
+            correlation_id=correlation_id,
+        )
+        jira = _get_jira_for_actor(actor_mode)
         issue = jira.issue(ticket_key)
 
         fields = {}
@@ -975,6 +1070,7 @@ def update_ticket(
                 'current_summary': str(issue.fields.summary),
                 'fields_would_update': list(fields.keys()),
                 'status_would_transition': status,
+                'audit': audit,
             })
 
         if fields:
@@ -993,7 +1089,9 @@ def update_ticket(
 
         updated_issue = jira.issue(ticket_key)
 
-        return ToolResult.success(_issue_to_dict(updated_issue))
+        result = _issue_to_dict(updated_issue)
+        result['audit'] = audit
+        return ToolResult.success(result)
 
     except Exception as e:
         log.error(f'Failed to update ticket: {e}')
@@ -1010,6 +1108,11 @@ def create_release(
     start_date: Optional[str] = None,
     release_date: Optional[str] = None,
     dry_run: Optional[bool] = None,
+    actor_mode: Optional[str] = None,
+    requested_by: Optional[str] = None,
+    approved_by: Optional[str] = None,
+    policy_rule: Optional[str] = None,
+    correlation_id: Optional[str] = None,
 ) -> ToolResult:
     '''
     Create a new release/version.
@@ -1028,7 +1131,14 @@ def create_release(
     log.debug(f'create_release(project={project_key}, name={name}, dry_run={dry_run})')
 
     try:
-        jira = get_jira()
+        audit = _build_audit_payload(
+            actor_mode=actor_mode,
+            requested_by=requested_by,
+            approved_by=approved_by,
+            policy_rule=policy_rule,
+            correlation_id=correlation_id,
+        )
+        jira = _get_jira_for_actor(actor_mode)
 
         if resolve_dry_run(dry_run):
             return ToolResult.success({
@@ -1038,6 +1148,7 @@ def create_release(
                 'description': description or '',
                 'start_date': start_date,
                 'release_date': release_date,
+                'audit': audit,
             })
 
         version = jira.create_version(
@@ -1053,7 +1164,8 @@ def create_release(
             'name': version.name,
             'description': getattr(version, 'description', ''),
             'startDate': getattr(version, 'startDate', None),
-            'releaseDate': getattr(version, 'releaseDate', None)
+            'releaseDate': getattr(version, 'releaseDate', None),
+            'audit': audit,
         }
 
         log.info(f'Created release: {name}')
@@ -1072,6 +1184,11 @@ def link_tickets(
     to_key: str,
     link_type: str = 'Relates',
     dry_run: Optional[bool] = None,
+    actor_mode: Optional[str] = None,
+    requested_by: Optional[str] = None,
+    approved_by: Optional[str] = None,
+    policy_rule: Optional[str] = None,
+    correlation_id: Optional[str] = None,
 ) -> ToolResult:
     '''
     Create a link between two tickets.
@@ -1088,15 +1205,23 @@ def link_tickets(
     log.debug(f'link_tickets(from={from_key}, to={to_key}, type={link_type}, dry_run={dry_run})')
 
     try:
+        audit = _build_audit_payload(
+            actor_mode=actor_mode,
+            requested_by=requested_by,
+            approved_by=approved_by,
+            policy_rule=policy_rule,
+            correlation_id=correlation_id,
+        )
         if resolve_dry_run(dry_run):
             return ToolResult.success({
                 'dry_run': True,
                 'from': from_key,
                 'to': to_key,
                 'type': link_type,
+                'audit': audit,
             })
 
-        jira = get_jira()
+        jira = _get_jira_for_actor(actor_mode)
 
         jira.create_issue_link(
             type=link_type,
@@ -1108,7 +1233,8 @@ def link_tickets(
         return ToolResult.success({
             'from': from_key,
             'to': to_key,
-            'type': link_type
+            'type': link_type,
+            'audit': audit,
         })
 
     except Exception as e:
@@ -2490,9 +2616,23 @@ class JiraTools(BaseTool):
         self,
         from_key: str,
         to_key: str,
-        link_type: str = 'Relates'
+        link_type: str = 'Relates',
+        actor_mode: Optional[str] = None,
+        requested_by: Optional[str] = None,
+        approved_by: Optional[str] = None,
+        policy_rule: Optional[str] = None,
+        correlation_id: Optional[str] = None,
     ) -> ToolResult:
-        return link_tickets(from_key, to_key, link_type)
+        return link_tickets(
+            from_key,
+            to_key,
+            link_type,
+            actor_mode=actor_mode,
+            requested_by=requested_by,
+            approved_by=approved_by,
+            policy_rule=policy_rule,
+            correlation_id=correlation_id,
+        )
     
     @tool(description='Get components for a project')
     def get_components(self, project_key: str) -> ToolResult:

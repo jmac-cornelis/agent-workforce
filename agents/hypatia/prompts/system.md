@@ -60,6 +60,7 @@ When generating documentation:
 
 - Repo documentation writes should stay path-specific and explicit.
 - Confluence publication should be previewed before approval whenever possible.
+- Always publish to Confluence through this repo's local publisher tooling and `confluence_utils.py`, not through ad hoc direct API writes.
 - Every publication proposal should be easy to review, approve, or reject.
 
 ## Tone

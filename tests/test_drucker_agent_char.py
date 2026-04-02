@@ -404,6 +404,45 @@ def test_drucker_agent_creates_review_session_and_executes_approved_actions(
     assert session.items[1].status.value == 'executed'
 
 
+def test_drucker_review_session_carries_polling_actor_context(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from agents.drucker.agent import DruckerCoordinatorAgent
+
+    monkeypatch.setattr(
+        DruckerCoordinatorAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'drucker prompt'),
+    )
+    monkeypatch.setenv('JIRA_SERVICE_EMAIL', 'scm@cornelisnetworks.com')
+    monkeypatch.setenv('JIRA_SERVICE_API_TOKEN', 'svc-token')
+
+    report = DruckerHygieneReport(
+        project_key='STL',
+        request={
+            'trigger': 'polling',
+            'correlation_id': 'poll-001',
+        },
+        proposed_actions=[
+            DruckerAction(
+                action_id='D001',
+                ticket_key='STL-201',
+                action_type='comment',
+                title='Post Drucker hygiene summary',
+                comment='Summary',
+            )
+        ],
+        tickets=[{'key': 'STL-201', 'summary': 'Needs attention'}],
+    )
+
+    agent = DruckerCoordinatorAgent(project_key='STL')
+    session = agent.create_review_session(report)
+
+    assert session.items[0].trigger == 'polling'
+    assert session.items[0].requested_by == 'scm@cornelisnetworks.com'
+    assert session.items[0].correlation_id == 'poll-001:D001'
+
+
 def test_drucker_agent_recent_ticket_intake_uses_checkpoint_and_processed_state(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
