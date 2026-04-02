@@ -387,6 +387,9 @@ Standalone CLI for GitHub operations. Requires `GITHUB_TOKEN` in the environment
 | `--stale-branches REPO` | Find stale branches | `python github_utils.py --stale-branches cornelisnetworks/ifs-all --branch-stale-days 60` |
 | `--extended-hygiene REPO` | Full extended report (all scans) | `python github_utils.py --extended-hygiene cornelisnetworks/ifs-all` |
 | `--rate-limit` | Show API rate limit status | `python github_utils.py --rate-limit` |
+| `--get-readme REPO` | Get repository README content | `python github_utils.py --get-readme cornelisnetworks/ifs-all` |
+| `--list-docs REPO` | List documentation files in a repo | `python github_utils.py --list-docs cornelisnetworks/ifs-all --docs-path docs` |
+| `--search-docs REPO QUERY` | Search repository documentation content | `python github_utils.py --search-docs cornelisnetworks/ifs-all "build instructions"` |
 
 #### GitHub CLI Options
 
@@ -400,6 +403,7 @@ Standalone CLI for GitHub operations. Requires `GITHUB_TOKEN` in the environment
 | `--quiet` / `-q` | off | Suppress stdout (log file still written) |
 | `--json` | off | Output as JSON instead of tables |
 | `--verbose` / `-v` | off | Enable verbose console logging |
+| `--docs-path DIR` | `docs` | Directory to search for `--list-docs` |
 
 ## Directory Structure
 

@@ -29,6 +29,13 @@ from shannon.cards import (
     build_gantt_release_monitor_card,
     build_gantt_release_survey_card,
     build_gantt_snapshot_card,
+    build_hypatia_confluence_publish_card,
+    build_hypatia_doc_card,
+    build_hypatia_pr_review_card,
+    build_hypatia_impact_card,
+    build_hypatia_publication_card,
+    build_hypatia_records_card,
+    build_hypatia_search_card,
     build_merge_conflicts_card,
     build_naming_compliance_card,
     build_pr_hygiene_card,
@@ -44,6 +51,32 @@ from agents.shannon.state_store import ShannonStateStore
 
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
+
+
+def _coerce_params(raw: Dict[str, str], param_defs: List[Dict[str, Any]]) -> Dict[str, Any]:
+    '''
+    Coerce flat string key-value pairs from Teams into typed JSON values
+    using the ``params`` metadata from agent_registry.yaml.
+
+    Handles: ``list`` (comma-split), ``int``, ``bool``, ``str`` (pass-through).
+    Unknown keys pass through unchanged.
+    '''
+    type_map = {p['name']: p.get('type', 'str') for p in param_defs}
+    result: Dict[str, Any] = {}
+    for key, value in raw.items():
+        ptype = type_map.get(key, 'str')
+        if ptype == 'list':
+            result[key] = [v.strip() for v in value.split(',') if v.strip()]
+        elif ptype == 'int':
+            try:
+                result[key] = int(value)
+            except ValueError:
+                result[key] = value
+        elif ptype == 'bool':
+            result[key] = value.lower() in ('true', '1', 'yes', 'on')
+        else:
+            result[key] = value
+    return result
 
 
 class ShannonService:
@@ -430,6 +463,16 @@ class ShannonService:
             '/release-survey': build_gantt_release_survey_card,
             '/release-survey-report': build_gantt_release_survey_card,
         },
+        'hypatia': {
+            '/generate-doc': build_hypatia_doc_card,
+            '/impact-detect': build_hypatia_impact_card,
+            '/doc-records': build_hypatia_records_card,
+            '/doc-record': build_hypatia_records_card,
+            '/publish-doc': build_hypatia_publication_card,
+            '/search-docs': build_hypatia_search_card,
+            '/confluence-publish': build_hypatia_confluence_publish_card,
+            '/pr-review': build_hypatia_pr_review_card,
+        },
     }
 
     MUTATION_COMMANDS: set[str] = set()
@@ -637,8 +680,23 @@ class ShannonService:
             lines = list(self.STANDARD_COMMAND_ROUTES.keys())
             custom_commands = getattr(registration, 'custom_commands', []) or []
             for cc in custom_commands:
+                cmd_name = cc['command']
                 desc = cc.get('description', '')
-                lines.append(f'{cc["command"]}: {desc}' if desc else cc['command'])
+                cc_params = cc.get('params') or []
+                if cc_params:
+                    param_parts = []
+                    for p in cc_params:
+                        name = p['name']
+                        ptype = p.get('type', 'str')
+                        hint = f'{name}' if ptype == 'str' else f'{name}({ptype})'
+                        if p.get('required'):
+                            param_parts.append(f'<{hint}>')
+                        else:
+                            param_parts.append(f'[{hint}]')
+                    usage = f'{cmd_name} {" ".join(param_parts)}'
+                    lines.append(f'{usage}: {desc}' if desc else usage)
+                else:
+                    lines.append(f'{cmd_name}: {desc}' if desc else cmd_name)
             card = build_fact_card(
                 title=f'{registration.display_name} Commands',
                 subtitle=f'Available commands for {agent_id}',
@@ -679,10 +737,11 @@ class ShannonService:
                     args = args[:-1]
 
                 if method.upper() == 'POST':
-                    json_body = {
+                    raw_body = {
                         args[i]: args[i + 1]
                         for i in range(0, len(args) - 1, 2)
                     } if args else {}
+                    json_body = _coerce_params(raw_body, cc.get('params') or [])
                     is_mutation = (
                         command in self.MUTATION_COMMANDS
                         or cc.get('mutation', False)
@@ -690,9 +749,7 @@ class ShannonService:
                     if is_mutation:
                         json_body['dry_run'] = not execute_requested
                 elif args:
-                    path = f'{path.rstrip("/")}/{args[0]}'
-                    if len(args) > 1:
-                        params = {'args': ' '.join(args[1:])}
+                    path = f'{path.rstrip("/")}/{args[-1]}'
                 result = self._call_agent_api(
                     registration, method, path, params=params, json_body=json_body,
                 )

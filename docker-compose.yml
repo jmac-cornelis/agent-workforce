@@ -180,7 +180,7 @@ services:
   hypatia:
     <<: *agent-base
     container_name: hypatia
-    command: ["uvicorn", "agents.hypatia_api:app", "--host", "0.0.0.0", "--port", "8203"]
+    command: ["uvicorn", "agents.hypatia.api:app", "--host", "0.0.0.0", "--port", "8203"]
     ports:
       - "8203:8203"
     environment:

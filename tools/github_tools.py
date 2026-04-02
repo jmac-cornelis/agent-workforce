@@ -47,6 +47,14 @@ try:
         analyze_ci_failures as _analyze_ci_failures,
         analyze_stale_branches as _analyze_stale_branches,
         analyze_extended_hygiene as _analyze_extended_hygiene,
+        get_repo_readme as _get_repo_readme,
+        list_repo_docs as _list_repo_docs,
+        search_repo_docs as _search_repo_docs,
+        get_pr_changed_files as _get_pr_changed_files,
+        get_file_content as _get_file_content,
+        create_or_update_file as _create_or_update_file,
+        batch_commit_files as _batch_commit_files,
+        post_pr_comment as _post_pr_comment,
     )
     GITHUB_UTILS_AVAILABLE = True
 except ImportError as e:
@@ -525,6 +533,268 @@ def analyze_extended_hygiene(repo_name: str, stale_days: int = 5, branch_stale_d
 
 
 # ****************************************************************************************
+# Documentation Search Tools
+# ****************************************************************************************
+
+@tool(description='Get the README content for a GitHub repository')
+def get_repo_readme(repo: str) -> ToolResult:
+    '''
+    Get the README content for a GitHub repository.
+
+    Input:
+        repo: Full repository name (e.g., 'org/repo').
+
+    Output:
+        ToolResult with README content and metadata.
+    '''
+    log.debug(f'get_repo_readme(repo={repo})')
+
+    try:
+        get_github()
+        result = _get_repo_readme(repo)
+
+        return ToolResult.success(result, repo=repo)
+
+    except Exception as e:
+        log.error(f'Failed to get repo README: {e}')
+        return ToolResult.failure(f'Failed to get README for {repo}: {e}')
+
+
+@tool(description='List documentation files in a GitHub repository directory')
+def list_repo_docs(repo: str, path: str = 'docs', extensions: Optional[list[str]] = None) -> ToolResult:
+    '''
+    List documentation files in a GitHub repository directory.
+
+    Input:
+        repo: Full repository name (e.g., 'org/repo').
+        path: Directory path to search (default: 'docs').
+        extensions: List of file extensions to include.
+
+    Output:
+        ToolResult with list of documentation file dicts.
+    '''
+    log.debug(f'list_repo_docs(repo={repo}, path={path})')
+
+    try:
+        get_github()
+        docs = _list_repo_docs(repo, path=path, extensions=extensions)
+
+        return ToolResult.success(docs, count=len(docs), repo=repo, path=path)
+
+    except Exception as e:
+        log.error(f'Failed to list repo docs: {e}')
+        return ToolResult.failure(f'Failed to list docs for {repo}: {e}')
+
+
+@tool(description='Search documentation files in a GitHub repository by content query')
+def search_repo_docs(repo: str, query: str, extensions: Optional[list[str]] = None) -> ToolResult:
+    '''
+    Search documentation files in a GitHub repository by content query.
+
+    Input:
+        repo: Full repository name (e.g., 'org/repo').
+        query: Search query string.
+        extensions: List of file extensions to search.
+
+    Output:
+        ToolResult with list of matching documentation file dicts.
+    '''
+    log.debug(f'search_repo_docs(repo={repo}, query={query!r})')
+
+    try:
+        get_github()
+        docs = _search_repo_docs(repo, query, extensions=extensions)
+
+        return ToolResult.success(docs, count=len(docs), repo=repo, query=query)
+
+    except Exception as e:
+        log.error(f'Failed to search repo docs: {e}')
+        return ToolResult.failure(f'Failed to search docs for {repo}: {e}')
+
+
+# ****************************************************************************************
+# Write Operation Tools
+# ****************************************************************************************
+
+@tool(description='Get the list of files changed in a pull request')
+def get_pr_changed_files(repo_name: str, pr_number: int) -> ToolResult:
+    '''
+    Get the list of files changed in a pull request.
+
+    Input:
+        repo_name: Full repository name (e.g., 'org/repo').
+        pr_number: The pull request number.
+
+    Output:
+        ToolResult with list of changed file dicts.
+    '''
+    log.debug(f'get_pr_changed_files(repo_name={repo_name}, pr_number={pr_number})')
+
+    try:
+        get_github()
+        files = _get_pr_changed_files(repo_name, pr_number)
+
+        return ToolResult.success(files, count=len(files), repo_name=repo_name, pr_number=pr_number)
+
+    except Exception as e:
+        log.error(f'Failed to get PR changed files: {e}')
+        return ToolResult.failure(f'Failed to get changed files for PR #{pr_number} in {repo_name}: {e}')
+
+
+@tool(description='Get the content of a file from a GitHub repository')
+def get_file_content(repo_name: str, path: str, branch: str = 'main') -> ToolResult:
+    '''
+    Get the content of a file from a GitHub repository.
+
+    Input:
+        repo_name: Full repository name (e.g., 'org/repo').
+        path: File path within the repository.
+        branch: Branch name (default: 'main').
+
+    Output:
+        ToolResult with file content dict, or empty result if file not found.
+    '''
+    log.debug(f'get_file_content(repo_name={repo_name}, path={path}, branch={branch})')
+
+    try:
+        get_github()
+        result = _get_file_content(repo_name, path, branch=branch)
+
+        if result is None:
+            return ToolResult.success(
+                {'found': False, 'path': path, 'branch': branch},
+                repo_name=repo_name,
+            )
+
+        result['found'] = True
+        return ToolResult.success(result, repo_name=repo_name)
+
+    except Exception as e:
+        log.error(f'Failed to get file content: {e}')
+        return ToolResult.failure(f'Failed to get {path} from {repo_name}@{branch}: {e}')
+
+
+@tool(description='Create or update a single file in a GitHub repository (dry-run by default)')
+def create_or_update_file(
+    repo_name: str,
+    path: str,
+    content: str,
+    message: str,
+    branch: str = 'main',
+    dry_run: Optional[bool] = None,
+) -> ToolResult:
+    '''
+    Create or update a single file in a GitHub repository.
+
+    Safety model:
+        Dry-run by default (no changes).  Pass dry_run=False to execute.
+
+    Input:
+        repo_name: Full repository name (e.g., 'org/repo').
+        path: File path within the repository.
+        content: File content as a string.
+        message: Commit message.
+        branch: Target branch (default: 'main').
+        dry_run: If True, preview only — no changes made.
+
+    Output:
+        ToolResult with operation result.
+    '''
+    log.debug(f'create_or_update_file(repo_name={repo_name}, path={path}, '
+              f'branch={branch}, dry_run={dry_run})')
+
+    try:
+        get_github()
+        result = _create_or_update_file(
+            repo_name, path, content, message, branch=branch, dry_run=dry_run,
+        )
+
+        return ToolResult.success(result, repo_name=repo_name)
+
+    except Exception as e:
+        log.error(f'Failed to create/update file: {e}')
+        return ToolResult.failure(f'Failed to create/update {path} in {repo_name}@{branch}: {e}')
+
+
+@tool(description='Atomically commit multiple files to a GitHub repository (dry-run by default)')
+def batch_commit_files(
+    repo_name: str,
+    files: List[Dict[str, str]],
+    message: str,
+    branch: str = 'main',
+    dry_run: Optional[bool] = None,
+) -> ToolResult:
+    '''
+    Atomically commit multiple files via the Git Tree API.
+
+    Safety model:
+        Dry-run by default (no changes).  Pass dry_run=False to execute.
+
+    Input:
+        repo_name: Full repository name (e.g., 'org/repo').
+        files: List of dicts with 'path' and 'content' keys.
+        message: Commit message.
+        branch: Target branch (default: 'main').
+        dry_run: If True, preview only — no changes made.
+
+    Output:
+        ToolResult with operation result.
+    '''
+    log.debug(f'batch_commit_files(repo_name={repo_name}, file_count={len(files)}, '
+              f'branch={branch}, dry_run={dry_run})')
+
+    try:
+        get_github()
+        result = _batch_commit_files(
+            repo_name, files, message, branch=branch, dry_run=dry_run,
+        )
+
+        return ToolResult.success(result, repo_name=repo_name)
+
+    except Exception as e:
+        log.error(f'Failed to batch commit files: {e}')
+        return ToolResult.failure(f'Failed to batch-commit to {repo_name}@{branch}: {e}')
+
+
+@tool(description='Post a comment on a GitHub pull request (dry-run by default)')
+def post_pr_comment(
+    repo_name: str,
+    pr_number: int,
+    body: str,
+    dry_run: Optional[bool] = None,
+) -> ToolResult:
+    '''
+    Post a comment on a GitHub pull request.
+
+    Safety model:
+        Dry-run by default (no changes).  Pass dry_run=False to execute.
+
+    Input:
+        repo_name: Full repository name (e.g., 'org/repo').
+        pr_number: The pull request number.
+        body: Comment body text.
+        dry_run: If True, preview only — no comment posted.
+
+    Output:
+        ToolResult with operation result.
+    '''
+    log.debug(f'post_pr_comment(repo_name={repo_name}, pr_number={pr_number}, '
+              f'body_length={len(body)}, dry_run={dry_run})')
+
+    try:
+        get_github()
+        result = _post_pr_comment(repo_name, pr_number, body, dry_run=dry_run)
+
+        return ToolResult.success(result, repo_name=repo_name)
+
+    except Exception as e:
+        log.error(f'Failed to post PR comment: {e}')
+        return ToolResult.failure(
+            f'Failed to post comment on PR #{pr_number} in {repo_name}: {e}'
+        )
+
+
+# ****************************************************************************************
 # Tool Collection Class
 # ****************************************************************************************
 
@@ -606,3 +876,44 @@ class GitHubTools(BaseTool):
     @tool(description='Run comprehensive extended hygiene analysis including all scan types')
     def analyze_extended_hygiene(self, repo_name: str, stale_days: int = 5, branch_stale_days: int = 30) -> ToolResult:
         return analyze_extended_hygiene(repo_name, stale_days, branch_stale_days)
+
+    @tool(description='Get the README content for a GitHub repository')
+    def get_repo_readme(self, repo: str) -> ToolResult:
+        return get_repo_readme(repo)
+
+    @tool(description='List documentation files in a GitHub repository directory')
+    def list_repo_docs(self, repo: str, path: str = 'docs', extensions: Optional[list[str]] = None) -> ToolResult:
+        return list_repo_docs(repo, path, extensions)
+
+    @tool(description='Search documentation files in a GitHub repository by content query')
+    def search_repo_docs(self, repo: str, query: str, extensions: Optional[list[str]] = None) -> ToolResult:
+        return search_repo_docs(repo, query, extensions)
+
+    @tool(description='Get the list of files changed in a pull request')
+    def get_pr_changed_files(self, repo_name: str, pr_number: int) -> ToolResult:
+        return get_pr_changed_files(repo_name, pr_number)
+
+    @tool(description='Get the content of a file from a GitHub repository')
+    def get_file_content(self, repo_name: str, path: str, branch: str = 'main') -> ToolResult:
+        return get_file_content(repo_name, path, branch)
+
+    @tool(description='Create or update a single file in a GitHub repository (dry-run by default)')
+    def create_or_update_file(
+        self, repo_name: str, path: str, content: str, message: str,
+        branch: str = 'main', dry_run: Optional[bool] = None,
+    ) -> ToolResult:
+        return create_or_update_file(repo_name, path, content, message, branch, dry_run)
+
+    @tool(description='Atomically commit multiple files to a GitHub repository (dry-run by default)')
+    def batch_commit_files(
+        self, repo_name: str, files: List[Dict[str, str]], message: str,
+        branch: str = 'main', dry_run: Optional[bool] = None,
+    ) -> ToolResult:
+        return batch_commit_files(repo_name, files, message, branch, dry_run)
+
+    @tool(description='Post a comment on a GitHub pull request (dry-run by default)')
+    def post_pr_comment(
+        self, repo_name: str, pr_number: int, body: str,
+        dry_run: Optional[bool] = None,
+    ) -> ToolResult:
+        return post_pr_comment(repo_name, pr_number, body, dry_run)

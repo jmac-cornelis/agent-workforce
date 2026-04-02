@@ -54,6 +54,48 @@ def create_app(service: Optional[ShannonService] = None) -> FastAPI:
     def bot_health() -> Dict[str, Any]:
         return shannon_service.get_health()
 
+    @app.get('/v1/info')
+    def info() -> Dict[str, Any]:
+        return {
+            'agent_id': 'shannon',
+            'name': 'Shannon Communications Agent',
+            'version': '0.1.0',
+            'description': (
+                'Single Teams bot and routing surface for the Cornelis agent workforce. '
+                'Routes user commands to agent APIs and renders responses as Adaptive Cards.'
+            ),
+            'capabilities': [
+                'Route Teams slash commands to registered agent APIs',
+                'Post agent notifications and alerts to Teams channels',
+                'Render agent responses as Adaptive Cards',
+                'Process Teams outgoing webhook activities',
+                'Agent registry management',
+            ],
+            'endpoints': [
+                {'method': 'GET', 'path': '/v1/bot/health', 'description': 'Bot health check'},
+                {'method': 'GET', 'path': '/v1/info', 'description': 'Agent identity and capabilities'},
+                {'method': 'GET', 'path': '/v1/status/stats', 'description': 'Service throughput statistics'},
+                {'method': 'GET', 'path': '/v1/status/load', 'description': 'Current load state'},
+                {'method': 'GET', 'path': '/v1/status/work-summary', 'description': 'Activity summary today'},
+                {'method': 'GET', 'path': '/v1/status/tokens', 'description': 'Token usage summary'},
+                {'method': 'GET', 'path': '/v1/status/decisions', 'description': 'Recent routing decisions'},
+                {'method': 'GET', 'path': '/v1/status/decisions/{record_id}', 'description': 'Detail for one decision'},
+                {'method': 'GET', 'path': '/v1/shannon/registry', 'description': 'Registered agent commands'},
+                {'method': 'POST', 'path': '/v1/bot/notify', 'description': 'Post notification to Teams channel'},
+                {'method': 'POST', 'path': '/api/messages', 'description': 'Teams Bot Framework activity endpoint'},
+                {'method': 'POST', 'path': '/v1/teams/activities', 'description': 'Teams activity endpoint (alias)'},
+                {'method': 'POST', 'path': '/v1/teams/outgoing-webhook', 'description': 'Teams outgoing webhook endpoint'},
+            ],
+            'shannon_commands': [
+                {'command': '/stats', 'description': 'Shannon service status and throughput'},
+                {'command': '/busy', 'description': 'Current Shannon load summary'},
+                {'command': '/work-today', 'description': 'Today\'s work summary'},
+                {'command': '/token-status', 'description': 'Deterministic/token execution summary'},
+                {'command': '/decision-tree', 'description': 'Recent routing and posting decisions'},
+                {'command': '/why', 'description': 'Deep dive into a specific decision'},
+            ],
+        }
+
     @app.get('/v1/status/stats')
     def status_stats() -> Dict[str, Any]:
         return shannon_service.get_stats()
