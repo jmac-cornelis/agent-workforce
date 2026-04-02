@@ -1,0 +1,29 @@
+agent_id: shackleton
+agent_name: Shackleton Delivery Manager
+zone: planning
+phase: 6
+
+description: >
+  Monitors execution against plan, detects schedule risk and coordination
+  failures, produces forecasts and escalation prompts.
+
+llm:
+  temperature: 0.3
+  max_tokens: 4096
+  max_iterations: 10
+
+events:
+  emits:
+    - delivery.snapshot_created
+    - delivery.risk_detected
+    - delivery.forecast_changed
+    - delivery.escalation_requested
+  consumes:
+    - planning.snapshot_created
+    - build.completed
+    - test.execution_completed
+    - release.promoted
+
+api:
+  prefix: /v1/delivery
+  port: 8214

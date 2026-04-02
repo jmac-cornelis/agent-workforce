@@ -5,6 +5,10 @@ Faraday should be the test-execution agent for the platform. Its job is to take 
 
 In v1, Faraday should wrap the existing Fuze Test execution path rather than replacing the ATF executive or Product Test Adapter layers.
 
+## Namesake
+
+Faraday is named for Michael Faraday, one of history's great experimental scientists, famous for careful apparatus work and for turning theory into repeatable demonstrations. We use his name for the test-execution agent because Faraday is where planned experiments meet the real world: environments are bound, runs are executed, and evidence is captured.
+
 
 ## Product definition
 ### Goal

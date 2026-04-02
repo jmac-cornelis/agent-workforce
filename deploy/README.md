@@ -195,7 +195,7 @@ Engineering hygiene agent. Jira ticket validation + GitHub PR lifecycle scanning
 | 8200 | Shannon | ✅ Deployed |
 | 8201 | Drucker | ✅ Deployed |
 | 8202 | Gantt | Planned |
-| 8203 | Hypatia | Planned |
+| 8203 | Hemingway | Planned |
 | 8210-8227 | Future agents | Reserved |
 
 ## Networking

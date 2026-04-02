@@ -133,12 +133,12 @@
         <mxCell id="t1" value="Shannon — Approval Flow" style="text;html=1;fontSize=18;fontStyle=1;align=left;" vertex="1" parent="1">
           <mxGeometry x="20" y="10" width="400" height="30" as="geometry"/>
         </mxCell>
-        <mxCell id="t2" value="Hedy requests release approval; Shannon posts Adaptive Card; approver responds; Shannon records and forwards" style="text;html=1;fontSize=11;fontColor=#666666;align=left;" vertex="1" parent="1">
+        <mxCell id="t2" value="Humphrey requests release approval; Shannon posts Adaptive Card; approver responds; Shannon records and forwards" style="text;html=1;fontSize=11;fontColor=#666666;align=left;" vertex="1" parent="1">
           <mxGeometry x="20" y="38" width="700" height="20" as="geometry"/>
         </mxCell>
 
         <!-- Lifelines -->
-        <mxCell id="a1" value="Hedy&#xa;API" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+        <mxCell id="a1" value="Humphrey&#xa;API" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
           <mxGeometry x="80" y="80" width="100" height="580" as="geometry"/>
         </mxCell>
         <mxCell id="a2" value="Shannon&#xa;Bot API" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#ffe6cc;strokeColor=#d79b00;" vertex="1" parent="1">
@@ -155,7 +155,7 @@
         </mxCell>
 
         <!-- Messages -->
-        <!-- 1. Hedy → Shannon Bot API: POST /v1/bot/request-approval -->
+        <!-- 1. Humphrey → Shannon Bot API: POST /v1/bot/request-approval -->
         <mxCell id="m1" value="POST /v1/bot/request-approval" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="130" y="160" as="sourcePoint"/>
@@ -203,7 +203,7 @@
           </mxGeometry>
         </mxCell>
 
-        <!-- 7. Shannon → Hedy API: POST /v1/approvals/{id}/respond -->
+        <!-- 7. Shannon → Humphrey API: POST /v1/approvals/{id}/respond -->
         <mxCell id="m7" value="POST /v1/approvals/{id}/respond" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="370" y="420" as="sourcePoint"/>

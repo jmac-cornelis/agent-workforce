@@ -71,17 +71,17 @@ All agents depend on this. Must be complete before any agent work begins.
 |----|-------|----|--------|------------|----|
 | ADA-1 | **Implement planning compatibility layer** — Durable TestPlan objects linked to build IDs. TestPlanRequest/TestPlan/CoverageSummary schemas. | 5 | S3 | PF-2, JOS-4 | TestPlan schema defined; plans persisted with build_id linkage; plans queryable by build_id |
 | ADA-2 | **Implement trigger-to-plan selection** — PolicyResolver maps trigger class (PR/merge/nightly/release) to plan class. Respects Fuze Test suite selection precedence. | 5 | S3 | ADA-1 | PR→unit+fast, merge→expanded+HIL, nightly→extended, release→cert+policy-gated; policy decisions logged |
-| ADA-3 | **Implement Ada API** — `POST /v1/test-plans/select`, `GET /v1/test-plans/{id}`, `GET /v1/test-plans/{id}/events`. Emit `test.plan_selected`, `coverage_gap_detected`. | 3 | S3 | ADA-2, PF-3 | API endpoints functional; events emitted; plans queryable; OpenAPI spec published |
-| ADA-4 | **Fuze Test dry-run planning mode** — Add dry-run mode to run-atf.py that outputs machine-readable plan without executing. Ada consumes this for plan validation. | 5 | S3 | ADA-2 | Dry-run flag added to run-atf.py; machine-readable output parseable by Ada; no side effects in dry-run |
+| ADA-3 | **Implement Galileo API** — `POST /v1/test-plans/select`, `GET /v1/test-plans/{id}`, `GET /v1/test-plans/{id}/events`. Emit `test.plan_selected`, `coverage_gap_detected`. | 3 | S3 | ADA-2, PF-3 | API endpoints functional; events emitted; plans queryable; OpenAPI spec published |
+| ADA-4 | **Fuze Test dry-run planning mode** — Add dry-run mode to run-atf.py that outputs machine-readable plan without executing. Galileo consumes this for plan validation. | 5 | S3 | ADA-2 | Dry-run flag added to run-atf.py; machine-readable output parseable by Galileo; no side effects in dry-run |
 | ADA-5 | **Coverage feedback loop** — CoverageAdvisor tracks coverage gaps across runs. Emits `coverage_gap_detected` when plan leaves known areas untested. | 5 | S4 | ADA-3 | Coverage gaps detected and emitted; gap records queryable; advisory signals sent to downstream consumers |
 
-**Ada Total: 23 SP**
+**Galileo Total: 23 SP**
 
 ---
 
 ### Epic: CURIE — Test Generator Agent
 
-> Materializes Ada TestPlans into concrete Fuze Test runtime inputs.
+> Materializes Galileo TestPlans into concrete Fuze Test runtime inputs.
 
 | ID | Story | SP | Sprint | Depends On | AC |
 |----|-------|----|--------|------------|----|
@@ -145,7 +145,7 @@ All agents depend on this. Must be complete before any agent work begins.
 | BAB-4 | **Fuze release integration** — Stable release-version extraction from Fuze. Stable release record lookup. Explicit replacement metadata. Emit `version.mapped`, `mapping_conflict_detected`. | 5 | S5 | BAB-3, PF-7 | Fuze release versions extracted reliably; release records queryable; events emitted on mapping and conflict |
 | BAB-5 | **Confirmation workflow** — `POST /v1/version-mappings/{id}/confirm` for human approval of ambiguous or high-risk mappings. | 3 | S5 | BAB-2 | Confirmation endpoint working; unconfirmed mappings flagged; confirmed mappings promoted to authoritative |
 
-**Babbage Total: 23 SP**
+**Mercator Total: 23 SP**
 
 ---
 
@@ -157,12 +157,12 @@ All agents depend on this. Must be complete before any agent work begins.
 |----|-------|----|--------|------------|----|
 | LIN-1 | **Implement build-issue linkage** — RelationshipResolver + TraceStore. Assert `issue_affects_build`, `issue_fixed_in_build` relationships. `POST /v1/trace/assert`, `GET /v1/trace/builds/{id}/issues`. | 5 | S4 | JOS-4, PF-5 | Build↔issue links assertable; queryable in both directions; trace records persisted with correlation IDs |
 | LIN-2 | **Implement test-build linkage** — Assert `build_validated_by_test_run` relationships. `GET /v1/trace/builds/{id}/test-runs`. | 3 | S4 | LIN-1, FAR-3 | Test run↔build links assertable; queryable; linked to TestExecutionRecord |
-| LIN-3 | **Implement release-version lineage** — Assert `build_promoted_to_release`, `build_mapped_to_external_version`. Integrate with Babbage version records. | 5 | S5 | LIN-2, BAB-1 | Release↔build↔version links queryable; lineage navigable end-to-end |
+| LIN-3 | **Implement release-version lineage** — Assert `build_promoted_to_release`, `build_mapped_to_external_version`. Integrate with Mercator version records. | 5 | S5 | LIN-2, BAB-1 | Release↔build↔version links queryable; lineage navigable end-to-end |
 | LIN-4 | **Implement requirement coverage** — Assert `requirement_implemented_by_commit`, `requirement_verified_by_test_run`. CoverageGapDetector flags unverified requirements. | 5 | S5 | LIN-3 | Requirement↔commit↔test links assertable; coverage gaps detected and emitted; gap records queryable |
 | LIN-5 | **Implement trace query service** — `GET /v1/trace/issues/{id}`, `/releases/{id}`, `/requirements/{id}`, `/gaps`. Full trace view from any anchor. | 5 | S5 | LIN-4 | Full trace navigable from any identity anchor; trace views return complete relationship graph |
 | LIN-6 | **Jira write-back integration** — JiraTracePublisher pushes traceability comments, evidence links, missing-build flags, trace view links to Jira issues. | 5 | S5 | LIN-5, PF-5 | Jira issues receive trace comments; evidence links clickable; missing-build flags visible; no duplicate write-backs |
 
-**Linnaeus Total: 28 SP**
+**Berners-Lee Total: 28 SP**
 
 ---
 
@@ -181,10 +181,10 @@ All agents depend on this. Must be complete before any agent work begins.
 | HER-1 | **Implement transcript ingestion** — TranscriptIngestor + MeetingNormalizer. Detect meeting-ended events, retrieve transcript payloads, normalize into MeetingRecord + TranscriptRecord. | 5 | S5 | PF-6, PF-2 | Meeting-ended events trigger ingestion; transcripts normalized; MeetingRecord persisted; no manual copy/paste required |
 | HER-2 | **Implement summary engine** — SummaryEngine generates MeetingSummaryRecord from transcript. Distinguishes fact/decision/action/unresolved. Minimal quotes, uncertain attribution marked. | 8 | S5 | HER-1 | Summaries generated; fact/decision/action/unresolved classified; attribution uncertainty marked; summaries queryable |
 | HER-3 | **Implement action extraction** — ActionExtractor produces ActionItemDraft records. Actions are drafts until accepted. DecisionRecord for explicit decisions. | 5 | S5 | HER-2 | Action items extracted as drafts; decisions recorded separately; draft→accepted workflow working |
-| HER-4 | **Implement Herodotus API** — `POST /v1/meetings/ingest`, `/summarize`, `/publish`. `GET /v1/meetings/{id}`, `/summary`. | 3 | S5 | HER-3 | API endpoints functional; summaries queryable; publication triggerable; OpenAPI spec published |
-| HER-5 | **Controlled publication** — PublicationCoordinator publishes to internal meeting-summary store. Optional Jira follow-up suggestions (for Drucker). Doc suggestions (for Hypatia). | 5 | S6 | HER-4, PF-5 | Summaries published to knowledge store; Jira follow-up suggestions emitted; doc suggestions emitted; review gate before external publish |
+| HER-4 | **Implement Pliny API** — `POST /v1/meetings/ingest`, `/summarize`, `/publish`. `GET /v1/meetings/{id}`, `/summary`. | 3 | S5 | HER-3 | API endpoints functional; summaries queryable; publication triggerable; OpenAPI spec published |
+| HER-5 | **Controlled publication** — PublicationCoordinator publishes to internal meeting-summary store. Optional Jira follow-up suggestions (for Drucker). Doc suggestions (for Hemingway). | 5 | S6 | HER-4, PF-5 | Summaries published to knowledge store; Jira follow-up suggestions emitted; doc suggestions emitted; review gate before external publish |
 
-**Herodotus Total: 26 SP**
+**Pliny Total: 26 SP**
 
 ---
 
@@ -203,7 +203,7 @@ All agents depend on this. Must be complete before any agent work begins.
 | LIN-R-1 | **Implement structured PR review** — DiffAnalyzer + PolicyProfileResolver + FindingEngine. Review categories: correctness_risk, safety_risk, concurrency_risk, maintainability_risk, policy_violation, documentation_impact, test_attention_needed. | 8 | S6 | PF-4, PF-2 | PR diffs analyzed; findings categorized; policy profiles (kernel, embedded_cpp, python_utility) applied; findings structured |
 | LIN-R-2 | **Implement Linus API** — `POST /v1/reviews/pr`, `GET /v1/reviews/{id}`, `/findings`, `POST /v1/reviews/{id}/publish`. | 3 | S6 | LIN-R-1 | API endpoints functional; reviews queryable; findings filterable by category; OpenAPI spec published |
 | LIN-R-3 | **GitHub review integration** — ReviewPublisher posts inline comments, PR summary, advisory status checks to GitHub. | 5 | S6 | LIN-R-2, PF-4 | Inline comments posted on PR; summary comment posted; advisory status check set; no duplicate comments on re-review |
-| LIN-R-4 | **Cross-agent impact signals** — ImpactSignalEmitter sends doc impact→Hypatia, test attention→Ada, build risk→Josephine. Emit `review.completed`, `review.policy_failed`, `documentation_impact_detected`. | 5 | S7 | LIN-R-3 | Impact signals emitted; downstream agents receive and can act on signals; events on bus with correlation IDs |
+| LIN-R-4 | **Cross-agent impact signals** — ImpactSignalEmitter sends doc impact→Hemingway, test attention→Galileo, build risk→Josephine. Emit `review.completed`, `review.policy_failed`, `documentation_impact_detected`. | 5 | S7 | LIN-R-3 | Impact signals emitted; downstream agents receive and can act on signals; events on bus with correlation IDs |
 | LIN-R-5 | **Repository-specific tuning** — Per-repo policy profile configuration. Override rules. Audit trail for policy exceptions. | 3 | S7 | LIN-R-4 | Per-repo profiles configurable; overrides audited; exception trail queryable |
 
 **Linus Total: 24 SP**
@@ -217,12 +217,12 @@ All agents depend on this. Must be complete before any agent work begins.
 | ID | Story | SP | Sprint | Depends On | AC |
 |----|-------|----|--------|------------|----|
 | HED-1 | **Implement release evaluation** — ReleaseEvaluator + ReadinessSummarizer. Evaluate build eligibility, test evidence, blocking defects, version mapping, branch policy. Produce ReleaseReadinessSummary. | 8 | S6 | JOS-4, FAR-3, BAB-1, LIN-5 | Release candidates evaluated; readiness summary includes build/test/defect/version/branch status; non-eligible builds rejected |
-| HED-2 | **Implement Hedy API** — `POST /v1/releases/evaluate`, `/promote`, `/block`, `/deprecate`. `GET /v1/releases/{id}`, `/summary`. Emit `release.candidate_created`, `approval_requested`. | 3 | S6 | HED-1, PF-3 | API endpoints functional; events emitted; release state queryable; OpenAPI spec published |
+| HED-2 | **Implement Humphrey API** — `POST /v1/releases/evaluate`, `/promote`, `/block`, `/deprecate`. `GET /v1/releases/{id}`, `/summary`. Emit `release.candidate_created`, `approval_requested`. | 3 | S6 | HED-1, PF-3 | API endpoints functional; events emitted; release state queryable; OpenAPI spec published |
 | HED-3 | **Promotion orchestration** — StagePromoter manages sit→qa→release→deprecated transitions. ApprovalCoordinator enforces human approval for production promotion. | 8 | S7 | HED-2, PF-9 | Stage transitions enforced; human approval required for release promotion; approval audit trail; emit `release.promoted`, `release.blocked` |
 | HED-4 | **Release matrix support** — ReleaseMatrixResolver handles 3D version matrix: time × hardware targets × customer targets. | 5 | S7 | HED-3 | Matrix-aware release candidates; per-HW and per-customer targeting; matrix queryable |
 | HED-5 | **Fuze release integration** — Non-interactive release API in Fuze. Machine-readable release evaluation. Stable release-state output. Explicit automation hooks. | 5 | S7 | HED-3, PF-7 | Fuze release operations callable without prompts; release state machine-readable; automation hooks documented |
 
-**Hedy Total: 29 SP**
+**Humphrey Total: 29 SP**
 
 ---
 
@@ -234,11 +234,11 @@ All agents depend on this. Must be complete before any agent work begins.
 |----|-------|----|--------|------------|----|
 | HYP-1 | **Implement doc impact analysis** — DocImpactAnalyzer consumes source changes, review findings, build metadata, test outcomes. Produces DocumentationImpactRecord. | 5 | S6 | LIN-R-4, JOS-4, FAR-3 | Impact records generated from source/review/build/test signals; impact severity classified; records queryable |
 | HYP-2 | **Implement internal doc generation** — SourceSynthesizer + DocGenerator. Generate as-built docs from build metadata + source. Grounded in fuze/docs/source Sphinx tree. | 8 | S7 | HYP-1, PF-2 | As-built docs generated; grounded in Sphinx source; docs linked to build_id; generation manifest recorded |
-| HYP-3 | **Implement Hypatia API** — `POST /v1/docs/impact`, `/generate`, `/publish`. `GET /v1/docs/{id}`, `/patch`. | 3 | S7 | HYP-2 | API endpoints functional; docs queryable; patches reviewable; OpenAPI spec published |
+| HYP-3 | **Implement Hemingway API** — `POST /v1/docs/impact`, `/generate`, `/publish`. `GET /v1/docs/{id}`, `/patch`. | 3 | S7 | HYP-2 | API endpoints functional; docs queryable; patches reviewable; OpenAPI spec published |
 | HYP-4 | **Engineering and user doc support** — Generate engineering_reference and user_guide doc classes. DocValidator checks factual grounding. | 5 | S7 | HYP-3 | Engineering and user docs generated; validator catches ungrounded claims; doc classes correctly classified |
 | HYP-5 | **Controlled publication** — PublicationCoordinator manages review gate before external publish. Sphinx/ReadTheDocs integration. Emit `docs.published`. | 5 | S8 | HYP-4, PF-9 | Review gate enforced; docs publishable to ReadTheDocs; publication audit trail; events emitted |
 
-**Hypatia Total: 26 SP**
+**Hemingway Total: 26 SP**
 
 ---
 
@@ -250,7 +250,7 @@ All agents depend on this. Must be complete before any agent work begins.
 |----|-------|----|--------|------------|----|
 | NIG-1 | **Implement bug intake and context assembly** — BugIntakeNormalizer + ContextAssembler + MissingDataDetector. Consume Jira bug events, pull trace/build/test/release evidence. | 8 | S6 | PF-5, LIN-5, JOS-4, FAR-3 | Bug events trigger intake; context assembled from trace/build/test/release; missing data identified and flagged |
 | NIG-2 | **Implement Nightingale API** — `POST /v1/bugs/investigate`, `/reproduce`, `/summarize`. `GET /v1/bugs/{id}`, `/attempts`. | 3 | S6 | NIG-1 | API endpoints functional; investigations queryable; reproduction attempts tracked; OpenAPI spec published |
-| NIG-3 | **Targeted reproduction workflow** — ReproductionPlanner + ReproductionCoordinator. Request reproduction via Ada/Curie/Faraday/Tesla. Track ReproductionAttempt records. | 8 | S7 | NIG-2, ADA-3, CUR-2, FAR-3, TES-3 | Reproduction requests dispatched; attempts tracked with durable records; repro results linked to bug; no repro claim without evidence |
+| NIG-3 | **Targeted reproduction workflow** — ReproductionPlanner + ReproductionCoordinator. Request reproduction via Galileo/Curie/Faraday/Tesla. Track ReproductionAttempt records. | 8 | S7 | NIG-2, ADA-3, CUR-2, FAR-3, TES-3 | Reproduction requests dispatched; attempts tracked with durable records; repro results linked to bug; no repro claim without evidence |
 | NIG-4 | **Failure signatures and clustering** — FailureSignatureRecord for recurring patterns. Cluster similar failures across bugs. | 5 | S7 | NIG-3 | Failure signatures extracted; similar failures clustered; signature records queryable |
 | NIG-5 | **Investigation summary and decision support** — InvestigationSummarizer produces structured summary separating facts/hypotheses/recommendations. Emit `bug.investigation_summarized`. | 5 | S8 | NIG-4 | Summaries generated; facts/hypotheses/recommendations separated; summaries queryable; events emitted |
 
@@ -303,12 +303,12 @@ All agents depend on this. Must be complete before any agent work begins.
 | ID | Story | SP | Sprint | Depends On | AC |
 |----|-------|----|--------|------------|----|
 | BRO-1 | **Implement delivery snapshots** — StatusAggregator consumes Gantt snapshots, Jira state, build/test/release evidence. Produce DeliverySnapshot. | 5 | S8 | GAN-2, JOS-4, FAR-3, HED-2 | Delivery snapshots generated; aggregated from planning + execution evidence; snapshots queryable |
-| BRO-2 | **Implement Brooks API** — `POST /v1/delivery/snapshot`. `GET /v1/delivery/snapshots/{id}`, `/status`, `/risks`. | 3 | S8 | BRO-1 | API endpoints functional; delivery status queryable; OpenAPI spec published |
+| BRO-2 | **Implement Shackleton API** — `POST /v1/delivery/snapshot`. `GET /v1/delivery/snapshots/{id}`, `/status`, `/risks`. | 3 | S8 | BRO-1 | API endpoints functional; delivery status queryable; OpenAPI spec published |
 | BRO-3 | **Risk detection** — DeliveryRiskDetector classifies schedule risk, blocked handoffs, resource contention. DeliveryRiskRecord with severity and evidence. | 5 | S8 | BRO-2 | Risks detected and classified; risk records include evidence links; severity levels assigned |
 | BRO-4 | **Forecasting** — ForecastEngine produces ForecastRecord with confidence intervals based on historical velocity and current state. | 5 | S8 | BRO-3 | Forecasts generated; confidence intervals included; forecasts linked to delivery snapshots |
 | BRO-5 | **Human reporting and escalation** — StatusPublisher + EscalationCoordinator. StatusSummary for stakeholders. EscalationRecord for blocked/at-risk items. | 5 | S8 | BRO-4 | Status summaries generated; escalation records created for at-risk items; escalation prompts sent (not auto-resolved) |
 
-**Brooks Total: 23 SP**
+**Shackleton Total: 23 SP**
 
 ---
 
@@ -344,11 +344,11 @@ All agents depend on this. Must be complete before any agent work begins.
 | Wave | Focus | Epics | Stories | Total SP |
 |------|-------|-------|---------|----------|
 | 0 | Platform Foundation | 1 | 12 | 64 |
-| 1 | Build & Test Spine | 5 (Josephine, Ada, Curie, Tesla, Faraday) | 28 | 140 |
-| 2 | Versioning & Traceability | 2 (Babbage, Linnaeus) | 11 | 51 |
-| 3 | Human Context | 1 (Herodotus) | 5 | 26 |
-| 4 | Quality, Release, Docs, Bugs | 4 (Linus, Hedy, Hypatia, Nightingale) | 20 | 108 |
-| 5 | Project Management (Future) | 3 (Drucker, Gantt, Brooks) | 15 | 73 |
+| 1 | Build & Test Spine | 5 (Josephine, Galileo, Curie, Tesla, Faraday) | 28 | 140 |
+| 2 | Versioning & Traceability | 2 (Mercator, Berners-Lee) | 11 | 51 |
+| 3 | Human Context | 1 (Pliny) | 5 | 26 |
+| 4 | Quality, Release, Docs, Bugs | 4 (Linus, Humphrey, Hemingway, Nightingale) | 20 | 108 |
+| 5 | Project Management (Future) | 3 (Drucker, Gantt, Shackleton) | 15 | 73 |
 | 6 | Hardening & Pilot | 1 | 8 | 42 |
 | **Total** | | **17 Epics** | **99 Stories** | **504 SP** |
 
@@ -390,12 +390,12 @@ PF-4 (S1)
 |--------|---------|------------------|
 | S1 | ~48 | Event envelope, schemas, transport, GitHub/Fuze adapters, security, repo scaffolding, artifact store |
 | S2 | ~59 | Jira/Teams/Env adapters, observability, Josephine full MVP |
-| S3 | ~68 | Ada, Curie, Tesla, Faraday MVPs (test spine online) |
-| S4 | ~46 | Babbage MVP, Linnaeus build/test linkage, Faraday hardening, Ada coverage |
-| S5 | ~51 | Babbage lineage, Linnaeus full trace + Jira write-back, Herodotus MVP |
-| S6 | ~56 | Linus, Hedy, Hypatia, Nightingale MVPs, hardening audit |
-| S7 | ~56 | Linus/Hedy/Hypatia/Nightingale hardening, Drucker, Gantt, E2E validation |
-| S8 | ~54 | Brooks, Gantt/Drucker completion, hardening, pilot rollout |
+| S3 | ~68 | Galileo, Curie, Tesla, Faraday MVPs (test spine online) |
+| S4 | ~46 | Mercator MVP, Berners-Lee build/test linkage, Faraday hardening, Galileo coverage |
+| S5 | ~51 | Mercator lineage, Berners-Lee full trace + Jira write-back, Pliny MVP |
+| S6 | ~56 | Linus, Humphrey, Hemingway, Nightingale MVPs, hardening audit |
+| S7 | ~56 | Linus/Humphrey/Hemingway/Nightingale hardening, Drucker, Gantt, E2E validation |
+| S8 | ~54 | Shackleton, Gantt/Drucker completion, hardening, pilot rollout |
 
 ---
 
@@ -403,6 +403,6 @@ PF-4 (S1)
 
 1. **Story IDs are placeholders** — replace with actual Jira keys when importing
 2. **SP estimates assume** a team of 5 (platform lead, integration eng, build/test eng, backend/data eng, product owner) with 2-week sprints
-3. **Wave 5 agents (Drucker, Gantt, Brooks)** are marked as future in the spec but included per request — they can be deferred without blocking Waves 0–4
+3. **Wave 5 agents (Drucker, Gantt, Shackleton)** are marked as future in the spec but included per request — they can be deferred without blocking Waves 0–4
 4. **Fuze changes** (JOS-1, ADA-4, CUR-4, FAR-6, TES-5, BAB-4, HED-5) are cross-cutting and may require coordination with the Fuze team
 5. **Hardening stories (Wave 6)** should run in parallel with later waves, not strictly after — HAR-1/HAR-2 can start as soon as Wave 1 agents are online

@@ -1,0 +1,41 @@
+##########################################################################################
+# Blackstone Legal Compliance & Code Scanning Agent Configuration
+# Author: Cornelis Networks
+##########################################################################################
+
+agent_id: blackstone
+display_name: Blackstone
+zone: execution_spine
+phase: 5
+description: >
+  Legal Compliance and Code Scanning Agent. Orchestrates license and
+  regulatory compliance scans, tracks remediation and exception flow,
+  and produces release-gating evidence for downstream agents.
+
+model: null
+temperature: 0.2
+max_iterations: 12
+timeout_seconds: 300
+
+events:
+  consumes:
+    - build.completed
+    - review.dependency_change
+  produces:
+    - compliance.scan.started
+    - compliance.scan.completed
+    - compliance.finding.new
+    - compliance.evidence.ready
+    - compliance.waiver.requested
+    - compliance.waiver.resolved
+    - sbom.updated
+
+dependencies:
+  - josephine
+  - linus
+  - mercator
+  - humphrey
+  - bernerslee
+  - drucker
+  - shannon
+  - event_bus

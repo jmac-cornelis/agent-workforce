@@ -75,7 +75,11 @@ from agents.drucker.tools import (
     list_drucker_reports,
     DruckerTools,
 )
-from agents.hypatia.tools import (
+from agents.hemingway.tools import (
+    generate_hemingway_documentation,
+    get_hemingway_record,
+    list_hemingway_records,
+    HemingwayTools,
     generate_hypatia_documentation,
     get_hypatia_record,
     list_hypatia_records,
@@ -204,9 +208,13 @@ __all__ = [
     'DruckerTools',
     # Hypatia
     'generate_hypatia_documentation',
+    'generate_hemingway_documentation',
     'get_hypatia_record',
+    'get_hemingway_record',
     'list_hypatia_records',
+    'list_hemingway_records',
     'HypatiaTools',
+    'HemingwayTools',
     # Draw.io
     'parse_org_chart',
     'get_responsibilities',

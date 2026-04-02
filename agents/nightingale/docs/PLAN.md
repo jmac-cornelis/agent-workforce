@@ -5,6 +5,10 @@ Nightingale should be the bug-investigation agent for the platform. Its v1 job i
 
 Nightingale should not replace Jira workflow ownership, release decisions, or traceability ownership. It should turn vague bug reports into actionable technical evidence.
 
+## Namesake
+
+Nightingale is named for Florence Nightingale, the pioneering nurse and statistician who used observation, evidence, and disciplined record-keeping to improve outcomes in complex systems. We use her name for the bug-investigation agent because Nightingale starts with symptoms, gathers evidence, and turns confusion into an actionable diagnosis.
+
 
 ## Product definition
 ### Goal

@@ -79,14 +79,18 @@ from agents.drucker.agent import DruckerCoordinatorAgent
 from agents.drucker.models import DruckerRequest
 from agents.gantt.agent import GanttProjectPlannerAgent
 from agents.gantt.models import PlanningRequest, ReleaseMonitorRequest, ReleaseSurveyRequest
-from agents.hypatia.agent import HypatiaDocumentationAgent
-from agents.hypatia.models import DocumentationRequest
+from agents.hemingway.agent import HemingwayDocumentationAgent
+from agents.hemingway.models import DocumentationRequest
 from agents.drucker.state.report_store import DruckerReportStore
 from agents.gantt.state.dependency_review_store import GanttDependencyReviewStore
 from agents.gantt.state.release_monitor_store import GanttReleaseMonitorStore
 from agents.gantt.state.release_survey_store import GanttReleaseSurveyStore
 from agents.gantt.state.snapshot_store import GanttSnapshotStore
-from agents.hypatia.state.record_store import HypatiaRecordStore
+from agents.hemingway.state.record_store import HemingwayRecordStore
+
+# Legacy compatibility aliases during the rename transition.
+HypatiaDocumentationAgent = HemingwayDocumentationAgent
+HypatiaRecordStore = HemingwayRecordStore
 
 # CRITICAL: Suppress all stdout output from jira_utils.  The MCP protocol
 # uses stdout exclusively for JSON-RPC 2.0 messages; any stray print()

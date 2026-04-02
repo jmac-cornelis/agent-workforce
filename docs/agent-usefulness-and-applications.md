@@ -85,9 +85,9 @@ Why it matters:
 
 ## Documentation Agent
 
-### HypatiaDocumentationAgent
+### HemingwayDocumentationAgent
 
-The `HypatiaDocumentationAgent` is useful when the team needs internal documentation updates that are grounded in actual source files and reviewable before they touch either the repo or Confluence.
+The `HemingwayDocumentationAgent` is useful when the team needs internal documentation updates that are grounded in actual source files and reviewable before they touch either the repo or Confluence.
 
 Practical applications:
 
@@ -277,9 +277,9 @@ Why it matters:
 
 ## Legal Compliance & Code Scanning Agent
 
-### BrandeisComplianceAgent
+### BlackstoneComplianceAgent
 
-The `BrandeisComplianceAgent` is useful when the team needs to ensure that what ships is legally clean, license-compatible, and compliant with organizational and regulatory policy — before it reaches a release gate.
+The `BlackstoneComplianceAgent` is useful when the team needs to ensure that what ships is legally clean, license-compatible, and compliant with organizational and regulatory policy — before it reaches a release gate.
 
 Practical applications:
 
@@ -287,7 +287,7 @@ Practical applications:
 - Generate and maintain a software bill of materials (SBOM) for tracked products and releases
 - Evaluate license compatibility across dependency trees and flag conflicts before release gates
 - Surface regulatory compliance gaps such as export control, FIPS, FedRAMP, or sector-specific requirements
-- Produce structured compliance evidence that `Hedy` can consume as a release-readiness input
+- Produce structured compliance evidence that `Humphrey` can consume as a release-readiness input
 - Track remediation status for flagged findings and coordinate with `Drucker` for Jira-backed tracking
 - Detect new or changed dependencies that require legal review
 - Deliver compliance alerts and status summaries to Teams channels via `Shannon`
@@ -296,7 +296,7 @@ Why it matters:
 
 - License and vulnerability compliance is a hard gate for shipping product. Catching issues late is expensive.
 - BlackDuck scans produce large, noisy result sets. An agent that interprets and prioritizes findings saves significant manual triage.
-- Structured compliance evidence that plugs directly into the release-gating workflow (`Hedy`) closes a gap in the current execution spine.
+- Structured compliance evidence that plugs directly into the release-gating workflow (`Humphrey`) closes a gap in the current execution spine.
 - Regulatory requirements (export control, FIPS) are easy to miss without systematic scanning and policy enforcement.
 - This agent turns compliance from a periodic manual audit into a continuous, automated, and auditable workflow.
 

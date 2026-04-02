@@ -82,13 +82,13 @@ No black boxes.
 - shared event envelope
 - canonical record schemas
 - Josephine MVP
-- Ada MVP
+- Galileo MVP
 - Curie MVP
 - Faraday MVP
 - Tesla MVP
-- Babbage MVP
-- Linnaeus MVP
-- Herodotus MVP
+- Mercator MVP
+- Berners-Lee MVP
+- Pliny MVP
 - narrow GitHub integration
 - narrow Jira integration
 - Fuze integration for build orchestration
@@ -132,7 +132,7 @@ A foundation package that every agent can use.
 Stand up the operational core:
 
 - Josephine
-- Ada
+- Galileo
 - Curie
 - Faraday
 - Tesla
@@ -148,8 +148,8 @@ A build-and-test loop that reacts to GitHub events and produces durable machine-
 
 Stand up the technical identity layer:
 
-- Babbage
-- Linnaeus
+- Mercator
+- Berners-Lee
 - Jira linkage
 - build-to-bug relationships
 - release mapping records
@@ -162,7 +162,7 @@ Exact traceability from code and build to issue and release context.
 
 Stand up the first human-context workflow:
 
-- Herodotus
+- Pliny
 - Teams transcript ingestion
 - summary extraction
 - Jira follow-up creation or suggestion path
@@ -278,7 +278,7 @@ Attach meaningful test execution to the build spine.
 
 ## Test spine MVP capabilities
 
-- Ada selects a test plan based on trigger type
+- Galileo selects a test plan based on trigger type
 - Curie materializes executable test inputs
 - Tesla tracks environment reservations
 - Faraday runs PR-level test plans
@@ -306,8 +306,8 @@ Attach meaningful test execution to the build spine.
 
 ## Exit criteria
 
-- Ada consumes Josephine events
-- Curie and Faraday consume Ada outputs
+- Galileo consumes Josephine events
+- Curie and Faraday consume Galileo outputs
 - tests run automatically by trigger class
 - results are queryable by build ID
 - environment reservations are tracked
@@ -315,20 +315,20 @@ Attach meaningful test execution to the build spine.
 
 ---
 
-# 6.4 Days 46–60 — Babbage and Linnaeus MVP
+# 6.4 Days 46–60 — Mercator and Berners-Lee MVP
 
 ## Objectives
 
 Create exact technical traceability.
 
-## Babbage MVP capabilities
+## Mercator MVP capabilities
 
 - map internal Fuze build IDs to external versions
 - expose lookup by internal build ID
 - expose reverse lookup by external version
 - emit version mapping events
 
-## Linnaeus MVP capabilities
+## Berners-Lee MVP capabilities
 
 - associate Jira issues to build IDs
 - associate test runs to build IDs
@@ -354,13 +354,13 @@ Keep it narrow:
 
 ---
 
-# 6.5 Days 61–75 — Herodotus MVP
+# 6.5 Days 61–75 — Pliny MVP
 
 ## Objectives
 
 Automate transcript capture and structured summary generation.
 
-## Herodotus MVP capabilities
+## Pliny MVP capabilities
 
 - detect transcript availability from Teams
 - ingest transcript automatically
@@ -448,7 +448,7 @@ Owns architecture, contracts, and technical decisions.
 Owns GitHub, Jira, Teams, and Fuze integration wiring.
 
 ### 3. Build/test systems engineer
-Owns Josephine, Ada, Curie, Faraday, Tesla, and environment orchestration.
+Owns Josephine, Galileo, Curie, Faraday, Tesla, and environment orchestration.
 
 ### 4. Backend/data engineer
 Owns event transport, record persistence, query layer, and auditability.
@@ -483,13 +483,13 @@ In a smaller team, several of these can be combined.
 
 ### Agent services
 - josephine-service
-- ada-service
+- galileo-service
 - curie-service
 - faraday-service
 - tesla-service
-- babbage-service
-- linnaeus-service
-- herodotus-service
+- mercator-service
+- bernerslee-service
+- pliny-service
 
 ### Integration adapters
 - github-adapter
@@ -510,25 +510,25 @@ This keeps the system modular and lets you replace pieces without rewriting ever
 - artifact store
 - event transport
 
-## Ada depends on
+## Galileo depends on
 - Josephine events
 - Curie
 - Faraday
 - Tesla
 - artifact/result storage
 
-## Babbage depends on
+## Mercator depends on
 - Josephine build IDs
 - release/version policy
 
-## Linnaeus depends on
+## Berners-Lee depends on
 - Jira integration
 - Josephine records
-- Ada planning records
+- Galileo planning records
 - Faraday execution records
-- Babbage mappings
+- Mercator mappings
 
-## Herodotus depends on
+## Pliny depends on
 - Teams integration
 - transcript access
 - summary storage target
@@ -618,7 +618,7 @@ Treat observability as part of MVP, not post-MVP cleanup.
 - emit build events
 
 ## Sprint 3
-- implement Ada test-plan selection
+- implement Galileo test-plan selection
 - implement Curie test-input generation
 - integrate Tesla environment reservation
 - execute PR tests through Faraday
@@ -626,15 +626,15 @@ Treat observability as part of MVP, not post-MVP cleanup.
 - emit coverage summaries
 
 ## Sprint 4
-- implement Babbage mapping logic
+- implement Mercator mapping logic
 - implement Jira adapter
-- implement Linnaeus happy path
+- implement Berners-Lee happy path
 - link bugs to builds and tests
 - push traceability comments to Jira
 
 ## Sprint 5
 - implement Teams transcript ingestion
-- implement Herodotus summarization pipeline
+- implement Pliny summarization pipeline
 - publish summary records
 - generate action item drafts
 
@@ -662,13 +662,13 @@ If those foundations are weak, smarter models will only make the confusion happe
 The right first move is to build the narrow operational spine:
 
 - Josephine
-- Ada
+- Galileo
 - Curie
 - Faraday
 - Tesla
-- Babbage
-- Linnaeus
-- Herodotus
+- Mercator
+- Berners-Lee
+- Pliny
 
 Then harden it.
 

@@ -12,6 +12,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Iterable, Optional
 
+from agents.rename_registry import agent_display_name
+
 
 def _fact_entries(facts: Dict[str, Any]) -> list[dict[str, str]]:
     return [
@@ -665,6 +667,8 @@ def build_dry_run_preview_card(
     Shows what WOULD happen if the user confirms execution.
     The user re-sends the same command with "execute" appended to proceed.
     '''
+    display_name = agent_display_name(agent_id) or str(agent_id or '').strip().title()
+
     preview_facts: Dict[str, Any] = {}
     body_lines: list[str] = []
 
@@ -703,7 +707,7 @@ def build_dry_run_preview_card(
             'type': 'TextBlock',
             'size': 'Large',
             'weight': 'Bolder',
-            'text': f'⏸ Dry Run — {agent_id.title()} {command}',
+            'text': f'⏸ Dry Run — {display_name} {command}',
             'wrap': True,
         },
         {

@@ -88,24 +88,24 @@ graph TB
         RD[(Redis)]
         NX[Nginx]
         J_API[Josephine API]
-        A_API[Ada API]
-        B_API[Babbage API]
-        L_API[Linnaeus API]
+        A_API[Galileo API]
+        B_API[Mercator API]
+        L_API[Berners-Lee API]
     end
     subgraph cn-ai-02["cn-ai-02"]
         C_API[Curie API]
         F_API[Faraday API]
         T_API[Tesla API]
-        H_API[Hedy API]
+        H_API[Humphrey API]
         LR_API[Linus API]
     end
     subgraph cn-ai-03["cn-ai-03"]
-        HE_API[Herodotus API]
-        HY_API[Hypatia API]
+        HE_API[Pliny API]
+        HY_API[Hemingway API]
         N_API[Nightingale API]
         D_API[Drucker API]
         G_API[Gantt API]
-        BR_API[Brooks API]
+        BR_API[Shackleton API]
     end
     subgraph cn-ai-04["cn-ai-04"]
         GF[Grafana]
@@ -126,9 +126,9 @@ graph TB
 
 | Host | Services |
 |------|----------|
-| **cn-ai-01** | PostgreSQL (primary), Redis, Nginx, Josephine API, Ada API, Babbage API, Linnaeus API |
-| **cn-ai-02** | Curie API, Faraday API, Tesla API, Hedy API, Linus API |
-| **cn-ai-03** | Herodotus API, Hypatia API, Nightingale API, Drucker API, Gantt API, Brooks API |
+| **cn-ai-01** | PostgreSQL (primary), Redis, Nginx, Josephine API, Galileo API, Mercator API, Berners-Lee API |
+| **cn-ai-02** | Curie API, Faraday API, Tesla API, Humphrey API, Linus API |
+| **cn-ai-03** | Pliny API, Hemingway API, Nightingale API, Drucker API, Gantt API, Shackleton API |
 | **cn-ai-04** | Grafana, Loki, Prometheus, PostgreSQL (replica), overflow capacity |
 | **bld-host-01** | Josephine workers (build execution in Docker) |
 | **HIL lab** | Faraday workers (test execution on hardware) |
@@ -142,7 +142,7 @@ graph TB
 | **Secret management** | workspace_profile_ref resolves to short-lived credentials via Docker secrets or env injection. No raw secrets in API payloads. |
 | **Approval gates** | Human approval required for: release promotion, review policy override, traceability exception, external doc publish. |
 | **Audit log** | All agent actions logged to PostgreSQL audit table with correlation_id, agent_id, action, timestamp. Immutable. |
-| **Transcript access** | Only Herodotus can access Teams transcripts. Scoped API credentials. |
+| **Transcript access** | Only Pliny can access Teams transcripts. Scoped API credentials. |
 
 ## Observability
 

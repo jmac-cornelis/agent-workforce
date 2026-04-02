@@ -60,13 +60,13 @@ event triggers.
   ----------------------- ----------------------- -----------------------
   Build & Package Agent   Josephine               Build orchestration
 
-  Release Orchestrator    Hedy                    Release matrix
+  Release Orchestrator    Humphrey                    Release matrix
                                                   management
 
   Code Review Agent       Linus                   Code quality
                                                   enforcement
 
-  Test Planner            Ada                     Test planning
+  Test Planner            Galileo                     Test planning
 
   Test Generator          Curie                   Executable test input
                                                   generation
@@ -76,20 +76,20 @@ event triggers.
   Test Environment        Tesla                   Environment reservation
   Manager                                         and lab state
 
-  Documentation Agent     Hypatia                 Documentation
+  Documentation Agent     Hemingway                 Documentation
                                                   generation
 
-  Knowledge Capture Agent Herodotus               Meeting transcripts &
+  Knowledge Capture Agent Pliny               Meeting transcripts &
                                                   summaries
 
   Bug Investigation      Nightingale             Bug triage,
   Agent                                           analysis, and
                                                   reproduction
 
-  Version Mapping Agent   Babbage                 Internal/external
+  Version Mapping Agent   Mercator                 Internal/external
                                                   version mapping
 
-  Traceability Agent      Linnaeus                Requirement and build
+  Traceability Agent      Berners-Lee                Requirement and build
                                                   traceability
   -----------------------------------------------------------------------
 
@@ -100,14 +100,14 @@ event triggers.
 Detailed implementation plans currently available:
 
 - Josephine: [JOSEPHINE_BUILD_AGENT_PLAN.md](../../agents/JOSEPHINE_BUILD_AGENT_PLAN.md)
-- Hedy: [HEDY_RELEASE_MANAGER_PLAN.md](../../agents/HEDY_RELEASE_MANAGER_PLAN.md)
+- Humphrey: [PLAN.md](../../agents/humphrey/docs/PLAN.md)
 - Linus: [LINUS_CODE_REVIEW_AGENT_PLAN.md](../../agents/LINUS_CODE_REVIEW_AGENT_PLAN.md)
-- Hypatia: [HYPATIA_DOCUMENTATION_AGENT_PLAN.md](../../agents/HYPATIA_DOCUMENTATION_AGENT_PLAN.md)
-- Babbage: [BABBAGE_VERSION_MANAGER_PLAN.md](../../agents/BABBAGE_VERSION_MANAGER_PLAN.md)
-- Linnaeus: [LINNAEUS_TRACEABILITY_AGENT_PLAN.md](../../agents/LINNAEUS_TRACEABILITY_AGENT_PLAN.md)
-- Herodotus: [HERODOTUS_KNOWLEDGE_CAPTURE_AGENT_PLAN.md](../../agents/HERODOTUS_KNOWLEDGE_CAPTURE_AGENT_PLAN.md)
+- Hemingway: [PLAN.md](../../agents/hemingway/docs/PLAN.md)
+- Mercator: [PLAN.md](../../agents/mercator/docs/PLAN.md)
+- Berners-Lee: [PLAN.md](../../agents/bernerslee/docs/PLAN.md)
+- Pliny: [PLAN.md](../../agents/pliny/docs/PLAN.md)
 - Nightingale: [NIGHTINGALE_BUG_TRIAGE_REPRODUCTION_PLAN.md](../../agents/NIGHTINGALE_BUG_TRIAGE_REPRODUCTION_PLAN.md)
-- Ada: [ADA_TEST_PLANNER_PLAN.md](../../agents/ADA_TEST_PLANNER_PLAN.md)
+- Galileo: [PLAN.md](../../agents/galileo/docs/PLAN.md)
 - Curie: [CURIE_TEST_GENERATOR_PLAN.md](../../agents/CURIE_TEST_GENERATOR_PLAN.md)
 - Faraday: [FARADAY_TEST_EXECUTOR_PLAN.md](../../agents/FARADAY_TEST_EXECUTOR_PLAN.md)
 - Tesla: [TESLA_TEST_ENVIRONMENT_MANAGER_PLAN.md](../../agents/TESLA_TEST_ENVIRONMENT_MANAGER_PLAN.md)
@@ -115,7 +115,7 @@ Detailed implementation plans currently available:
 Project-management extension plans:
 
 - Gantt: [GANTT_PROJECT_PLANNER_PLAN.md](../../agents/GANTT_PROJECT_PLANNER_PLAN.md)
-- Brooks: [BROOKS_DELIVERY_MANAGER_PLAN.md](../../agents/BROOKS_DELIVERY_MANAGER_PLAN.md)
+- Shackleton: [PLAN.md](../../agents/shackleton/docs/PLAN.md)
 - Drucker: [DRUCKER_JIRA_COORDINATOR_PLAN.md](../../agents/DRUCKER_JIRA_COORDINATOR_PLAN.md)
 
 ## 4.1 Build & Package Agent (Josephine)
@@ -151,7 +151,7 @@ Automate builds and packaging using the **Fuze configuration system**.
 
 ------------------------------------------------------------------------
 
-## 4.2 Release Orchestrator (Hedy)
+## 4.2 Release Orchestrator (Humphrey)
 
 ### Purpose
 
@@ -203,13 +203,13 @@ Triggered during GitHub Pull Requests.
 
 ------------------------------------------------------------------------
 
-## 4.4 Test Planner (Ada)
+## 4.4 Test Planner (Galileo)
 
 ### Purpose
 
 Define what should be tested, at what depth, and under what policy.
 
-Ada is no longer the umbrella name for the whole test domain. Ada is specifically the planning agent.
+Galileo is no longer the umbrella name for the whole test domain. Galileo is specifically the planning agent.
 
 ### Components
 
@@ -229,7 +229,7 @@ Ada is no longer the umbrella name for the whole test domain. Ada is specificall
 
 ### Purpose
 
-Turn Ada's plan into executable Fuze Test inputs.
+Turn Galileo's plan into executable Fuze Test inputs.
 
 ### Responsibilities
 
@@ -240,7 +240,7 @@ Turn Ada's plan into executable Fuze Test inputs.
 ### Triggering Model
 
 - Always-on generation service with light persistent state
-- Work is triggered by Ada plan outputs or direct generation requests
+- Work is triggered by Galileo plan outputs or direct generation requests
 - Humans can regenerate inputs for debugging or exceptional cases
 
 ------------------------------------------------------------------------
@@ -303,7 +303,7 @@ Supports:
 
 ------------------------------------------------------------------------
 
-## 4.8 Documentation Agent (Hypatia)
+## 4.8 Documentation Agent (Hemingway)
 
 ### Purpose
 
@@ -335,7 +335,7 @@ Potential integration with:
 
 ------------------------------------------------------------------------
 
-## 4.9 Knowledge Capture Agent (Herodotus)
+## 4.9 Knowledge Capture Agent (Pliny)
 
 ### Purpose
 
@@ -361,7 +361,7 @@ Automatically capture meeting knowledge.
 
 ------------------------------------------------------------------------
 
-## 4.10 Version Mapping Agent (Babbage)
+## 4.10 Version Mapping Agent (Mercator)
 
 ### Purpose
 
@@ -381,7 +381,7 @@ Connect **Fuze internal versioning** with **external release versions**.
 
 ------------------------------------------------------------------------
 
-## 4.11 Traceability Agent (Linnaeus)
+## 4.11 Traceability Agent (Berners-Lee)
 
 ### Purpose
 
@@ -452,13 +452,13 @@ Turn Jira bug reports into actionable technical evidence.
 # 6. Recommended Implementation Order
 
 1.  Build Agent (Josephine)
-2.  Release Agent (Hedy)
+2.  Release Agent (Humphrey)
 3.  Code Review Agent (Linus)
-4.  Test Stack (Ada / Curie / Faraday / Tesla)
-5.  Documentation Agent (Hypatia)
-6.  Version Mapping Agent (Babbage)
-7.  Traceability Agent (Linnaeus)
-8.  Knowledge Capture Agent (Herodotus)
+4.  Test Stack (Galileo / Curie / Faraday / Tesla)
+5.  Documentation Agent (Hemingway)
+6.  Version Mapping Agent (Mercator)
+7.  Traceability Agent (Berners-Lee)
+8.  Knowledge Capture Agent (Pliny)
 
 ------------------------------------------------------------------------
 
@@ -467,7 +467,7 @@ Turn Jira bug reports into actionable technical evidence.
 Potential additional agents:
 
 -   project planner agents such as Gantt
--   delivery-management agents such as Brooks
+-   delivery-management agents such as Shackleton
 -   Jira workflow coordinators such as Drucker
 -   resource scheduling agents
 -   system architecture analysis agents
@@ -475,7 +475,7 @@ Potential additional agents:
 Typical triggering models for likely extensions:
 
 -   Gantt: primarily on-demand planning snapshots, with optional scheduled refreshes later; humans review and approve planning write-backs
--   Brooks: on-demand and scheduled delivery summaries; humans request status views and acknowledge or dismiss risks
+-   Shackleton: on-demand and scheduled delivery summaries; humans request status views and acknowledge or dismiss risks
 -   Drucker: always-on Jira coordination service reacting to Jira events plus scheduled hygiene scans; humans approve, apply, or suppress workflow changes
 
 ---
@@ -493,18 +493,18 @@ flowchart TB
 
     %% Core Agents
     JOSEPHINE["Josephine<br/>Build & Package Agent"]
-    HEDY["Hedy<br/>Release Orchestrator"]
+    HEDY["Humphrey<br/>Release Orchestrator"]
     LINUS["Linus<br/>Code Review Agent"]
-    ADA["Ada<br/>Test Planner"]
+    ADA["Galileo<br/>Test Planner"]
     CURIE["Curie<br/>Test Generator"]
     FARADAY["Faraday<br/>Test Executor"]
     TESLA["Tesla<br/>Test Environment Manager"]
 
     %% Support Agents
-    HYPATIA["Hypatia<br/>Documentation Agent"]
-    BABBAGE["Babbage<br/>Version Mapping Agent"]
-    LINNAEUS["Linnaeus<br/>Traceability Agent"]
-    HERODOTUS["Herodotus<br/>Knowledge Capture Agent"]
+    HYPATIA["Hemingway<br/>Documentation Agent"]
+    BABBAGE["Mercator<br/>Version Mapping Agent"]
+    LINNAEUS["Berners-Lee<br/>Traceability Agent"]
+    HERODOTUS["Pliny<br/>Knowledge Capture Agent"]
 
     %% Primary Flows
     GH --> JOSEPHINE
@@ -545,16 +545,16 @@ flowchart TB
 
 - **GitHub** is the primary source of development events.
 - **Fuze Config** drives configuration-aware build and package behavior.
-- **Josephine** produces build artifacts and hands release-ready outputs to **Hedy**.
+- **Josephine** produces build artifacts and hands release-ready outputs to **Humphrey**.
 - **Linus** evaluates pull requests and code quality policy.
-- **Ada** selects test intent and depth from trigger and policy.
+- **Galileo** selects test intent and depth from trigger and policy.
 - **Curie** turns selected plans into executable Fuze Test inputs.
 - **Tesla** manages environment state and reservations.
 - **Faraday** executes the planned tests, including hardware-in-the-loop flows.
-- **Babbage** maps internal Fuze-generated build identities to external release versions.
-- **Linnaeus** maintains traceability from requirements and Jira tickets to builds, tests, and releases.
-- **Hypatia** generates and updates repo-level, user, and engineering documentation.
-- **Herodotus** captures and summarizes meeting transcripts from Microsoft Teams.
+- **Mercator** maps internal Fuze-generated build identities to external release versions.
+- **Berners-Lee** maintains traceability from requirements and Jira tickets to builds, tests, and releases.
+- **Hemingway** generates and updates repo-level, user, and engineering documentation.
+- **Pliny** captures and summarizes meeting transcripts from Microsoft Teams.
 - **Nightingale** turns bug reports into reproducible technical investigations and evidence packs.
 
 ---
@@ -582,16 +582,16 @@ flowchart TB
 
     %% Agents
     JOSEPHINE["Josephine<br/>Build & Package"]
-    HEDY["Hedy<br/>Release Orchestrator"]
+    HEDY["Humphrey<br/>Release Orchestrator"]
     LINUS["Linus<br/>Code Review"]
-    ADA["Ada<br/>Test Planner"]
+    ADA["Galileo<br/>Test Planner"]
     CURIE["Curie<br/>Test Generator"]
     FARADAY["Faraday<br/>Test Executor"]
     TESLA["Tesla<br/>Test Environment"]
-    HYPATIA["Hypatia<br/>Documentation"]
-    BABBAGE["Babbage<br/>Version Mapping"]
-    LINNAEUS["Linnaeus<br/>Traceability"]
-    HERODOTUS["Herodotus<br/>Knowledge Capture"]
+    HYPATIA["Hemingway<br/>Documentation"]
+    BABBAGE["Mercator<br/>Version Mapping"]
+    LINNAEUS["Berners-Lee<br/>Traceability"]
+    HERODOTUS["Pliny<br/>Knowledge Capture"]
 
     %% Event Entry
     PR --> GH
@@ -645,7 +645,7 @@ flowchart TB
 - A pull request event enters through **GitHub / GitHub Actions**.
 - **Linus** performs code review and policy checks.
 - **Josephine** runs configuration-aware build and package steps using **Fuze Config**.
-- **Ada** selects the PR-level test plan.
+- **Galileo** selects the PR-level test plan.
 - **Curie** materializes executable Fuze Test inputs from that plan.
 - **Tesla** provides or reserves the required environment class.
 - **Faraday** runs the PR-level suite, including unit tests and fast functional tests.
@@ -653,12 +653,12 @@ flowchart TB
 
 ### Merge and Release Flow
 - A merge to main or a release branch triggers deeper release handling.
-- **Hedy** determines the release path for the build across release branches, hardware targets, and customer variants.
-- **Babbage** maps the resulting internal build identities to external release versions.
-- **Linnaeus** pushes traceability data into Jira so that bugs, builds, tests, and releases stay linked.
+- **Humphrey** determines the release path for the build across release branches, hardware targets, and customer variants.
+- **Mercator** maps the resulting internal build identities to external release versions.
+- **Berners-Lee** pushes traceability data into Jira so that bugs, builds, tests, and releases stay linked.
 
 ### Nightly Flow
-- The nightly scheduler triggers the same core path, but **Ada** selects an expanded test plan.
+- The nightly scheduler triggers the same core path, but **Galileo** selects an expanded test plan.
 - **Curie**, **Tesla**, and **Faraday** carry that plan through generation, reservation, and execution.
 - This is where long-duration and broader hardware-in-the-loop coverage happens.
 
@@ -666,16 +666,16 @@ flowchart TB
 - New Jira bug reports enter through **Jira**.
 - **Drucker** keeps the issue operationally coherent in Jira.
 - **Nightingale** triages the report, requests missing data, and drives reproduction work where warranted.
-- **Linnaeus** associates the issue with the exact build, test evidence, and release context where possible.
-- That investigation and traceability data feeds **Hedy** so release decisions can account for active defect status.
+- **Berners-Lee** associates the issue with the exact build, test evidence, and release context where possible.
+- That investigation and traceability data feeds **Humphrey** so release decisions can account for active defect status.
 
 ### Documentation Flow
-- Source changes, builds, and test results feed **Hypatia**.
-- **Hypatia** updates as-built documentation, user documentation, and engineering documentation.
+- Source changes, builds, and test results feed **Hemingway**.
+- **Hemingway** updates as-built documentation, user documentation, and engineering documentation.
 - Outputs can be committed back to GitHub and published to the internal documentation target.
 
 ### Knowledge Capture Flow
-- At the end of a Teams meeting, **Herodotus** captures and summarizes the transcript.
+- At the end of a Teams meeting, **Pliny** captures and summarizes the transcript.
 - Key decisions, action items, and technical notes can be pushed into Jira and internal documentation.
 
 ---
@@ -959,15 +959,15 @@ It may use a scheduler such as SLURM as an internal allocation backend, but agen
 - GitHub PR and merge events
 - Fuze configuration data
 - release branch policy
-- build requests from Hedy
+- build requests from Humphrey
 
 ### Produces
 - Build Record
 - artifact manifests
 - build status events
 - package metadata
-- documentation source signals to Hypatia
-- version source signals to Babbage
+- documentation source signals to Hemingway
+- version source signals to Mercator
 
 ### Key outbound interfaces
 - `build.completed`
@@ -984,7 +984,7 @@ It may use a scheduler such as SLURM as an internal allocation backend, but agen
 - normal work starts from build requests or upstream repository/build events
 - humans can submit, retry, cancel, and inspect jobs
 
-## 10.4.2 Hedy — Release Orchestrator
+## 10.4.2 Humphrey — Release Orchestrator
 
 ### Consumes
 - build completion events from Josephine
@@ -1030,7 +1030,7 @@ It may use a scheduler such as SLURM as an internal allocation backend, but agen
 - inline comments
 - review summaries
 - pass/fail advisory status
-- documentation impact signals to Hypatia
+- documentation impact signals to Hemingway
 
 ### Key outbound interfaces
 - `review.completed`
@@ -1046,11 +1046,11 @@ It may use a scheduler such as SLURM as an internal allocation backend, but agen
 - normal work starts from PR open, update, sync, or review-request events
 - humans can re-run reviews and suppress or override findings under policy
 
-## 10.4.4 Ada — Test Planner
+## 10.4.4 Galileo — Test Planner
 
 ### Consumes
 - build completion events from Josephine
-- release validation requests from Hedy
+- release validation requests from Humphrey
 - environment state from Tesla
 - coverage gaps from test quality analysis
 - GitHub workflow context
@@ -1060,7 +1060,7 @@ It may use a scheduler such as SLURM as an internal allocation backend, but agen
 - planning decisions
 - coverage intent summaries
 - defect candidate signals
-- traceability signals to Linnaeus
+- traceability signals to Berners-Lee
 - generation requests for Curie
 - execution requests for Faraday
 
@@ -1080,14 +1080,14 @@ Detailed execution-side responsibilities are split across Curie, Faraday, and Te
 - normal work starts from build completion, PR/merge/nightly triggers, or release-validation requests
 - humans can preview plans or apply policy overrides where allowed
 
-## 10.4.5 Hypatia — Documentation Agent
+## 10.4.5 Hemingway — Documentation Agent
 
 ### Consumes
 - source changes from GitHub
 - review findings from Linus
 - build metadata from Josephine
 - test outcomes from Faraday
-- traceability context from Linnaeus
+- traceability context from Berners-Lee
 
 ### Produces
 - repo-level as-built docs
@@ -1112,11 +1112,11 @@ Detailed execution-side responsibilities are split across Curie, Faraday, and Te
 - normal work starts from documentation-impact signals caused by source, build, test, release, or approved meeting-summary changes
 - humans review, publish, reject, or regenerate documentation outputs
 
-## 10.4.6 Babbage — Version Mapping Agent
+## 10.4.6 Mercator — Version Mapping Agent
 
 ### Consumes
 - internal build IDs from Josephine
-- release context from Hedy
+- release context from Humphrey
 - branch/version policy
 - optional marketing or customer-facing version rules
 
@@ -1140,14 +1140,14 @@ Detailed execution-side responsibilities are split across Curie, Faraday, and Te
 - normal work starts from build, release, or mapping requests and events
 - humans can confirm or correct mappings where policy requires
 
-## 10.4.7 Linnaeus — Traceability Agent
+## 10.4.7 Berners-Lee — Traceability Agent
 
 ### Consumes
 - Jira issue events
 - build records from Josephine
 - test records from Faraday
-- release records from Hedy
-- version mappings from Babbage
+- release records from Humphrey
+- version mappings from Mercator
 - requirement mappings from project artifacts
 
 ### Produces
@@ -1173,7 +1173,7 @@ Detailed execution-side responsibilities are split across Curie, Faraday, and Te
 - normal work starts from Jira, GitHub, build, test, release, and version events
 - humans can assert or correct relationship records with audit trail
 
-## 10.4.8 Herodotus — Knowledge Capture Agent
+## 10.4.8 Pliny — Knowledge Capture Agent
 
 ### Consumes
 - Teams transcript-ready events
@@ -1208,10 +1208,10 @@ Detailed execution-side responsibilities are split across Curie, Faraday, and Te
 ### Consumes
 - Jira bug events
 - issue comments, attachments, and reproduction notes
-- traceability context from Linnaeus
+- traceability context from Berners-Lee
 - build context from Josephine
 - test execution evidence from Faraday
-- release context from Hedy
+- release context from Humphrey
 
 ### Produces
 - Bug Investigation Record
@@ -1280,7 +1280,7 @@ Different data should have different authoritative stores.
 | Build configuration / internal build IDs | Fuze | authoritative technical build identity |
 | Test environment inventory | Environment Manager | authoritative HIL and mock capability state |
 | Build and test artifacts | Artifact store | immutable retention strongly recommended |
-| Release state | Release service owned by Hedy | may also sync summaries into Jira |
+| Release state | Release service owned by Humphrey | may also sync summaries into Jira |
 | Documentation | Docs repository / publish target | generated outputs should still be versioned |
 | Meeting summaries | Knowledge store | can also mirror into Jira/docs selectively |
 
@@ -1304,15 +1304,15 @@ Different data should have different authoritative stores.
 To keep implementation practical, the first cut should be narrow.
 
 ### MVP required interfaces
-1. GitHub → Josephine / Linus / Ada
+1. GitHub → Josephine / Linus / Galileo
 2. Fuze → Josephine
-3. Josephine → Babbage / Ada
-4. Ada → Curie / Tesla / Faraday
-5. Faraday → Linnaeus
-6. Babbage → Linnaeus
-7. Linnaeus → Jira
-8. Teams → Herodotus
-9. Herodotus → Jira
+3. Josephine → Mercator / Galileo
+4. Galileo → Curie / Tesla / Faraday
+5. Faraday → Berners-Lee
+6. Mercator → Berners-Lee
+7. Berners-Lee → Jira
+8. Teams → Pliny
+9. Pliny → Jira
 
 ### MVP deferred interfaces
 - automated doc publishing to broad audiences

@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
-"""Publish all agent workforce pages to Confluence.
+'''Publish all agent workforce pages to Confluence.
 
-Reads agent plan markdown from ``docs/workforce/`` and draw.io diagrams from
-``docs/diagrams/workforce/``, converts them to Confluence storage format, and
-publishes each agent as a child page under the AI Agent Workforce parent page.
+Reads agent plan markdown from ``agents/*/docs/PLAN.md`` and draw.io diagrams
+from ``docs/diagrams/workforce/``, converts them to Confluence storage format,
+and publishes each agent as a child page under a configured workforce root
+page.
 
 Pre-rendered diagram screenshots are read from ``docs/confluence/images/``
 (produced by ``render_all_diagrams.py``).
-"""
-import sys, os, re, json
+'''
+import argparse
+import json
+import os
+import re
+import sys
 
 # ---------------------------------------------------------------------------
 # Repo-relative paths — resolve from this script's location so the script
@@ -21,7 +26,12 @@ REPO_ROOT = os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..')
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-from confluence_utils import connect_to_confluence, _inline_markdown_to_storage
+from confluence_utils import (
+    _inline_markdown_to_storage,
+    connect_to_confluence,
+    convert_markdown_to_confluence,
+    read_markdown_file,
+)
 from PIL import Image, ImageChops
 
 # Diagrams live under docs/diagrams/workforce/ after the repo consolidation.
@@ -30,31 +40,47 @@ DIAGRAM_DIR = os.path.join(REPO_ROOT, 'docs', 'diagrams', 'workforce')
 # Agent plan markdown files now live under agents/<name>/docs/.
 # Legacy PLAN_DIR kept for backward compat but individual agent entries
 # can override via 'plan_path' (relative to REPO_ROOT).
-PLAN_DIR = os.path.join(REPO_ROOT, 'docs', 'workforce')
-
 # Pre-rendered screenshot PNGs are stored here by render_all_diagrams.py.
 IMG_DIR = os.path.join(REPO_ROOT, 'docs', 'confluence', 'images')
+OVERVIEW_SOURCE = os.path.join(REPO_ROOT, 'docs', 'workforce', 'README.md')
 
-PARENT_PAGE_ID = '656572464'
-SPACE_ID = '238190621'
+DEFAULT_PARENT_PAGE_ID = '656572464'
+DEFAULT_SPACE_ID = '238190621'
+DEFAULT_ROOT_TITLE = 'AI Agent Workforce'
+
+
+def _diagram_set(stem):
+    return [
+        {
+            'kind': 'use-case',
+            'file': f'{stem}_USE_CASE.drawio',
+            'heading': 'Use Case Diagrams',
+        },
+        {
+            'kind': 'sequence',
+            'file': f'{stem}_SEQUENCE.drawio',
+            'heading': 'Sequence Diagrams',
+        },
+    ]
 
 AGENTS = [
-    {'name': 'Ada', 'title': 'Ada — Test Planner Agent', 'plan': 'agents/ada/docs/PLAN.md', 'diagram': 'ADA_USE_CASE.drawio', 'zone': 'Execution Spine', 'role': 'Test Planner', 'wave': 1, 'sprint': 'S3'},
-    {'name': 'Curie', 'title': 'Curie — Test Generator Agent', 'plan': 'agents/curie/docs/PLAN.md', 'diagram': 'CURIE_USE_CASE.drawio', 'zone': 'Execution Spine', 'role': 'Test Generator', 'wave': 1, 'sprint': 'S3'},
-    {'name': 'Faraday', 'title': 'Faraday — Test Executor Agent', 'plan': 'agents/faraday/docs/PLAN.md', 'diagram': 'FARADAY_USE_CASE.drawio', 'zone': 'Execution Spine', 'role': 'Test Executor', 'wave': 1, 'sprint': 'S3'},
-    {'name': 'Tesla', 'title': 'Tesla — Environment Manager Agent', 'plan': 'agents/tesla/docs/PLAN.md', 'diagram': 'TESLA_USE_CASE.drawio', 'zone': 'Execution Spine', 'role': 'Environment Manager', 'wave': 1, 'sprint': 'S3'},
-    {'name': 'Hedy', 'title': 'Hedy — Release Manager Agent', 'plan': 'agents/hedy/docs/PLAN.md', 'diagram': 'HEDY_USE_CASE.drawio', 'zone': 'Execution Spine', 'role': 'Release Manager', 'wave': 4, 'sprint': 'S6'},
-    {'name': 'Linus', 'title': 'Linus — Code Review Agent', 'plan': 'agents/linus/docs/PLAN.md', 'diagram': 'LINUS_USE_CASE.drawio', 'zone': 'Execution Spine', 'role': 'Code Review', 'wave': 4, 'sprint': 'S6'},
-    {'name': 'Babbage', 'title': 'Babbage — Version Manager Agent', 'plan': 'agents/babbage/docs/PLAN.md', 'diagram': 'BABBAGE_USE_CASE.drawio', 'zone': 'Intelligence & Knowledge', 'role': 'Version Manager', 'wave': 2, 'sprint': 'S4'},
-    {'name': 'Linnaeus', 'title': 'Linnaeus — Traceability Agent', 'plan': 'agents/linnaeus/docs/PLAN.md', 'diagram': 'LINNAEUS_USE_CASE.drawio', 'zone': 'Intelligence & Knowledge', 'role': 'Traceability', 'wave': 2, 'sprint': 'S4'},
-    {'name': 'Herodotus', 'title': 'Herodotus — Knowledge Capture Agent', 'plan': 'agents/herodotus/docs/PLAN.md', 'diagram': 'HERODOTUS_USE_CASE.drawio', 'zone': 'Intelligence & Knowledge', 'role': 'Knowledge Capture', 'wave': 3, 'sprint': 'S5'},
-    {'name': 'Hypatia', 'title': 'Hypatia — Documentation Agent', 'plan': 'agents/hypatia/docs/PLAN.md', 'diagram': 'HYPATIA_USE_CASE.drawio', 'zone': 'Intelligence & Knowledge', 'role': 'Documentation', 'wave': 4, 'sprint': 'S7'},
-    {'name': 'Nightingale', 'title': 'Nightingale — Bug Investigation Agent', 'plan': 'agents/nightingale/docs/PLAN.md', 'diagram': 'NIGHTINGALE_USE_CASE.drawio', 'zone': 'Intelligence & Knowledge', 'role': 'Bug Investigation', 'wave': 4, 'sprint': 'S6'},
-    {'name': 'Drucker', 'title': 'Drucker — Engineering Hygiene Agent', 'plan': 'agents/drucker/docs/PLAN.md', 'diagram': 'DRUCKER_USE_CASE.drawio', 'zone': 'Engineering Hygiene', 'role': 'Engineering Hygiene', 'wave': 5, 'sprint': 'S7'},
-    {'name': 'Gantt', 'title': 'Gantt — Project Planner Agent', 'plan': 'agents/gantt/docs/PLAN.md', 'diagram': 'GANTT_USE_CASE.drawio', 'zone': 'Planning & Delivery', 'role': 'Project Planner', 'wave': 5, 'sprint': 'S7'},
-    {'name': 'Brooks', 'title': 'Brooks — Delivery Manager Agent', 'plan': 'agents/brooks/docs/PLAN.md', 'diagram': 'BROOKS_USE_CASE.drawio', 'zone': 'Planning & Delivery', 'role': 'Delivery Manager', 'wave': 5, 'sprint': 'S8'},
-    {'name': 'Shannon', 'title': 'Shannon — Communications Agent', 'plan': 'agents/shannon/docs/PLAN.md', 'diagram': None, 'zone': 'Service Infrastructure', 'role': 'Communications', 'wave': 0, 'sprint': 'S1'},
-    {'name': 'Brandeis', 'title': 'Brandeis — Legal Compliance Agent', 'plan': 'agents/brandeis/docs/PLAN.md', 'diagram': None, 'zone': 'Execution Spine', 'role': 'Legal Compliance', 'wave': 6, 'sprint': 'S9'},
+    {'name': 'Josephine', 'title': 'Josephine — Build Agent', 'plan': 'agents/josephine/docs/PLAN.md', 'diagrams': _diagram_set('JOSEPHINE'), 'zone': 'Execution Spine', 'role': 'Build & Package', 'wave': 1, 'sprint': 'S2'},
+    {'name': 'Galileo', 'title': 'Galileo — Test Planner Agent', 'plan': 'agents/galileo/docs/PLAN.md', 'diagrams': _diagram_set('GALILEO'), 'zone': 'Execution Spine', 'role': 'Test Planner', 'wave': 1, 'sprint': 'S3'},
+    {'name': 'Curie', 'title': 'Curie — Test Generator Agent', 'plan': 'agents/curie/docs/PLAN.md', 'diagrams': _diagram_set('CURIE'), 'zone': 'Execution Spine', 'role': 'Test Generator', 'wave': 1, 'sprint': 'S3'},
+    {'name': 'Faraday', 'title': 'Faraday — Test Executor Agent', 'plan': 'agents/faraday/docs/PLAN.md', 'diagrams': _diagram_set('FARADAY'), 'zone': 'Execution Spine', 'role': 'Test Executor', 'wave': 1, 'sprint': 'S3'},
+    {'name': 'Tesla', 'title': 'Tesla — Environment Manager Agent', 'plan': 'agents/tesla/docs/PLAN.md', 'diagrams': _diagram_set('TESLA'), 'zone': 'Execution Spine', 'role': 'Environment Manager', 'wave': 1, 'sprint': 'S3'},
+    {'name': 'Humphrey', 'title': 'Humphrey — Release Manager Agent', 'plan': 'agents/humphrey/docs/PLAN.md', 'diagrams': _diagram_set('HUMPHREY'), 'zone': 'Execution Spine', 'role': 'Release Manager', 'wave': 4, 'sprint': 'S6'},
+    {'name': 'Linus', 'title': 'Linus — Code Review Agent', 'plan': 'agents/linus/docs/PLAN.md', 'diagrams': _diagram_set('LINUS'), 'zone': 'Execution Spine', 'role': 'Code Review', 'wave': 4, 'sprint': 'S6'},
+    {'name': 'Mercator', 'title': 'Mercator — Version Manager Agent', 'plan': 'agents/mercator/docs/PLAN.md', 'diagrams': _diagram_set('MERCATOR'), 'zone': 'Intelligence & Knowledge', 'role': 'Version Manager', 'wave': 2, 'sprint': 'S4'},
+    {'name': 'BernersLee', 'title': 'Berners-Lee — Traceability Agent', 'plan': 'agents/bernerslee/docs/PLAN.md', 'diagrams': _diagram_set('BERNERSLEE'), 'zone': 'Intelligence & Knowledge', 'role': 'Traceability', 'wave': 2, 'sprint': 'S4'},
+    {'name': 'Pliny', 'title': 'Pliny — Knowledge Capture Agent', 'plan': 'agents/pliny/docs/PLAN.md', 'diagrams': _diagram_set('PLINY'), 'zone': 'Intelligence & Knowledge', 'role': 'Knowledge Capture', 'wave': 3, 'sprint': 'S5'},
+    {'name': 'Hemingway', 'title': 'Hemingway — Documentation Agent', 'plan': 'agents/hemingway/docs/PLAN.md', 'diagrams': _diagram_set('HEMINGWAY'), 'zone': 'Intelligence & Knowledge', 'role': 'Documentation', 'wave': 4, 'sprint': 'S7'},
+    {'name': 'Nightingale', 'title': 'Nightingale — Bug Investigation Agent', 'plan': 'agents/nightingale/docs/PLAN.md', 'diagrams': _diagram_set('NIGHTINGALE'), 'zone': 'Intelligence & Knowledge', 'role': 'Bug Investigation', 'wave': 4, 'sprint': 'S6'},
+    {'name': 'Drucker', 'title': 'Drucker — Engineering Hygiene Agent', 'plan': 'agents/drucker/docs/PLAN.md', 'diagrams': _diagram_set('DRUCKER'), 'zone': 'Engineering Hygiene', 'role': 'Engineering Hygiene', 'wave': 5, 'sprint': 'S7'},
+    {'name': 'Gantt', 'title': 'Gantt — Project Planner Agent', 'plan': 'agents/gantt/docs/PLAN.md', 'diagrams': _diagram_set('GANTT'), 'zone': 'Planning & Delivery', 'role': 'Project Planner', 'wave': 5, 'sprint': 'S7'},
+    {'name': 'Shackleton', 'title': 'Shackleton — Delivery Manager Agent', 'plan': 'agents/shackleton/docs/PLAN.md', 'diagrams': _diagram_set('SHACKLETON'), 'zone': 'Planning & Delivery', 'role': 'Delivery Manager', 'wave': 5, 'sprint': 'S8'},
+    {'name': 'Shannon', 'title': 'Shannon — Communications Agent', 'plan': 'agents/shannon/docs/PLAN.md', 'diagrams': _diagram_set('SHANNON'), 'zone': 'Service Infrastructure', 'role': 'Communications', 'wave': 0, 'sprint': 'S1'},
+    {'name': 'Blackstone', 'title': 'Blackstone — Legal Compliance Agent', 'plan': 'agents/blackstone/docs/PLAN.md', 'diagrams': _diagram_set('BLACKSTONE'), 'zone': 'Execution Spine', 'role': 'Legal Compliance', 'wave': 6, 'sprint': 'S9'},
 ]
 
 
@@ -87,7 +113,213 @@ def get_diagram_tab_names(drawio_path):
     return re.findall(r'<diagram[^>]*name="([^"]*)"', content)
 
 
-def md_to_storage(plan_path, agent):
+def get_agent_diagrams(agent):
+    name_lower = str(agent['name']).strip().lower()
+    diagrams = agent.get('diagrams') or []
+    normalized = []
+    for item in diagrams:
+        kind = str(item.get('kind', '')).strip() or 'diagram'
+        normalized.append({
+            'kind': kind,
+            'file': item['file'],
+            'heading': item.get('heading', 'Diagrams'),
+            'attachment_prefix': f'{name_lower}-{kind}',
+        })
+    legacy = agent.get('diagram')
+    if legacy:
+        normalized.append({
+            'kind': 'diagram',
+            'file': legacy,
+            'heading': 'Diagrams',
+            'attachment_prefix': f'{name_lower}-diagram',
+        })
+    return normalized
+
+
+def _page_params(space_id, title, parent_id=None):
+    params = {
+        'spaceId': str(space_id),
+        'title': title,
+        'status': 'current',
+    }
+    if parent_id:
+        params['parentId'] = str(parent_id)
+    return params
+
+
+def _iter_child_pages(c, parent_id):
+    path = f'/api/v2/pages/{parent_id}/children'
+    params = {'limit': 250}
+    results = []
+
+    while path:
+        response = c.request('GET', path, params=params)
+        payload = response.json()
+        results.extend(payload.get('results', []))
+        next_link = (payload.get('_links') or {}).get('next')
+        path = next_link if next_link else None
+        params = None
+
+    return results
+
+
+def _find_child_page(c, parent_id, title):
+    matches = []
+    for child in _iter_child_pages(c, parent_id):
+        if str(child.get('title') or '').casefold() == title.casefold():
+            matches.append(child)
+    if not matches:
+        return None
+    if len(matches) > 1:
+        raise RuntimeError(
+            f'Multiple child pages named "{title}" found under parent {parent_id}.'
+        )
+    return matches[0]
+
+
+def _create_or_update_child_page(
+    c,
+    title,
+    body,
+    parent_id,
+    space_id,
+    version_message='Updated by publish script',
+    duplicate_title_suffix=' (Updated)',
+):
+    def _upsert(resolved_title):
+        existing = _find_child_page(c, parent_id, resolved_title)
+        if existing:
+            page_id = str(existing['id'])
+            current_page = c.request(
+                'GET',
+                f'/api/v2/pages/{page_id}',
+                params={'body-format': 'storage'},
+            ).json()
+            version_number = int((current_page.get('version') or {}).get('number') or 0)
+            payload = {
+                'id': page_id,
+                'status': str(current_page.get('status') or existing.get('status') or 'current'),
+                'title': resolved_title,
+                'body': {'representation': 'storage', 'value': body},
+                'version': {'number': version_number + 1, 'message': version_message},
+            }
+            if current_page.get('spaceId') or existing.get('spaceId'):
+                payload['spaceId'] = current_page.get('spaceId') or existing.get('spaceId')
+            response = c.request('PUT', f'/api/v2/pages/{page_id}', json=payload)
+            page = response.json()
+            print(f'  Updated existing page {page_id}: {response.status_code}')
+            return str(page['id']), resolved_title
+
+        payload = {
+            'spaceId': str(space_id),
+            'status': 'current',
+            'title': resolved_title,
+            'parentId': str(parent_id),
+            'body': {'representation': 'storage', 'value': body},
+        }
+        response = c.session.post(f'{c.base_url}/api/v2/pages', json=payload)
+        if response.status_code in (200, 201):
+            page = response.json()
+            page_id = str(page['id'])
+            print(f'  Created page {page_id}')
+            return page_id, resolved_title
+        if response.status_code == 400 and 'same title' in response.text.lower():
+            return None, resolved_title
+        response.raise_for_status()
+        return None, resolved_title
+
+    page_id, used_title = _upsert(title)
+    if page_id:
+        return page_id
+
+    fallback_title = (
+        title if title.endswith(duplicate_title_suffix)
+        else f'{title}{duplicate_title_suffix}'
+    )
+    if fallback_title != used_title:
+        print(f'  Title conflict for "{title}", retrying as "{fallback_title}"')
+    fallback_page_id, _ = _upsert(fallback_title)
+    if fallback_page_id:
+        return fallback_page_id
+
+    raise RuntimeError(f'Unable to create or update page for title "{title}".')
+
+
+def ensure_root_page(c, parent_page_id, root_title, space_id):
+    markdown = read_markdown_file(OVERVIEW_SOURCE)
+    converted = convert_markdown_to_confluence(
+        markdown,
+        render_diagrams_flag=True,
+        base_dir=os.path.dirname(OVERVIEW_SOURCE),
+    )
+    body = converted['storage']
+    body = body.replace('<h1>AI Agent Workforce</h1>', f'<h1>{root_title}</h1>', 1)
+    body = body.replace(
+        f'<h1>{root_title}</h1>',
+        (
+            f'<h1>{root_title}</h1>'
+            '<p><strong>Live agent catalog:</strong> '
+            '<ac:link>'
+            '<ri:page ri:content-title="Agent Catalog and Status (Updated)" />'
+            '<ac:plain-text-link-body><![CDATA[Agent Catalog and Status (Updated)]]></ac:plain-text-link-body>'
+            '</ac:link></p>'
+        ),
+        1,
+    )
+
+    page_id = _create_or_update_child_page(
+        c,
+        title=root_title,
+        body=body,
+        parent_id=parent_page_id,
+        space_id=space_id,
+        version_message='Updated by workforce publish script',
+    )
+    _upload_attachment_files(c, page_id, converted.get('attachments') or [])
+    return page_id
+
+
+def _upload_attachment_files(c, page_id, attachments):
+    for item in attachments:
+        source_path = item['source_path']
+        filename = item['filename']
+        if not os.path.exists(source_path):
+            continue
+        print(f'  Uploading {filename}...')
+        with open(source_path, 'rb') as handle:
+            upload_resp = c.session.post(
+                f'{c.base_url}/rest/api/content/{page_id}/child/attachment',
+                headers={'X-Atlassian-Token': 'nocheck'},
+                files={'file': (filename, handle, 'image/png')},
+                data={'minorEdit': 'true'},
+            )
+        if upload_resp.status_code in (200, 201):
+            print(f'    {upload_resp.status_code}')
+            continue
+        if upload_resp.status_code == 400 and 'already exists' in upload_resp.text.lower():
+            print('    400 (already exists)')
+            continue
+        print(f'    {upload_resp.status_code}')
+
+
+def _render_agent_diagram_sections(agent):
+    html = []
+    for spec in get_agent_diagrams(agent):
+        tab_names = get_diagram_tab_names(os.path.join(DIAGRAM_DIR, spec['file']))
+        if not tab_names:
+            continue
+        html.append(f'<h3>{spec["heading"]}</h3>')
+        for i, tab_name in enumerate(tab_names):
+            html.append(f'<h4>{tab_name}</h4>')
+            html.append(
+                f'<ac:image ac:align="center" ac:width="900">'
+                f'<ri:attachment ri:filename="{spec["attachment_prefix"]}-tab{i+1}.png" />'
+                f'</ac:image>'
+            )
+    return '\n'.join(html)
+
+
+def md_to_storage(plan_path, agent, root_title):
     with open(plan_path, 'r') as f:
         md = f.read()
 
@@ -165,11 +397,7 @@ def md_to_storage(plan_path, agent):
 
         return '\n'.join(html_parts)
 
-    name_lower = agent['name'].lower()
-    if agent.get('diagram'):
-        tab_names = get_diagram_tab_names(os.path.join(DIAGRAM_DIR, agent['diagram']))
-    else:
-        tab_names = []
+    diagram_specs = get_agent_diagrams(agent)
 
     html = f'''<h1>{agent['title']}</h1>
 
@@ -177,7 +405,7 @@ def md_to_storage(plan_path, agent):
 <ac:parameter ac:name="maxLevel">2</ac:parameter>
 </ac:structured-macro>
 
-<p><ac:link><ri:page ri:content-title="AI Agent Workforce" /><ac:plain-text-link-body><![CDATA[Back to AI Agent Workforce]]></ac:plain-text-link-body></ac:link></p>
+<p><ac:link><ri:page ri:content-title="{root_title}" /><ac:plain-text-link-body><![CDATA[Back to {root_title}]]></ac:plain-text-link-body></ac:link></p>
 
 <ac:structured-macro ac:name="info" ac:schema-version="1">
 <ac:rich-text-body>
@@ -192,13 +420,11 @@ def md_to_storage(plan_path, agent):
                 html += f'\n<h2>Overview</h2>\n{md_section_to_html(sections[key])}'
             continue
 
-        html += f'\n<h2>{key}</h2>\n{md_section_to_html(sections[key])}'
+        if key == 'Diagrams':
+            html += f'\n<h2>{key}</h2>\n{_render_agent_diagram_sections(agent)}'
+            continue
 
-    if tab_names:
-        html += '\n<h2>Use Case Diagrams</h2>\n'
-        for i, tab_name in enumerate(tab_names):
-            html += f'<h3>{tab_name}</h3>\n'
-            html += f'<ac:image ac:align="center" ac:width="900"><ri:attachment ri:filename="{name_lower}-tab{i+1}.png" /></ac:image>\n'
+        html += f'\n<h2>{key}</h2>\n{md_section_to_html(sections[key])}'
 
     return html
 
@@ -218,7 +444,7 @@ def crop_image(path):
     return img.size
 
 
-def publish_agent(c, agent, screenshot_func=None):
+def publish_agent(c, agent, parent_page_id, space_id, root_title, screenshot_func=None):
     name_lower = agent['name'].lower()
     plan_path = os.path.join(REPO_ROOT, agent['plan'])
 
@@ -228,57 +454,28 @@ def publish_agent(c, agent, screenshot_func=None):
 
     print(f"\n=== Publishing {agent['title']} ===")
 
-    body = md_to_storage(plan_path, agent)
+    body = md_to_storage(plan_path, agent, root_title)
+    page_id = _create_or_update_child_page(
+        c,
+        title=agent['title'],
+        body=body,
+        parent_id=parent_page_id,
+        space_id=space_id,
+    )
 
-    payload = {
-        'spaceId': SPACE_ID,
-        'status': 'current',
-        'title': agent['title'],
-        'parentId': PARENT_PAGE_ID,
-        'body': {'representation': 'storage', 'value': body}
-    }
-
-    resp = c.session.post(f'{c.base_url}/api/v2/pages', json=payload)
-    if resp.status_code in (200, 201):
-        page = resp.json()
-        page_id = page['id']
-        print(f"  Created page {page_id}")
-    elif resp.status_code in (400, 409):
-        print(f"  Page already exists, updating...")
-        search_resp = c.session.get(f'{c.base_url}/api/v2/pages', params={
-            'spaceId': SPACE_ID, 'title': agent['title'], 'status': 'current'
-        })
-        results = search_resp.json().get('results', [])
-        if results:
-            page_id = results[0]['id']
-            ver = results[0]['version']['number']
-            payload2 = {
-                'id': page_id, 'status': 'current', 'title': agent['title'],
-                'body': {'representation': 'storage', 'value': body},
-                'version': {'number': ver + 1, 'message': 'Updated by publish script'}
-            }
-            resp2 = c.session.put(f'{c.base_url}/api/v2/pages/{page_id}', json=payload2)
-            print(f"  Updated existing page {page_id}: {resp2.status_code}")
-        else:
-            print(f"  ERROR: Could not find or create page")
-            return None
-    else:
-        print(f"  ERROR creating page: {resp.status_code} {resp.text[:300]}")
-        return None
-
-    # Upload pre-rendered diagram screenshots from docs/confluence/images/.
-    img_files = sorted([f for f in os.listdir(IMG_DIR) if f.startswith(f'{name_lower}-tab') and f.endswith('.png')])
-    for fname in img_files:
-        fpath = os.path.join(IMG_DIR, fname)
-        print(f"  Uploading {fname}...")
-        with open(fpath, 'rb') as img:
-            upload_resp = c.session.post(
-                f'{c.base_url}/rest/api/content/{page_id}/child/attachment',
-                headers={'X-Atlassian-Token': 'nocheck'},
-                files={'file': (fname, img, 'image/png')},
-                data={'minorEdit': 'true'}
-            )
-            print(f"    {upload_resp.status_code}")
+    attachments = []
+    for spec in get_agent_diagrams(agent):
+        prefix = f'{spec["attachment_prefix"]}-tab'
+        img_files = sorted(
+            f for f in os.listdir(IMG_DIR)
+            if f.startswith(prefix) and f.endswith('.png')
+        )
+        for fname in img_files:
+            attachments.append({
+                'source_path': os.path.join(IMG_DIR, fname),
+                'filename': fname,
+            })
+    _upload_attachment_files(c, page_id, attachments)
 
     return page_id
 
@@ -286,13 +483,13 @@ def publish_agent(c, agent, screenshot_func=None):
 USER_DOCS = [
     {'name': 'Drucker', 'title': 'Drucker — User Guide', 'readme': 'agents/drucker/README.md'},
     {'name': 'Gantt', 'title': 'Gantt — User Guide', 'readme': 'agents/gantt/README.md'},
-    {'name': 'Hypatia', 'title': 'Hypatia — User Guide', 'readme': 'agents/hypatia/README.md'},
+    {'name': 'Hemingway', 'title': 'Hemingway — User Guide', 'readme': 'agents/hemingway/README.md'},
     {'name': 'Shannon', 'title': 'Shannon — User Guide', 'readme': 'agents/shannon/README.md'},
     {'name': 'Workforce', 'title': 'Agent Catalog and Status', 'readme': 'agents/README.md'},
 ]
 
 
-def publish_user_doc(c, doc):
+def publish_user_doc(c, doc, parent_page_id, space_id, root_title):
     readme_path = os.path.join(REPO_ROOT, doc['readme'])
     if not os.path.exists(readme_path):
         print(f'  SKIP: {readme_path} not found')
@@ -406,7 +603,7 @@ def publish_user_doc(c, doc):
 <ac:structured-macro ac:name="toc" ac:schema-version="1">
 <ac:parameter ac:name="maxLevel">3</ac:parameter>
 </ac:structured-macro>
-<p><ac:link><ri:page ri:content-title="AI Agent Workforce" /><ac:plain-text-link-body><![CDATA[Back to AI Agent Workforce]]></ac:plain-text-link-body></ac:link></p>
+<p><ac:link><ri:page ri:content-title="{root_title}" /><ac:plain-text-link-body><![CDATA[Back to {root_title}]]></ac:plain-text-link-body></ac:link></p>
 '''
 
     for key in sections:
@@ -416,58 +613,35 @@ def publish_user_doc(c, doc):
             continue
         html += f'\n<h2>{key}</h2>\n{readme_section_to_html(sections[key])}'
 
-    payload = {
-        'spaceId': SPACE_ID,
-        'status': 'current',
-        'title': doc['title'],
-        'parentId': PARENT_PAGE_ID,
-        'body': {'representation': 'storage', 'value': html}
-    }
-
-    resp = c.session.post(f'{c.base_url}/api/v2/pages', json=payload)
-    if resp.status_code in (200, 201):
-        page = resp.json()
-        page_id = page['id']
-        print(f'  Created page {page_id}')
-    elif resp.status_code in (400, 409) and 'already exists' in resp.text.lower():
-        print(f'  Page already exists ({resp.status_code}), searching...')
-        search_resp = c.session.get(f'{c.base_url}/api/v2/pages', params={
-            'spaceId': SPACE_ID, 'title': doc['title'], 'status': 'current'
-        })
-        results = search_resp.json().get('results', [])
-        if results:
-            page_id = results[0]['id']
-            ver = results[0]['version']['number']
-            payload2 = {
-                'id': page_id, 'status': 'current', 'title': doc['title'],
-                'body': {'representation': 'storage', 'value': html},
-                'version': {'number': ver + 1, 'message': 'Updated by publish script'}
-            }
-            resp2 = c.session.put(f'{c.base_url}/api/v2/pages/{page_id}', json=payload2)
-            print(f'  Updated existing page {page_id}: {resp2.status_code}')
-        else:
-            print(f'  ERROR: Could not find or create page')
-            return None
-    else:
-        print(f'  ERROR creating page: {resp.status_code} {resp.text[:300]}')
-        return None
-
-    return page_id
+    return _create_or_update_child_page(
+        c,
+        title=doc['title'],
+        body=html,
+        parent_id=parent_page_id,
+        space_id=space_id,
+    )
 
 
 if __name__ == '__main__':
-    import argparse
     parser = argparse.ArgumentParser(description='Publish agent pages to Confluence')
     parser.add_argument('--plans', action='store_true', help='Publish agent plan pages')
     parser.add_argument('--user-docs', action='store_true', help='Publish user documentation (README) pages')
     parser.add_argument('--all', action='store_true', help='Publish everything')
     parser.add_argument('--agent', type=str, help='Publish only this agent (by name)')
+    parser.add_argument('--parent-page-id', type=str, default=DEFAULT_PARENT_PAGE_ID, help='Parent page ID under which the workforce root page should live')
+    parser.add_argument('--space-id', type=str, default='', help='Confluence space ID override')
+    parser.add_argument('--root-title', type=str, default=DEFAULT_ROOT_TITLE, help='Title for the workforce root page')
     args = parser.parse_args()
 
     if not args.plans and not args.user_docs and not args.all:
         args.all = True
 
     c = connect_to_confluence()
+    root_parent = args.parent_page_id
+    parent_page = c.request('GET', f'/api/v2/pages/{root_parent}', params={'body-format': 'storage'}).json()
+    resolved_space_id = args.space_id or str(parent_page.get('spaceId') or DEFAULT_SPACE_ID)
+    root_page_id = ensure_root_page(c, root_parent, args.root_title, resolved_space_id)
+    print(f'\n=== Using workforce root page {root_page_id}: {args.root_title} ===')
 
     if args.plans or args.all:
         print('\n=== Publishing Agent Plans ===')
@@ -475,7 +649,7 @@ if __name__ == '__main__':
         if args.agent:
             agents = [a for a in AGENTS if a['name'].lower() == args.agent.lower()]
         for agent in agents:
-            page_id = publish_agent(c, agent)
+            page_id = publish_agent(c, agent, root_page_id, resolved_space_id, args.root_title)
             if page_id:
                 print(f'  Done: {agent["title"]} -> {page_id}')
 
@@ -485,7 +659,7 @@ if __name__ == '__main__':
         if args.agent:
             docs = [d for d in USER_DOCS if d['name'].lower() == args.agent.lower()]
         for doc in docs:
-            page_id = publish_user_doc(c, doc)
+            page_id = publish_user_doc(c, doc, root_page_id, resolved_space_id, args.root_title)
             if page_id:
                 print(f'  Done: {doc["title"]} -> {page_id}')
 

@@ -22,7 +22,7 @@
         <mxCell id="m8" value="Emit test.execution_completed" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="275" y="470" as="sourcePoint"/><mxPoint x="1110" y="470" as="targetPoint"/></mxGeometry></mxCell>
         <mxCell id="m9" value="Release reservation" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="275" y="510" as="sourcePoint"/><mxPoint x="470" y="510" as="targetPoint"/></mxGeometry></mxCell>
         <mxCell id="m10" value="Teardown workspace" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="275" y="550" as="sourcePoint"/><mxPoint x="275" y="580" as="targetPoint"/><Array as="points"><mxPoint x="310" y="550"/><mxPoint x="310" y="580"/></Array></mxGeometry></mxCell>
-        <mxCell id="n1" value="Ada, Hedy, Linnaeus&#xa;consume execution results" style="text;html=1;fontSize=10;fontColor=#999999;align=left;" vertex="1" parent="1"><mxGeometry x="1120" y="475" width="170" height="30" as="geometry"/></mxCell>
+        <mxCell id="n1" value="Galileo, Humphrey, Berners-Lee&#xa;consume execution results" style="text;html=1;fontSize=10;fontColor=#999999;align=left;" vertex="1" parent="1"><mxGeometry x="1120" y="475" width="170" height="30" as="geometry"/></mxCell>
       </root>
     </mxGraphModel>
   </diagram>

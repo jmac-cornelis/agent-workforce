@@ -22,7 +22,7 @@
 
 | Location | Services | Why |
 |----------|----------|-----|
-| **AWS (cloud)** | All 13 agent API services (Josephine API, Ada, Curie, Hedy, Linus, Babbage, Linnaeus, Herodotus, Hypatia, Nightingale, Drucker, Gantt, Brooks) | Stateless API services. No hardware dependency. Benefit from elastic scaling and managed infrastructure. |
+| **AWS (cloud)** | All 13 agent API services (Josephine API, Galileo, Curie, Humphrey, Linus, Mercator, Berners-Lee, Pliny, Hemingway, Nightingale, Drucker, Gantt, Shackleton) | Stateless API services. No hardware dependency. Benefit from elastic scaling and managed infrastructure. |
 | **AWS (cloud)** | Josephine build workers (EC2) | Builds don't need physical hardware. EC2 provides Docker-in-Docker capability. Spot instances for cost savings. |
 | **AWS (cloud)** | PostgreSQL (RDS), Redis (ElastiCache), Artifact Store (S3), ALB, CloudWatch | Managed services eliminate operational overhead. Multi-AZ for HA. |
 | **On-prem** | Faraday test workers | Must execute on or near HIL lab hardware. Low-latency access to DUTs, switches, fabric topology. |
@@ -85,10 +85,10 @@ AWS and on-prem networks connect via **AWS Site-to-Site VPN** (IPsec tunnels) or
 
 | Flow | Direction | Volume |
 |------|-----------|--------|
-| Faraday workers ↔ Agent APIs (Ada, Curie, Tesla) | Bidirectional | Low (API calls, test plans, status updates) |
+| Faraday workers ↔ Agent APIs (Galileo, Curie, Tesla) | Bidirectional | Low (API calls, test plans, status updates) |
 | Faraday workers → S3 (test results, logs) | On-prem → AWS | Medium (test artifacts after each run) |
 | Josephine build workers → S3 (build artifacts) | Within AWS | N/A (stays in cloud) |
-| Agent APIs → AI inference (cn-ai hosts) | AWS → On-prem | Medium (LLM prompts/responses for Linus, Hypatia, Nightingale, Herodotus) |
+| Agent APIs → AI inference (cn-ai hosts) | AWS → On-prem | Medium (LLM prompts/responses for Linus, Hemingway, Nightingale, Pliny) |
 | Jenkins → Agent APIs (triggers) | On-prem → AWS | Low (webhook triggers) |
 | Tesla ↔ Agent APIs | Bidirectional | Low (reservation requests/grants) |
 
@@ -127,7 +127,7 @@ AWS and on-prem networks connect via **AWS Site-to-Site VPN** (IPsec tunnels) or
 | **Network complexity** | Simple (everything on-prem) | Moderate (VPN, cross-network DNS, split traffic) |
 | **Latency to HIL labs** | Sub-millisecond (same network) | 5-50ms (VPN dependent) |
 | **Latency to AI inference** | Sub-millisecond | 5-50ms (VPN dependent) |
-| **Data sovereignty** | All data on-prem | Build artifacts, test results, source refs in AWS. Transcripts stay on-prem (Herodotus can run on-prem if needed). |
+| **Data sovereignty** | All data on-prem | Build artifacts, test results, source refs in AWS. Transcripts stay on-prem (Pliny can run on-prem if needed). |
 | **Time to production** | Faster (no AWS setup) | Slower (VPN setup, IAM, networking) |
 
 ## Recommendation

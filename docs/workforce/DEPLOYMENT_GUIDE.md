@@ -113,20 +113,20 @@ graph LR
 | Shannon | ✓ | | ✓ | | ✓ |
 | Drucker | ✓ | ✓ | ✓ | ✓ | |
 | Gantt | ✓ | ✓ | ✓ | | |
-| Hypatia | ✓ | | ✓ | | |
+| Hemingway | ✓ | | ✓ | | |
 | Josephine | ✓ | | | ✓ | |
-| Ada | ✓ | | ✓ | | |
+| Galileo | ✓ | | ✓ | | |
 | Curie | ✓ | | ✓ | | |
 | Faraday | ✓ | | | | |
 | Tesla | ✓ | | | | |
-| Hedy | ✓ | ✓ | ✓ | ✓ | |
+| Humphrey | ✓ | ✓ | ✓ | ✓ | |
 | Linus | ✓ | | ✓ | ✓ | |
-| Babbage | ✓ | ✓ | | | |
-| Linnaeus | ✓ | ✓ | | | |
-| Herodotus | ✓ | | ✓ | | ✓ |
+| Mercator | ✓ | ✓ | | | |
+| Berners-Lee | ✓ | ✓ | | | |
+| Pliny | ✓ | | ✓ | | ✓ |
 | Nightingale | ✓ | ✓ | ✓ | ✓ | |
-| Brooks | ✓ | ✓ | ✓ | | |
-| Brandeis | ✓ | | | ✓ | |
+| Shackleton | ✓ | ✓ | ✓ | | |
+| Blackstone | ✓ | | | ✓ | |
 
 ## Docker Compose Service Topology
 
@@ -141,26 +141,26 @@ graph TB
         Shannon[Shannon:8200]
         Drucker[Drucker:8201]
         Gantt[Gantt:8202]
-        Hypatia[Hypatia:8203]
+        Hemingway[Hemingway:8203]
     end
 
     subgraph cn-ai-02 [cn-ai-02: Engineering & Test]
         Josephine[Josephine:8210]
-        Ada[Ada:8211]
+        Galileo[Galileo:8211]
         Curie[Curie:8212]
         Faraday[Faraday:8213]
         Tesla[Tesla:8214]
     end
 
     subgraph cn-ai-03 [cn-ai-03: Management & Delivery]
-        Hedy[Hedy:8220]
+        Humphrey[Humphrey:8220]
         Linus[Linus:8221]
-        Babbage[Babbage:8222]
-        Linnaeus[Linnaeus:8223]
-        Herodotus[Herodotus:8224]
+        Mercator[Mercator:8222]
+        Berners-Lee[Berners-Lee:8223]
+        Pliny[Pliny:8224]
         Nightingale[Nightingale:8225]
-        Brooks[Brooks:8226]
-        Brandeis[Brandeis:8227]
+        Shackleton[Shackleton:8226]
+        Blackstone[Blackstone:8227]
     end
 
     subgraph cn-ai-04 [cn-ai-04: Observability]
@@ -188,20 +188,20 @@ Each service definition includes:
 | Shannon | 8200 | cn-ai-01 |
 | Drucker | 8201 | cn-ai-01 |
 | Gantt | 8202 | cn-ai-01 |
-| Hypatia | 8203 | cn-ai-01 |
+| Hemingway | 8203 | cn-ai-01 |
 | Josephine | 8210 | cn-ai-02 |
-| Ada | 8211 | cn-ai-02 |
+| Galileo | 8211 | cn-ai-02 |
 | Curie | 8212 | cn-ai-02 |
 | Faraday | 8213 | cn-ai-02 |
 | Tesla | 8214 | cn-ai-02 |
-| Hedy | 8220 | cn-ai-03 |
+| Humphrey | 8220 | cn-ai-03 |
 | Linus | 8221 | cn-ai-03 |
-| Babbage | 8222 | cn-ai-03 |
-| Linnaeus | 8223 | cn-ai-03 |
-| Herodotus | 8224 | cn-ai-03 |
+| Mercator | 8222 | cn-ai-03 |
+| Berners-Lee | 8223 | cn-ai-03 |
+| Pliny | 8224 | cn-ai-03 |
 | Nightingale | 8225 | cn-ai-03 |
-| Brooks | 8226 | cn-ai-03 |
-| Brandeis | 8227 | cn-ai-03 |
+| Shackleton | 8226 | cn-ai-03 |
+| Blackstone | 8227 | cn-ai-03 |
 
 ## Volume Mounts
 

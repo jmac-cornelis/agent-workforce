@@ -5,6 +5,10 @@ Linus should be the code-review agent for the platform. Its v1 job is to evaluat
 
 Linus should not become a style bot or a generic lint wrapper. It should focus on high-signal review findings tied to correctness, maintainability, and policy.
 
+## Namesake
+
+Linus is named for Linus Torvalds, the creator of Linux and Git, two foundational systems shaped by practical engineering judgment, code review, and change control at scale. We use his name for the code-review agent because Linus is about evaluating changes rigorously, surfacing real risk early, and keeping the codebase healthy as it evolves.
+
 
 ## Product definition
 ### Goal

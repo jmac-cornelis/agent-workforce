@@ -1212,7 +1212,7 @@ def handle_args():
 Agent subcommands:
   agent-cli drucker hygiene --project STL
   agent-cli gantt snapshot --project STL --planning-horizon 120
-  agent-cli hypatia generate --doc-title "Build Notes" --docs README.md
+  agent-cli hemingway generate --doc-title "Build Notes" --docs README.md
 
 Unique workflows:
   agent-cli bug-report --filter "CN5000 Bug Filter" --project STL
@@ -1234,7 +1234,7 @@ Unique workflows:
     # --- Mount per-agent CLIs ---
     from agents.drucker.cli import register_subcommands as drucker_cmds
     from agents.gantt.cli import register_subcommands as gantt_cmds
-    from agents.hypatia.cli import register_subcommands as hypatia_cmds
+    from agents.hemingway.cli import register_subcommands as hemingway_cmds
 
     drucker_parser = subparsers.add_parser('drucker', help='Drucker Engineering Hygiene agent')
     drucker_sub = drucker_parser.add_subparsers(dest='agent_command', required=True)
@@ -1244,9 +1244,16 @@ Unique workflows:
     gantt_sub = gantt_parser.add_subparsers(dest='agent_command', required=True)
     gantt_cmds(gantt_sub)
 
-    hypatia_parser = subparsers.add_parser('hypatia', help='Hypatia Documentation agent')
+    hemingway_parser = subparsers.add_parser('hemingway', help='Hemingway Documentation agent')
+    hemingway_sub = hemingway_parser.add_subparsers(dest='agent_command', required=True)
+    hemingway_cmds(hemingway_sub)
+
+    hypatia_parser = subparsers.add_parser(
+        'hypatia',
+        help='Legacy alias for Hemingway Documentation agent',
+    )
     hypatia_sub = hypatia_parser.add_subparsers(dest='agent_command', required=True)
-    hypatia_cmds(hypatia_sub)
+    hemingway_cmds(hypatia_sub)
 
     # --- Unique workflows (not mounted from agents) ---
 

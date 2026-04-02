@@ -11,6 +11,10 @@ In practical terms:
 
 Curie should not invent a new low-level execution model. It should target the Fuze Test model that already exists.
 
+## Namesake
+
+Curie is named for Marie Curie, the pioneering physicist and chemist whose laboratory work turned difficult scientific questions into disciplined experiments and reproducible results. We use her name for the test-generation agent because Curie takes a high-level test plan and materializes it into concrete executable inputs that a lab system can actually run.
+
 
 ## Product definition
 ### Goal

@@ -2,13 +2,13 @@
 
 [Back to AI Agent Workforce](README.md)
 
-> **Warning:** **Decision Required:** This document evaluates whether Fuze Test / ATF is the right test framework for the agent platform, or whether we should adopt or migrate to an alternative. This decision affects Ada (test planning), Curie (test generation), Faraday (test execution), and Tesla (environment management).
+> **Warning:** **Decision Required:** This document evaluates whether Fuze Test / ATF is the right test framework for the agent platform, or whether we should adopt or migrate to an alternative. This decision affects Galileo (test planning), Curie (test generation), Faraday (test execution), and Tesla (environment management).
 
 ## Current State
 
 Cornelis Networks currently uses **Fuze Test / ATF** (Automated Test Framework) as the primary test execution framework for OPX fabric hardware. It is a custom, internally-built framework with deep integration into the hardware-in-the-loop (HIL) lab environment.
 
-The agent platform design currently assumes Fuze Test as the execution substrate — Faraday wraps it, Ada plans against its suite vocabulary, and Curie generates inputs in its format. If Fuze Test is replaced, all three agents need adaptation.
+The agent platform design currently assumes Fuze Test as the execution substrate — Faraday wraps it, Galileo plans against its suite vocabulary, and Curie generates inputs in its format. If Fuze Test is replaced, all three agents need adaptation.
 
 ## Evaluation Criteria
 
@@ -50,7 +50,7 @@ The agent platform design currently assumes Fuze Test as the execution substrate
 | Phase | Timeframe | Action |
 |-------|-----------|--------|
 | **1 — Wrap** | 3-6 months | Python API wrapper around Fuze Test CLI. Machine-readable output (JSON results, structured failures). Faraday consumes this API. pytest integration for new tests. |
-| **2 — Extend** | 3-6 months | Add parallel execution support. Enhanced CI/CD integration. Dry-run validation mode for Ada/Curie. Structured failure classification. |
+| **2 — Extend** | 3-6 months | Add parallel execution support. Enhanced CI/CD integration. Dry-run validation mode for Galileo/Curie. Structured failure classification. |
 | **3 — Migrate** | 12-24 months | Incrementally rewrite high-value test suites as pytest tests using shared hardware fixtures. Fuze Test suites continue to work alongside. No big-bang migration. |
 
 ### When to Reconsider
@@ -66,7 +66,7 @@ Replace Fuze Test entirely **only if**:
 
 | Agent | Impact of Framework Choice |
 |-------|---------------------------|
-| **Ada** (Test Planner) | Plans against suite vocabulary. If framework changes, Ada's PolicyResolver and suite selection logic must adapt. Wrapper API insulates Ada from underlying framework. |
+| **Galileo** (Test Planner) | Plans against suite vocabulary. If framework changes, Galileo's PolicyResolver and suite selection logic must adapt. Wrapper API insulates Galileo from underlying framework. |
 | **Curie** (Test Generator) | Generates runtime inputs in framework-specific format. Wrapper API provides stable input contract regardless of underlying framework. |
 | **Faraday** (Test Executor) | Directly invokes the test framework. Wrapper API is Faraday's primary integration point. Framework change = update wrapper, not Faraday. |
 | **Tesla** (Environment Mgr) | Manages reservations independent of test framework. ATF resource files are the integration point. If framework changes, Tesla's resource file parser may need updates. |

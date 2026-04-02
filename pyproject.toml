@@ -54,6 +54,7 @@ drawio-utils = "drawio_utilities:main"
 agent-cli = "agent_cli:main"
 drucker-agent = "agents.drucker.cli:main"
 gantt-agent = "agents.gantt.cli:main"
+hemingway-agent = "agents.hemingway.cli:main"
 hypatia-agent = "agents.hypatia.cli:main"
 excel-utils = "excel_utils:main"
 

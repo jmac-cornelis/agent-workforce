@@ -1,0 +1,30 @@
+agent_id: bernerslee
+agent_name: Berners-Lee Traceability
+zone: intelligence
+phase: 3
+
+description: >
+  Maintains exact queryable relationships between requirements, Jira issues,
+  commits, builds, tests, releases, and external version mappings.
+
+llm:
+  temperature: 0.3
+  max_tokens: 4096
+  max_iterations: 10
+
+events:
+  emits:
+    - trace.edge_created
+    - trace.edge_updated
+    - trace.gap_detected
+    - trace.jira_updated
+    - trace.query_served
+  consumes:
+    - build.completed
+    - test.execution_completed
+    - version.mapped
+    - release.promoted
+
+api:
+  prefix: /v1/trace
+  port: 8211

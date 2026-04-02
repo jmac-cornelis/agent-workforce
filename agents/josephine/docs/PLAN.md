@@ -5,6 +5,10 @@ Josephine should be an internal API-driven build service built on top of a reusa
 
 Josephine is not a replacement for ATF, release promotion, or Jira/Bamboo workflow ownership in v1. It is the hosted build/package execution layer.
 
+## Namesake
+
+Josephine is named for Josephine Cochrane, the American inventor who created the first commercially successful mechanical dishwasher after deciding that repetitive manual work should be done more reliably by a machine. We use her name for the build agent because Josephine takes labor-intensive, failure-prone build and packaging work and turns it into a dependable automated service with consistent outputs.
+
 
 ## Product definition
 ### Goal

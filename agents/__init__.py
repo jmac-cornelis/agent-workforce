@@ -25,8 +25,8 @@ from agents.gantt.components import (
     PlanningSummarizer,
     RiskProjector,
 )
-from agents.hypatia.agent import HypatiaDocumentationAgent
-from agents.hypatia.models import (
+from agents.hemingway.agent import HemingwayDocumentationAgent, HypatiaDocumentationAgent
+from agents.hemingway.models import (
     DocumentationImpactRecord,
     DocumentationPatch,
     DocumentationRecord,
@@ -55,6 +55,7 @@ __all__ = [
     'DocumentationRecord',
     'DocumentationRequest',
     'GanttProjectPlannerAgent',
+    'HemingwayDocumentationAgent',
     'HypatiaDocumentationAgent',
     'ReleasePlanningOrchestrator',
     'JiraAnalystAgent',
