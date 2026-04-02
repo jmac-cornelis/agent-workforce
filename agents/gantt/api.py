@@ -3,7 +3,9 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import tempfile
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from config.env_loader import load_env
@@ -30,6 +32,8 @@ _planning_run_count = 0
 _release_monitor_run_count = 0
 _release_survey_run_count = 0
 _last_run_at = ''
+
+_EXPORT_DIR = Path(os.getenv('GANTT_EXPORT_DIR', 'data/gantt_exports'))
 
 
 class PlanningSnapshotRunRequest(BaseModel):
@@ -91,6 +95,31 @@ class ReleaseSurveyRunRequest(BaseModel):
     persist: bool = True
 
 
+class ReleaseTasksQueryRequest(BaseModel):
+    project_key: str = 'STL'
+    releases: List[str] | str
+    statuses: Optional[List[str] | str] = None
+    issue_types: Optional[List[str] | str] = None
+    scope_label: Optional[str] = None
+    limit: int = 500
+
+
+class PlanExportRequest(BaseModel):
+    project_key: str = 'STL'
+    ticket_keys: Optional[List[str] | str] = None
+    releases: Optional[List[str] | str] = None
+    hierarchy_depth: int = 1
+    table_format: str = 'indented'
+    output_file: Optional[str] = None
+    limit: int = 500
+
+
+class PlanImportRequest(BaseModel):
+    plan_file: str
+    project_key: str = 'STL'
+    execute: bool = False
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title='Gantt Agent API', version='1.0.0')
 
@@ -103,7 +132,7 @@ def create_app() -> FastAPI:
         return {
             'agent_id': 'gantt',
             'name': 'Gantt Project Planner Agent',
-            'version': '1.0.0',
+            'version': '1.1.0',
             'description': (
                 'Planning snapshots and release-health monitoring for '
                 'Jira-backed delivery work. Deterministic-first with '
@@ -113,6 +142,9 @@ def create_app() -> FastAPI:
                 'Create planning snapshots from Jira backlogs',
                 'Release health monitoring with gap analysis and velocity tracking',
                 'Release execution surveys',
+                'Query and count release tickets by fixVersion, status, and type',
+                'Export plan scope to indented Excel',
+                'Import plan files (Excel/CSV/JSON) into Jira with dry-run support',
                 'Scheduled poller for automated snapshot/monitor cycles',
             ],
             'endpoints': [
@@ -134,6 +166,9 @@ def create_app() -> FastAPI:
                 {'method': 'GET', 'path': '/v1/release-survey/reports', 'description': 'List release surveys'},
                 {'method': 'GET', 'path': '/v1/release-survey/report/{survey_id}', 'description': 'Get a specific survey'},
                 {'method': 'POST', 'path': '/v1/poller/tick', 'description': 'Scheduled poller entrypoint'},
+                {'method': 'POST', 'path': '/v1/query/release-tasks', 'description': 'Query/count tickets by fixVersion'},
+                {'method': 'POST', 'path': '/v1/plan/export', 'description': 'Export plan scope to indented Excel'},
+                {'method': 'POST', 'path': '/v1/plan/import', 'description': 'Import plan file into Jira (dry-run or execute)'},
             ],
             'shannon_commands': [
                 {'command': '/planning-snapshot', 'description': 'Create a planning snapshot'},
@@ -144,6 +179,9 @@ def create_app() -> FastAPI:
                 {'command': '/release-reports', 'description': 'List stored release monitor reports'},
                 {'command': '/release-survey-report', 'description': 'Get a stored release survey'},
                 {'command': '/release-survey-reports', 'description': 'List stored release surveys'},
+                {'command': '/release-tasks', 'description': 'Query tickets by fixVersion'},
+                {'command': '/plan-export', 'description': 'Export plan to Excel'},
+                {'command': '/plan-import', 'description': 'Import plan into Jira'},
             ],
         }
 
@@ -487,6 +525,333 @@ def create_app() -> FastAPI:
             'ok': True,
             'data': release_survey_store.list_surveys(project_key=project_key, limit=limit),
         }
+
+    @app.post('/v1/query/release-tasks')
+    def query_release_tasks(body: ReleaseTasksQueryRequest) -> Dict[str, Any]:
+        import jira_utils as _jira_utils
+
+        releases = normalize_csv_list(body.releases)
+        if not releases:
+            return {'ok': False, 'error': 'At least one release name is required'}
+
+        statuses = normalize_csv_list(body.statuses)
+        issue_types = normalize_csv_list(body.issue_types)
+
+        try:
+            jira = _jira_utils.connect_to_jira()
+        except Exception as e:
+            log.error(f'Jira connection failed for release-tasks query: {e}')
+            return {'ok': False, 'error': f'Jira connection failed: {e}'}
+
+        all_releases: Dict[str, Any] = {}
+        total_count = 0
+
+        for release in releases:
+            try:
+                jql_parts = [
+                    f'project = "{body.project_key}"',
+                    f'fixVersion = "{release}"',
+                ]
+                if statuses:
+                    status_list = ', '.join(f'"{s}"' for s in statuses)
+                    jql_parts.append(f'status IN ({status_list})')
+                if issue_types:
+                    type_list = ', '.join(f'"{t}"' for t in issue_types)
+                    jql_parts.append(f'issuetype IN ({type_list})')
+                if body.scope_label:
+                    jql_parts.append(
+                        f'(labels = "{body.scope_label}" OR '
+                        f'"product family" = "{body.scope_label}")'
+                    )
+
+                jql = ' AND '.join(jql_parts) + ' ORDER BY priority ASC, updated DESC'
+                issues = _jira_utils.run_jql_query(jira, jql, limit=body.limit) or []
+
+                tickets = []
+                for t in issues:
+                    fields = t.get('fields', {}) or {}
+                    status_obj = fields.get('status') or {}
+                    type_obj = fields.get('issuetype') or {}
+                    priority_obj = fields.get('priority') or {}
+                    assignee_obj = fields.get('assignee') or {}
+                    fix_versions = fields.get('fixVersions') or []
+                    fv_names = ', '.join(v.get('name', '') for v in fix_versions if isinstance(v, dict))
+                    tickets.append({
+                        'key': t.get('key', ''),
+                        'summary': fields.get('summary', ''),
+                        'status': status_obj.get('name', '') if isinstance(status_obj, dict) else str(status_obj),
+                        'issue_type': type_obj.get('name', '') if isinstance(type_obj, dict) else str(type_obj),
+                        'priority': priority_obj.get('name', '') if isinstance(priority_obj, dict) else str(priority_obj),
+                        'assignee': assignee_obj.get('displayName', '') if isinstance(assignee_obj, dict) else str(assignee_obj),
+                        'fix_version': fv_names,
+                    })
+
+                all_releases[release] = {
+                    'release': release,
+                    'total': len(tickets),
+                    'jql': jql,
+                    'tickets': tickets,
+                }
+                total_count += len(tickets)
+
+            except Exception as e:
+                log.error(f'Failed to query release {release}: {e}')
+                all_releases[release] = {
+                    'release': release,
+                    'total': 0,
+                    'error': str(e),
+                    'tickets': [],
+                }
+
+        status_breakdown: Dict[str, int] = {}
+        type_breakdown: Dict[str, int] = {}
+        for rel_data in all_releases.values():
+            for t in rel_data.get('tickets', []):
+                s = t.get('status', 'Unknown')
+                status_breakdown[s] = status_breakdown.get(s, 0) + 1
+                it = t.get('issue_type', 'Unknown')
+                type_breakdown[it] = type_breakdown.get(it, 0) + 1
+
+        return {
+            'ok': True,
+            'data': {
+                'project_key': body.project_key,
+                'total_tickets': total_count,
+                'by_status': status_breakdown,
+                'by_issue_type': type_breakdown,
+                'releases': all_releases,
+            },
+        }
+
+    @app.post('/v1/plan/export')
+    def plan_export(body: PlanExportRequest) -> Dict[str, Any]:
+        ticket_keys = normalize_csv_list(body.ticket_keys)
+        releases = normalize_csv_list(body.releases)
+
+        if not ticket_keys and not releases:
+            return {
+                'ok': False,
+                'error': 'Provide either ticket_keys (epic keys) or releases (fixVersion names)',
+            }
+
+        _EXPORT_DIR.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')
+
+        if ticket_keys:
+            import excel_utils as _excel_utils
+
+            output_name = body.output_file or f'{body.project_key}_plan_export_{timestamp}.xlsx'
+            if not output_name.endswith('.xlsx'):
+                output_name += '.xlsx'
+            output_path = str(_EXPORT_DIR / output_name)
+
+            try:
+                _excel_utils.build_excel_map(
+                    ticket_keys=ticket_keys,
+                    hierarchy_depth=body.hierarchy_depth,
+                    limit=body.limit,
+                    output_file=output_path,
+                    project_key=body.project_key,
+                )
+            except Exception as e:
+                log.error(f'Plan export (build_excel_map) failed: {e}')
+                return {'ok': False, 'error': str(e)}
+
+            return {
+                'ok': True,
+                'data': {
+                    'mode': 'ticket_keys',
+                    'ticket_keys': ticket_keys,
+                    'hierarchy_depth': body.hierarchy_depth,
+                    'output_file': output_path,
+                },
+            }
+
+        import jira_utils as _jira_utils
+
+        try:
+            jira = _jira_utils.connect_to_jira()
+        except Exception as e:
+            log.error(f'Jira connection failed for plan export: {e}')
+            return {'ok': False, 'error': f'Jira connection failed: {e}'}
+
+        all_issues: list = []
+        for release in releases:
+            try:
+                jql = (
+                    f'project = "{body.project_key}" AND fixVersion = "{release}" '
+                    f'ORDER BY priority ASC, updated DESC'
+                )
+                issues = _jira_utils.run_jql_query(jira, jql, limit=body.limit) or []
+                all_issues.extend(issues)
+            except Exception as e:
+                log.error(f'Failed to query release {release} for export: {e}')
+                return {'ok': False, 'error': f'Query for release {release} failed: {e}'}
+
+        if not all_issues:
+            return {
+                'ok': True,
+                'data': {
+                    'mode': 'releases',
+                    'releases': releases,
+                    'total_tickets': 0,
+                    'output_file': None,
+                    'message': 'No tickets found for the specified releases',
+                },
+            }
+
+        release_tag = '_'.join(r.replace('.', '-') for r in releases[:3])
+        output_name = body.output_file or f'{body.project_key}_{release_tag}_{timestamp}.xlsx'
+        if not output_name.endswith('.xlsx'):
+            output_name += '.xlsx'
+        output_path = str(_EXPORT_DIR / output_name)
+
+        try:
+            _jira_utils.dump_tickets_to_file(
+                all_issues,
+                dump_file=output_path,
+                dump_format='excel',
+                table_format=body.table_format,
+            )
+        except Exception as e:
+            log.error(f'Plan export (dump_tickets_to_file) failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+        return {
+            'ok': True,
+            'data': {
+                'mode': 'releases',
+                'releases': releases,
+                'total_tickets': len(all_issues),
+                'table_format': body.table_format,
+                'output_file': output_path,
+            },
+        }
+
+    @app.post('/v1/plan/import')
+    def plan_import(body: PlanImportRequest) -> Dict[str, Any]:
+        if not body.plan_file:
+            return {'ok': False, 'error': 'plan_file path is required'}
+
+        if not os.path.isfile(body.plan_file):
+            return {'ok': False, 'error': f'File not found: {body.plan_file}'}
+
+        ext = os.path.splitext(body.plan_file)[1].lower()
+
+        if ext in ('.csv', '.xlsx', '.xls'):
+            try:
+                from tools.plan_export_tools import plan_file_to_json
+                plan_data = plan_file_to_json(
+                    body.plan_file,
+                    project_key=body.project_key,
+                )
+            except Exception as e:
+                log.error(f'Failed to parse plan file {body.plan_file}: {e}')
+                return {'ok': False, 'error': f'Parse failed: {e}'}
+        elif ext == '.json':
+            import json as _json
+            try:
+                with open(body.plan_file, 'r', encoding='utf-8') as f:
+                    plan_data = _json.load(f)
+            except Exception as e:
+                log.error(f'Failed to read JSON plan file {body.plan_file}: {e}')
+                return {'ok': False, 'error': f'JSON read failed: {e}'}
+        else:
+            return {
+                'ok': False,
+                'error': f'Unsupported file type: {ext}. Use .xlsx, .csv, or .json',
+            }
+
+        total_epics = plan_data.get('total_epics', 0)
+        total_stories = plan_data.get('total_stories', 0)
+        total_tickets = plan_data.get('total_tickets', total_epics + total_stories)
+        project_key = plan_data.get('project_key', body.project_key)
+
+        plan_summary = {
+            'file': body.plan_file,
+            'file_type': ext,
+            'project_key': project_key,
+            'total_epics': total_epics,
+            'total_stories': total_stories,
+            'total_tickets': total_tickets,
+        }
+
+        epics = plan_data.get('epics', [])
+        if epics:
+            plan_summary['epics'] = [
+                {
+                    'summary': e.get('summary', ''),
+                    'story_count': len(e.get('stories', [])),
+                }
+                for e in epics[:50]
+            ]
+
+        if not body.execute:
+            return {
+                'ok': True,
+                'data': {
+                    'mode': 'dry_run',
+                    'plan': plan_summary,
+                    'message': (
+                        f'Parsed {total_tickets} tickets '
+                        f'({total_epics} epics, {total_stories} stories). '
+                        f'Set execute=true to create in Jira.'
+                    ),
+                },
+            }
+
+        try:
+            from agents.feature_planning_orchestrator import FeaturePlanningOrchestrator
+
+            orchestrator = FeaturePlanningOrchestrator(
+                project_key=body.project_key,
+            )
+            exec_result = orchestrator._run_execute_plan(
+                plan_file=body.plan_file,
+                project_key=body.project_key,
+                execute=True,
+            )
+
+            if hasattr(exec_result, 'status') and exec_result.status == 'error':
+                return {
+                    'ok': False,
+                    'error': getattr(exec_result, 'message', str(exec_result)),
+                    'plan': plan_summary,
+                }
+
+            exec_data = {}
+            if hasattr(exec_result, 'data'):
+                exec_data = exec_result.data if isinstance(exec_result.data, dict) else {}
+            elif isinstance(exec_result, dict):
+                exec_data = exec_result
+
+            return {
+                'ok': True,
+                'data': {
+                    'mode': 'execute',
+                    'plan': plan_summary,
+                    'execution': exec_data,
+                    'message': f'Created {total_tickets} tickets in {body.project_key}',
+                },
+            }
+
+        except ImportError:
+            log.error('FeaturePlanningOrchestrator not available')
+            return {
+                'ok': False,
+                'error': (
+                    'Execution mode requires FeaturePlanningOrchestrator. '
+                    'Module not available in this deployment.'
+                ),
+                'plan': plan_summary,
+            }
+        except Exception as e:
+            log.error(f'Plan execution failed: {e}')
+            return {
+                'ok': False,
+                'error': f'Execution failed: {e}',
+                'plan': plan_summary,
+            }
 
     return app
 
