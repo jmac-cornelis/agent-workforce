@@ -22,7 +22,7 @@
         <mxCell id="m8" value="Emit build.completed" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="535" y="450" as="sourcePoint"/><mxPoint x="1130" y="450" as="targetPoint"/></mxGeometry></mxCell>
         <mxCell id="m9" value="Post build status (success)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="335" y="490" as="sourcePoint"/><mxPoint x="130" y="490" as="targetPoint"/></mxGeometry></mxCell>
         <mxCell id="m10" value="Teardown workspace" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1"><mxGeometry relative="1" as="geometry"><mxPoint x="535" y="530" as="sourcePoint"/><mxPoint x="535" y="560" as="targetPoint"/><Array as="points"><mxPoint x="570" y="530"/><mxPoint x="570" y="560"/></Array></mxGeometry></mxCell>
-        <mxCell id="n1" value="Ada, Babbage, Linnaeus, Hedy&#xa;consume build.completed" style="text;html=1;fontSize=10;fontColor=#999999;align=left;" vertex="1" parent="1"><mxGeometry x="1140" y="455" width="200" height="30" as="geometry"/></mxCell>
+        <mxCell id="n1" value="Galileo, Mercator, Berners-Lee, Humphrey&#xa;consume build.completed" style="text;html=1;fontSize=10;fontColor=#999999;align=left;" vertex="1" parent="1"><mxGeometry x="1140" y="455" width="200" height="30" as="geometry"/></mxCell>
       </root>
     </mxGraphModel>
   </diagram>

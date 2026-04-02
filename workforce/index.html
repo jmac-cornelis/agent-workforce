@@ -1639,44 +1639,44 @@ This document does not address the details of human responsibilities, other than
 </thead>
 <tbody>
 <tr>
-<td><strong><a href="JOSEPHINE_BUILD_AGENT_PLAN.md">Josephine</a></strong></td>
+<td><strong><a href="../../agents/josephine/docs/PLAN.md">Josephine</a></strong></td>
 <td>Build &amp; Package</td>
 <td>Build orchestration, compilation management, and artifact production across all Cornelis repositories. Wraps Fuze build/package into an API-driven service.</td>
 </tr>
 <tr>
-<td><strong><a href="ADA_TEST_PLANNER_PLAN.md">Ada</a></strong></td>
+<td><strong><a href="../../agents/galileo/docs/PLAN.md">Galileo</a></strong></td>
 <td>Test Planning</td>
 <td>Determines what to test based on trigger class (PR, merge, nightly, release), coverage targets, and environment constraints.</td>
 </tr>
 <tr>
-<td><strong><a href="CURIE_TEST_GENERATOR_PLAN.md">Curie</a></strong></td>
+<td><strong><a href="../../agents/curie/docs/PLAN.md">Curie</a></strong></td>
 <td>Test Generation</td>
-<td>Materializes Ada's test plans into concrete Fuze Test runtime inputs with reproducible version hashes.</td>
+<td>Materializes Galileo's test plans into concrete Fuze Test runtime inputs with reproducible version hashes.</td>
 </tr>
 <tr>
-<td><strong><a href="FARADAY_TEST_EXECUTOR_PLAN.md">Faraday</a></strong></td>
+<td><strong><a href="../../agents/faraday/docs/PLAN.md">Faraday</a></strong></td>
 <td>Test Execution</td>
 <td>Runs ATF/Fuze Test cycles, captures logs/artifacts/results, classifies failures, and produces structured TestExecutionRecords.</td>
 </tr>
 <tr>
-<td><strong><a href="TESLA_TEST_ENVIRONMENT_MANAGER_PLAN.md">Tesla</a></strong></td>
+<td><strong><a href="../../agents/tesla/docs/PLAN.md">Tesla</a></strong></td>
 <td>Environment Mgmt</td>
 <td>Shared reservation service for HIL and mock environments with capability matching and health monitoring.</td>
 </tr>
 <tr>
-<td><strong><a href="HEDY_RELEASE_MANAGER_PLAN.md">Hedy</a></strong></td>
+<td><strong><a href="../../agents/humphrey/docs/PLAN.md">Humphrey</a></strong></td>
 <td>Release Mgmt</td>
 <td>Orchestrates release decisions using the Fuze release model with stage promotion (sit, qa, release) and human approval gates.</td>
 </tr>
 <tr>
-<td><strong><a href="LINUS_CODE_REVIEW_AGENT_PLAN.md">Linus</a></strong></td>
+<td><strong><a href="../../agents/linus/docs/PLAN.md">Linus</a></strong></td>
 <td>Code Review</td>
 <td>Evaluates PRs against policy profiles (kernel, embedded C++, Python) and emits cross-agent impact signals.</td>
 </tr>
 <tr>
-<td><strong><a href="BRANDEIS_COMPLIANCE_AGENT_PLAN.md">Brandeis</a></strong></td>
+<td><strong><a href="../../agents/blackstone/docs/PLAN.md">Blackstone</a></strong></td>
 <td>Legal Compliance &amp; Code Scanning</td>
-<td>Scans dependencies for license compliance, flags policy violations on PRs, and manages license exception workflows. Named after Louis Brandeis, champion of transparency and the right to privacy.</td>
+<td>Scans dependencies for license compliance, flags policy violations on PRs, and manages license exception workflows. Named after William Blackstone, whose legal commentaries helped codify durable rule systems and precedent.</td>
 </tr>
 </tbody>
 </table>
@@ -1692,32 +1692,32 @@ This document does not address the details of human responsibilities, other than
 </thead>
 <tbody>
 <tr>
-<td><strong><a href="BABBAGE_VERSION_MANAGER_PLAN.md">Babbage</a></strong></td>
+<td><strong><a href="../../agents/mercator/docs/PLAN.md">Mercator</a></strong></td>
 <td>Version Mapping</td>
 <td>Maps Fuze internal build IDs to external customer-facing release versions with conflict detection and lineage tracking.</td>
 </tr>
 <tr>
-<td><strong><a href="LINNAEUS_TRACEABILITY_AGENT_PLAN.md">Linnaeus</a></strong></td>
+<td><strong><a href="../../agents/bernerslee/docs/PLAN.md">Berners-Lee</a></strong></td>
 <td>Traceability</td>
 <td>Maintains queryable relationships between requirements, Jira issues, commits, builds, tests, releases, and versions.</td>
 </tr>
 <tr>
-<td><strong><a href="HERODOTUS_KNOWLEDGE_CAPTURE_AGENT_PLAN.md">Herodotus</a></strong></td>
+<td><strong><a href="../../agents/pliny/docs/PLAN.md">Pliny</a></strong></td>
 <td>Knowledge Capture</td>
 <td>Ingests Teams meeting transcripts and produces structured summaries, decisions, and action items.</td>
 </tr>
 <tr>
-<td><strong><a href="HYPATIA_DOCUMENTATION_AGENT_PLAN.md">Hypatia</a></strong></td>
+<td><strong><a href="../../agents/hemingway/docs/PLAN.md">Hemingway</a></strong></td>
 <td>Documentation</td>
 <td>Produces as-built, user, and engineering docs from authoritative system records via Sphinx/ReadTheDocs.</td>
 </tr>
 <tr>
-<td><strong><a href="NIGHTINGALE_BUG_TRIAGE_REPRODUCTION_PLAN.md">Nightingale</a></strong></td>
+<td><strong><a href="../../agents/nightingale/docs/PLAN.md">Nightingale</a></strong></td>
 <td>Bug Investigation</td>
 <td>Reacts to Jira bugs, assembles build/test/release context, drives targeted reproduction, and produces investigation summaries.</td>
 </tr>
 <tr>
-<td><strong><a href="DRUCKER_JIRA_COORDINATOR_PLAN.md">Drucker</a></strong></td>
+<td><strong><a href="../../agents/drucker/docs/PLAN.md">Drucker</a></strong></td>
 <td>Engineering Hygiene</td>
 <td>Keeps Jira and GitHub operationally coherent with triage, PR lifecycle monitoring, hygiene scans, routing, and evidence-backed workflow nudges.</td>
 </tr>
@@ -1735,21 +1735,21 @@ This document does not address the details of human responsibilities, other than
 </thead>
 <tbody>
 <tr>
-<td><strong><a href="GANTT_PROJECT_PLANNER_PLAN.md">Gantt</a></strong></td>
+<td><strong><a href="../../agents/gantt/docs/PLAN.md">Gantt</a></strong></td>
 <td>Project Planning</td>
 <td>Converts Jira work state, technical evidence, and meeting decisions into milestone proposals, dependency graphs, and risk summaries.</td>
 </tr>
 <tr>
-<td><strong><a href="BROOKS_DELIVERY_MANAGER_PLAN.md">Brooks</a></strong></td>
+<td><strong><a href="../../agents/shackleton/docs/PLAN.md">Shackleton</a></strong></td>
 <td>Delivery Mgmt</td>
 <td>Monitors execution against plan, detects schedule risk and coordination failures, produces forecasts and escalation prompts.</td>
 </tr>
 </tbody>
 </table>
 <p>Planning backlog for the current Gantt + Drucker convergence work:
-<a href="GANTT_DRUCKER_PM_IMPLEMENTATION_BACKLOG.md"><code>GANTT_DRUCKER_PM_IMPLEMENTATION_BACKLOG.md</code></a></p>
+<a href="GANTT_DRUCKER_PM_IMPLEMENTATION_BACKLOG.md">GANTT_DRUCKER_PM_IMPLEMENTATION_BACKLOG.md</a></p>
 <p>Jira automation identity policy for choosing between service-account and human-attributed writes:
-<a href="JIRA_ACTOR_IDENTITY_POLICY/"><code>JIRA_ACTOR_IDENTITY_POLICY.md</code></a></p>
+<a href="JIRA_ACTOR_IDENTITY_POLICY/">JIRA_ACTOR_IDENTITY_POLICY.md</a></p>
 <h3 id="service-infrastructure">Service Infrastructure<a class="headerlink" href="#service-infrastructure" title="Permanent link">&para;</a></h3>
 <p>This agent provides the shared communications layer for all other agents.</p>
 <table>
@@ -1762,7 +1762,7 @@ This document does not address the details of human responsibilities, other than
 </thead>
 <tbody>
 <tr>
-<td><strong><a href="SHANNON_COMMUNICATIONS_AGENT_PLAN.md">Shannon</a></strong></td>
+<td><strong><a href="../../agents/shannon/docs/PLAN.md">Shannon</a></strong></td>
 <td>Communications</td>
 <td>Single Teams bot serving all agent channels. Routes commands, manages approvals, posts notifications, and logs all human-agent interactions. Named after Claude Shannon, father of information theory.</td>
 </tr>
@@ -1782,24 +1782,24 @@ This document does not address the details of human responsibilities, other than
     end
     subgraph Spine["Execution Spine"]
         JOS[Josephine&lt;br/&gt;Build &amp; Package]
-        ADA[Ada&lt;br/&gt;Test Planner]
+        ADA[Galileo&lt;br/&gt;Test Planner]
         CUR[Curie&lt;br/&gt;Test Generator]
         FAR[Faraday&lt;br/&gt;Test Executor]
         TES[Tesla&lt;br/&gt;Environment Mgr]
-        HED[Hedy&lt;br/&gt;Release Mgr]
+        HED[Humphrey&lt;br/&gt;Release Mgr]
         LIN_R[Linus&lt;br/&gt;Code Review]
     end
     subgraph Intel["Intelligence &amp; Knowledge"]
-        BAB[Babbage&lt;br/&gt;Version Mgr]
-        LIN[Linnaeus&lt;br/&gt;Traceability]
-        HER[Herodotus&lt;br/&gt;Knowledge Capture]
-        HYP[Hypatia&lt;br/&gt;Documentation]
+        BAB[Mercator&lt;br/&gt;Version Mgr]
+        LIN[Berners-Lee&lt;br/&gt;Traceability]
+        HER[Pliny&lt;br/&gt;Knowledge Capture]
+        HYP[Hemingway&lt;br/&gt;Documentation]
         NIG[Nightingale&lt;br/&gt;Bug Investigation]
         DRU[Drucker&lt;br/&gt;Engineering Hygiene]
     end
     subgraph Plan["Planning &amp; Delivery"]
         GAN[Gantt&lt;br/&gt;Project Planner]
-        BRO[Brooks&lt;br/&gt;Delivery Mgr]
+        BRO[Shackleton&lt;br/&gt;Delivery Mgr]
     end
     GH --&gt; JOS &amp; LIN_R &amp; ADA
     FZ --&gt; JOS
@@ -1827,7 +1827,7 @@ This document does not address the details of human responsibilities, other than
 <h3 id="decision-logging-audit-trail">Decision Logging &amp; Audit Trail<a class="headerlink" href="#decision-logging-audit-trail" title="Permanent link">&para;</a></h3>
 <p>Every agent logs all actions and, for decisions, records the complete decision tree — what inputs were evaluated, what alternatives were considered, and why the chosen path was selected. All logs are stored in PostgreSQL and queryable by correlation_id, agent_id, and time range via Grafana/Loki. This provides full transparency and accountability for every automated action.</p>
 <h3 id="microsoft-teams-channel-interface">Microsoft Teams Channel Interface<a class="headerlink" href="#microsoft-teams-channel-interface" title="Permanent link">&para;</a></h3>
-<p>Each agent has a dedicated Teams channel (<code>#agent-{name}</code>) in the "Agent Workforce" team. This is the primary human interface. All Teams channels are managed by <strong><a href="../agents/SHANNON_COMMUNICATIONS_AGENT_PLAN.md">Shannon</a></strong>, the communications service agent — a single bot deployment that routes commands, renders responses, and manages approval workflows across all 15 domain agent channels. See the <a href="reference/TEAMS_BOT_FRAMEWORK.md">Teams Bot Framework Specification</a> for full technical details.</p>
+<p>Each agent has a dedicated Teams channel (<code>#agent-{name}</code>) in the "Agent Workforce" team. This is the primary human interface. All Teams channels are managed by <strong><a href="../../agents/shannon/docs/PLAN.md">Shannon</a></strong>, the communications service agent — a single bot deployment that routes commands, renders responses, and manages approval workflows across all 15 domain agent channels. See the <a href="reference/TEAMS_BOT_FRAMEWORK.md">Teams Bot Framework Specification</a> for full technical details.</p>
 <ul>
 <li><strong>Activity feed</strong> — real-time summaries of agent actions</li>
 <li><strong>Decision notifications</strong> — non-trivial decisions posted with rationale</li>
@@ -2010,44 +2010,44 @@ This document does not address the details of human responsibilities, other than
 <tr>
 <td><strong>2</strong></td>
 <td>Test Spine</td>
-<td>Ada, Curie, Tesla, Faraday</td>
+<td>Galileo, Curie, Tesla, Faraday</td>
 <td>Test planning, generation, environment reservation, and execution form a pipeline that consumes Josephine's build output.</td>
 </tr>
 <tr>
 <td><strong>3</strong></td>
 <td>Versioning &amp; Traceability</td>
-<td>Babbage, Linnaeus</td>
+<td>Mercator, Berners-Lee</td>
 <td>Version mapping and traceability link builds, tests, issues, and releases — requires build and test records from Phases 1–2.</td>
 </tr>
 <tr>
 <td><strong>4</strong></td>
 <td>Knowledge Capture</td>
-<td>Herodotus</td>
+<td>Pliny</td>
 <td>Meeting summaries and action items feed into planning and documentation. Independent of build/test but benefits from traceability links.</td>
 </tr>
 <tr>
 <td><strong>5</strong></td>
 <td>Quality &amp; Release</td>
-<td>Linus, Hedy, Hypatia, Nightingale</td>
+<td>Linus, Humphrey, Hemingway, Nightingale</td>
 <td>Code review, release orchestration, documentation, and bug investigation all consume evidence from Phases 1–3.</td>
 </tr>
 <tr>
 <td><strong>6</strong></td>
 <td>Project Management</td>
-<td>Drucker, Gantt, Brooks</td>
+<td>Drucker, Gantt, Shackleton</td>
 <td>Engineering hygiene (Jira + GitHub), project planning, and delivery tracking aggregate signals from all other agents.</td>
 </tr>
 </tbody>
 </table>
 <h3 id="dependency-chain">Dependency Chain<a class="headerlink" href="#dependency-chain" title="Permanent link">&para;</a></h3>
-<p><strong>Phase 0</strong> (Foundation) → <strong>Phase 1</strong> (Josephine builds) → <strong>Phase 2</strong> (Ada/Curie/Tesla/Faraday test) → <strong>Phase 3</strong> (Babbage/Linnaeus trace) → <strong>Phase 5</strong> (Linus/Hedy/Hypatia/Nightingale quality). Phase 4 (Herodotus) can run in parallel with Phase 3. Phase 6 (Drucker/Gantt/Brooks) runs last since it aggregates everything.</p>
+<p><strong>Phase 0</strong> (Foundation) → <strong>Phase 1</strong> (Josephine builds) → <strong>Phase 2</strong> (Galileo/Curie/Tesla/Faraday test) → <strong>Phase 3</strong> (Mercator/Berners-Lee trace) → <strong>Phase 5</strong> (Linus/Humphrey/Hemingway/Nightingale quality). Phase 4 (Pliny) can run in parallel with Phase 3. Phase 6 (Drucker/Gantt/Shackleton) runs last since it aggregates everything.</p>
 <pre class="mermaid"><code>graph LR
     P0[Phase 0&lt;br/&gt;Foundation] --&gt; P1[Phase 1&lt;br/&gt;Josephine]
-    P1 --&gt; P2[Phase 2&lt;br/&gt;Ada, Curie&lt;br/&gt;Tesla, Faraday]
-    P2 --&gt; P3[Phase 3&lt;br/&gt;Babbage&lt;br/&gt;Linnaeus]
-    P3 --&gt; P5[Phase 5&lt;br/&gt;Linus, Hedy&lt;br/&gt;Hypatia, Nightingale]
-    P2 --&gt; P4[Phase 4&lt;br/&gt;Herodotus]
-    P4 --&gt; P6[Phase 6&lt;br/&gt;Drucker, Gantt&lt;br/&gt;Brooks]
+    P1 --&gt; P2[Phase 2&lt;br/&gt;Galileo, Curie&lt;br/&gt;Tesla, Faraday]
+    P2 --&gt; P3[Phase 3&lt;br/&gt;Mercator&lt;br/&gt;Berners-Lee]
+    P3 --&gt; P5[Phase 5&lt;br/&gt;Linus, Humphrey&lt;br/&gt;Hemingway, Nightingale]
+    P2 --&gt; P4[Phase 4&lt;br/&gt;Pliny]
+    P4 --&gt; P6[Phase 6&lt;br/&gt;Drucker, Gantt&lt;br/&gt;Shackleton]
     P5 --&gt; P6</code></pre>
 
 

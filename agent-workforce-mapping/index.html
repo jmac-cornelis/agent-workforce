@@ -1437,10 +1437,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#brooks-delivery-manager" class="md-nav__link">
+  <a href="#shackleton-delivery-manager" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Brooks — Delivery Manager
+        Shackleton — Delivery Manager
       
     </span>
   </a>
@@ -1476,10 +1476,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#hypatia-documentation-agent" class="md-nav__link">
+  <a href="#hemingway-documentation-agent" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Hypatia — Documentation Agent
+        Hemingway — Documentation Agent
       
     </span>
   </a>
@@ -1487,10 +1487,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#herodotus-knowledge-capture" class="md-nav__link">
+  <a href="#pliny-knowledge-capture" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Herodotus — Knowledge Capture
+        Pliny — Knowledge Capture
       
     </span>
   </a>
@@ -1509,10 +1509,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#linnaeus-traceability" class="md-nav__link">
+  <a href="#berners-lee-traceability" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Linnaeus — Traceability
+        Berners-Lee — Traceability
       
     </span>
   </a>
@@ -1520,10 +1520,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#babbage-version-manager" class="md-nav__link">
+  <a href="#mercator-version-manager" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Babbage — Version Manager
+        Mercator — Version Manager
       
     </span>
   </a>
@@ -1548,10 +1548,10 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#hedy-release-manager" class="md-nav__link">
+  <a href="#humphrey-release-manager" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Hedy — Release Manager
+        Humphrey — Release Manager
       
     </span>
   </a>
@@ -1570,10 +1570,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#ada-test-planner" class="md-nav__link">
+  <a href="#galileo-test-planner" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Ada — Test Planner
+        Galileo — Test Planner
       
     </span>
   </a>
@@ -1625,10 +1625,10 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#brandeis-legal-compliance-code-scanning" class="md-nav__link">
+  <a href="#blackstone-legal-compliance-code-scanning" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Brandeis — Legal Compliance &amp; Code Scanning
+        Blackstone — Legal Compliance &amp; Code Scanning
       
     </span>
   </a>
@@ -1769,25 +1769,25 @@
 <ul>
 <li><code>Gantt</code> — strong partial implementation</li>
 <li><code>Drucker</code> — strong partial implementation</li>
-<li><code>Hypatia</code> — strong tooling foundation, but not yet a dedicated documentation agent</li>
+<li><code>Hemingway</code> — strong tooling foundation, but not yet a dedicated documentation agent</li>
 </ul>
 <p>The lighter partial mappings are:</p>
 <ul>
-<li><code>Brooks</code></li>
-<li><code>Hedy</code></li>
+<li><code>Shackleton</code></li>
+<li><code>Humphrey</code></li>
 <li><code>Nightingale</code></li>
-<li><code>Herodotus</code></li>
+<li><code>Pliny</code></li>
 </ul>
 <p>The weakest or essentially not-yet-started mappings are:</p>
 <ul>
 <li><code>Josephine</code></li>
-<li><code>Ada</code></li>
+<li><code>Galileo</code></li>
 <li><code>Curie</code></li>
 <li><code>Faraday</code></li>
 <li><code>Tesla</code></li>
 <li><code>Linus</code></li>
-<li><code>Babbage</code></li>
-<li><code>Linnaeus</code></li>
+<li><code>Mercator</code></li>
+<li><code>Berners-Lee</code></li>
 </ul>
 <h2 id="shared-capabilities-in-jira-utilities">Shared Capabilities in <code>jira-utilities</code><a class="headerlink" href="#shared-capabilities-in-jira-utilities" title="Permanent link">&para;</a></h2>
 <p>Before mapping named workforce agents, it helps to separate the shared building blocks from the agent roles.</p>
@@ -1877,9 +1877,9 @@
 <li>no integration with execution-spine evidence like builds/tests/releases</li>
 <li>no delivery-risk projection from cross-agent operational data beyond Jira-derived backlog signals</li>
 </ul>
-<h4 id="brooks-delivery-manager">Brooks — Delivery Manager<a class="headerlink" href="#brooks-delivery-manager" title="Permanent link">&para;</a></h4>
+<h4 id="shackleton-delivery-manager">Shackleton — Delivery Manager<a class="headerlink" href="#shackleton-delivery-manager" title="Permanent link">&para;</a></h4>
 <p><strong>Workforce intent</strong></p>
-<p><code>Brooks</code> monitors execution against plan, detects schedule risk and coordination failure, and produces delivery summaries.</p>
+<p><code>Shackleton</code> monitors execution against plan, detects schedule risk and coordination failure, and produces delivery summaries.</p>
 <p><strong>Current mapping in <code>jira-utilities</code></strong></p>
 <ul>
 <li><code>agents/jira_analyst.py</code></li>
@@ -1899,7 +1899,7 @@
 <li>preserve workflow state</li>
 </ul>
 <p>That means it can support planning snapshots and some manual reporting.</p>
-<p><strong>Main gaps vs workforce Brooks</strong></p>
+<p><strong>Main gaps vs workforce Shackleton</strong></p>
 <ul>
 <li>no comparison of execution reality vs approved plan over time</li>
 <li>no build/test/release evidence integration</li>
@@ -1907,7 +1907,7 @@
 <li>no escalation model</li>
 <li>no risk detector grounded in objective engineering execution signals</li>
 </ul>
-<p><code>jira-utilities</code> can help Brooks, but it is not yet Brooks.</p>
+<p><code>jira-utilities</code> can help Shackleton, but it is not yet Shackleton.</p>
 <h3 id="intelligence-knowledge">Intelligence &amp; Knowledge<a class="headerlink" href="#intelligence-knowledge" title="Permanent link">&para;</a></h3>
 <p>This repo has important foundations here, but most implementations are still thin.</p>
 <h4 id="drucker-jira-coordinator">Drucker — Jira Coordinator<a class="headerlink" href="#drucker-jira-coordinator" title="Permanent link">&para;</a></h4>
@@ -1962,9 +1962,9 @@
 <li>no escalation model tied to teams, components, or managers</li>
 </ul>
 <p>The practical conclusion is that <code>jira-utilities</code> is now a real seed implementation of Drucker, not just a precursor.</p>
-<h4 id="hypatia-documentation-agent">Hypatia — Documentation Agent<a class="headerlink" href="#hypatia-documentation-agent" title="Permanent link">&para;</a></h4>
+<h4 id="hemingway-documentation-agent">Hemingway — Documentation Agent<a class="headerlink" href="#hemingway-documentation-agent" title="Permanent link">&para;</a></h4>
 <p><strong>Workforce intent</strong></p>
-<p><code>Hypatia</code> turns source changes, system facts, meeting clarifications, and release context into durable documentation changes.</p>
+<p><code>Hemingway</code> turns source changes, system facts, meeting clarifications, and release context into durable documentation changes.</p>
 <p><strong>Current mapping in <code>jira-utilities</code></strong></p>
 <ul>
 <li><code>confluence_utils.py</code></li>
@@ -1974,9 +1974,9 @@
 <li><code>tools/web_search_tools.py</code></li>
 <li><code>tools/mcp_tools.py</code></li>
 <li><code>agents/research_agent.py</code></li>
-<li><code>agents/hypatia_agent.py</code></li>
-<li><code>agents/hypatia_models.py</code></li>
-<li><code>state/hypatia_record_store.py</code></li>
+<li><code>agents/hemingway/agent.py</code></li>
+<li><code>agents/hemingway/models.py</code></li>
+<li><code>agents/hemingway/state/record_store.py</code></li>
 </ul>
 <p><strong>Maturity</strong></p>
 <p>Strong partial implementation.</p>
@@ -2002,7 +2002,7 @@
 <li>durable documentation records</li>
 <li>review-gated repo and Confluence publication staging</li>
 </ul>
-<p>The new Hypatia slice now adds:</p>
+<p>The new Hemingway slice now adds:</p>
 <ul>
 <li>a dedicated documentation agent class</li>
 <li>documentation request, impact, patch, record, and publication models</li>
@@ -2010,7 +2010,7 @@
 <li>a review-gated publication path for repo docs and Confluence</li>
 <li>stronger validation hooks plus optional evidence-backed publication inputs</li>
 </ul>
-<p><strong>Main gaps vs workforce Hypatia</strong></p>
+<p><strong>Main gaps vs workforce Hemingway</strong></p>
 <ul>
 <li>no as-built documentation generation model</li>
 <li>no always-on event-driven impact detection</li>
@@ -2019,12 +2019,12 @@
 </ul>
 <p>So the right reading is:</p>
 <ul>
-<li><code>jira-utilities</code> is now a real first-generation Hypatia slice</li>
-<li>it is still narrower than the full workforce Hypatia design</li>
+<li><code>jira-utilities</code> is now a real first-generation Hemingway slice</li>
+<li>it is still narrower than the full workforce Hemingway design</li>
 </ul>
-<h4 id="herodotus-knowledge-capture">Herodotus — Knowledge Capture<a class="headerlink" href="#herodotus-knowledge-capture" title="Permanent link">&para;</a></h4>
+<h4 id="pliny-knowledge-capture">Pliny — Knowledge Capture<a class="headerlink" href="#pliny-knowledge-capture" title="Permanent link">&para;</a></h4>
 <p><strong>Workforce intent</strong></p>
-<p><code>Herodotus</code> ingests Teams meeting transcripts, extracts decisions and action items, and publishes durable meeting summaries.</p>
+<p><code>Pliny</code> ingests Teams meeting transcripts, extracts decisions and action items, and publishes durable meeting summaries.</p>
 <p><strong>Current mapping in <code>jira-utilities</code></strong></p>
 <ul>
 <li><code>tools/confluence_tools.py</code></li>
@@ -2036,14 +2036,14 @@
 <p><strong>Maturity</strong></p>
 <p>Light conceptual overlap only.</p>
 <p><strong>Why it maps at all</strong></p>
-<p>The repo has pieces Herodotus would reuse:</p>
+<p>The repo has pieces Pliny would reuse:</p>
 <ul>
 <li>document read support</li>
 <li>page publishing support</li>
 <li>human review support</li>
 </ul>
 <p>But those are shared utilities, not a meeting-ingest implementation.</p>
-<p><strong>Main gaps vs workforce Herodotus</strong></p>
+<p><strong>Main gaps vs workforce Pliny</strong></p>
 <ul>
 <li>no Teams transcript ingest</li>
 <li>no meeting record model</li>
@@ -2051,7 +2051,7 @@
 <li>no action extraction pipeline</li>
 <li>no transcript-grounded publishing workflow</li>
 </ul>
-<p>Herodotus is mostly future work.</p>
+<p>Pliny is mostly future work.</p>
 <h4 id="nightingale-bug-investigation">Nightingale — Bug Investigation<a class="headerlink" href="#nightingale-bug-investigation" title="Permanent link">&para;</a></h4>
 <p><strong>Workforce intent</strong></p>
 <p><code>Nightingale</code> reacts to Jira bug reports, gathers context, drives reproduction, and produces durable investigation records.</p>
@@ -2085,9 +2085,9 @@
 <li>no iterative investigation loop</li>
 </ul>
 <p>The repo is more useful for bug reporting and bug summarization than bug reproduction.</p>
-<h4 id="linnaeus-traceability">Linnaeus — Traceability<a class="headerlink" href="#linnaeus-traceability" title="Permanent link">&para;</a></h4>
+<h4 id="berners-lee-traceability">Berners-Lee — Traceability<a class="headerlink" href="#berners-lee-traceability" title="Permanent link">&para;</a></h4>
 <p><strong>Workforce intent</strong></p>
-<p><code>Linnaeus</code> owns durable relationships between requirements, issues, builds, tests, releases, and versions.</p>
+<p><code>Berners-Lee</code> owns durable relationships between requirements, issues, builds, tests, releases, and versions.</p>
 <p><strong>Current mapping in <code>jira-utilities</code></strong></p>
 <ul>
 <li>limited related-ticket traversal in Jira tools</li>
@@ -2102,9 +2102,9 @@
 <li>no durable trace store</li>
 <li>no build/test/release linkage model</li>
 </ul>
-<h4 id="babbage-version-manager">Babbage — Version Manager<a class="headerlink" href="#babbage-version-manager" title="Permanent link">&para;</a></h4>
+<h4 id="mercator-version-manager">Mercator — Version Manager<a class="headerlink" href="#mercator-version-manager" title="Permanent link">&para;</a></h4>
 <p><strong>Workforce intent</strong></p>
-<p><code>Babbage</code> maps internal build identities to external versions and lineage.</p>
+<p><code>Mercator</code> maps internal build identities to external versions and lineage.</p>
 <p><strong>Current mapping in <code>jira-utilities</code></strong></p>
 <ul>
 <li>light overlap through Jira release/version inspection</li>
@@ -2120,9 +2120,9 @@
 </ul>
 <h3 id="execution-spine">Execution Spine<a class="headerlink" href="#execution-spine" title="Permanent link">&para;</a></h3>
 <p>This is where <code>jira-utilities</code> is currently weakest.</p>
-<h4 id="hedy-release-manager">Hedy — Release Manager<a class="headerlink" href="#hedy-release-manager" title="Permanent link">&para;</a></h4>
+<h4 id="humphrey-release-manager">Humphrey — Release Manager<a class="headerlink" href="#humphrey-release-manager" title="Permanent link">&para;</a></h4>
 <p><strong>Workforce intent</strong></p>
-<p><code>Hedy</code> evaluates release readiness and governs release-state transitions using build, test, version, and traceability evidence.</p>
+<p><code>Humphrey</code> evaluates release readiness and governs release-state transitions using build, test, version, and traceability evidence.</p>
 <p><strong>Current mapping in <code>jira-utilities</code></strong></p>
 <ul>
 <li><code>agents/orchestrator.py</code></li>
@@ -2141,13 +2141,13 @@
 <li>creating Jira structures</li>
 <li>reviewing changes</li>
 </ul>
-<p>The workforce <code>Hedy</code> is much more of a release control plane:</p>
+<p>The workforce <code>Humphrey</code> is much more of a release control plane:</p>
 <ul>
 <li>evaluate readiness</li>
 <li>promote or block</li>
 <li>coordinate approvals against build/test evidence</li>
 </ul>
-<p><strong>Main gaps vs workforce Hedy</strong></p>
+<p><strong>Main gaps vs workforce Humphrey</strong></p>
 <ul>
 <li>no build candidate model</li>
 <li>no release readiness evaluation model</li>
@@ -2160,7 +2160,7 @@
 <p>None beyond indirect consumption of outputs that a build agent would eventually provide.</p>
 <p><strong>Maturity</strong></p>
 <p>Not started.</p>
-<h4 id="ada-test-planner">Ada — Test Planner<a class="headerlink" href="#ada-test-planner" title="Permanent link">&para;</a></h4>
+<h4 id="galileo-test-planner">Galileo — Test Planner<a class="headerlink" href="#galileo-test-planner" title="Permanent link">&para;</a></h4>
 <p><strong>Current mapping</strong></p>
 <p>Only faint conceptual overlap through planning decomposition patterns.</p>
 <p><strong>Maturity</strong></p>
@@ -2185,19 +2185,19 @@
 <p>None of substance in the current repo.</p>
 <p><strong>Maturity</strong></p>
 <p>Not started.</p>
-<h4 id="brandeis-legal-compliance-code-scanning">Brandeis — Legal Compliance &amp; Code Scanning<a class="headerlink" href="#brandeis-legal-compliance-code-scanning" title="Permanent link">&para;</a></h4>
+<h4 id="blackstone-legal-compliance-code-scanning">Blackstone — Legal Compliance &amp; Code Scanning<a class="headerlink" href="#blackstone-legal-compliance-code-scanning" title="Permanent link">&para;</a></h4>
 <p><strong>Workforce intent</strong></p>
-<p><code>Brandeis</code> owns software composition analysis, license compliance, regulatory scanning, and legal-risk governance. Named after Louis Brandeis, the Supreme Court Justice who championed transparency and regulatory reform. Brandeis ensures that what ships is legally clean, license-compatible, and compliant with organizational and regulatory policy.</p>
+<p><code>Blackstone</code> owns software composition analysis, license compliance, regulatory scanning, and legal-risk governance. Named after William Blackstone, whose legal commentaries helped codify durable rule systems and precedent. Blackstone ensures that what ships is legally clean, license-compatible, and compliant with organizational and regulatory policy.</p>
 <p><strong>Core capabilities</strong></p>
 <ul>
 <li>Orchestrate and interpret BlackDuck (Synopsys) scan results for open-source license compliance and known vulnerabilities</li>
 <li>Maintain a current software bill of materials (SBOM) for tracked products and releases</li>
 <li>Evaluate license compatibility across dependency trees and flag conflicts before release gates</li>
 <li>Surface regulatory compliance gaps (export control, FIPS, FedRAMP, or sector-specific requirements)</li>
-<li>Produce structured compliance reports that <code>Hedy</code> can consume as release-readiness evidence</li>
+<li>Produce structured compliance reports that <code>Humphrey</code> can consume as release-readiness evidence</li>
 <li>Track remediation status for flagged findings via <code>Drucker</code>-coordinated Jira work</li>
 <li>Detect new or changed dependencies that require legal review</li>
-<li>Emit compliance signals to <code>Hedy</code> (release gating), <code>Linus</code> (code-review context), and <code>Linnaeus</code> (traceability)</li>
+<li>Emit compliance signals to <code>Humphrey</code> (release gating), <code>Linus</code> (code-review context), and <code>Berners-Lee</code> (traceability)</li>
 </ul>
 <p><strong>Current mapping in <code>jira-utilities</code></strong></p>
 <p>None. No scanning, SBOM, or license-compliance tooling exists in the current repo.</p>
@@ -2249,14 +2249,14 @@
 <td>Strong current-state Jira understanding, but not yet hygiene/routing orchestration</td>
 </tr>
 <tr>
-<td><code>HypatiaDocumentationAgent</code></td>
-<td><code>Hypatia</code></td>
+<td><code>HemingwayDocumentationAgent</code></td>
+<td><code>Hemingway</code></td>
 <td>Source-grounded internal documentation generation with review-gated publication</td>
 </tr>
 <tr>
 <td><code>ReviewAgent</code></td>
 <td>Shared cross-cutting capability</td>
-<td>Reusable across <code>Drucker</code>, <code>Hedy</code>, <code>Hypatia</code>, <code>Brooks</code>, and <code>Gantt</code></td>
+<td>Reusable across <code>Drucker</code>, <code>Humphrey</code>, <code>Hemingway</code>, <code>Shackleton</code>, and <code>Gantt</code></td>
 </tr>
 <tr>
 <td><code>VisionAnalyzerAgent</code></td>
@@ -2265,7 +2265,7 @@
 </tr>
 <tr>
 <td><code>ResearchAgent</code></td>
-<td>Upstream support for <code>Gantt</code>, <code>Hypatia</code>, and <code>Nightingale</code></td>
+<td>Upstream support for <code>Gantt</code>, <code>Hemingway</code>, and <code>Nightingale</code></td>
 <td>Better understood as shared intelligence than a workforce one-to-one mapping</td>
 </tr>
 <tr>
@@ -2285,7 +2285,7 @@
 <ul>
 <li>use this repo as the starting codebase for <code>Gantt</code></li>
 <li>grow <code>Drucker</code> out of the existing Jira tool and analysis layer</li>
-<li>use the Hypatia slice here as the starting documentation-service foundation</li>
+<li>use the Hemingway slice here as the starting documentation-service foundation</li>
 <li>reuse <code>ReviewAgent</code> as a shared approval capability across the future platform</li>
 </ul>
 <p>That is more realistic than trying to force this repo to represent the entire workforce.</p>
@@ -2307,7 +2307,7 @@
 <li>release readiness control-plane automation</li>
 <li>bug reproduction automation</li>
 <li>Teams transcript knowledge capture</li>
-<li>software composition analysis, license compliance, or regulatory scanning (<code>Brandeis</code>)</li>
+<li>software composition analysis, license compliance, or regulatory scanning (<code>Blackstone</code>)</li>
 </ul>
 <h2 id="suggested-next-steps">Suggested Next Steps<a class="headerlink" href="#suggested-next-steps" title="Permanent link">&para;</a></h2>
 <p>If the goal is to converge this repo toward the workforce model, the most sensible path is:</p>
@@ -2315,12 +2315,12 @@
 <li>Formalize <code>Gantt</code> as the umbrella role for the existing planning agents.</li>
 <li>Grow <code>JiraAnalystAgent</code> plus <code>jira_tools</code> into a real <code>Drucker</code> slice:
    metadata gaps, stale-state detection, recommendation records, and safe write-backs.</li>
-<li>Deepen the new <code>Hypatia</code> slice:
+<li>Deepen the new <code>Hemingway</code> slice:
    doc-impact detection, stronger validation, and richer documentation classes.</li>
 <li>Standardize service interfaces around these agents:
    request model, response model, audit metadata, and approval hooks.</li>
-<li>Stand up <code>Brandeis</code> as the compliance gate:
-   BlackDuck integration, SBOM generation, license-compatibility checks, and compliance evidence that <code>Hedy</code> can consume for release gating.</li>
+<li>Stand up <code>Blackstone</code> as the compliance gate:
+   BlackDuck integration, SBOM generation, license-compatibility checks, and compliance evidence that <code>Humphrey</code> can consume for release gating.</li>
 <li>Leave execution-spine agents for a separate phase, since they depend on systems this repo does not currently model.</li>
 </ol>
 <h2 id="bottom-line">Bottom Line<a class="headerlink" href="#bottom-line" title="Permanent link">&para;</a></h2>
@@ -2329,7 +2329,7 @@
 <ul>
 <li><code>Gantt</code> first</li>
 <li><code>Drucker</code> second</li>
-<li><code>Hypatia</code> third</li>
+<li><code>Hemingway</code> third</li>
 </ul>
 <p>Everything else is either an adjacency or a future integration point.</p>
 <p>That makes this repo a strong candidate for the <strong>planning, Jira coordination, and documentation-facing edge</strong> of the larger agent platform, not the execution spine or the full enterprise agent runtime.</p>

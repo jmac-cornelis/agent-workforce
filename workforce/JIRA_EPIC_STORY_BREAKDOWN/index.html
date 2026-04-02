@@ -1970,7 +1970,7 @@
 </tr>
 <tr>
 <td>ADA-3</td>
-<td><strong>Implement Ada API</strong> — <code>POST /v1/test-plans/select</code>, <code>GET /v1/test-plans/{id}</code>, <code>GET /v1/test-plans/{id}/events</code>. Emit <code>test.plan_selected</code>, <code>coverage_gap_detected</code>.</td>
+<td><strong>Implement Galileo API</strong> — <code>POST /v1/test-plans/select</code>, <code>GET /v1/test-plans/{id}</code>, <code>GET /v1/test-plans/{id}/events</code>. Emit <code>test.plan_selected</code>, <code>coverage_gap_detected</code>.</td>
 <td>3</td>
 <td>S3</td>
 <td>ADA-2, PF-3</td>
@@ -1978,11 +1978,11 @@
 </tr>
 <tr>
 <td>ADA-4</td>
-<td><strong>Fuze Test dry-run planning mode</strong> — Add dry-run mode to run-atf.py that outputs machine-readable plan without executing. Ada consumes this for plan validation.</td>
+<td><strong>Fuze Test dry-run planning mode</strong> — Add dry-run mode to run-atf.py that outputs machine-readable plan without executing. Galileo consumes this for plan validation.</td>
 <td>5</td>
 <td>S3</td>
 <td>ADA-2</td>
-<td>Dry-run flag added to run-atf.py; machine-readable output parseable by Ada; no side effects in dry-run</td>
+<td>Dry-run flag added to run-atf.py; machine-readable output parseable by Galileo; no side effects in dry-run</td>
 </tr>
 <tr>
 <td>ADA-5</td>
@@ -1994,11 +1994,11 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Ada Total: 23 SP</strong></p>
+<p><strong>Galileo Total: 23 SP</strong></p>
 <hr />
 <h3 id="epic-curie-test-generator-agent">Epic: CURIE — Test Generator Agent<a class="headerlink" href="#epic-curie-test-generator-agent" title="Permanent link">&para;</a></h3>
 <blockquote>
-<p>Materializes Ada TestPlans into concrete Fuze Test runtime inputs.</p>
+<p>Materializes Galileo TestPlans into concrete Fuze Test runtime inputs.</p>
 </blockquote>
 <table>
 <thead>
@@ -2237,7 +2237,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Babbage Total: 23 SP</strong></p>
+<p><strong>Mercator Total: 23 SP</strong></p>
 <hr />
 <h3 id="epic-linnaeus-traceability-agent">Epic: LINNAEUS — Traceability Agent<a class="headerlink" href="#epic-linnaeus-traceability-agent" title="Permanent link">&para;</a></h3>
 <blockquote>
@@ -2273,7 +2273,7 @@
 </tr>
 <tr>
 <td>LIN-3</td>
-<td><strong>Implement release-version lineage</strong> — Assert <code>build_promoted_to_release</code>, <code>build_mapped_to_external_version</code>. Integrate with Babbage version records.</td>
+<td><strong>Implement release-version lineage</strong> — Assert <code>build_promoted_to_release</code>, <code>build_mapped_to_external_version</code>. Integrate with Mercator version records.</td>
 <td>5</td>
 <td>S5</td>
 <td>LIN-2, BAB-1</td>
@@ -2305,7 +2305,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Linnaeus Total: 28 SP</strong></p>
+<p><strong>Berners-Lee Total: 28 SP</strong></p>
 <hr />
 <p><strong>Wave 2 Total: 51 SP</strong></p>
 <hr />
@@ -2352,7 +2352,7 @@
 </tr>
 <tr>
 <td>HER-4</td>
-<td><strong>Implement Herodotus API</strong> — <code>POST /v1/meetings/ingest</code>, <code>/summarize</code>, <code>/publish</code>. <code>GET /v1/meetings/{id}</code>, <code>/summary</code>.</td>
+<td><strong>Implement Pliny API</strong> — <code>POST /v1/meetings/ingest</code>, <code>/summarize</code>, <code>/publish</code>. <code>GET /v1/meetings/{id}</code>, <code>/summary</code>.</td>
 <td>3</td>
 <td>S5</td>
 <td>HER-3</td>
@@ -2360,7 +2360,7 @@
 </tr>
 <tr>
 <td>HER-5</td>
-<td><strong>Controlled publication</strong> — PublicationCoordinator publishes to internal meeting-summary store. Optional Jira follow-up suggestions (for Drucker). Doc suggestions (for Hypatia).</td>
+<td><strong>Controlled publication</strong> — PublicationCoordinator publishes to internal meeting-summary store. Optional Jira follow-up suggestions (for Drucker). Doc suggestions (for Hemingway).</td>
 <td>5</td>
 <td>S6</td>
 <td>HER-4, PF-5</td>
@@ -2368,7 +2368,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Herodotus Total: 26 SP</strong></p>
+<p><strong>Pliny Total: 26 SP</strong></p>
 <hr />
 <p><strong>Wave 3 Total: 26 SP</strong></p>
 <hr />
@@ -2415,7 +2415,7 @@
 </tr>
 <tr>
 <td>LIN-R-4</td>
-<td><strong>Cross-agent impact signals</strong> — ImpactSignalEmitter sends doc impact→Hypatia, test attention→Ada, build risk→Josephine. Emit <code>review.completed</code>, <code>review.policy_failed</code>, <code>documentation_impact_detected</code>.</td>
+<td><strong>Cross-agent impact signals</strong> — ImpactSignalEmitter sends doc impact→Hemingway, test attention→Galileo, build risk→Josephine. Emit <code>review.completed</code>, <code>review.policy_failed</code>, <code>documentation_impact_detected</code>.</td>
 <td>5</td>
 <td>S7</td>
 <td>LIN-R-3</td>
@@ -2459,7 +2459,7 @@
 </tr>
 <tr>
 <td>HED-2</td>
-<td><strong>Implement Hedy API</strong> — <code>POST /v1/releases/evaluate</code>, <code>/promote</code>, <code>/block</code>, <code>/deprecate</code>. <code>GET /v1/releases/{id}</code>, <code>/summary</code>. Emit <code>release.candidate_created</code>, <code>approval_requested</code>.</td>
+<td><strong>Implement Humphrey API</strong> — <code>POST /v1/releases/evaluate</code>, <code>/promote</code>, <code>/block</code>, <code>/deprecate</code>. <code>GET /v1/releases/{id}</code>, <code>/summary</code>. Emit <code>release.candidate_created</code>, <code>approval_requested</code>.</td>
 <td>3</td>
 <td>S6</td>
 <td>HED-1, PF-3</td>
@@ -2491,7 +2491,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Hedy Total: 29 SP</strong></p>
+<p><strong>Humphrey Total: 29 SP</strong></p>
 <hr />
 <h3 id="epic-hypatia-documentation-agent">Epic: HYPATIA — Documentation Agent<a class="headerlink" href="#epic-hypatia-documentation-agent" title="Permanent link">&para;</a></h3>
 <blockquote>
@@ -2527,7 +2527,7 @@
 </tr>
 <tr>
 <td>HYP-3</td>
-<td><strong>Implement Hypatia API</strong> — <code>POST /v1/docs/impact</code>, <code>/generate</code>, <code>/publish</code>. <code>GET /v1/docs/{id}</code>, <code>/patch</code>.</td>
+<td><strong>Implement Hemingway API</strong> — <code>POST /v1/docs/impact</code>, <code>/generate</code>, <code>/publish</code>. <code>GET /v1/docs/{id}</code>, <code>/patch</code>.</td>
 <td>3</td>
 <td>S7</td>
 <td>HYP-2</td>
@@ -2551,7 +2551,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Hypatia Total: 26 SP</strong></p>
+<p><strong>Hemingway Total: 26 SP</strong></p>
 <hr />
 <h3 id="epic-nightingale-bug-investigation-agent">Epic: NIGHTINGALE — Bug Investigation Agent<a class="headerlink" href="#epic-nightingale-bug-investigation-agent" title="Permanent link">&para;</a></h3>
 <blockquote>
@@ -2587,7 +2587,7 @@
 </tr>
 <tr>
 <td>NIG-3</td>
-<td><strong>Targeted reproduction workflow</strong> — ReproductionPlanner + ReproductionCoordinator. Request reproduction via Ada/Curie/Faraday/Tesla. Track ReproductionAttempt records.</td>
+<td><strong>Targeted reproduction workflow</strong> — ReproductionPlanner + ReproductionCoordinator. Request reproduction via Galileo/Curie/Faraday/Tesla. Track ReproductionAttempt records.</td>
 <td>8</td>
 <td>S7</td>
 <td>NIG-2, ADA-3, CUR-2, FAR-3, TES-3</td>
@@ -2762,7 +2762,7 @@
 </tr>
 <tr>
 <td>BRO-2</td>
-<td><strong>Implement Brooks API</strong> — <code>POST /v1/delivery/snapshot</code>. <code>GET /v1/delivery/snapshots/{id}</code>, <code>/status</code>, <code>/risks</code>.</td>
+<td><strong>Implement Shackleton API</strong> — <code>POST /v1/delivery/snapshot</code>. <code>GET /v1/delivery/snapshots/{id}</code>, <code>/status</code>, <code>/risks</code>.</td>
 <td>3</td>
 <td>S8</td>
 <td>BRO-1</td>
@@ -2794,7 +2794,7 @@
 </tr>
 </tbody>
 </table>
-<p><strong>Brooks Total: 23 SP</strong></p>
+<p><strong>Shackleton Total: 23 SP</strong></p>
 <hr />
 <p><strong>Wave 5 Total: 73 SP</strong></p>
 <hr />
@@ -2904,35 +2904,35 @@
 <tr>
 <td>1</td>
 <td>Build &amp; Test Spine</td>
-<td>5 (Josephine, Ada, Curie, Tesla, Faraday)</td>
+<td>5 (Josephine, Galileo, Curie, Tesla, Faraday)</td>
 <td>28</td>
 <td>140</td>
 </tr>
 <tr>
 <td>2</td>
 <td>Versioning &amp; Traceability</td>
-<td>2 (Babbage, Linnaeus)</td>
+<td>2 (Mercator, Berners-Lee)</td>
 <td>11</td>
 <td>51</td>
 </tr>
 <tr>
 <td>3</td>
 <td>Human Context</td>
-<td>1 (Herodotus)</td>
+<td>1 (Pliny)</td>
 <td>5</td>
 <td>26</td>
 </tr>
 <tr>
 <td>4</td>
 <td>Quality, Release, Docs, Bugs</td>
-<td>4 (Linus, Hedy, Hypatia, Nightingale)</td>
+<td>4 (Linus, Humphrey, Hemingway, Nightingale)</td>
 <td>20</td>
 <td>108</td>
 </tr>
 <tr>
 <td>5</td>
 <td>Project Management (Future)</td>
-<td>3 (Drucker, Gantt, Brooks)</td>
+<td>3 (Drucker, Gantt, Shackleton)</td>
 <td>15</td>
 <td>73</td>
 </tr>
@@ -3002,32 +3002,32 @@
 <tr>
 <td>S3</td>
 <td>~68</td>
-<td>Ada, Curie, Tesla, Faraday MVPs (test spine online)</td>
+<td>Galileo, Curie, Tesla, Faraday MVPs (test spine online)</td>
 </tr>
 <tr>
 <td>S4</td>
 <td>~46</td>
-<td>Babbage MVP, Linnaeus build/test linkage, Faraday hardening, Ada coverage</td>
+<td>Mercator MVP, Berners-Lee build/test linkage, Faraday hardening, Galileo coverage</td>
 </tr>
 <tr>
 <td>S5</td>
 <td>~51</td>
-<td>Babbage lineage, Linnaeus full trace + Jira write-back, Herodotus MVP</td>
+<td>Mercator lineage, Berners-Lee full trace + Jira write-back, Pliny MVP</td>
 </tr>
 <tr>
 <td>S6</td>
 <td>~56</td>
-<td>Linus, Hedy, Hypatia, Nightingale MVPs, hardening audit</td>
+<td>Linus, Humphrey, Hemingway, Nightingale MVPs, hardening audit</td>
 </tr>
 <tr>
 <td>S7</td>
 <td>~56</td>
-<td>Linus/Hedy/Hypatia/Nightingale hardening, Drucker, Gantt, E2E validation</td>
+<td>Linus/Humphrey/Hemingway/Nightingale hardening, Drucker, Gantt, E2E validation</td>
 </tr>
 <tr>
 <td>S8</td>
 <td>~54</td>
-<td>Brooks, Gantt/Drucker completion, hardening, pilot rollout</td>
+<td>Shackleton, Gantt/Drucker completion, hardening, pilot rollout</td>
 </tr>
 </tbody>
 </table>
@@ -3036,7 +3036,7 @@
 <ol>
 <li><strong>Story IDs are placeholders</strong> — replace with actual Jira keys when importing</li>
 <li><strong>SP estimates assume</strong> a team of 5 (platform lead, integration eng, build/test eng, backend/data eng, product owner) with 2-week sprints</li>
-<li><strong>Wave 5 agents (Drucker, Gantt, Brooks)</strong> are marked as future in the spec but included per request — they can be deferred without blocking Waves 0–4</li>
+<li><strong>Wave 5 agents (Drucker, Gantt, Shackleton)</strong> are marked as future in the spec but included per request — they can be deferred without blocking Waves 0–4</li>
 <li><strong>Fuze changes</strong> (JOS-1, ADA-4, CUR-4, FAR-6, TES-5, BAB-4, HED-5) are cross-cutting and may require coordination with the Fuze team</li>
 <li><strong>Hardening stories (Wave 6)</strong> should run in parallel with later waves, not strictly after — HAR-1/HAR-2 can start as soon as Wave 1 agents are online</li>
 </ol>

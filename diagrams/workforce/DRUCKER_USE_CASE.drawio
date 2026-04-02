@@ -85,10 +85,10 @@
         <mxCell id="t2_a_faraday" value="Faraday&lt;br&gt;Test Agent" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
           <mxGeometry x="80" y="250" width="30" height="50" as="geometry"/>
         </mxCell>
-        <mxCell id="t2_a_linnaeus" value="Linnaeus&lt;br&gt;Traceability" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="t2_a_linnaeus" value="Berners-Lee&lt;br&gt;Traceability" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
           <mxGeometry x="80" y="380" width="30" height="50" as="geometry"/>
         </mxCell>
-        <mxCell id="t2_a_herodotus" value="Herodotus&lt;br&gt;Meeting Agent" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="t2_a_herodotus" value="Pliny&lt;br&gt;Meeting Agent" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
           <mxGeometry x="830" y="380" width="30" height="50" as="geometry"/>
         </mxCell>
 

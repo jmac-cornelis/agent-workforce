@@ -1480,10 +1480,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#hypatia-documentation-workflow" class="md-nav__link">
+  <a href="#hemingway-documentation-workflow" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Hypatia Documentation Workflow
+        Hemingway Documentation Workflow
       
     </span>
   </a>
@@ -1616,7 +1616,7 @@
 <li><a href="#feature-plan-scope-document--jira">Feature Plan (Scope Document → Jira)</a></li>
 <li><a href="#drucker-hygiene-workflow">Drucker Hygiene Workflow</a></li>
 <li><a href="#drucker-polling-mode">Drucker Polling Mode</a></li>
-<li><a href="#hypatia-documentation-workflow">Hypatia Documentation Workflow</a></li>
+<li><a href="#hemingway-documentation-workflow">Hemingway Documentation Workflow</a></li>
 <li><a href="#bug-report-workflow">Bug Report Workflow</a></li>
 <li><a href="#release-planning-workflow">Release Planning Workflow</a></li>
 <li><a href="#global-workflow-flags">Global Workflow Flags</a></li>
@@ -1817,25 +1817,27 @@ proposed Jira actions can be reviewed before execution.</p>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>agent-cli<span class="w"> </span>drucker-poll<span class="w"> </span>--project<span class="w"> </span>STL<span class="w"> </span>--max-cycles<span class="w"> </span><span class="m">2</span><span class="w"> </span>--poll-interval<span class="w"> </span><span class="m">300</span><span class="w"> </span>--notify-shannon
 </span></code></pre></div>
 <hr />
-<h2 id="hypatia-documentation-workflow">Hypatia Documentation Workflow<a class="headerlink" href="#hypatia-documentation-workflow" title="Permanent link">&para;</a></h2>
+<h2 id="hemingway-documentation-workflow">Hemingway Documentation Workflow<a class="headerlink" href="#hemingway-documentation-workflow" title="Permanent link">&para;</a></h2>
 <p>Build, persist, and review source-grounded internal documentation candidates for
 repo Markdown and optional Confluence targets.</p>
+<p>During the local rename transition, <code>agent-cli hypatia ...</code> remains accepted as
+an alias for <code>agent-cli hemingway ...</code>.</p>
 <div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Generate a repo-owned documentation draft</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>agent-cli<span class="w"> </span>hypatia-generate<span class="w"> </span>--doc-title<span class="w"> </span><span class="s2">&quot;STL Build Notes&quot;</span><span class="w"> </span>--docs<span class="w"> </span>README.md<span class="w"> </span>AGENTS.md
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>agent-cli<span class="w"> </span>hemingway<span class="w"> </span>generate<span class="w"> </span>--doc-title<span class="w"> </span><span class="s2">&quot;STL Build Notes&quot;</span><span class="w"> </span>--docs<span class="w"> </span>README.md<span class="w"> </span>AGENTS.md
 </span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>
 </span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="c1"># Target a specific repo doc path and documentation class</span>
-</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>agent-cli<span class="w"> </span>hypatia-generate<span class="w"> </span>--doc-title<span class="w"> </span><span class="s2">&quot;Fabric Bring-Up Guide&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>agent-cli<span class="w"> </span>hemingway<span class="w"> </span>generate<span class="w"> </span>--doc-title<span class="w"> </span><span class="s2">&quot;Fabric Bring-Up Guide&quot;</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span>--doc-type<span class="w"> </span>how_to<span class="w"> </span>--docs<span class="w"> </span>docs/source.md<span class="w"> </span>--target-file<span class="w"> </span>docs/fabric-bring-up.md
 </span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a>
 </span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="c1"># Add evidence files and stricter validation for release-note support</span>
-</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>agent-cli<span class="w"> </span>hypatia-generate<span class="w"> </span>--doc-title<span class="w"> </span><span class="s2">&quot;Release Notes Support&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>agent-cli<span class="w"> </span>hemingway<span class="w"> </span>generate<span class="w"> </span>--doc-title<span class="w"> </span><span class="s2">&quot;Release Notes Support&quot;</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-6-10"><a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">  </span>--doc-type<span class="w"> </span>release_note_support<span class="w"> </span>--docs<span class="w"> </span>notes.md<span class="w"> </span>--evidence<span class="w"> </span>release.json<span class="w"> </span>--doc-validation<span class="w"> </span>strict
 </span><span id="__span-6-11"><a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a>
 </span><span id="__span-6-12"><a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="c1"># Stage a Confluence publication target alongside the repo draft</span>
-</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>agent-cli<span class="w"> </span>hypatia-generate<span class="w"> </span>--doc-title<span class="w"> </span><span class="s2">&quot;STL Weekly Summary&quot;</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-13"><a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a>agent-cli<span class="w"> </span>hemingway<span class="w"> </span>generate<span class="w"> </span>--doc-title<span class="w"> </span><span class="s2">&quot;STL Weekly Summary&quot;</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-6-14"><a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">  </span>--docs<span class="w"> </span>README.md<span class="w"> </span>--confluence-title<span class="w"> </span><span class="s2">&quot;STL Weekly Summary&quot;</span><span class="w"> </span>--confluence-space<span class="w"> </span>ENG
 </span></code></pre></div>
-<p>Each <code>hypatia-generate</code> run stores a durable copy under <code>data/hypatia_docs/&lt;DOC_ID&gt;/</code>
+<p>Each <code>hemingway generate</code> run stores a durable copy under <code>data/hemingway_docs/&lt;DOC_ID&gt;/</code>
 and writes a review-session JSON plus per-target Markdown patch drafts alongside the
 exported record files so publication stays reviewable before execution.</p>
 <hr />
@@ -1941,7 +1943,7 @@ exported record files so publication stays reviewable before execution.</p>
 <tbody>
 <tr>
 <td><code>--workflow NAME</code></td>
-<td>Workflow to run (<code>bug-report</code>, <code>drucker-hygiene</code>, <code>drucker-poll</code>, <code>feature-plan</code>, <code>gantt-poll</code>, <code>gantt-release-monitor</code>, <code>gantt-release-monitor-get</code>, <code>gantt-release-monitor-list</code>, <code>gantt-snapshot</code>, <code>gantt-snapshot-get</code>, <code>gantt-snapshot-list</code>, <code>hypatia-generate</code>)</td>
+<td>Workflow to run (<code>bug-report</code>, <code>drucker-hygiene</code>, <code>drucker-poll</code>, <code>feature-plan</code>, <code>gantt-poll</code>, <code>gantt-release-monitor</code>, <code>gantt-release-monitor-get</code>, <code>gantt-release-monitor-list</code>, <code>gantt-snapshot</code>, <code>gantt-snapshot-get</code>, <code>gantt-snapshot-list</code>, <code>hemingway-generate</code>)</td>
 </tr>
 <tr>
 <td><code>--project KEY</code></td>
@@ -1969,23 +1971,23 @@ exported record files so publication stays reviewable before execution.</p>
 </tr>
 <tr>
 <td><code>--doc-title TEXT</code></td>
-<td>Document title for <code>hypatia-generate</code></td>
+<td>Document title for <code>hemingway generate</code></td>
 </tr>
 <tr>
 <td><code>--doc-type TYPE</code></td>
-<td>Documentation class for <code>hypatia-generate</code></td>
+<td>Documentation class for <code>hemingway generate</code></td>
 </tr>
 <tr>
 <td><code>--doc-validation PROFILE</code></td>
-<td>Validation profile for <code>hypatia-generate</code> (<code>default</code>, <code>strict</code>, <code>sphinx</code>)</td>
+<td>Validation profile for <code>hemingway generate</code> (<code>default</code>, <code>strict</code>, <code>sphinx</code>)</td>
 </tr>
 <tr>
 <td><code>--target-file FILE</code></td>
-<td>Repo Markdown target for <code>hypatia-generate</code></td>
+<td>Repo Markdown target for <code>hemingway generate</code></td>
 </tr>
 <tr>
 <td><code>--confluence-title TITLE</code>, <code>--confluence-page PAGE</code>, <code>--confluence-space SPACE</code></td>
-<td>Optional Confluence publication target for <code>hypatia-generate</code></td>
+<td>Optional Confluence publication target for <code>hemingway generate</code></td>
 </tr>
 <tr>
 <td><code>--model MODEL</code>, <code>-m</code></td>

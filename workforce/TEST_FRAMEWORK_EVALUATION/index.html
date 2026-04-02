@@ -1462,11 +1462,11 @@
 <h1 id="test-framework-evaluation">Test Framework Evaluation<a class="headerlink" href="#test-framework-evaluation" title="Permanent link">&para;</a></h1>
 <p><a href="../">Back to AI Agent Workforce</a></p>
 <blockquote>
-<p><strong>Warning:</strong> <strong>Decision Required:</strong> This document evaluates whether Fuze Test / ATF is the right test framework for the agent platform, or whether we should adopt or migrate to an alternative. This decision affects Ada (test planning), Curie (test generation), Faraday (test execution), and Tesla (environment management).</p>
+<p><strong>Warning:</strong> <strong>Decision Required:</strong> This document evaluates whether Fuze Test / ATF is the right test framework for the agent platform, or whether we should adopt or migrate to an alternative. This decision affects Galileo (test planning), Curie (test generation), Faraday (test execution), and Tesla (environment management).</p>
 </blockquote>
 <h2 id="current-state">Current State<a class="headerlink" href="#current-state" title="Permanent link">&para;</a></h2>
 <p>Cornelis Networks currently uses <strong>Fuze Test / ATF</strong> (Automated Test Framework) as the primary test execution framework for OPX fabric hardware. It is a custom, internally-built framework with deep integration into the hardware-in-the-loop (HIL) lab environment.</p>
-<p>The agent platform design currently assumes Fuze Test as the execution substrate — Faraday wraps it, Ada plans against its suite vocabulary, and Curie generates inputs in its format. If Fuze Test is replaced, all three agents need adaptation.</p>
+<p>The agent platform design currently assumes Fuze Test as the execution substrate — Faraday wraps it, Galileo plans against its suite vocabulary, and Curie generates inputs in its format. If Fuze Test is replaced, all three agents need adaptation.</p>
 <h2 id="evaluation-criteria">Evaluation Criteria<a class="headerlink" href="#evaluation-criteria" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
@@ -1600,7 +1600,7 @@
 <tr>
 <td><strong>2 — Extend</strong></td>
 <td>3-6 months</td>
-<td>Add parallel execution support. Enhanced CI/CD integration. Dry-run validation mode for Ada/Curie. Structured failure classification.</td>
+<td>Add parallel execution support. Enhanced CI/CD integration. Dry-run validation mode for Galileo/Curie. Structured failure classification.</td>
 </tr>
 <tr>
 <td><strong>3 — Migrate</strong></td>
@@ -1627,8 +1627,8 @@
 </thead>
 <tbody>
 <tr>
-<td><strong>Ada</strong> (Test Planner)</td>
-<td>Plans against suite vocabulary. If framework changes, Ada's PolicyResolver and suite selection logic must adapt. Wrapper API insulates Ada from underlying framework.</td>
+<td><strong>Galileo</strong> (Test Planner)</td>
+<td>Plans against suite vocabulary. If framework changes, Galileo's PolicyResolver and suite selection logic must adapt. Wrapper API insulates Galileo from underlying framework.</td>
 </tr>
 <tr>
 <td><strong>Curie</strong> (Test Generator)</td>
