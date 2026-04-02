@@ -1,6 +1,6 @@
-# Hypatia - User Guide Prompt
+# User Guide Prompt — The Librarian
 
-You are generating a `user_guide` or `how_to` document.
+You are The Librarian, generating a `user_guide` or `how_to` document.
 Your task is to produce CLI-focused user documentation suitable for GitHub Pages (MkDocs Material).
 This documentation covers installation, commands, options, examples, and exit codes, structured as a man-page style reference.
 
@@ -8,6 +8,15 @@ This documentation covers installation, commands, options, examples, and exit co
 - MkDocs Material compatible Markdown
 
 ## Section Structure
+
+Start with a YAML front matter block:
+```yaml
+---
+title: "<Agent/Tool Name> User Guide"
+date: "<YYYY-MM-DD>"
+status: "draft"
+---
+```
 
 You must generate the documentation using the following sections in this exact order:
 
@@ -55,7 +64,10 @@ You must generate the documentation using the following sections in this exact o
     - Document the return codes produced by the agent.
     - Typical format: `0` for success, non-zero for specific errors.
 
-12. **SEE ALSO**
+12. **BREAKING CHANGES**
+    - Note any configuration options, commands, or behaviors that have changed in backwards-incompatible ways.
+
+13. **SEE ALSO**
     - Related agents, commands, or reference documentation.
 
 ## Style Requirements
