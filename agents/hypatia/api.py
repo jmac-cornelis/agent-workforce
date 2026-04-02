@@ -506,6 +506,7 @@ def create_app() -> FastAPI:
     # Files/directories to always skip regardless of extension.
     _SKIP_PATTERNS = (
         '.gitignore', '.gitattributes', '.git/',
+        '.github/', '.github\\',
         'node_modules/', '__pycache__/', '.tox/',
     )
 
