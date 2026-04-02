@@ -1,0 +1,402 @@
+<mxfile host="app.diagrams.net" modified="2026-03-14T20:00:00.000Z" agent="Codex" version="24.7.17" type="device">
+  <diagram id="aws-hybrid-arch" name="AWS Hybrid Architecture">
+    <mxGraphModel dx="1600" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- ============================================================ -->
+        <!-- TITLE & SUBTITLE                                             -->
+        <!-- ============================================================ -->
+        <mxCell id="title" value="AWS Hybrid Architecture — Agent Workforce" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="15" width="500" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitle" value="Cloud compute + on-prem HIL labs connected via Site-to-Site VPN" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="45" width="500" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- AWS VPC CONTAINER (left side)                                -->
+        <!-- ============================================================ -->
+        <mxCell id="aws_vpc" value="AWS VPC — us-east-1" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;opacity=15;dashed=0;verticalAlign=top;fontSize=14;fontStyle=1;fontColor=#d79b00;spacingTop=5;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="30" y="80" width="680" height="780" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- APPLICATION LOAD BALANCER                                    -->
+        <!-- ============================================================ -->
+        <mxCell id="alb" value="Application&lt;br&gt;Load Balancer (ALB)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;fontStyle=1;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="260" y="110" width="160" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- ECS FARGATE CLUSTER CONTAINER                                -->
+        <!-- ============================================================ -->
+        <mxCell id="ecs_cluster" value="ECS Fargate Cluster" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;opacity=25;dashed=1;dashPattern=8 4;verticalAlign=top;fontSize=12;fontStyle=1;fontColor=#82b366;spacingTop=3;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="50" y="170" width="640" height="220" as="geometry"/>
+        </mxCell>
+
+        <!-- Agent service boxes inside ECS -->
+        <mxCell id="svc_josephine" value="Josephine&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Build Agent&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="200" width="90" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_ada" value="Ada&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Test Planner&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="170" y="200" width="90" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_curie" value="Curie&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Test Generator&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="270" y="200" width="90" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_hedy" value="Hedy&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Communicator&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="370" y="200" width="90" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_linus" value="Linus&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Code Reviewer&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="470" y="200" width="90" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_babbage" value="Babbage&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Analyzer&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="570" y="200" width="100" height="36" as="geometry"/>
+        </mxCell>
+
+        <!-- Row 2 of agent services -->
+        <mxCell id="svc_linnaeus" value="Linnaeus&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Traceability&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="250" width="90" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_herodotus" value="Herodotus&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Historian&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="170" y="250" width="90" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_hypatia" value="Hypatia&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Knowledge&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="270" y="250" width="90" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_nightingale" value="Nightingale&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Quality&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="370" y="250" width="90" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_drucker" value="Drucker&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;PM&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="470" y="250" width="90" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_gantt_brooks" value="Gantt / Brooks&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Schedule / Arch&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="570" y="250" width="100" height="36" as="geometry"/>
+        </mxCell>
+
+        <!-- Agent API label -->
+        <mxCell id="ecs_api_label" value="Agent API Services (13 agents)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=10;fontColor=#82b366;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="220" y="295" width="250" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- Row 3: Faraday & Tesla (on-prem-bound, but API in ECS) -->
+        <mxCell id="svc_faraday_api" value="Faraday API&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Test Exec Coordinator&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="170" y="320" width="120" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="svc_tesla_api" value="Tesla API&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Env Mgr Coordinator&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="370" y="320" width="120" height="36" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- EC2 BUILD WORKERS                                            -->
+        <!-- ============================================================ -->
+        <mxCell id="ec2_workers" value="EC2 Build Workers&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Josephine DinD (Docker-in-Docker)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;fontStyle=1;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="70" y="400" width="200" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- DATA TIER                                                    -->
+        <!-- ============================================================ -->
+        <!-- RDS PostgreSQL (cylinder shape) -->
+        <mxCell id="rds" value="RDS PostgreSQL&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Agent state, events, queues&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=8;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="470" width="150" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- ElastiCache Redis -->
+        <mxCell id="redis" value="ElastiCache Redis&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Caching, rate limiting&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=8;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="260" y="470" width="150" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- S3 Bucket -->
+        <mxCell id="s3" value="S3 Bucket&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Build outputs, test results, docs&lt;/font&gt;" style="shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=8;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="450" y="470" width="150" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- NETWORKING                                                   -->
+        <!-- ============================================================ -->
+        <!-- NAT Gateway -->
+        <mxCell id="nat_gw" value="NAT Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontStyle=1;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="70" y="570" width="120" height="36" as="geometry"/>
+        </mxCell>
+
+        <!-- VPN Gateway -->
+        <mxCell id="vpn_gw" value="VPN Gateway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontStyle=1;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="450" y="570" width="120" height="36" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- SECURITY & MONITORING                                        -->
+        <!-- ============================================================ -->
+        <mxCell id="secrets_mgr" value="AWS Secrets Manager&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Credentials, API tokens&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=9;fontStyle=1;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="70" y="640" width="150" height="40" as="geometry"/>
+        </mxCell>
+        <mxCell id="cloudwatch" value="CloudWatch&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Logs, metrics, alarms&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=9;fontStyle=1;arcSize=15;" vertex="1" parent="1">
+          <mxGeometry x="260" y="640" width="150" height="40" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- INTERNET / EXTERNAL SERVICES (bottom-left)                   -->
+        <!-- ============================================================ -->
+        <mxCell id="internet" value="Internet" style="ellipse;shape=cloud;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=11;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="50" y="730" width="120" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="ext_github" value="GitHub" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="190" y="730" width="70" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="ext_jira" value="Jira" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="270" y="730" width="70" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="ext_teams" value="Teams" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=9;fontStyle=1;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="350" y="730" width="70" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- VPN TUNNEL (center)                                          -->
+        <!-- ============================================================ -->
+        <mxCell id="vpn_tunnel_line" value="" style="endArrow=none;html=1;strokeColor=#666666;strokeWidth=5;dashed=0;" edge="1" parent="1" source="vpn_gw" target="onprem_router">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="vpn_tunnel_label" value="Site-to-Site VPN / IPsec&lt;br&gt;(or AWS Direct Connect)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=10;fontStyle=3;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="600" y="555" width="180" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- ON-PREM CONTAINER (right side)                               -->
+        <!-- ============================================================ -->
+        <mxCell id="onprem_net" value="Cornelis On-Prem Network" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;opacity=15;dashed=0;verticalAlign=top;fontSize=14;fontStyle=1;fontColor=#6c8ebf;spacingTop=5;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="830" y="80" width="740" height="780" as="geometry"/>
+        </mxCell>
+
+        <!-- On-prem firewall/router -->
+        <mxCell id="onprem_router" value="Firewall / Router" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=10;fontStyle=1;arcSize=20;" vertex="1" parent="1">
+          <mxGeometry x="860" y="570" width="130" height="36" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- ON-PREM: HIL LAB SERVERS                                     -->
+        <!-- ============================================================ -->
+        <mxCell id="hil_container" value="HIL Lab Servers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;opacity=30;dashed=1;dashPattern=8 4;verticalAlign=top;fontSize=12;fontStyle=1;fontColor=#6c8ebf;spacingTop=3;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="860" y="110" width="320" height="180" as="geometry"/>
+        </mxCell>
+        <mxCell id="hil_srv1" value="HIL Server 1&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;OPx fabric test env&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="880" y="145" width="120" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="hil_srv2" value="HIL Server 2&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Multi-node cluster&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="145" width="120" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="hil_srv3" value="HIL Server 3&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Single-node test&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="880" y="200" width="120" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="hil_srv4" value="HIL Server 4&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Performance bench&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1020" y="200" width="120" height="36" as="geometry"/>
+        </mxCell>
+        <mxCell id="hil_label" value="Real Cornelis hardware test environments" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=9;fontColor=#6c8ebf;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="880" y="250" width="260" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- ON-PREM: FARADAY TEST WORKERS                                -->
+        <!-- ============================================================ -->
+        <mxCell id="faraday_workers" value="Faraday Test Workers&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;On-prem — near HIL hardware&lt;br&gt;Execute tests on real fabric&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="860" y="320" width="180" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- ON-PREM: TESLA ENVIRONMENT MANAGER                           -->
+        <!-- ============================================================ -->
+        <mxCell id="tesla_env" value="Tesla Env Manager&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Lab reservations &amp;amp; provisioning&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="1070" y="320" width="180" height="55" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- ON-PREM: JENKINS                                             -->
+        <!-- ============================================================ -->
+        <mxCell id="jenkins" value="Jenkins CI/CD&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Triggers workflows, pipelines&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;arcSize=10;" vertex="1" parent="1">
+          <mxGeometry x="860" y="420" width="180" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- ON-PREM: AI INFERENCE HOSTS                                  -->
+        <!-- ============================================================ -->
+        <mxCell id="ai_container" value="AI Inference Hosts" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;opacity=30;dashed=1;dashPattern=8 4;verticalAlign=top;fontSize=12;fontStyle=1;fontColor=#6c8ebf;spacingTop=3;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1070" y="410" width="470" height="70" as="geometry"/>
+        </mxCell>
+        <mxCell id="ai_01" value="cn-ai-01" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="435" width="80" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="ai_02" value="cn-ai-02" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1190" y="435" width="80" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="ai_03" value="cn-ai-03" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="435" width="80" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="ai_04" value="cn-ai-04" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1390" y="435" width="80" height="30" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- LEGEND (bottom-right)                                        -->
+        <!-- ============================================================ -->
+        <mxCell id="legend_box" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#999999;dashed=0;arcSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="700" width="260" height="140" as="geometry"/>
+        </mxCell>
+        <mxCell id="legend_title" value="Legend" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1290" y="705" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <!-- AWS -->
+        <mxCell id="leg_aws" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1295" y="730" width="20" height="14" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg_aws_t" value="AWS Managed Service" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="728" width="130" height="18" as="geometry"/>
+        </mxCell>
+        <!-- On-prem -->
+        <mxCell id="leg_onprem" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1295" y="750" width="20" height="14" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg_onprem_t" value="On-Prem Server" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="748" width="130" height="18" as="geometry"/>
+        </mxCell>
+        <!-- Agent -->
+        <mxCell id="leg_agent" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1295" y="770" width="20" height="14" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg_agent_t" value="Agent Service (ECS)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="768" width="130" height="18" as="geometry"/>
+        </mxCell>
+        <!-- Network -->
+        <mxCell id="leg_net" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1295" y="790" width="20" height="14" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg_net_t" value="VPN / Network" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="788" width="130" height="18" as="geometry"/>
+        </mxCell>
+        <!-- External -->
+        <mxCell id="leg_ext" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=8;" vertex="1" parent="1">
+          <mxGeometry x="1295" y="810" width="20" height="14" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg_ext_t" value="Internet / External" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=9;" vertex="1" parent="1">
+          <mxGeometry x="1320" y="808" width="130" height="18" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- CONNECTIONS — AWS INTERNAL                                   -->
+        <!-- ============================================================ -->
+
+        <!-- ALB → ECS agent services (single arrow to cluster) -->
+        <mxCell id="e_alb_ecs" value="routes API traffic" style="endArrow=block;endFill=1;html=1;strokeColor=#d79b00;fontSize=9;fontColor=#999999;edgeStyle=orthogonalEdgeStyle;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" edge="1" parent="1" source="alb" target="ecs_cluster">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ECS → RDS PostgreSQL -->
+        <mxCell id="e_ecs_rds" value="state &amp;amp; events" style="endArrow=block;endFill=1;html=1;strokeColor=#d79b00;fontSize=8;fontColor=#999999;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="svc_linnaeus" target="rds">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ECS → ElastiCache Redis -->
+        <mxCell id="e_ecs_redis" value="cache &amp;amp; rate limit" style="endArrow=block;endFill=1;html=1;strokeColor=#d79b00;fontSize=8;fontColor=#999999;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="svc_hypatia" target="redis">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ECS → S3 -->
+        <mxCell id="e_ecs_s3" value="artifacts" style="endArrow=block;endFill=1;html=1;strokeColor=#d79b00;fontSize=8;fontColor=#999999;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="svc_babbage" target="s3">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ECS → NAT Gateway -->
+        <mxCell id="e_ecs_nat" value="outbound" style="endArrow=block;endFill=1;html=1;strokeColor=#666666;fontSize=8;fontColor=#999999;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="svc_hedy" target="nat_gw">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- NAT Gateway → Internet -->
+        <mxCell id="e_nat_internet" value="HTTPS" style="endArrow=block;endFill=1;html=1;strokeColor=#b85450;fontSize=8;fontColor=#999999;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="nat_gw" target="internet">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Internet → External services -->
+        <mxCell id="e_int_github" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#b85450;fontSize=8;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="internet" target="ext_github">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_int_jira" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#b85450;fontSize=8;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="internet" target="ext_jira">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="e_int_teams" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#b85450;fontSize=8;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="internet" target="ext_teams">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ECS → VPN Gateway -->
+        <mxCell id="e_ecs_vpn" value="to on-prem" style="endArrow=block;endFill=1;html=1;strokeColor=#666666;fontSize=8;fontColor=#999999;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="svc_faraday_api" target="vpn_gw">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ECS Secrets Manager connection -->
+        <mxCell id="e_ecs_secrets" value="credentials" style="endArrow=block;endFill=1;html=1;strokeColor=#d79b00;fontSize=8;fontColor=#999999;dashed=1;dashPattern=4 4;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="ecs_cluster" target="secrets_mgr">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ECS CloudWatch connection -->
+        <mxCell id="e_ecs_cw" value="logs &amp;amp; metrics" style="endArrow=block;endFill=1;html=1;strokeColor=#d79b00;fontSize=8;fontColor=#999999;dashed=1;dashPattern=4 4;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="ecs_cluster" target="cloudwatch">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Josephine → EC2 workers -->
+        <mxCell id="e_jose_ec2" value="build jobs" style="endArrow=block;endFill=1;html=1;strokeColor=#82b366;fontSize=8;fontColor=#999999;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="svc_josephine" target="ec2_workers">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ============================================================ -->
+        <!-- CONNECTIONS — CROSS-VPN (AWS ↔ On-Prem)                     -->
+        <!-- ============================================================ -->
+
+        <!-- On-prem router → Faraday workers -->
+        <mxCell id="e_router_faraday" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#6c8ebf;fontSize=8;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="onprem_router" target="faraday_workers">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- On-prem router → Tesla -->
+        <mxCell id="e_router_tesla" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#6c8ebf;fontSize=8;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="onprem_router" target="tesla_env">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- On-prem router → Jenkins -->
+        <mxCell id="e_router_jenkins" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#6c8ebf;fontSize=8;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="onprem_router" target="jenkins">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- On-prem router → AI hosts -->
+        <mxCell id="e_router_ai" value="" style="endArrow=block;endFill=1;html=1;strokeColor=#6c8ebf;fontSize=8;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="onprem_router" target="ai_container">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Faraday workers → HIL lab servers -->
+        <mxCell id="e_faraday_hil" value="test execution" style="endArrow=block;endFill=1;html=1;strokeColor=#6c8ebf;fontSize=8;fontColor=#999999;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="faraday_workers" target="hil_container">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Tesla → HIL lab servers -->
+        <mxCell id="e_tesla_hil" value="provisioning" style="endArrow=block;endFill=1;html=1;strokeColor=#6c8ebf;fontSize=8;fontColor=#999999;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="tesla_env" target="hil_container">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Cross-VPN label -->
+        <mxCell id="vpn_traffic_label" value="&lt;font style=&quot;font-size:9px;&quot;&gt;Through VPN:&lt;br&gt;ECS agents ↔ Faraday, Tesla, Jenkins, AI hosts&lt;br&gt;Faraday workers → HIL lab servers&lt;/font&gt;" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=top;fontSize=9;fontColor=#666666;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="560" y="610" width="260" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Jenkins → Faraday (triggers) -->
+        <mxCell id="e_jenkins_faraday" value="triggers" style="endArrow=block;endFill=1;html=1;strokeColor=#6c8ebf;fontSize=8;fontColor=#999999;dashed=1;dashPattern=4 4;edgeStyle=orthogonalEdgeStyle;" edge="1" parent="1" source="jenkins" target="faraday_workers">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- AI hosts label -->
+        <mxCell id="ai_label" value="LLM inference services (agents call via VPN)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;fontSize=9;fontColor=#6c8ebf;fontStyle=2;" vertex="1" parent="1">
+          <mxGeometry x="1090" y="490" width="280" height="18" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

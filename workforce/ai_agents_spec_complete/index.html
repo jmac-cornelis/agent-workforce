@@ -1,0 +1,2740 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for the Cornelis Networks Agent Workforce">
+      
+      
+      
+        <link rel="canonical" href="https://jmac-cornelis.github.io/agent-workforce/workforce/ai_agents_spec_complete/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>AI Agent System Specification - Agent Workforce</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#ai-agent-system-specification" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Agent Workforce" class="md-header__button md-logo" aria-label="Agent Workforce" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Agent Workforce
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              AI Agent System Specification
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/jmac-cornelis/agent-workforce" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jmac-cornelis/agent-workforce
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../user-guide/index.md" class="md-tabs__link">
+          
+  
+  
+    
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../agents/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Agents
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../cli/agent-cli.md" class="md-tabs__link">
+          
+  
+  
+    
+  
+  CLI Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../deployment/index.md" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Deployment
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../architecture/index.md" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Agent Workforce" class="md-nav__button md-logo" aria-label="Agent Workforce" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Agent Workforce
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/jmac-cornelis/agent-workforce" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jmac-cornelis/agent-workforce
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/index.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/installation.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../user-guide/quickstart.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../agents/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Agents
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/drucker.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Drucker (Engineering Hygiene)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/gantt.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gantt (Project Planning)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/hypatia.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hypatia (Documentation)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../agents/shannon.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shannon (Communications)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/agent-cli.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    agent-cli
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/drucker-agent.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    drucker-agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/gantt-agent.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gantt-agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/hypatia-agent.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    hypatia-agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/github-utils.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    github-utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Deployment
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../deployment/index.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../deployment/server-setup.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Server Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../deployment/containers.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker & Podman
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../deployment/cloudflare.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cloudflare Tunnel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/index.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/framework.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Framework
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/shannon.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shannon Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/jmac-cornelis/agent-workforce/edit/main/docs/workforce/ai_agents_spec_complete.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="ai-agent-system-specification">AI Agent System Specification<a class="headerlink" href="#ai-agent-system-specification" title="Permanent link">&para;</a></h1>
+<p>Author: John N. Macdonald (Concept Origin) Generated:
+2026-03-10T19:16:17.736254Z</p>
+<hr />
+<h1 id="1-overview">1. Overview<a class="headerlink" href="#1-overview" title="Permanent link">&para;</a></h1>
+<p>This document specifies the autonomous and semi‑autonomous AI agents
+discussed in the design session. The goal is to create a coordinated
+system of specialized agents that assist with:</p>
+<ul>
+<li>Project management</li>
+<li>Development alignment</li>
+<li>Testing orchestration</li>
+<li>Build and release management</li>
+<li>Documentation generation</li>
+<li>Knowledge capture</li>
+<li>Code quality enforcement</li>
+</ul>
+<p>The system assumes integration with:</p>
+<ul>
+<li><strong>Jira</strong></li>
+<li><strong>GitHub / GitHub Actions</strong></li>
+<li><strong>Microsoft Teams</strong></li>
+<li><strong>Fuze configuration system</strong></li>
+<li><strong>Hardware‑in‑the‑loop test infrastructure</strong></li>
+</ul>
+<p>Agents operate independently but communicate through shared state and
+event triggers.</p>
+<hr />
+<h1 id="2-system-architecture-principles">2. System Architecture Principles<a class="headerlink" href="#2-system-architecture-principles" title="Permanent link">&para;</a></h1>
+<ol>
+<li><strong>Event Driven</strong><ul>
+<li>GitHub events</li>
+<li>Jira events</li>
+<li>Test environment signals</li>
+<li>Build completion signals</li>
+</ul>
+</li>
+<li><strong>Human‑in‑the‑Loop</strong><ul>
+<li>Agents suggest and guide</li>
+<li>Humans approve critical changes</li>
+</ul>
+</li>
+<li><strong>Traceability</strong><ul>
+<li>Every build tied to a Fuze build ID</li>
+<li>Jira issues reference exact builds</li>
+<li>Tests reference commits and builds</li>
+</ul>
+</li>
+<li><strong>Progressive Testing</strong><ul>
+<li>PR tests: fast</li>
+<li>Merge tests: moderate</li>
+<li>Nightly tests: exhaustive</li>
+</ul>
+</li>
+</ol>
+<hr />
+<h1 id="3-agent-inventory">3. Agent Inventory<a class="headerlink" href="#3-agent-inventory" title="Permanent link">&para;</a></h1>
+<hr />
+<p>Agent                   Historical Name         Function</p>
+<hr />
+<p>Build &amp; Package Agent   Josephine               Build orchestration</p>
+<p>Release Orchestrator    Hedy                    Release matrix
+                                                  management</p>
+<p>Code Review Agent       Linus                   Code quality
+                                                  enforcement</p>
+<p>Test Planner            Ada                     Test planning</p>
+<p>Test Generator          Curie                   Executable test input
+                                                  generation</p>
+<p>Test Executor           Faraday                 Test execution</p>
+<p>Test Environment        Tesla                   Environment reservation
+  Manager                                         and lab state</p>
+<p>Documentation Agent     Hypatia                 Documentation
+                                                  generation</p>
+<p>Knowledge Capture Agent Herodotus               Meeting transcripts &amp;
+                                                  summaries</p>
+<p>Bug Investigation      Nightingale             Bug triage,
+  Agent                                           analysis, and
+                                                  reproduction</p>
+<p>Version Mapping Agent   Babbage                 Internal/external
+                                                  version mapping</p>
+<p>Traceability Agent      Linnaeus                Requirement and build
+                                                  traceability</p>
+<hr />
+<hr />
+<h1 id="4-agent-specifications">4. Agent Specifications<a class="headerlink" href="#4-agent-specifications" title="Permanent link">&para;</a></h1>
+<p>Detailed implementation plans currently available:</p>
+<ul>
+<li>Josephine: <a href="../../agents/JOSEPHINE_BUILD_AGENT_PLAN.md">JOSEPHINE_BUILD_AGENT_PLAN.md</a></li>
+<li>Hedy: <a href="../../agents/HEDY_RELEASE_MANAGER_PLAN.md">HEDY_RELEASE_MANAGER_PLAN.md</a></li>
+<li>Linus: <a href="../../agents/LINUS_CODE_REVIEW_AGENT_PLAN.md">LINUS_CODE_REVIEW_AGENT_PLAN.md</a></li>
+<li>Hypatia: <a href="../../agents/HYPATIA_DOCUMENTATION_AGENT_PLAN.md">HYPATIA_DOCUMENTATION_AGENT_PLAN.md</a></li>
+<li>Babbage: <a href="../../agents/BABBAGE_VERSION_MANAGER_PLAN.md">BABBAGE_VERSION_MANAGER_PLAN.md</a></li>
+<li>Linnaeus: <a href="../../agents/LINNAEUS_TRACEABILITY_AGENT_PLAN.md">LINNAEUS_TRACEABILITY_AGENT_PLAN.md</a></li>
+<li>Herodotus: <a href="../../agents/HERODOTUS_KNOWLEDGE_CAPTURE_AGENT_PLAN.md">HERODOTUS_KNOWLEDGE_CAPTURE_AGENT_PLAN.md</a></li>
+<li>Nightingale: <a href="../../agents/NIGHTINGALE_BUG_TRIAGE_REPRODUCTION_PLAN.md">NIGHTINGALE_BUG_TRIAGE_REPRODUCTION_PLAN.md</a></li>
+<li>Ada: <a href="../../agents/ADA_TEST_PLANNER_PLAN.md">ADA_TEST_PLANNER_PLAN.md</a></li>
+<li>Curie: <a href="../../agents/CURIE_TEST_GENERATOR_PLAN.md">CURIE_TEST_GENERATOR_PLAN.md</a></li>
+<li>Faraday: <a href="../../agents/FARADAY_TEST_EXECUTOR_PLAN.md">FARADAY_TEST_EXECUTOR_PLAN.md</a></li>
+<li>Tesla: <a href="../../agents/TESLA_TEST_ENVIRONMENT_MANAGER_PLAN.md">TESLA_TEST_ENVIRONMENT_MANAGER_PLAN.md</a></li>
+</ul>
+<p>Project-management extension plans:</p>
+<ul>
+<li>Gantt: <a href="../../agents/GANTT_PROJECT_PLANNER_PLAN.md">GANTT_PROJECT_PLANNER_PLAN.md</a></li>
+<li>Brooks: <a href="../../agents/BROOKS_DELIVERY_MANAGER_PLAN.md">BROOKS_DELIVERY_MANAGER_PLAN.md</a></li>
+<li>Drucker: <a href="../../agents/DRUCKER_JIRA_COORDINATOR_PLAN.md">DRUCKER_JIRA_COORDINATOR_PLAN.md</a></li>
+</ul>
+<h2 id="41-build-package-agent-josephine">4.1 Build &amp; Package Agent (Josephine)<a class="headerlink" href="#41-build-package-agent-josephine" title="Permanent link">&para;</a></h2>
+<h3 id="purpose">Purpose<a class="headerlink" href="#purpose" title="Permanent link">&para;</a></h3>
+<p>Automate builds and packaging using the <strong>Fuze configuration system</strong>.</p>
+<h3 id="inputs">Inputs<a class="headerlink" href="#inputs" title="Permanent link">&para;</a></h3>
+<ul>
+<li>GitHub commits</li>
+<li>Pull request events</li>
+<li>Merge events</li>
+<li>Fuze configuration JSON</li>
+</ul>
+<h3 id="outputs">Outputs<a class="headerlink" href="#outputs" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Build artifacts</li>
+<li>Unique build identifiers</li>
+<li>Build metadata</li>
+</ul>
+<h3 id="responsibilities">Responsibilities<a class="headerlink" href="#responsibilities" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Execute builds based on Fuze configuration</li>
+<li>Generate reproducible artifacts</li>
+<li>Tag builds with Fuze internal IDs</li>
+</ul>
+<h3 id="triggering-model">Triggering Model<a class="headerlink" href="#triggering-model" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Always-on API and worker control plane</li>
+<li>Work is triggered by build requests or upstream repository/build events</li>
+<li>Humans can submit, retry, cancel, or inspect builds</li>
+</ul>
+<hr />
+<h2 id="42-release-orchestrator-hedy">4.2 Release Orchestrator (Hedy)<a class="headerlink" href="#42-release-orchestrator-hedy" title="Permanent link">&para;</a></h2>
+<h3 id="purpose_1">Purpose<a class="headerlink" href="#purpose_1" title="Permanent link">&para;</a></h3>
+<p>Manage release strategy across a <strong>3D version matrix</strong>:</p>
+<ul>
+<li>Time</li>
+<li>Hardware revisions</li>
+<li>Customer variants</li>
+</ul>
+<h3 id="responsibilities_1">Responsibilities<a class="headerlink" href="#responsibilities_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Coordinate builds into release candidates</li>
+<li>Manage release branches</li>
+<li>Map builds to hardware and customers</li>
+<li>Coordinate deployment schedules</li>
+</ul>
+<h3 id="triggering-model_1">Triggering Model<a class="headerlink" href="#triggering-model_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Always-on release control plane</li>
+<li>Work is triggered by build completion, release evaluation requests, or promotion requests</li>
+<li>Humans approve, block, promote, or deprecate releases</li>
+</ul>
+<hr />
+<h2 id="43-code-review-agent-linus">4.3 Code Review Agent (Linus)<a class="headerlink" href="#43-code-review-agent-linus" title="Permanent link">&para;</a></h2>
+<h3 id="purpose_2">Purpose<a class="headerlink" href="#purpose_2" title="Permanent link">&para;</a></h3>
+<p>Automate code quality enforcement.</p>
+<h3 id="review-types">Review Types<a class="headerlink" href="#review-types" title="Permanent link">&para;</a></h3>
+<p><strong>Kernel Compliance</strong> - Kernel coding style - Upstream compatibility</p>
+<p><strong>Embedded Best Practices</strong> - C/C++ safety - Memory usage - Concurrency
+correctness</p>
+<p><strong>Python Utilities</strong> - Static analysis - Script correctness</p>
+<h3 id="integration">Integration<a class="headerlink" href="#integration" title="Permanent link">&para;</a></h3>
+<p>Triggered during GitHub Pull Requests.</p>
+<h3 id="triggering-model_2">Triggering Model<a class="headerlink" href="#triggering-model_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Always-on review service</li>
+<li>Work is triggered by pull request open, update, sync, or review-request events</li>
+<li>Humans can re-run reviews and override or suppress findings under policy</li>
+</ul>
+<hr />
+<h2 id="44-test-planner-ada">4.4 Test Planner (Ada)<a class="headerlink" href="#44-test-planner-ada" title="Permanent link">&para;</a></h2>
+<h3 id="purpose_3">Purpose<a class="headerlink" href="#purpose_3" title="Permanent link">&para;</a></h3>
+<p>Define what should be tested, at what depth, and under what policy.</p>
+<p>Ada is no longer the umbrella name for the whole test domain. Ada is specifically the planning agent.</p>
+<h3 id="components">Components<a class="headerlink" href="#components" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Trigger-to-plan selection</li>
+<li>Coverage-driven planning</li>
+<li>Environment-class intent selection</li>
+</ol>
+<h3 id="triggering-model_3">Triggering Model<a class="headerlink" href="#triggering-model_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Always-on planning service</li>
+<li>Work is triggered by PR, merge, nightly, build-completion, or release-validation events</li>
+<li>Humans can preview plans or apply policy overrides where allowed</li>
+</ul>
+<hr />
+<h2 id="45-test-generator-curie">4.5 Test Generator (Curie)<a class="headerlink" href="#45-test-generator-curie" title="Permanent link">&para;</a></h2>
+<h3 id="purpose_4">Purpose<a class="headerlink" href="#purpose_4" title="Permanent link">&para;</a></h3>
+<p>Turn Ada's plan into executable Fuze Test inputs.</p>
+<h3 id="responsibilities_2">Responsibilities<a class="headerlink" href="#responsibilities_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Materialize explicit suite inputs</li>
+<li>Generate runtime overlays when needed</li>
+<li>Keep generated test inputs reproducible and auditable</li>
+</ul>
+<h3 id="triggering-model_4">Triggering Model<a class="headerlink" href="#triggering-model_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Always-on generation service with light persistent state</li>
+<li>Work is triggered by Ada plan outputs or direct generation requests</li>
+<li>Humans can regenerate inputs for debugging or exceptional cases</li>
+</ul>
+<hr />
+<h2 id="46-test-executor-faraday">4.6 Test Executor (Faraday)<a class="headerlink" href="#46-test-executor-faraday" title="Permanent link">&para;</a></h2>
+<h3 id="purpose_5">Purpose<a class="headerlink" href="#purpose_5" title="Permanent link">&para;</a></h3>
+<p>Execute planned tests through Fuze Test.</p>
+<h3 id="responsibilities_3">Responsibilities<a class="headerlink" href="#responsibilities_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Run test cycles through the ATF executive</li>
+<li>Capture logs, artifacts, and normalized result records</li>
+<li>Surface execution state and failure classes</li>
+</ul>
+<h3 id="triggering-model_5">Triggering Model<a class="headerlink" href="#triggering-model_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Always-on execution control plane with queued workers</li>
+<li>Work is triggered by accepted test-run requests and ready reservations</li>
+<li>Humans can cancel, rerun, or inspect executions</li>
+</ul>
+<hr />
+<h2 id="47-test-environment-manager-tesla">4.7 Test Environment Manager (Tesla)<a class="headerlink" href="#47-test-environment-manager-tesla" title="Permanent link">&para;</a></h2>
+<h3 id="purpose_6">Purpose<a class="headerlink" href="#purpose_6" title="Permanent link">&para;</a></h3>
+<p>Expose environment state and manage reservations for scarce mock and HIL resources.</p>
+<h3 id="responsibilities_4">Responsibilities<a class="headerlink" href="#responsibilities_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Publish environment capability and availability</li>
+<li>Grant, renew, and release reservations</li>
+<li>Surface maintenance, quarantine, and utilization state</li>
+</ul>
+<h3 id="testing-levels">Testing Levels<a class="headerlink" href="#testing-levels" title="Permanent link">&para;</a></h3>
+<p>Event           Testing Level</p>
+<hr />
+<p>Pull Request    Unit + fast functional tests
+  Merge to main   extended functional tests
+  Nightly         full test suite
+  Release         certification suite</p>
+<h3 id="hardware-integration">Hardware Integration<a class="headerlink" href="#hardware-integration" title="Permanent link">&para;</a></h3>
+<p>Supports:</p>
+<ul>
+<li>hardware‑in‑loop testing</li>
+<li>network simulation</li>
+<li>mock environments</li>
+</ul>
+<h3 id="triggering-model_6">Triggering Model<a class="headerlink" href="#triggering-model_6" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Always-on shared environment-state and reservation service</li>
+<li>Work is triggered by reservation, heartbeat, release, quarantine, and maintenance actions</li>
+<li>Scheduled lease and health checks run continuously in the background</li>
+<li>Humans can quarantine, maintain, or release environments manually</li>
+</ul>
+<hr />
+<h2 id="48-documentation-agent-hypatia">4.8 Documentation Agent (Hypatia)<a class="headerlink" href="#48-documentation-agent-hypatia" title="Permanent link">&para;</a></h2>
+<h3 id="purpose_7">Purpose<a class="headerlink" href="#purpose_7" title="Permanent link">&para;</a></h3>
+<p>Generate living documentation.</p>
+<h3 id="documentation-types">Documentation Types<a class="headerlink" href="#documentation-types" title="Permanent link">&para;</a></h3>
+<p><strong>1. As‑Built Documentation</strong> - README files - Design descriptions -
+Repo structure explanations</p>
+<p><strong>2. User Documentation</strong> - API references - Tool documentation - Usage
+guides</p>
+<p><strong>3. Engineering Documentation</strong> - architecture - system diagrams -
+design rationale</p>
+<h3 id="tools">Tools<a class="headerlink" href="#tools" title="Permanent link">&para;</a></h3>
+<p>Potential integration with:</p>
+<ul>
+<li>Sphinx</li>
+<li>ReadTheDocs‑style internal publishing</li>
+</ul>
+<h3 id="triggering-model_7">Triggering Model<a class="headerlink" href="#triggering-model_7" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Always-on documentation service</li>
+<li>Work is triggered by documentation-impact signals from source, build, test, release, or meeting-summary changes</li>
+<li>Humans review, publish, reject, or regenerate documentation outputs</li>
+</ul>
+<hr />
+<h2 id="49-knowledge-capture-agent-herodotus">4.9 Knowledge Capture Agent (Herodotus)<a class="headerlink" href="#49-knowledge-capture-agent-herodotus" title="Permanent link">&para;</a></h2>
+<h3 id="purpose_8">Purpose<a class="headerlink" href="#purpose_8" title="Permanent link">&para;</a></h3>
+<p>Automatically capture meeting knowledge.</p>
+<h3 id="integration_1">Integration<a class="headerlink" href="#integration_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Microsoft Teams meetings</li>
+<li>Transcript APIs</li>
+</ul>
+<h3 id="functions">Functions<a class="headerlink" href="#functions" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Auto‑retrieve transcripts</li>
+<li>Summarize technical discussions</li>
+<li>Extract decisions</li>
+<li>Produce meeting notes</li>
+</ul>
+<h3 id="triggering-model_8">Triggering Model<a class="headerlink" href="#triggering-model_8" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Always-on transcript-ingest and summary service</li>
+<li>Work is triggered by transcript-ready events or explicit ingest/summarize requests</li>
+<li>Humans review, publish, redact, or retract summaries</li>
+</ul>
+<hr />
+<h2 id="410-version-mapping-agent-babbage">4.10 Version Mapping Agent (Babbage)<a class="headerlink" href="#410-version-mapping-agent-babbage" title="Permanent link">&para;</a></h2>
+<h3 id="purpose_9">Purpose<a class="headerlink" href="#purpose_9" title="Permanent link">&para;</a></h3>
+<p>Connect <strong>Fuze internal versioning</strong> with <strong>external release versions</strong>.</p>
+<h3 id="responsibilities_5">Responsibilities<a class="headerlink" href="#responsibilities_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Map build IDs to release versions</li>
+<li>Track version lineage</li>
+<li>Maintain compatibility records</li>
+</ul>
+<h3 id="triggering-model_9">Triggering Model<a class="headerlink" href="#triggering-model_9" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Always-on version-mapping service</li>
+<li>Work is triggered by build, release, and mapping requests or events</li>
+<li>Humans can confirm, correct, or approve mappings where policy requires</li>
+</ul>
+<hr />
+<h2 id="411-traceability-agent-linnaeus">4.11 Traceability Agent (Linnaeus)<a class="headerlink" href="#411-traceability-agent-linnaeus" title="Permanent link">&para;</a></h2>
+<h3 id="purpose_10">Purpose<a class="headerlink" href="#purpose_10" title="Permanent link">&para;</a></h3>
+<p>Maintain traceability across system components.</p>
+<h3 id="responsibilities_6">Responsibilities<a class="headerlink" href="#responsibilities_6" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Link Jira tickets to builds</li>
+<li>Link tests to builds</li>
+<li>Link requirements to code</li>
+<li>Track bug origin builds</li>
+</ul>
+<h3 id="triggering-model_10">Triggering Model<a class="headerlink" href="#triggering-model_10" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Always-on traceability service</li>
+<li>Work is triggered by Jira, GitHub, build, test, release, and version events</li>
+<li>Humans can assert, correct, or suppress specific relationship records with audit trail</li>
+</ul>
+<hr />
+<h2 id="412-bug-investigation-agent-nightingale">4.12 Bug Investigation Agent (Nightingale)<a class="headerlink" href="#412-bug-investigation-agent-nightingale" title="Permanent link">&para;</a></h2>
+<h3 id="purpose_11">Purpose<a class="headerlink" href="#purpose_11" title="Permanent link">&para;</a></h3>
+<p>Turn Jira bug reports into actionable technical evidence.</p>
+<h3 id="responsibilities_7">Responsibilities<a class="headerlink" href="#responsibilities_7" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Triage new bug reports for technical completeness</li>
+<li>Assemble build, test, release, and traceability context</li>
+<li>Coordinate targeted reproduction attempts</li>
+<li>Produce investigation summaries and reproduction evidence</li>
+</ul>
+<h3 id="triggering-model_11">Triggering Model<a class="headerlink" href="#triggering-model_11" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Always-on investigation service</li>
+<li>Work is triggered by new bug reports, bug updates, reopen events, or explicit reproduction requests</li>
+<li>Humans can escalate, approve expensive reproduction work, or close an investigation as inconclusive</li>
+</ul>
+<hr />
+<h1 id="5-integration-points">5. Integration Points<a class="headerlink" href="#5-integration-points" title="Permanent link">&para;</a></h1>
+<h2 id="github">GitHub<a class="headerlink" href="#github" title="Permanent link">&para;</a></h2>
+<ul>
+<li>PR events</li>
+<li>merge events</li>
+<li>commit metadata</li>
+</ul>
+<h2 id="jira">Jira<a class="headerlink" href="#jira" title="Permanent link">&para;</a></h2>
+<ul>
+<li>ticket updates</li>
+<li>bug reports</li>
+<li>release tagging</li>
+</ul>
+<h2 id="microsoft-teams">Microsoft Teams<a class="headerlink" href="#microsoft-teams" title="Permanent link">&para;</a></h2>
+<ul>
+<li>meeting transcripts</li>
+<li>notifications</li>
+</ul>
+<h2 id="fuze">Fuze<a class="headerlink" href="#fuze" title="Permanent link">&para;</a></h2>
+<ul>
+<li>configuration‑driven builds</li>
+<li>build ID generation</li>
+</ul>
+<hr />
+<h1 id="6-recommended-implementation-order">6. Recommended Implementation Order<a class="headerlink" href="#6-recommended-implementation-order" title="Permanent link">&para;</a></h1>
+<ol>
+<li>Build Agent (Josephine)</li>
+<li>Release Agent (Hedy)</li>
+<li>Code Review Agent (Linus)</li>
+<li>Test Stack (Ada / Curie / Faraday / Tesla)</li>
+<li>Documentation Agent (Hypatia)</li>
+<li>Version Mapping Agent (Babbage)</li>
+<li>Traceability Agent (Linnaeus)</li>
+<li>Knowledge Capture Agent (Herodotus)</li>
+</ol>
+<hr />
+<h1 id="7-future-extensions">7. Future Extensions<a class="headerlink" href="#7-future-extensions" title="Permanent link">&para;</a></h1>
+<p>Potential additional agents:</p>
+<ul>
+<li>project planner agents such as Gantt</li>
+<li>delivery-management agents such as Brooks</li>
+<li>Jira workflow coordinators such as Drucker</li>
+<li>resource scheduling agents</li>
+<li>system architecture analysis agents</li>
+</ul>
+<p>Typical triggering models for likely extensions:</p>
+<ul>
+<li>Gantt: primarily on-demand planning snapshots, with optional scheduled refreshes later; humans review and approve planning write-backs</li>
+<li>Brooks: on-demand and scheduled delivery summaries; humans request status views and acknowledge or dismiss risks</li>
+<li>Drucker: always-on Jira coordination service reacting to Jira events plus scheduled hygiene scans; humans approve, apply, or suppress workflow changes</li>
+</ul>
+<hr />
+<h1 id="8-agent-architecture-diagram">8. Agent Architecture Diagram<a class="headerlink" href="#8-agent-architecture-diagram" title="Permanent link">&para;</a></h1>
+<pre class="mermaid"><code>flowchart TB
+    %% External Systems
+    GH["GitHub"]
+    JIRA["Jira"]
+    TEAMS["Microsoft Teams"]
+    FUZE["Fuze Config"]
+    HW["HW Test Environment"]
+
+    %% Core Agents
+    JOSEPHINE["Josephine&lt;br/&gt;Build &amp; Package Agent"]
+    HEDY["Hedy&lt;br/&gt;Release Orchestrator"]
+    LINUS["Linus&lt;br/&gt;Code Review Agent"]
+    ADA["Ada&lt;br/&gt;Test Planner"]
+    CURIE["Curie&lt;br/&gt;Test Generator"]
+    FARADAY["Faraday&lt;br/&gt;Test Executor"]
+    TESLA["Tesla&lt;br/&gt;Test Environment Manager"]
+
+    %% Support Agents
+    HYPATIA["Hypatia&lt;br/&gt;Documentation Agent"]
+    BABBAGE["Babbage&lt;br/&gt;Version Mapping Agent"]
+    LINNAEUS["Linnaeus&lt;br/&gt;Traceability Agent"]
+    HERODOTUS["Herodotus&lt;br/&gt;Knowledge Capture Agent"]
+
+    %% Primary Flows
+    GH --&gt; JOSEPHINE
+    GH --&gt; LINUS
+    GH --&gt; ADA
+
+    FUZE --&gt; JOSEPHINE
+    JOSEPHINE --&gt; HEDY
+    HEDY --&gt; ADA
+    ADA --&gt; CURIE
+    ADA --&gt; TESLA
+    ADA --&gt; FARADAY
+    CURIE --&gt; FARADAY
+    TESLA --&gt; FARADAY
+    FARADAY --&gt; HW
+
+    JOSEPHINE --&gt; BABBAGE
+    HEDY --&gt; BABBAGE
+    BABBAGE --&gt; LINNAEUS
+    ADA --&gt; LINNAEUS
+    FARADAY --&gt; LINNAEUS
+    LINNAEUS --&gt; JIRA
+
+    JOSEPHINE --&gt; HYPATIA
+    LINUS --&gt; HYPATIA
+    FARADAY --&gt; HYPATIA
+    HYPATIA --&gt; GH
+
+    TEAMS --&gt; HERODOTUS
+    HERODOTUS --&gt; JIRA
+
+    %% Optional operational relationships
+    JIRA --&gt; HEDY
+    JIRA --&gt; LINNAEUS</code></pre>
+<h2 id="diagram-notes">Diagram Notes<a class="headerlink" href="#diagram-notes" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>GitHub</strong> is the primary source of development events.</li>
+<li><strong>Fuze Config</strong> drives configuration-aware build and package behavior.</li>
+<li><strong>Josephine</strong> produces build artifacts and hands release-ready outputs to <strong>Hedy</strong>.</li>
+<li><strong>Linus</strong> evaluates pull requests and code quality policy.</li>
+<li><strong>Ada</strong> selects test intent and depth from trigger and policy.</li>
+<li><strong>Curie</strong> turns selected plans into executable Fuze Test inputs.</li>
+<li><strong>Tesla</strong> manages environment state and reservations.</li>
+<li><strong>Faraday</strong> executes the planned tests, including hardware-in-the-loop flows.</li>
+<li><strong>Babbage</strong> maps internal Fuze-generated build identities to external release versions.</li>
+<li><strong>Linnaeus</strong> maintains traceability from requirements and Jira tickets to builds, tests, and releases.</li>
+<li><strong>Hypatia</strong> generates and updates repo-level, user, and engineering documentation.</li>
+<li><strong>Herodotus</strong> captures and summarizes meeting transcripts from Microsoft Teams.</li>
+<li><strong>Nightingale</strong> turns bug reports into reproducible technical investigations and evidence packs.</li>
+</ul>
+<hr />
+<h1 id="9-event-flow-diagram">9. Event Flow Diagram<a class="headerlink" href="#9-event-flow-diagram" title="Permanent link">&para;</a></h1>
+<pre class="mermaid"><code>flowchart TB
+    %% Event Sources
+    subgraph EVENTS["Event Sources"]
+        PR["Pull Request Opened / Updated"]
+        MERGE["Main / Release Branch Merge"]
+        NIGHTLY["Nightly Scheduler"]
+        BUG["New Jira Bug Report"]
+        MEETING["Teams Meeting Ended"]
+    end
+
+    %% Platforms
+    GH["GitHub / GitHub Actions"]
+    JIRA["Jira"]
+    TEAMS["Microsoft Teams"]
+    FUZE["Fuze Config"]
+    HW["HW Test Environment"]
+    DOCS["Internal Docs Publish Target"]
+
+    %% Agents
+    JOSEPHINE["Josephine&lt;br/&gt;Build &amp; Package"]
+    HEDY["Hedy&lt;br/&gt;Release Orchestrator"]
+    LINUS["Linus&lt;br/&gt;Code Review"]
+    ADA["Ada&lt;br/&gt;Test Planner"]
+    CURIE["Curie&lt;br/&gt;Test Generator"]
+    FARADAY["Faraday&lt;br/&gt;Test Executor"]
+    TESLA["Tesla&lt;br/&gt;Test Environment"]
+    HYPATIA["Hypatia&lt;br/&gt;Documentation"]
+    BABBAGE["Babbage&lt;br/&gt;Version Mapping"]
+    LINNAEUS["Linnaeus&lt;br/&gt;Traceability"]
+    HERODOTUS["Herodotus&lt;br/&gt;Knowledge Capture"]
+
+    %% Event Entry
+    PR --&gt; GH
+    MERGE --&gt; GH
+    NIGHTLY --&gt; GH
+    BUG --&gt; JIRA
+    MEETING --&gt; TEAMS
+
+    %% PR Flow
+    GH --&gt; LINUS
+    GH --&gt; JOSEPHINE
+    FUZE --&gt; JOSEPHINE
+    JOSEPHINE --&gt; ADA
+    ADA --&gt; CURIE
+    ADA --&gt; TESLA
+    CURIE --&gt; FARADAY
+    TESLA --&gt; FARADAY
+    FARADAY --&gt; HW
+    FARADAY --&gt; GH
+    LINUS --&gt; GH
+
+    %% Merge / Release Flow
+    GH --&gt; HEDY
+    JOSEPHINE --&gt; BABBAGE
+    HEDY --&gt; BABBAGE
+    BABBAGE --&gt; LINNAEUS
+    ADA --&gt; LINNAEUS
+    FARADAY --&gt; LINNAEUS
+    LINNAEUS --&gt; JIRA
+
+    %% Documentation Flow
+    GH --&gt; HYPATIA
+    JOSEPHINE --&gt; HYPATIA
+    FARADAY --&gt; HYPATIA
+    HYPATIA --&gt; DOCS
+    HYPATIA --&gt; GH
+
+    %% Bug / Traceability Flow
+    JIRA --&gt; LINNAEUS
+    LINNAEUS --&gt; HEDY
+
+    %% Knowledge Capture Flow
+    TEAMS --&gt; HERODOTUS
+    HERODOTUS --&gt; JIRA
+    HERODOTUS --&gt; DOCS</code></pre>
+<h2 id="event-flow-notes">Event Flow Notes<a class="headerlink" href="#event-flow-notes" title="Permanent link">&para;</a></h2>
+<h3 id="pull-request-flow">Pull Request Flow<a class="headerlink" href="#pull-request-flow" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A pull request event enters through <strong>GitHub / GitHub Actions</strong>.</li>
+<li><strong>Linus</strong> performs code review and policy checks.</li>
+<li><strong>Josephine</strong> runs configuration-aware build and package steps using <strong>Fuze Config</strong>.</li>
+<li><strong>Ada</strong> selects the PR-level test plan.</li>
+<li><strong>Curie</strong> materializes executable Fuze Test inputs from that plan.</li>
+<li><strong>Tesla</strong> provides or reserves the required environment class.</li>
+<li><strong>Faraday</strong> runs the PR-level suite, including unit tests and fast functional tests.</li>
+<li>Results flow back into GitHub status checks and associated development records.</li>
+</ul>
+<h3 id="merge-and-release-flow">Merge and Release Flow<a class="headerlink" href="#merge-and-release-flow" title="Permanent link">&para;</a></h3>
+<ul>
+<li>A merge to main or a release branch triggers deeper release handling.</li>
+<li><strong>Hedy</strong> determines the release path for the build across release branches, hardware targets, and customer variants.</li>
+<li><strong>Babbage</strong> maps the resulting internal build identities to external release versions.</li>
+<li><strong>Linnaeus</strong> pushes traceability data into Jira so that bugs, builds, tests, and releases stay linked.</li>
+</ul>
+<h3 id="nightly-flow">Nightly Flow<a class="headerlink" href="#nightly-flow" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The nightly scheduler triggers the same core path, but <strong>Ada</strong> selects an expanded test plan.</li>
+<li><strong>Curie</strong>, <strong>Tesla</strong>, and <strong>Faraday</strong> carry that plan through generation, reservation, and execution.</li>
+<li>This is where long-duration and broader hardware-in-the-loop coverage happens.</li>
+</ul>
+<h3 id="bug-intake-flow">Bug Intake Flow<a class="headerlink" href="#bug-intake-flow" title="Permanent link">&para;</a></h3>
+<ul>
+<li>New Jira bug reports enter through <strong>Jira</strong>.</li>
+<li><strong>Drucker</strong> keeps the issue operationally coherent in Jira.</li>
+<li><strong>Nightingale</strong> triages the report, requests missing data, and drives reproduction work where warranted.</li>
+<li><strong>Linnaeus</strong> associates the issue with the exact build, test evidence, and release context where possible.</li>
+<li>That investigation and traceability data feeds <strong>Hedy</strong> so release decisions can account for active defect status.</li>
+</ul>
+<h3 id="documentation-flow">Documentation Flow<a class="headerlink" href="#documentation-flow" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Source changes, builds, and test results feed <strong>Hypatia</strong>.</li>
+<li><strong>Hypatia</strong> updates as-built documentation, user documentation, and engineering documentation.</li>
+<li>Outputs can be committed back to GitHub and published to the internal documentation target.</li>
+</ul>
+<h3 id="knowledge-capture-flow">Knowledge Capture Flow<a class="headerlink" href="#knowledge-capture-flow" title="Permanent link">&para;</a></h3>
+<ul>
+<li>At the end of a Teams meeting, <strong>Herodotus</strong> captures and summarizes the transcript.</li>
+<li>Key decisions, action items, and technical notes can be pushed into Jira and internal documentation.</li>
+</ul>
+<hr />
+<h1 id="10-agent-interface-specification">10. Agent Interface Specification<a class="headerlink" href="#10-agent-interface-specification" title="Permanent link">&para;</a></h1>
+<p>This section defines the operational interfaces between agents, platforms, and shared system services.
+The purpose is to make implementation concrete enough that engineering teams can assign ownership, define schemas, and begin staged delivery.</p>
+<h2 id="101-interface-design-principles">10.1 Interface Design Principles<a class="headerlink" href="#101-interface-design-principles" title="Permanent link">&para;</a></h2>
+<h3 id="canonical-rules">Canonical Rules<a class="headerlink" href="#canonical-rules" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Events are first-class</strong></li>
+<li>Agents should react to typed events rather than polling where possible.</li>
+<li>
+<p>Polling is acceptable for systems that do not provide suitable event hooks.</p>
+</li>
+<li>
+<p><strong>Every artifact has an identity</strong></p>
+</li>
+<li>
+<p>Commits, pull requests, Jira issues, builds, test executions, releases, documents, and meeting summaries must all carry stable IDs.</p>
+</li>
+<li>
+<p><strong>Internal build identity is authoritative</strong></p>
+</li>
+<li>Fuze-generated internal build IDs are the ground truth for technical traceability.</li>
+<li>
+<p>External versions are derived and mapped, not substituted.</p>
+</li>
+<li>
+<p><strong>Interfaces should be typed and auditable</strong></p>
+</li>
+<li>Every agent action should produce a machine-readable record.</li>
+<li>
+<p>Every major decision should include provenance.</p>
+</li>
+<li>
+<p><strong>Humans approve irreversible actions</strong></p>
+</li>
+<li>Agents may recommend, draft, annotate, classify, and orchestrate.</li>
+<li>Production release approval and policy exceptions should remain human controlled.</li>
+</ol>
+<h2 id="102-shared-canonical-objects">10.2 Shared Canonical Objects<a class="headerlink" href="#102-shared-canonical-objects" title="Permanent link">&para;</a></h2>
+<p>These objects should be normalized across the system, even if individual tools store richer native forms.</p>
+<h3 id="build-record">Build Record<a class="headerlink" href="#build-record" title="Permanent link">&para;</a></h3>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;build_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fuze:build:2026-03-10T22:14:11Z:abc123&quot;</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;source_repo&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;github.com/org/repo&quot;</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">&quot;branch&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;release/2.4&quot;</span><span class="p">,</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">&quot;commit_sha&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;abc123def456&quot;</span><span class="p">,</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="nt">&quot;trigger_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pull_request&quot;</span><span class="p">,</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span><span class="nt">&quot;trigger_ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PR-1842&quot;</span><span class="p">,</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span><span class="nt">&quot;fuze_config_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;cfg-network-card-a1&quot;</span><span class="p">,</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span><span class="nt">&quot;artifact_uris&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">    </span><span class="s2">&quot;s3://builds/fw.bin&quot;</span><span class="p">,</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="s2">&quot;s3://builds/pkg.tar.gz&quot;</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">  </span><span class="p">],</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;succeeded&quot;</span><span class="p">,</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">  </span><span class="nt">&quot;created_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-03-10T22:14:11Z&quot;</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="test-execution-record">Test Execution Record<a class="headerlink" href="#test-execution-record" title="Permanent link">&para;</a></h3>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;test_run_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test:run:88921&quot;</span><span class="p">,</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">&quot;build_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fuze:build:2026-03-10T22:14:11Z:abc123&quot;</span><span class="p">,</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">&quot;test_plan_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pr-fast-functional-v3&quot;</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="nt">&quot;test_level&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pr&quot;</span><span class="p">,</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">&quot;environment_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hil-rack-03&quot;</span><span class="p">,</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span><span class="nt">&quot;environment_mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hardware_in_loop&quot;</span><span class="p">,</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;passed&quot;</span><span class="p">,</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="nt">&quot;started_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-03-10T22:22:00Z&quot;</span><span class="p">,</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="nt">&quot;ended_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-03-10T22:31:00Z&quot;</span><span class="p">,</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="nt">&quot;coverage_summary&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="nt">&quot;unit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">82.1</span><span class="p">,</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="nt">&quot;functional&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">64.4</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">  </span><span class="p">}</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="release-record">Release Record<a class="headerlink" href="#release-record" title="Permanent link">&para;</a></h3>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">&quot;release_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;release:2.4.0-rc2&quot;</span><span class="p">,</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">&quot;build_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fuze:build:2026-03-10T22:14:11Z:abc123&quot;</span><span class="p">,</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">&quot;external_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2.4.0-rc2&quot;</span><span class="p">,</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">&quot;release_branch&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;release/2.4&quot;</span><span class="p">,</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">&quot;hardware_targets&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;revC&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;revD&quot;</span><span class="p">],</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">&quot;customer_profiles&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;default&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;customer-x&quot;</span><span class="p">],</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span><span class="nt">&quot;approval_state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pending&quot;</span><span class="p">,</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;candidate&quot;</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="traceability-record">Traceability Record<a class="headerlink" href="#traceability-record" title="Permanent link">&para;</a></h3>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;trace_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;trace:bug:PROJ-4421&quot;</span><span class="p">,</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">&quot;jira_issue_key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PROJ-4421&quot;</span><span class="p">,</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">&quot;build_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fuze:build:2026-03-10T22:14:11Z:abc123&quot;</span><span class="p">,</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">&quot;release_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;release:2.4.0-rc2&quot;</span><span class="p">,</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span><span class="nt">&quot;commit_shas&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;abc123def456&quot;</span><span class="p">],</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="nt">&quot;test_run_ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;test:run:88921&quot;</span><span class="p">],</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span><span class="nt">&quot;requirements&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;REQ-NET-0042&quot;</span><span class="p">]</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="documentation-record">Documentation Record<a class="headerlink" href="#documentation-record" title="Permanent link">&para;</a></h3>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;doc_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;doc:engineering:interrupt-routing&quot;</span><span class="p">,</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span><span class="nt">&quot;doc_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;engineering&quot;</span><span class="p">,</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span><span class="nt">&quot;source_refs&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nt">&quot;commit_shas&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;abc123def456&quot;</span><span class="p">],</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="nt">&quot;build_ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;fuze:build:2026-03-10T22:14:11Z:abc123&quot;</span><span class="p">],</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="nt">&quot;jira_keys&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;PROJ-4421&quot;</span><span class="p">]</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="w">  </span><span class="p">},</span>
+</span><span id="__span-4-9"><a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="w">  </span><span class="nt">&quot;publish_target&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;internal-docs&quot;</span><span class="p">,</span>
+</span><span id="__span-4-10"><a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="w">  </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;published&quot;</span>
+</span><span id="__span-4-11"><a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="meeting-summary-record">Meeting Summary Record<a class="headerlink" href="#meeting-summary-record" title="Permanent link">&para;</a></h3>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&quot;meeting_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;teams:meeting:2026-03-10:embedded-release-review&quot;</span><span class="p">,</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">&quot;transcript_ref&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;teams://transcripts/78421&quot;</span><span class="p">,</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">&quot;summary_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;summary:2026-03-10:embedded-release-review&quot;</span><span class="p">,</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="nt">&quot;decision_items&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">    </span><span class="s2">&quot;Keep PR HIL runtime under 10 minutes&quot;</span><span class="p">,</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="s2">&quot;Add release branch gating for revD hardware&quot;</span>
+</span><span id="__span-5-8"><a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">  </span><span class="p">],</span>
+</span><span id="__span-5-9"><a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">  </span><span class="nt">&quot;action_items&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+</span><span id="__span-5-10"><a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="p">{</span>
+</span><span id="__span-5-11"><a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">      </span><span class="nt">&quot;owner&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;john.macdonald@4tlastech.com&quot;</span><span class="p">,</span>
+</span><span id="__span-5-12"><a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">      </span><span class="nt">&quot;description&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Define release matrix policy&quot;</span>
+</span><span id="__span-5-13"><a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">    </span><span class="p">}</span>
+</span><span id="__span-5-14"><a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">  </span><span class="p">]</span>
+</span><span id="__span-5-15"><a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="p">}</span>
+</span></code></pre></div>
+<h2 id="103-platform-interfaces">10.3 Platform Interfaces<a class="headerlink" href="#103-platform-interfaces" title="Permanent link">&para;</a></h2>
+<h3 id="github-github-actions">GitHub / GitHub Actions<a class="headerlink" href="#github-github-actions" title="Permanent link">&para;</a></h3>
+<p>GitHub is the primary development event source.</p>
+<h4 id="consumed-by-agents">Consumed by Agents<a class="headerlink" href="#consumed-by-agents" title="Permanent link">&para;</a></h4>
+<ul>
+<li>pull request opened</li>
+<li>pull request updated</li>
+<li>pull request review requested</li>
+<li>branch push</li>
+<li>main merge</li>
+<li>release branch merge</li>
+<li>tag creation</li>
+<li>workflow completion</li>
+</ul>
+<h4 id="produced-back-to-github">Produced back to GitHub<a class="headerlink" href="#produced-back-to-github" title="Permanent link">&para;</a></h4>
+<ul>
+<li>status checks</li>
+<li>review comments</li>
+<li>release notes drafts</li>
+<li>documentation commits</li>
+<li>traceability annotations</li>
+<li>links to build and test artifacts</li>
+</ul>
+<h4 id="minimum-payload-fields">Minimum payload fields<a class="headerlink" href="#minimum-payload-fields" title="Permanent link">&para;</a></h4>
+<ul>
+<li>repository</li>
+<li>branch</li>
+<li>commit SHA</li>
+<li>pull request number</li>
+<li>author</li>
+<li>changed files</li>
+<li>workflow run ID</li>
+</ul>
+<h3 id="jira_1">Jira<a class="headerlink" href="#jira_1" title="Permanent link">&para;</a></h3>
+<p>Jira is the primary work tracking and defect system.</p>
+<h4 id="consumed-by-agents_1">Consumed by Agents<a class="headerlink" href="#consumed-by-agents_1" title="Permanent link">&para;</a></h4>
+<ul>
+<li>new bug report</li>
+<li>ticket updated</li>
+<li>release field changed</li>
+<li>priority changed</li>
+<li>stale issue detection trigger</li>
+</ul>
+<h4 id="produced-back-to-jira">Produced back to Jira<a class="headerlink" href="#produced-back-to-jira" title="Permanent link">&para;</a></h4>
+<ul>
+<li>exact build linkage</li>
+<li>missing metadata flags</li>
+<li>release recommendations</li>
+<li>test evidence links</li>
+<li>summary comments</li>
+<li>traceability links</li>
+</ul>
+<h4 id="minimum-payload-fields_1">Minimum payload fields<a class="headerlink" href="#minimum-payload-fields_1" title="Permanent link">&para;</a></h4>
+<ul>
+<li>issue key</li>
+<li>issue type</li>
+<li>reporter</li>
+<li>assignee</li>
+<li>priority</li>
+<li>affected build ID</li>
+<li>release target</li>
+<li>custom fields for hardware/customer scope</li>
+</ul>
+<h3 id="microsoft-teams_1">Microsoft Teams<a class="headerlink" href="#microsoft-teams_1" title="Permanent link">&para;</a></h3>
+<p>Teams is the meeting and human notification channel.</p>
+<h4 id="consumed-by-agents_2">Consumed by Agents<a class="headerlink" href="#consumed-by-agents_2" title="Permanent link">&para;</a></h4>
+<ul>
+<li>meeting ended</li>
+<li>transcript ready</li>
+<li>direct message trigger</li>
+<li>adaptive card response</li>
+</ul>
+<h4 id="produced-back-to-teams">Produced back to Teams<a class="headerlink" href="#produced-back-to-teams" title="Permanent link">&para;</a></h4>
+<ul>
+<li>reporter prompts for missing bug data</li>
+<li>approval requests</li>
+<li>meeting summaries</li>
+<li>escalation messages</li>
+<li>release readiness summaries</li>
+</ul>
+<h4 id="minimum-payload-fields_2">Minimum payload fields<a class="headerlink" href="#minimum-payload-fields_2" title="Permanent link">&para;</a></h4>
+<ul>
+<li>meeting ID</li>
+<li>transcript URI</li>
+<li>user principal name</li>
+<li>team/channel or chat ID</li>
+<li>message correlation ID</li>
+</ul>
+<h3 id="fuze_1">Fuze<a class="headerlink" href="#fuze_1" title="Permanent link">&para;</a></h3>
+<p>Fuze is the source of build configuration truth and internal build identity.</p>
+<h4 id="consumed-by-agents_3">Consumed by Agents<a class="headerlink" href="#consumed-by-agents_3" title="Permanent link">&para;</a></h4>
+<ul>
+<li>build configuration JSON</li>
+<li>target definitions</li>
+<li>packaging definitions</li>
+<li>internal build IDs</li>
+<li>branch/build policy</li>
+</ul>
+<h4 id="produced-by-agents">Produced by Agents<a class="headerlink" href="#produced-by-agents" title="Permanent link">&para;</a></h4>
+<ul>
+<li>build requests</li>
+<li>build metadata association</li>
+<li>external version mapping references</li>
+</ul>
+<h4 id="minimum-payload-fields_3">Minimum payload fields<a class="headerlink" href="#minimum-payload-fields_3" title="Permanent link">&para;</a></h4>
+<ul>
+<li>fuze configuration ID</li>
+<li>target name</li>
+<li>package name</li>
+<li>build policy type</li>
+<li>generated build ID</li>
+</ul>
+<h3 id="hardware-test-environment-manager">Hardware / Test Environment Manager<a class="headerlink" href="#hardware-test-environment-manager" title="Permanent link">&para;</a></h3>
+<p>This service exposes the state of real and mocked test environments.
+It may use a scheduler such as SLURM as an internal allocation backend, but agents should integrate with the manager's API and domain model rather than directly with SLURM.</p>
+<h4 id="consumed-by-agents_4">Consumed by Agents<a class="headerlink" href="#consumed-by-agents_4" title="Permanent link">&para;</a></h4>
+<ul>
+<li>rack availability</li>
+<li>target hardware identity</li>
+<li>environment capability matrix</li>
+<li>mock topology configuration</li>
+<li>reservation status</li>
+</ul>
+<h4 id="produced-by-agents_1">Produced by Agents<a class="headerlink" href="#produced-by-agents_1" title="Permanent link">&para;</a></h4>
+<ul>
+<li>reservation requests</li>
+<li>execution requests</li>
+<li>teardown requests</li>
+<li>environment utilization metrics</li>
+</ul>
+<h4 id="minimum-payload-fields_4">Minimum payload fields<a class="headerlink" href="#minimum-payload-fields_4" title="Permanent link">&para;</a></h4>
+<ul>
+<li>environment ID</li>
+<li>hardware profile</li>
+<li>topology profile</li>
+<li>reservation window</li>
+<li>test plan ID</li>
+</ul>
+<h2 id="104-agent-by-agent-interfaces">10.4 Agent-by-Agent Interfaces<a class="headerlink" href="#104-agent-by-agent-interfaces" title="Permanent link">&para;</a></h2>
+<h2 id="1041-josephine-build-package-agent">10.4.1 Josephine — Build &amp; Package Agent<a class="headerlink" href="#1041-josephine-build-package-agent" title="Permanent link">&para;</a></h2>
+<h3 id="consumes">Consumes<a class="headerlink" href="#consumes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>GitHub PR and merge events</li>
+<li>Fuze configuration data</li>
+<li>release branch policy</li>
+<li>build requests from Hedy</li>
+</ul>
+<h3 id="produces">Produces<a class="headerlink" href="#produces" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Build Record</li>
+<li>artifact manifests</li>
+<li>build status events</li>
+<li>package metadata</li>
+<li>documentation source signals to Hypatia</li>
+<li>version source signals to Babbage</li>
+</ul>
+<h3 id="key-outbound-interfaces">Key outbound interfaces<a class="headerlink" href="#key-outbound-interfaces" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>build.completed</code></li>
+<li><code>build.failed</code></li>
+<li><code>artifact.published</code></li>
+</ul>
+<h3 id="minimal-command-surface">Minimal command surface<a class="headerlink" href="#minimal-command-surface" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>request_build(repo, branch, commit_sha, fuze_config_id, trigger_type)</code></li>
+<li><code>get_build_status(build_id)</code></li>
+<li><code>get_artifact_manifest(build_id)</code></li>
+</ul>
+<h3 id="triggering-model_12">Triggering model<a class="headerlink" href="#triggering-model_12" title="Permanent link">&para;</a></h3>
+<ul>
+<li>always-on API, scheduler, and worker control plane</li>
+<li>normal work starts from build requests or upstream repository/build events</li>
+<li>humans can submit, retry, cancel, and inspect jobs</li>
+</ul>
+<h2 id="1042-hedy-release-orchestrator">10.4.2 Hedy — Release Orchestrator<a class="headerlink" href="#1042-hedy-release-orchestrator" title="Permanent link">&para;</a></h2>
+<h3 id="consumes_1">Consumes<a class="headerlink" href="#consumes_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>build completion events from Josephine</li>
+<li>Jira release intent and defect state</li>
+<li>customer/hardware release matrix policy</li>
+<li>traceability and version mapping context</li>
+</ul>
+<h3 id="produces_1">Produces<a class="headerlink" href="#produces_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Release Record</li>
+<li>release candidate proposals</li>
+<li>deployment readiness summaries</li>
+<li>release approval requests</li>
+<li>downstream test requests for release validation</li>
+</ul>
+<h3 id="key-outbound-interfaces_1">Key outbound interfaces<a class="headerlink" href="#key-outbound-interfaces_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>release.candidate_created</code></li>
+<li><code>release.approval_requested</code></li>
+<li><code>release.promoted</code></li>
+<li><code>release.blocked</code></li>
+</ul>
+<h3 id="minimal-command-surface_1">Minimal command surface<a class="headerlink" href="#minimal-command-surface_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>evaluate_release(build_id, release_branch, hardware_targets, customer_profiles)</code></li>
+<li><code>promote_release(release_id)</code></li>
+<li><code>block_release(release_id, reason)</code></li>
+</ul>
+<h3 id="triggering-model_13">Triggering model<a class="headerlink" href="#triggering-model_13" title="Permanent link">&para;</a></h3>
+<ul>
+<li>always-on release control plane</li>
+<li>normal work starts from build completion events or explicit release-evaluation/promotion requests</li>
+<li>humans approve, block, promote, or deprecate releases</li>
+</ul>
+<h2 id="1043-linus-code-review-agent">10.4.3 Linus — Code Review Agent<a class="headerlink" href="#1043-linus-code-review-agent" title="Permanent link">&para;</a></h2>
+<h3 id="consumes_2">Consumes<a class="headerlink" href="#consumes_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>PR events from GitHub</li>
+<li>diff context</li>
+<li>review policy profiles:</li>
+<li>kernel.org profile</li>
+<li>embedded C/C++ profile</li>
+<li>Python utility profile</li>
+</ul>
+<h3 id="produces_2">Produces<a class="headerlink" href="#produces_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>structured review findings</li>
+<li>inline comments</li>
+<li>review summaries</li>
+<li>pass/fail advisory status</li>
+<li>documentation impact signals to Hypatia</li>
+</ul>
+<h3 id="key-outbound-interfaces_2">Key outbound interfaces<a class="headerlink" href="#key-outbound-interfaces_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>review.completed</code></li>
+<li><code>review.policy_failed</code></li>
+<li><code>review.documentation_impact_detected</code></li>
+</ul>
+<h3 id="minimal-command-surface_2">Minimal command surface<a class="headerlink" href="#minimal-command-surface_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>review_pr(repo, pr_number, policy_profile)</code></li>
+<li><code>get_review_summary(repo, pr_number)</code></li>
+</ul>
+<h3 id="triggering-model_14">Triggering model<a class="headerlink" href="#triggering-model_14" title="Permanent link">&para;</a></h3>
+<ul>
+<li>always-on review service</li>
+<li>normal work starts from PR open, update, sync, or review-request events</li>
+<li>humans can re-run reviews and suppress or override findings under policy</li>
+</ul>
+<h2 id="1044-ada-test-planner">10.4.4 Ada — Test Planner<a class="headerlink" href="#1044-ada-test-planner" title="Permanent link">&para;</a></h2>
+<h3 id="consumes_3">Consumes<a class="headerlink" href="#consumes_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>build completion events from Josephine</li>
+<li>release validation requests from Hedy</li>
+<li>environment state from Tesla</li>
+<li>coverage gaps from test quality analysis</li>
+<li>GitHub workflow context</li>
+</ul>
+<h3 id="produces_3">Produces<a class="headerlink" href="#produces_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Test Plan</li>
+<li>planning decisions</li>
+<li>coverage intent summaries</li>
+<li>defect candidate signals</li>
+<li>traceability signals to Linnaeus</li>
+<li>generation requests for Curie</li>
+<li>execution requests for Faraday</li>
+</ul>
+<h3 id="key-outbound-interfaces_3">Key outbound interfaces<a class="headerlink" href="#key-outbound-interfaces_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>test.plan_selected</code></li>
+<li><code>test.coverage_gap_detected</code></li>
+</ul>
+<h3 id="minimal-command-surface_3">Minimal command surface<a class="headerlink" href="#minimal-command-surface_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>select_test_plan(trigger_type, branch, hardware_profile)</code></li>
+<li><code>get_test_plan(test_plan_id)</code></li>
+<li><code>invalidate_test_plan(test_plan_id)</code></li>
+</ul>
+<p>Detailed execution-side responsibilities are split across Curie, Faraday, and Tesla.</p>
+<h3 id="triggering-model_15">Triggering model<a class="headerlink" href="#triggering-model_15" title="Permanent link">&para;</a></h3>
+<ul>
+<li>always-on planning service</li>
+<li>normal work starts from build completion, PR/merge/nightly triggers, or release-validation requests</li>
+<li>humans can preview plans or apply policy overrides where allowed</li>
+</ul>
+<h2 id="1045-hypatia-documentation-agent">10.4.5 Hypatia — Documentation Agent<a class="headerlink" href="#1045-hypatia-documentation-agent" title="Permanent link">&para;</a></h2>
+<h3 id="consumes_4">Consumes<a class="headerlink" href="#consumes_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li>source changes from GitHub</li>
+<li>review findings from Linus</li>
+<li>build metadata from Josephine</li>
+<li>test outcomes from Faraday</li>
+<li>traceability context from Linnaeus</li>
+</ul>
+<h3 id="produces_4">Produces<a class="headerlink" href="#produces_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li>repo-level as-built docs</li>
+<li>user docs</li>
+<li>engineering docs</li>
+<li>Documentation Record</li>
+<li>publish status events</li>
+</ul>
+<h3 id="key-outbound-interfaces_4">Key outbound interfaces<a class="headerlink" href="#key-outbound-interfaces_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>docs.generated</code></li>
+<li><code>docs.publish_requested</code></li>
+<li><code>docs.published</code></li>
+</ul>
+<h3 id="minimal-command-surface_4">Minimal command surface<a class="headerlink" href="#minimal-command-surface_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>generate_as_built_docs(repo, commit_sha)</code></li>
+<li><code>generate_user_docs(source_scope)</code></li>
+<li><code>generate_engineering_docs(source_scope, trace_refs)</code></li>
+<li><code>publish_docs(doc_id, target)</code></li>
+</ul>
+<h3 id="triggering-model_16">Triggering model<a class="headerlink" href="#triggering-model_16" title="Permanent link">&para;</a></h3>
+<ul>
+<li>always-on documentation service</li>
+<li>normal work starts from documentation-impact signals caused by source, build, test, release, or approved meeting-summary changes</li>
+<li>humans review, publish, reject, or regenerate documentation outputs</li>
+</ul>
+<h2 id="1046-babbage-version-mapping-agent">10.4.6 Babbage — Version Mapping Agent<a class="headerlink" href="#1046-babbage-version-mapping-agent" title="Permanent link">&para;</a></h2>
+<h3 id="consumes_5">Consumes<a class="headerlink" href="#consumes_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li>internal build IDs from Josephine</li>
+<li>release context from Hedy</li>
+<li>branch/version policy</li>
+<li>optional marketing or customer-facing version rules</li>
+</ul>
+<h3 id="produces_5">Produces<a class="headerlink" href="#produces_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li>version mapping tables</li>
+<li>external version proposals</li>
+<li>compatibility lineage records</li>
+<li>version lookup API results</li>
+</ul>
+<h3 id="key-outbound-interfaces_5">Key outbound interfaces<a class="headerlink" href="#key-outbound-interfaces_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>version.mapped</code></li>
+<li><code>version.mapping_conflict_detected</code></li>
+</ul>
+<h3 id="minimal-command-surface_5">Minimal command surface<a class="headerlink" href="#minimal-command-surface_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>map_build_to_external_version(build_id, release_context)</code></li>
+<li><code>get_external_version(build_id)</code></li>
+<li><code>get_internal_builds(external_version)</code></li>
+</ul>
+<h3 id="triggering-model_17">Triggering model<a class="headerlink" href="#triggering-model_17" title="Permanent link">&para;</a></h3>
+<ul>
+<li>always-on version-mapping service</li>
+<li>normal work starts from build, release, or mapping requests and events</li>
+<li>humans can confirm or correct mappings where policy requires</li>
+</ul>
+<h2 id="1047-linnaeus-traceability-agent">10.4.7 Linnaeus — Traceability Agent<a class="headerlink" href="#1047-linnaeus-traceability-agent" title="Permanent link">&para;</a></h2>
+<h3 id="consumes_6">Consumes<a class="headerlink" href="#consumes_6" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Jira issue events</li>
+<li>build records from Josephine</li>
+<li>test records from Faraday</li>
+<li>release records from Hedy</li>
+<li>version mappings from Babbage</li>
+<li>requirement mappings from project artifacts</li>
+</ul>
+<h3 id="produces_6">Produces<a class="headerlink" href="#produces_6" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Traceability Record</li>
+<li>build-to-bug links</li>
+<li>requirement-to-code links</li>
+<li>test evidence associations</li>
+<li>release impact views</li>
+</ul>
+<h3 id="key-outbound-interfaces_6">Key outbound interfaces<a class="headerlink" href="#key-outbound-interfaces_6" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>trace.updated</code></li>
+<li><code>trace.issue_linked</code></li>
+<li><code>trace.requirement_linked</code></li>
+</ul>
+<h3 id="minimal-command-surface_6">Minimal command surface<a class="headerlink" href="#minimal-command-surface_6" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>link_issue_to_build(jira_key, build_id)</code></li>
+<li><code>link_test_to_build(test_run_id, build_id)</code></li>
+<li><code>link_requirement_to_artifact(requirement_id, artifact_ref)</code></li>
+<li><code>get_trace_view(trace_id)</code></li>
+</ul>
+<h3 id="triggering-model_18">Triggering model<a class="headerlink" href="#triggering-model_18" title="Permanent link">&para;</a></h3>
+<ul>
+<li>always-on traceability service</li>
+<li>normal work starts from Jira, GitHub, build, test, release, and version events</li>
+<li>humans can assert or correct relationship records with audit trail</li>
+</ul>
+<h2 id="1048-herodotus-knowledge-capture-agent">10.4.8 Herodotus — Knowledge Capture Agent<a class="headerlink" href="#1048-herodotus-knowledge-capture-agent" title="Permanent link">&para;</a></h2>
+<h3 id="consumes_7">Consumes<a class="headerlink" href="#consumes_7" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Teams transcript-ready events</li>
+<li>transcript text</li>
+<li>meeting metadata</li>
+<li>optional template or topic classification policy</li>
+</ul>
+<h3 id="produces_7">Produces<a class="headerlink" href="#produces_7" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Meeting Summary Record</li>
+<li>decision logs</li>
+<li>action item drafts</li>
+<li>Jira follow-up suggestions</li>
+<li>documentation update suggestions</li>
+</ul>
+<h3 id="key-outbound-interfaces_7">Key outbound interfaces<a class="headerlink" href="#key-outbound-interfaces_7" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>meeting.summary_created</code></li>
+<li><code>meeting.action_items_extracted</code></li>
+<li><code>meeting.documentation_update_suggested</code></li>
+</ul>
+<h3 id="minimal-command-surface_7">Minimal command surface<a class="headerlink" href="#minimal-command-surface_7" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>summarize_meeting(meeting_id, transcript_ref)</code></li>
+<li><code>extract_actions(summary_id)</code></li>
+<li><code>publish_summary(summary_id, targets)</code></li>
+</ul>
+<h3 id="triggering-model_19">Triggering model<a class="headerlink" href="#triggering-model_19" title="Permanent link">&para;</a></h3>
+<ul>
+<li>always-on transcript-ingest and summary service</li>
+<li>normal work starts from transcript-ready events or explicit ingest/summarize requests</li>
+<li>humans review, publish, redact, or retract summaries</li>
+</ul>
+<h2 id="1049-nightingale-bug-investigation-agent">10.4.9 Nightingale — Bug Investigation Agent<a class="headerlink" href="#1049-nightingale-bug-investigation-agent" title="Permanent link">&para;</a></h2>
+<h3 id="consumes_8">Consumes<a class="headerlink" href="#consumes_8" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Jira bug events</li>
+<li>issue comments, attachments, and reproduction notes</li>
+<li>traceability context from Linnaeus</li>
+<li>build context from Josephine</li>
+<li>test execution evidence from Faraday</li>
+<li>release context from Hedy</li>
+</ul>
+<h3 id="produces_8">Produces<a class="headerlink" href="#produces_8" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Bug Investigation Record</li>
+<li>reproduction requests</li>
+<li>missing-information requests</li>
+<li>failure signature candidates</li>
+<li>investigation summaries</li>
+</ul>
+<h3 id="key-outbound-interfaces_8">Key outbound interfaces<a class="headerlink" href="#key-outbound-interfaces_8" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>bug.investigation_started</code></li>
+<li><code>bug.reproduction_requested</code></li>
+<li><code>bug.reproduced</code></li>
+<li><code>bug.investigation_summarized</code></li>
+</ul>
+<h3 id="minimal-command-surface_8">Minimal command surface<a class="headerlink" href="#minimal-command-surface_8" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>investigate_bug(jira_key, policy_profile)</code></li>
+<li><code>request_reproduction(jira_key, scope)</code></li>
+<li><code>get_investigation_summary(jira_key)</code></li>
+</ul>
+<h3 id="triggering-model_20">Triggering model<a class="headerlink" href="#triggering-model_20" title="Permanent link">&para;</a></h3>
+<ul>
+<li>always-on investigation service</li>
+<li>normal work starts from new bug reports, relevant Jira updates, reopen events, or explicit reproduction requests</li>
+<li>humans can escalate investigations, approve costly repro attempts, or close a case as inconclusive</li>
+</ul>
+<h2 id="105-cross-agent-event-contracts">10.5 Cross-Agent Event Contracts<a class="headerlink" href="#105-cross-agent-event-contracts" title="Permanent link">&para;</a></h2>
+<p>The system will work best if cross-agent communication is standardized around a common event envelope.</p>
+<h3 id="standard-event-envelope">Standard Event Envelope<a class="headerlink" href="#standard-event-envelope" title="Permanent link">&para;</a></h3>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">&quot;event_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;evt-019284&quot;</span><span class="p">,</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">&quot;event_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;build.completed&quot;</span><span class="p">,</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">&quot;producer&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;josephine&quot;</span><span class="p">,</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="nt">&quot;occurred_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-03-10T22:14:11Z&quot;</span><span class="p">,</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span><span class="nt">&quot;correlation_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;corr-pr-1842&quot;</span><span class="p">,</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span><span class="nt">&quot;subject_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;fuze:build:2026-03-10T22:14:11Z:abc123&quot;</span><span class="p">,</span>
+</span><span id="__span-6-8"><a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">  </span><span class="nt">&quot;payload&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span>
+</span><span id="__span-6-9"><a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="p">}</span>
+</span></code></pre></div>
+<h3 id="recommended-common-event-types">Recommended common event types<a class="headerlink" href="#recommended-common-event-types" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>build.completed</code></li>
+<li><code>build.failed</code></li>
+<li><code>review.completed</code></li>
+<li><code>review.policy_failed</code></li>
+<li><code>test.execution_completed</code></li>
+<li><code>test.coverage_gap_detected</code></li>
+<li><code>version.mapped</code></li>
+<li><code>trace.updated</code></li>
+<li><code>release.candidate_created</code></li>
+<li><code>release.promoted</code></li>
+<li><code>docs.published</code></li>
+<li><code>meeting.summary_created</code></li>
+</ul>
+<h2 id="106-storage-and-system-of-record-guidance">10.6 Storage and System of Record Guidance<a class="headerlink" href="#106-storage-and-system-of-record-guidance" title="Permanent link">&para;</a></h2>
+<p>Different data should have different authoritative stores.</p>
+<table>
+<thead>
+<tr>
+<th>Data Type</th>
+<th>System of Record</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Source code / PR metadata</td>
+<td>GitHub</td>
+<td>authoritative for code and review state</td>
+</tr>
+<tr>
+<td>Work items / bug workflow</td>
+<td>Jira</td>
+<td>authoritative for issue workflow</td>
+</tr>
+<tr>
+<td>Build configuration / internal build IDs</td>
+<td>Fuze</td>
+<td>authoritative technical build identity</td>
+</tr>
+<tr>
+<td>Test environment inventory</td>
+<td>Environment Manager</td>
+<td>authoritative HIL and mock capability state</td>
+</tr>
+<tr>
+<td>Build and test artifacts</td>
+<td>Artifact store</td>
+<td>immutable retention strongly recommended</td>
+</tr>
+<tr>
+<td>Release state</td>
+<td>Release service owned by Hedy</td>
+<td>may also sync summaries into Jira</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>Docs repository / publish target</td>
+<td>generated outputs should still be versioned</td>
+</tr>
+<tr>
+<td>Meeting summaries</td>
+<td>Knowledge store</td>
+<td>can also mirror into Jira/docs selectively</td>
+</tr>
+</tbody>
+</table>
+<h2 id="107-security-and-access-boundaries">10.7 Security and Access Boundaries<a class="headerlink" href="#107-security-and-access-boundaries" title="Permanent link">&para;</a></h2>
+<h3 id="required-boundaries">Required boundaries<a class="headerlink" href="#required-boundaries" title="Permanent link">&para;</a></h3>
+<ul>
+<li>agents should act using service principals, not shared human credentials</li>
+<li>production release promotion should require explicit approval</li>
+<li>transcript access should be scoped to authorized meetings and channels</li>
+<li>customer-specific release data should be partitioned if necessary</li>
+<li>audit logs should capture agent decisions and human overrides</li>
+</ul>
+<h3 id="recommended-approval-gates">Recommended approval gates<a class="headerlink" href="#recommended-approval-gates" title="Permanent link">&para;</a></h3>
+<ul>
+<li>release promotion to customer-visible channels</li>
+<li>override of code review policy failures</li>
+<li>acceptance of missing traceability on regulated features</li>
+<li>publication of externally shared documentation</li>
+</ul>
+<h2 id="108-mvp-interface-cut">10.8 MVP Interface Cut<a class="headerlink" href="#108-mvp-interface-cut" title="Permanent link">&para;</a></h2>
+<p>To keep implementation practical, the first cut should be narrow.</p>
+<h3 id="mvp-required-interfaces">MVP required interfaces<a class="headerlink" href="#mvp-required-interfaces" title="Permanent link">&para;</a></h3>
+<ol>
+<li>GitHub → Josephine / Linus / Ada</li>
+<li>Fuze → Josephine</li>
+<li>Josephine → Babbage / Ada</li>
+<li>Ada → Curie / Tesla / Faraday</li>
+<li>Faraday → Linnaeus</li>
+<li>Babbage → Linnaeus</li>
+<li>Linnaeus → Jira</li>
+<li>Teams → Herodotus</li>
+<li>Herodotus → Jira</li>
+</ol>
+<h3 id="mvp-deferred-interfaces">MVP deferred interfaces<a class="headerlink" href="#mvp-deferred-interfaces" title="Permanent link">&para;</a></h3>
+<ul>
+<li>automated doc publishing to broad audiences</li>
+<li>advanced release promotion workflows</li>
+<li>adaptive test generation from coverage gaps</li>
+<li>customer-specific partition-aware release channels</li>
+</ul>
+<h2 id="109-implementation-notes">10.9 Implementation Notes<a class="headerlink" href="#109-implementation-notes" title="Permanent link">&para;</a></h2>
+<p>The cleanest implementation shape is likely:</p>
+<ul>
+<li>event bus or queue for cross-agent events</li>
+<li>per-agent service with clear ownership</li>
+<li>shared schema package for canonical records</li>
+<li>append-only audit log for key decisions</li>
+<li>a traceability query layer for engineers and program managers</li>
+</ul>
+<p>That keeps the agents independently deployable while preserving a coherent operational model.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/jmac-cornelis/agent-workforce" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
