@@ -804,14 +804,14 @@
   
   
     <li class="md-nav__item">
-      <a href="agents/hypatia.md" class="md-nav__link">
+      <a href="agents/hemingway.md" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    Hypatia (Documentation)
+    Hemingway (Documentation)
   
 
     
@@ -1017,14 +1017,14 @@
   
   
     <li class="md-nav__item">
-      <a href="cli/hypatia-agent.md" class="md-nav__link">
+      <a href="cli/hemingway-agent.md" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-    hypatia-agent
+    hemingway-agent
   
 
     
@@ -1530,7 +1530,7 @@
 <td>Planning snapshots, release monitoring, dependency review</td>
 </tr>
 <tr>
-<td><a href="agents/hypatia.md">Hypatia</a></td>
+<td><a href="agents/hemingway.md">Hemingway</a></td>
 <td>Documentation</td>
 <td>8203</td>
 <td>Source-grounded documentation generation and publication</td>
@@ -1559,8 +1559,8 @@
 </span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># Run Gantt planning snapshot</span>
 </span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>gantt-agent<span class="w"> </span>snapshot<span class="w"> </span>--project-key<span class="w"> </span>STL<span class="w"> </span>--planning-horizon<span class="w"> </span><span class="m">90</span>
 </span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1"># Generate documentation with Hypatia</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>hypatia-agent<span class="w"> </span>generate<span class="w"> </span>--doc-title<span class="w"> </span><span class="s2">&quot;Module Overview&quot;</span><span class="w"> </span>--docs<span class="w"> </span>src/module/
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1"># Generate documentation with Hemingway</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>hemingway-agent<span class="w"> </span>generate<span class="w"> </span>--doc-title<span class="w"> </span><span class="s2">&quot;Module Overview&quot;</span><span class="w"> </span>--docs<span class="w"> </span>src/module/
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="c1"># Start Shannon API server</span>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>uvicorn<span class="w"> </span>shannon.app:app<span class="w"> </span>--host<span class="w"> </span><span class="m">0</span>.0.0.0<span class="w"> </span>--port<span class="w"> </span><span class="m">8200</span>

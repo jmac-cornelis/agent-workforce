@@ -94,7 +94,7 @@
         <mxCell id="herodotus" value="Pliny&#xa;Knowledge Capture" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
           <mxGeometry x="900" y="260" width="125" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="hypatia" value="Hemingway&#xa;Documentation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="hemingway" value="Hemingway&#xa;Documentation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
           <mxGeometry x="1050" y="260" width="125" height="60" as="geometry"/>
         </mxCell>
 
@@ -122,11 +122,11 @@
         <mxCell id="e5" edge="1" parent="1" source="josephine" target="hedy" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e6" edge="1" parent="1" source="josephine" target="babbage" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e7" edge="1" parent="1" source="josephine" target="linnaeus" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e8" edge="1" parent="1" source="josephine" target="hypatia" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e8" edge="1" parent="1" source="josephine" target="hemingway" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e9" edge="1" parent="1" source="josephine" target="ada" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e10" edge="1" parent="1" source="linus" target="gh" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e11" edge="1" parent="1" source="linus" target="ada" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e12" edge="1" parent="1" source="linus" target="hypatia" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e12" edge="1" parent="1" source="linus" target="hemingway" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e13" edge="1" parent="1" source="ada" target="curie" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e14" edge="1" parent="1" source="ada" target="tesla" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e15" edge="1" parent="1" source="ada" target="faraday" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
@@ -138,7 +138,7 @@
         <mxCell id="e21" edge="1" parent="1" source="atf" target="faraday" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e22" edge="1" parent="1" source="faraday" target="linnaeus" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e23" edge="1" parent="1" source="faraday" target="nightingale" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e24" edge="1" parent="1" source="faraday" target="hypatia" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e24" edge="1" parent="1" source="faraday" target="hemingway" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e25" edge="1" parent="1" source="faraday" target="hedy" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e26" edge="1" parent="1" source="jira" target="drucker" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e27" edge="1" parent="1" source="jira" target="nightingale" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
@@ -149,7 +149,7 @@
         <mxCell id="e32" edge="1" parent="1" source="drucker" target="brooks" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e33" edge="1" parent="1" source="linnaeus" target="nightingale" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e34" edge="1" parent="1" source="linnaeus" target="hedy" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e35" edge="1" parent="1" source="linnaeus" target="hypatia" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e35" edge="1" parent="1" source="linnaeus" target="hemingway" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e36" edge="1" parent="1" source="linnaeus" target="gantt" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e37" edge="1" parent="1" source="linnaeus" target="brooks" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e38" edge="1" parent="1" source="linnaeus" target="jira" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
@@ -164,11 +164,11 @@
         <mxCell id="e47" edge="1" parent="1" source="teams" target="herodotus" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e48" edge="1" parent="1" source="herodotus" target="kb" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e49" edge="1" parent="1" source="herodotus" target="drucker" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e50" edge="1" parent="1" source="herodotus" target="hypatia" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e50" edge="1" parent="1" source="herodotus" target="hemingway" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e51" edge="1" parent="1" source="herodotus" target="gantt" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e52" edge="1" parent="1" source="herodotus" target="brooks" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e53" edge="1" parent="1" source="hypatia" target="docs" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e54" edge="1" parent="1" source="hypatia" target="gh" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e53" edge="1" parent="1" source="hemingway" target="docs" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e54" edge="1" parent="1" source="hemingway" target="gh" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e55" edge="1" parent="1" source="hedy" target="jira" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e56" edge="1" parent="1" source="hedy" target="gantt" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e57" edge="1" parent="1" source="hedy" target="brooks" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
@@ -180,7 +180,7 @@
         <mxCell id="e63" edge="1" parent="1" source="eng" target="linus" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e64" edge="1" parent="1" source="eng" target="josephine" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e65" edge="1" parent="1" source="eng" target="faraday" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
-        <mxCell id="e66" edge="1" parent="1" source="eng" target="hypatia" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
+        <mxCell id="e66" edge="1" parent="1" source="eng" target="hemingway" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e67" edge="1" parent="1" source="rel" target="hedy" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e68" edge="1" parent="1" source="pm" target="gantt" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>
         <mxCell id="e69" edge="1" parent="1" source="pm" target="brooks" style="endArrow=block;html=1;rounded=0;strokeColor=#666666;"><mxGeometry relative="1" as="geometry"/></mxCell>

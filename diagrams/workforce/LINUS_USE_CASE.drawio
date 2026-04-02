@@ -192,7 +192,7 @@
         </mxCell>
 
         <!-- Actors (right side — signal consumers) -->
-        <mxCell id="t4_a_hypatia" value="Hemingway&lt;br&gt;Doc Agent" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="t4_a_hemingway" value="Hemingway&lt;br&gt;Doc Agent" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
           <mxGeometry x="830" y="110" width="30" height="50" as="geometry"/>
         </mxCell>
         <mxCell id="t4_a_ada" value="Galileo&lt;br&gt;Test Planner" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
@@ -220,7 +220,7 @@
         </mxCell>
 
         <!-- Actor-to-UC edges -->
-        <mxCell id="t4_e1" style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" source="t4_uc1" target="t4_a_hypatia" parent="1">
+        <mxCell id="t4_e1" style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" source="t4_uc1" target="t4_a_hemingway" parent="1">
           <mxGeometry relative="1" as="geometry"/>
         </mxCell>
         <mxCell id="t4_e2" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="t4_uc2" target="t4_a_ada" parent="1">
