@@ -735,6 +735,7 @@ def create_app() -> FastAPI:
                         generated_docs.append({
                             'path': p_target,
                             'title': doc_record_dict.get('title', ''),
+                            'content': p_content,
                             'content_preview': p_content[:500],
                             'content_length': len(p_content),
                             'record_id': record_id,
