@@ -17,6 +17,43 @@ Shannon has its own operational channel (`#agent-shannon`) where operators monit
 
 > **Full technical specification:** [docs/reference/TEAMS_BOT_FRAMEWORK.md](../docs/reference/TEAMS_BOT_FRAMEWORK.md)
 
+## Namesake
+
+Shannon is named for Claude Shannon, the mathematician and engineer whose work founded information theory and clarified how signals move through noisy systems. We use his name for the communications agent because Shannon routes messages, preserves meaning across boundaries, and makes the whole agent workforce communicable.
+
+## Diagrams
+
+### Use Case Diagram
+
+```mermaid
+flowchart LR
+    U[Teams User] --> SH[Shannon]
+    AG[Registered Agent APIs] --> SH
+    SH --> T[Microsoft Teams]
+    SH --> PG[(PostgreSQL)]
+    SH --> RD[(Redis)]
+```
+
+### Message Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant U as Teams User
+    participant T as Microsoft Teams
+    participant SH as Shannon
+    participant R as Agent Registry
+    participant A as Agent API
+
+    U->>T: @Shannon /command
+    T->>SH: inbound webhook
+    SH->>R: resolve agent from channel + command
+    R-->>SH: agent registration
+    SH->>A: route command to API
+    A-->>SH: structured response
+    SH-->>T: Adaptive Card / threaded reply
+    T-->>U: rendered response
+```
+
 
 ## Product definition
 

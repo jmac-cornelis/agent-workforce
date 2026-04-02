@@ -5,6 +5,10 @@ Drucker should be the engineering hygiene agent for both Jira workflow coordinat
 
 Drucker should not replace Jira or GitHub as systems of record. It should make both cleaner, more current, and more trustworthy.
 
+## Namesake
+
+Drucker is named for Peter Drucker, the management thinker who focused on making knowledge work visible, measurable, and effective. We use his name for the engineering hygiene agent because Drucker identifies drift, missing structure, and workflow breakdowns, then helps the organization operate with more clarity and discipline.
+
 
 ## Product definition
 ### Goal

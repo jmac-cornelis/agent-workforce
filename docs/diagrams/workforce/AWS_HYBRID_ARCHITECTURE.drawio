@@ -40,30 +40,30 @@
         <mxCell id="svc_josephine" value="Josephine&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Build Agent&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="70" y="200" width="90" height="36" as="geometry"/>
         </mxCell>
-        <mxCell id="svc_ada" value="Ada&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Test Planner&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="svc_ada" value="Galileo&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Test Planner&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="170" y="200" width="90" height="36" as="geometry"/>
         </mxCell>
         <mxCell id="svc_curie" value="Curie&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Test Generator&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="270" y="200" width="90" height="36" as="geometry"/>
         </mxCell>
-        <mxCell id="svc_hedy" value="Hedy&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Communicator&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="svc_hedy" value="Humphrey&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Communicator&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="370" y="200" width="90" height="36" as="geometry"/>
         </mxCell>
         <mxCell id="svc_linus" value="Linus&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Code Reviewer&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="470" y="200" width="90" height="36" as="geometry"/>
         </mxCell>
-        <mxCell id="svc_babbage" value="Babbage&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Analyzer&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="svc_babbage" value="Mercator&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Analyzer&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="570" y="200" width="100" height="36" as="geometry"/>
         </mxCell>
 
         <!-- Row 2 of agent services -->
-        <mxCell id="svc_linnaeus" value="Linnaeus&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Traceability&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="svc_linnaeus" value="Berners-Lee&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Traceability&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="70" y="250" width="90" height="36" as="geometry"/>
         </mxCell>
-        <mxCell id="svc_herodotus" value="Herodotus&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Historian&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="svc_herodotus" value="Pliny&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Historian&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="170" y="250" width="90" height="36" as="geometry"/>
         </mxCell>
-        <mxCell id="svc_hypatia" value="Hypatia&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Knowledge&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="svc_hypatia" value="Hemingway&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Knowledge&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="270" y="250" width="90" height="36" as="geometry"/>
         </mxCell>
         <mxCell id="svc_nightingale" value="Nightingale&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Quality&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
@@ -72,7 +72,7 @@
         <mxCell id="svc_drucker" value="Drucker&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;PM&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="470" y="250" width="90" height="36" as="geometry"/>
         </mxCell>
-        <mxCell id="svc_gantt_brooks" value="Gantt / Brooks&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Schedule / Arch&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
+        <mxCell id="svc_gantt_brooks" value="Gantt / Shackleton&lt;br&gt;&lt;font style=&quot;font-size:8px;&quot;&gt;Schedule / Arch&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=9;fontStyle=1;" vertex="1" parent="1">
           <mxGeometry x="570" y="250" width="100" height="36" as="geometry"/>
         </mxCell>
 

@@ -38,23 +38,39 @@ IMG_DIR = os.path.join(REPO_ROOT, 'docs', 'confluence', 'images')
 PARENT_PAGE_ID = '656572464'
 SPACE_ID = '238190621'
 
+
+def _diagram_set(stem):
+    return [
+        {
+            'kind': 'use-case',
+            'file': f'{stem}_USE_CASE.drawio',
+            'heading': 'Use Case Diagrams',
+        },
+        {
+            'kind': 'sequence',
+            'file': f'{stem}_SEQUENCE.drawio',
+            'heading': 'Sequence Diagrams',
+        },
+    ]
+
 AGENTS = [
-    {'name': 'Ada', 'title': 'Ada — Test Planner Agent', 'plan': 'agents/ada/docs/PLAN.md', 'diagram': 'ADA_USE_CASE.drawio', 'zone': 'Execution Spine', 'role': 'Test Planner', 'wave': 1, 'sprint': 'S3'},
-    {'name': 'Curie', 'title': 'Curie — Test Generator Agent', 'plan': 'agents/curie/docs/PLAN.md', 'diagram': 'CURIE_USE_CASE.drawio', 'zone': 'Execution Spine', 'role': 'Test Generator', 'wave': 1, 'sprint': 'S3'},
-    {'name': 'Faraday', 'title': 'Faraday — Test Executor Agent', 'plan': 'agents/faraday/docs/PLAN.md', 'diagram': 'FARADAY_USE_CASE.drawio', 'zone': 'Execution Spine', 'role': 'Test Executor', 'wave': 1, 'sprint': 'S3'},
-    {'name': 'Tesla', 'title': 'Tesla — Environment Manager Agent', 'plan': 'agents/tesla/docs/PLAN.md', 'diagram': 'TESLA_USE_CASE.drawio', 'zone': 'Execution Spine', 'role': 'Environment Manager', 'wave': 1, 'sprint': 'S3'},
-    {'name': 'Hedy', 'title': 'Hedy — Release Manager Agent', 'plan': 'agents/hedy/docs/PLAN.md', 'diagram': 'HEDY_USE_CASE.drawio', 'zone': 'Execution Spine', 'role': 'Release Manager', 'wave': 4, 'sprint': 'S6'},
-    {'name': 'Linus', 'title': 'Linus — Code Review Agent', 'plan': 'agents/linus/docs/PLAN.md', 'diagram': 'LINUS_USE_CASE.drawio', 'zone': 'Execution Spine', 'role': 'Code Review', 'wave': 4, 'sprint': 'S6'},
-    {'name': 'Babbage', 'title': 'Babbage — Version Manager Agent', 'plan': 'agents/babbage/docs/PLAN.md', 'diagram': 'BABBAGE_USE_CASE.drawio', 'zone': 'Intelligence & Knowledge', 'role': 'Version Manager', 'wave': 2, 'sprint': 'S4'},
-    {'name': 'Linnaeus', 'title': 'Linnaeus — Traceability Agent', 'plan': 'agents/linnaeus/docs/PLAN.md', 'diagram': 'LINNAEUS_USE_CASE.drawio', 'zone': 'Intelligence & Knowledge', 'role': 'Traceability', 'wave': 2, 'sprint': 'S4'},
-    {'name': 'Herodotus', 'title': 'Herodotus — Knowledge Capture Agent', 'plan': 'agents/herodotus/docs/PLAN.md', 'diagram': 'HERODOTUS_USE_CASE.drawio', 'zone': 'Intelligence & Knowledge', 'role': 'Knowledge Capture', 'wave': 3, 'sprint': 'S5'},
-    {'name': 'Hypatia', 'title': 'Hypatia — Documentation Agent', 'plan': 'agents/hypatia/docs/PLAN.md', 'diagram': 'HYPATIA_USE_CASE.drawio', 'zone': 'Intelligence & Knowledge', 'role': 'Documentation', 'wave': 4, 'sprint': 'S7'},
-    {'name': 'Nightingale', 'title': 'Nightingale — Bug Investigation Agent', 'plan': 'agents/nightingale/docs/PLAN.md', 'diagram': 'NIGHTINGALE_USE_CASE.drawio', 'zone': 'Intelligence & Knowledge', 'role': 'Bug Investigation', 'wave': 4, 'sprint': 'S6'},
-    {'name': 'Drucker', 'title': 'Drucker — Engineering Hygiene Agent', 'plan': 'agents/drucker/docs/PLAN.md', 'diagram': 'DRUCKER_USE_CASE.drawio', 'zone': 'Engineering Hygiene', 'role': 'Engineering Hygiene', 'wave': 5, 'sprint': 'S7'},
-    {'name': 'Gantt', 'title': 'Gantt — Project Planner Agent', 'plan': 'agents/gantt/docs/PLAN.md', 'diagram': 'GANTT_USE_CASE.drawio', 'zone': 'Planning & Delivery', 'role': 'Project Planner', 'wave': 5, 'sprint': 'S7'},
-    {'name': 'Brooks', 'title': 'Brooks — Delivery Manager Agent', 'plan': 'agents/brooks/docs/PLAN.md', 'diagram': 'BROOKS_USE_CASE.drawio', 'zone': 'Planning & Delivery', 'role': 'Delivery Manager', 'wave': 5, 'sprint': 'S8'},
-    {'name': 'Shannon', 'title': 'Shannon — Communications Agent', 'plan': 'agents/shannon/docs/PLAN.md', 'diagram': None, 'zone': 'Service Infrastructure', 'role': 'Communications', 'wave': 0, 'sprint': 'S1'},
-    {'name': 'Brandeis', 'title': 'Brandeis — Legal Compliance Agent', 'plan': 'agents/brandeis/docs/PLAN.md', 'diagram': None, 'zone': 'Execution Spine', 'role': 'Legal Compliance', 'wave': 6, 'sprint': 'S9'},
+    {'name': 'Josephine', 'title': 'Josephine — Build Agent', 'plan': 'agents/josephine/docs/PLAN.md', 'diagrams': _diagram_set('JOSEPHINE'), 'zone': 'Execution Spine', 'role': 'Build & Package', 'wave': 1, 'sprint': 'S2'},
+    {'name': 'Galileo', 'title': 'Galileo — Test Planner Agent', 'plan': 'agents/galileo/docs/PLAN.md', 'diagrams': _diagram_set('GALILEO'), 'zone': 'Execution Spine', 'role': 'Test Planner', 'wave': 1, 'sprint': 'S3'},
+    {'name': 'Curie', 'title': 'Curie — Test Generator Agent', 'plan': 'agents/curie/docs/PLAN.md', 'diagrams': _diagram_set('CURIE'), 'zone': 'Execution Spine', 'role': 'Test Generator', 'wave': 1, 'sprint': 'S3'},
+    {'name': 'Faraday', 'title': 'Faraday — Test Executor Agent', 'plan': 'agents/faraday/docs/PLAN.md', 'diagrams': _diagram_set('FARADAY'), 'zone': 'Execution Spine', 'role': 'Test Executor', 'wave': 1, 'sprint': 'S3'},
+    {'name': 'Tesla', 'title': 'Tesla — Environment Manager Agent', 'plan': 'agents/tesla/docs/PLAN.md', 'diagrams': _diagram_set('TESLA'), 'zone': 'Execution Spine', 'role': 'Environment Manager', 'wave': 1, 'sprint': 'S3'},
+    {'name': 'Humphrey', 'title': 'Humphrey — Release Manager Agent', 'plan': 'agents/humphrey/docs/PLAN.md', 'diagrams': _diagram_set('HUMPHREY'), 'zone': 'Execution Spine', 'role': 'Release Manager', 'wave': 4, 'sprint': 'S6'},
+    {'name': 'Linus', 'title': 'Linus — Code Review Agent', 'plan': 'agents/linus/docs/PLAN.md', 'diagrams': _diagram_set('LINUS'), 'zone': 'Execution Spine', 'role': 'Code Review', 'wave': 4, 'sprint': 'S6'},
+    {'name': 'Mercator', 'title': 'Mercator — Version Manager Agent', 'plan': 'agents/mercator/docs/PLAN.md', 'diagrams': _diagram_set('MERCATOR'), 'zone': 'Intelligence & Knowledge', 'role': 'Version Manager', 'wave': 2, 'sprint': 'S4'},
+    {'name': 'BernersLee', 'title': 'Berners-Lee — Traceability Agent', 'plan': 'agents/bernerslee/docs/PLAN.md', 'diagrams': _diagram_set('BERNERSLEE'), 'zone': 'Intelligence & Knowledge', 'role': 'Traceability', 'wave': 2, 'sprint': 'S4'},
+    {'name': 'Pliny', 'title': 'Pliny — Knowledge Capture Agent', 'plan': 'agents/pliny/docs/PLAN.md', 'diagrams': _diagram_set('PLINY'), 'zone': 'Intelligence & Knowledge', 'role': 'Knowledge Capture', 'wave': 3, 'sprint': 'S5'},
+    {'name': 'Hemingway', 'title': 'Hemingway — Documentation Agent', 'plan': 'agents/hemingway/docs/PLAN.md', 'diagrams': _diagram_set('HEMINGWAY'), 'zone': 'Intelligence & Knowledge', 'role': 'Documentation', 'wave': 4, 'sprint': 'S7'},
+    {'name': 'Nightingale', 'title': 'Nightingale — Bug Investigation Agent', 'plan': 'agents/nightingale/docs/PLAN.md', 'diagrams': _diagram_set('NIGHTINGALE'), 'zone': 'Intelligence & Knowledge', 'role': 'Bug Investigation', 'wave': 4, 'sprint': 'S6'},
+    {'name': 'Drucker', 'title': 'Drucker — Engineering Hygiene Agent', 'plan': 'agents/drucker/docs/PLAN.md', 'diagrams': _diagram_set('DRUCKER'), 'zone': 'Engineering Hygiene', 'role': 'Engineering Hygiene', 'wave': 5, 'sprint': 'S7'},
+    {'name': 'Gantt', 'title': 'Gantt — Project Planner Agent', 'plan': 'agents/gantt/docs/PLAN.md', 'diagrams': _diagram_set('GANTT'), 'zone': 'Planning & Delivery', 'role': 'Project Planner', 'wave': 5, 'sprint': 'S7'},
+    {'name': 'Shackleton', 'title': 'Shackleton — Delivery Manager Agent', 'plan': 'agents/shackleton/docs/PLAN.md', 'diagrams': _diagram_set('SHACKLETON'), 'zone': 'Planning & Delivery', 'role': 'Delivery Manager', 'wave': 5, 'sprint': 'S8'},
+    {'name': 'Shannon', 'title': 'Shannon — Communications Agent', 'plan': 'agents/shannon/docs/PLAN.md', 'diagrams': _diagram_set('SHANNON'), 'zone': 'Service Infrastructure', 'role': 'Communications', 'wave': 0, 'sprint': 'S1'},
+    {'name': 'Blackstone', 'title': 'Blackstone — Legal Compliance Agent', 'plan': 'agents/blackstone/docs/PLAN.md', 'diagrams': _diagram_set('BLACKSTONE'), 'zone': 'Execution Spine', 'role': 'Legal Compliance', 'wave': 6, 'sprint': 'S9'},
 ]
 
 
@@ -85,6 +101,29 @@ def get_diagram_tab_names(drawio_path):
     with open(drawio_path, 'r') as f:
         content = f.read()
     return re.findall(r'<diagram[^>]*name="([^"]*)"', content)
+
+
+def get_agent_diagrams(agent):
+    name_lower = str(agent['name']).strip().lower()
+    diagrams = agent.get('diagrams') or []
+    normalized = []
+    for item in diagrams:
+        kind = str(item.get('kind', '')).strip() or 'diagram'
+        normalized.append({
+            'kind': kind,
+            'file': item['file'],
+            'heading': item.get('heading', 'Diagrams'),
+            'attachment_prefix': f'{name_lower}-{kind}',
+        })
+    legacy = agent.get('diagram')
+    if legacy:
+        normalized.append({
+            'kind': 'diagram',
+            'file': legacy,
+            'heading': 'Diagrams',
+            'attachment_prefix': f'{name_lower}-diagram',
+        })
+    return normalized
 
 
 def md_to_storage(plan_path, agent):
@@ -165,11 +204,7 @@ def md_to_storage(plan_path, agent):
 
         return '\n'.join(html_parts)
 
-    name_lower = agent['name'].lower()
-    if agent.get('diagram'):
-        tab_names = get_diagram_tab_names(os.path.join(DIAGRAM_DIR, agent['diagram']))
-    else:
-        tab_names = []
+    diagram_specs = get_agent_diagrams(agent)
 
     html = f'''<h1>{agent['title']}</h1>
 
@@ -194,11 +229,18 @@ def md_to_storage(plan_path, agent):
 
         html += f'\n<h2>{key}</h2>\n{md_section_to_html(sections[key])}'
 
-    if tab_names:
-        html += '\n<h2>Use Case Diagrams</h2>\n'
+    for spec in diagram_specs:
+        tab_names = get_diagram_tab_names(os.path.join(DIAGRAM_DIR, spec['file']))
+        if not tab_names:
+            continue
+        html += f'\n<h2>{spec["heading"]}</h2>\n'
         for i, tab_name in enumerate(tab_names):
             html += f'<h3>{tab_name}</h3>\n'
-            html += f'<ac:image ac:align="center" ac:width="900"><ri:attachment ri:filename="{name_lower}-tab{i+1}.png" /></ac:image>\n'
+            html += (
+                f'<ac:image ac:align="center" ac:width="900">'
+                f'<ri:attachment ri:filename="{spec["attachment_prefix"]}-tab{i+1}.png" />'
+                f'</ac:image>\n'
+            )
 
     return html
 
@@ -267,18 +309,23 @@ def publish_agent(c, agent, screenshot_func=None):
         return None
 
     # Upload pre-rendered diagram screenshots from docs/confluence/images/.
-    img_files = sorted([f for f in os.listdir(IMG_DIR) if f.startswith(f'{name_lower}-tab') and f.endswith('.png')])
-    for fname in img_files:
-        fpath = os.path.join(IMG_DIR, fname)
-        print(f"  Uploading {fname}...")
-        with open(fpath, 'rb') as img:
-            upload_resp = c.session.post(
-                f'{c.base_url}/rest/api/content/{page_id}/child/attachment',
-                headers={'X-Atlassian-Token': 'nocheck'},
-                files={'file': (fname, img, 'image/png')},
-                data={'minorEdit': 'true'}
-            )
-            print(f"    {upload_resp.status_code}")
+    for spec in get_agent_diagrams(agent):
+        prefix = f'{spec["attachment_prefix"]}-tab'
+        img_files = sorted([
+            f for f in os.listdir(IMG_DIR)
+            if f.startswith(prefix) and f.endswith('.png')
+        ])
+        for fname in img_files:
+            fpath = os.path.join(IMG_DIR, fname)
+            print(f"  Uploading {fname}...")
+            with open(fpath, 'rb') as img:
+                upload_resp = c.session.post(
+                    f'{c.base_url}/rest/api/content/{page_id}/child/attachment',
+                    headers={'X-Atlassian-Token': 'nocheck'},
+                    files={'file': (fname, img, 'image/png')},
+                    data={'minorEdit': 'true'}
+                )
+                print(f"    {upload_resp.status_code}")
 
     return page_id
 
@@ -286,7 +333,7 @@ def publish_agent(c, agent, screenshot_func=None):
 USER_DOCS = [
     {'name': 'Drucker', 'title': 'Drucker — User Guide', 'readme': 'agents/drucker/README.md'},
     {'name': 'Gantt', 'title': 'Gantt — User Guide', 'readme': 'agents/gantt/README.md'},
-    {'name': 'Hypatia', 'title': 'Hypatia — User Guide', 'readme': 'agents/hypatia/README.md'},
+    {'name': 'Hemingway', 'title': 'Hemingway — User Guide', 'readme': 'agents/hemingway/README.md'},
     {'name': 'Shannon', 'title': 'Shannon — User Guide', 'readme': 'agents/shannon/README.md'},
     {'name': 'Workforce', 'title': 'Agent Catalog and Status', 'readme': 'agents/README.md'},
 ]

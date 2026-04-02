@@ -64,20 +64,20 @@ def build_body():
     )
     channel_rows = [
         ('#agent-josephine', 'Josephine -- Build and Package', 'Execution Spine'),
-        ('#agent-ada', 'Ada -- Test Planner', 'Execution Spine'),
+        ('#agent-galileo', 'Galileo -- Test Planner', 'Execution Spine'),
         ('#agent-curie', 'Curie -- Test Generator', 'Execution Spine'),
         ('#agent-faraday', 'Faraday -- Test Executor', 'Execution Spine'),
         ('#agent-tesla', 'Tesla -- Environment Manager', 'Execution Spine'),
-        ('#agent-hedy', 'Hedy -- Release Manager', 'Execution Spine'),
+        ('#agent-humphrey', 'Humphrey -- Release Manager', 'Execution Spine'),
         ('#agent-linus', 'Linus -- Code Review', 'Execution Spine'),
-        ('#agent-babbage', 'Babbage -- Version Manager', 'Intelligence and Knowledge'),
-        ('#agent-linnaeus', 'Linnaeus -- Traceability', 'Intelligence and Knowledge'),
-        ('#agent-herodotus', 'Herodotus -- Knowledge Capture', 'Intelligence and Knowledge'),
-        ('#agent-hypatia', 'Hypatia -- Documentation', 'Intelligence and Knowledge'),
+        ('#agent-mercator', 'Mercator -- Version Manager', 'Intelligence and Knowledge'),
+        ('#agent-bernerslee', 'Berners-Lee -- Traceability', 'Intelligence and Knowledge'),
+        ('#agent-pliny', 'Pliny -- Knowledge Capture', 'Intelligence and Knowledge'),
+        ('#agent-hemingway', 'Hemingway -- Documentation', 'Intelligence and Knowledge'),
         ('#agent-nightingale', 'Nightingale -- Bug Investigation', 'Intelligence and Knowledge'),
         ('#agent-drucker', 'Drucker -- Jira Coordinator', 'Intelligence and Knowledge'),
         ('#agent-gantt', 'Gantt -- Project Planner', 'Planning and Delivery'),
-        ('#agent-brooks', 'Brooks -- Delivery Manager', 'Planning and Delivery'),
+        ('#agent-shackleton', 'Shackleton -- Delivery Manager', 'Planning and Delivery'),
     ]
     for ch, agent, zone in channel_rows:
         parts.append(f'<tr><td><code>{html.escape(ch)}</code></td><td>{html.escape(agent)}</td><td>{html.escape(zone)}</td></tr>')
@@ -208,12 +208,12 @@ def build_body():
     health_endpoint: /v1/health
     timeout_seconds: 30
 
-  - agent_id: hedy
-    display_name: Hedy
+  - agent_id: humphrey
+    display_name: Humphrey
     role: Release Manager
     channel_id: "19:xyz789ghi012@thread.tacv2"
     api_base_url: http://cn-ai-02:8106
-    icon_url: https://internal.cornelisnetworks.com/icons/hedy.png
+    icon_url: https://internal.cornelisnetworks.com/icons/humphrey.png
     description: >
       Orchestrates release decisions using the Fuze release model with
       stage promotion and human approval gates.
@@ -304,7 +304,7 @@ def build_body():
   "action": "approval_response",
   "approval_id": "APR-2024-001",
   "decision": "approved",
-  "agent_id": "hedy",
+  "agent_id": "humphrey",
   "approval_comment": "Looks good. Test coverage is sufficient."
 }'''))
 
@@ -373,14 +373,14 @@ Content-Type: application/json
     parts.append('<p><strong>Routing:</strong></p>')
     parts.append(_code_macro('', 'GET {api_base_url}/v1/status/decisions'))
     parts.append('<p><strong>Example Request:</strong></p>')
-    parts.append('<p>User posts <code>/decision-tree</code> in <code>#agent-hedy</code>.</p>')
+    parts.append('<p>User posts <code>/decision-tree</code> in <code>#agent-humphrey</code>.</p>')
     parts.append(_code_macro('http', 'GET http://cn-ai-02:8106/v1/status/decisions'))
     parts.append('<p><strong>Example Response:</strong></p>')
     parts.append(_code_macro('json', '''{
-  "agent_id": "hedy",
+  "agent_id": "humphrey",
   "decisions": [
     {
-      "decision_id": "DEC-hedy-20250315-001",
+      "decision_id": "DEC-humphrey-20250315-001",
       "timestamp": "2025-03-15T10:23:00Z",
       "title": "Release readiness evaluation for BLD-4521",
       "outcome": "blocked",
@@ -390,7 +390,7 @@ Content-Type: application/json
       "confidence": "high"
     },
     {
-      "decision_id": "DEC-hedy-20250315-002",
+      "decision_id": "DEC-humphrey-20250315-002",
       "timestamp": "2025-03-15T11:45:00Z",
       "title": "Promote BLD-4519 from sit to qa",
       "outcome": "promoted",
@@ -411,12 +411,12 @@ Content-Type: application/json
     parts.append('<p><strong>Routing:</strong></p>')
     parts.append(_code_macro('', 'GET {api_base_url}/v1/status/decisions/{decision_id}'))
     parts.append('<p><strong>Example Request:</strong></p>')
-    parts.append('<p>User posts <code>/why DEC-hedy-20250315-001</code> in <code>#agent-hedy</code>.</p>')
-    parts.append(_code_macro('http', 'GET http://cn-ai-02:8106/v1/status/decisions/DEC-hedy-20250315-001'))
+    parts.append('<p>User posts <code>/why DEC-humphrey-20250315-001</code> in <code>#agent-humphrey</code>.</p>')
+    parts.append(_code_macro('http', 'GET http://cn-ai-02:8106/v1/status/decisions/DEC-humphrey-20250315-001'))
     parts.append('<p><strong>Example Response:</strong></p>')
     parts.append(_code_macro('json', '''{
-  "decision_id": "DEC-hedy-20250315-001",
-  "agent_id": "hedy",
+  "decision_id": "DEC-humphrey-20250315-001",
+  "agent_id": "humphrey",
   "timestamp": "2025-03-15T10:23:00Z",
   "title": "Release readiness evaluation for BLD-4521",
   "outcome": "blocked",
@@ -429,7 +429,7 @@ Content-Type: application/json
       "summary": "Build succeeded. 14 packages produced."
     },
     {
-      "source": "babbage",
+      "source": "mercator",
       "type": "version_mapping",
       "subject_id": "BLD-4521",
       "summary": "Mapped to external version 12.0.3.1"
@@ -441,7 +441,7 @@ Content-Type: application/json
       "summary": "HIL coverage: 72%. Unit coverage: 98%. 3 test failures."
     },
     {
-      "source": "linnaeus",
+      "source": "bernerslee",
       "type": "traceability_summary",
       "subject_id": "BLD-4521",
       "summary": "2 Jira issues linked. 1 requirement gap detected."
@@ -467,7 +467,7 @@ Content-Type: application/json
   "rationale": "HIL test coverage for BLD-4521 is 72%, which is 8 points below the 80% threshold required for qa stage promotion. The 3 test failures are in fabric initialization paths that are HIL-only. Policy does not permit waiver for coverage gaps exceeding 5 points. Blocking and requesting targeted HIL testing is the correct action.",
   "follow_up_actions": [
     "Requested Faraday to schedule targeted HIL test run for fabric initialization paths",
-    "Notified Ada to update test plan for BLD-4521 with expanded HIL scope"
+    "Notified Galileo to update test plan for BLD-4521 with expanded HIL scope"
   ]
 }'''))
     parts.append('<p><strong>Adaptive Card Layout:</strong> Full decision detail card with expandable sections for inputs, alternatives, rationale, and follow-up actions.</p>')
@@ -740,17 +740,17 @@ Content-Type: application/json
     parts.append(
         '<table data-layout="default"><tbody>'
         '<tr><th>Agent</th><th>Approval Type</th><th>Description</th><th>Typical Approvers</th></tr>'
-        '<tr><td><strong>Hedy</strong></td><td><code>release_promotion</code></td><td>Promote a build from one release stage to the next (sit to qa, qa to release)</td><td>Release Approvers</td></tr>'
+        '<tr><td><strong>Humphrey</strong></td><td><code>release_promotion</code></td><td>Promote a build from one release stage to the next (sit to qa, qa to release)</td><td>Release Approvers</td></tr>'
         '<tr><td><strong>Linus</strong></td><td><code>review_policy_override</code></td><td>Override a review policy finding that the agent flagged as blocking</td><td>Engineers, Tech Leads</td></tr>'
-        '<tr><td><strong>Linnaeus</strong></td><td><code>traceability_exception</code></td><td>Allow a release or build to proceed despite a traceability gap</td><td>Project Leads</td></tr>'
-        '<tr><td><strong>Hypatia</strong></td><td><code>external_doc_publish</code></td><td>Publish documentation to an external-facing target</td><td>Documentation Owners, Engineering Managers</td></tr>'
+        '<tr><td><strong>Berners-Lee</strong></td><td><code>traceability_exception</code></td><td>Allow a release or build to proceed despite a traceability gap</td><td>Project Leads</td></tr>'
+        '<tr><td><strong>Hemingway</strong></td><td><code>external_doc_publish</code></td><td>Publish documentation to an external-facing target</td><td>Documentation Owners, Engineering Managers</td></tr>'
         '</tbody></table>'
     )
 
     parts.append('<h3>Approval Request Payload</h3>')
     parts.append('<p>Agents call the bot\'s approval API with this payload:</p>')
     parts.append(_code_macro('json', '''{
-  "agent_id": "hedy",
+  "agent_id": "humphrey",
   "approval_type": "release_promotion",
   "title": "Promote BLD-4519 from qa to release",
   "description": "All qa-stage gates passed. Requesting promotion to release stage.",
@@ -1006,7 +1006,7 @@ Authorization: Bearer <agent_service_token>
 X-Idempotency-Key: <unique_key>
 
 {
-  "agent_id": "hedy",
+  "agent_id": "humphrey",
   "approval_type": "release_promotion",
   "title": "Promote BLD-4519 from qa to release",
   "description": "All qa-stage gates passed. Requesting promotion to release stage.",
@@ -1126,7 +1126,7 @@ Authorization: Bearer <agent_service_token>'''))
     parts.append('<p><strong>Response:</strong></p>')
     parts.append(_code_macro('json', '''{
   "approval_id": "APR-20250315-001",
-  "agent_id": "hedy",
+  "agent_id": "humphrey",
   "approval_type": "release_promotion",
   "status": "approved",
   "requested_at": "2025-03-15T14:30:00Z",
@@ -1381,7 +1381,7 @@ services:
     parts.append('</ul>')
     parts.append('<p><strong>Deliverables:</strong></p>')
     parts.append('<ul>')
-    parts.append('<li>Hedy, Linus, Linnaeus, and Hypatia can request human approvals.</li>')
+    parts.append('<li>Humphrey, Linus, Berners-Lee, and Hemingway can request human approvals.</li>')
     parts.append('<li>Users can approve/reject via Adaptive Card buttons.</li>')
     parts.append('<li>Timeouts trigger escalation.</li>')
     parts.append('<li>All approval actions are audited with user identity.</li>')

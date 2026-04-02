@@ -106,10 +106,10 @@
         <mxCell id="linus" value="<b>Linus</b><br>Code Review" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="485" y="150" width="130" height="55" as="geometry"/>
         </mxCell>
-        <mxCell id="hedy" value="<b>Hedy</b><br>Release Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="hedy" value="<b>Humphrey</b><br>Release Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="340" y="235" width="130" height="55" as="geometry"/>
         </mxCell>
-        <mxCell id="ada" value="<b>Ada</b><br>Test Planner" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="ada" value="<b>Galileo</b><br>Test Planner" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="485" y="235" width="130" height="55" as="geometry"/>
         </mxCell>
         <mxCell id="curie" value="<b>Curie</b><br>Test Generator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
@@ -121,7 +121,7 @@
         <mxCell id="tesla" value="<b>Tesla</b><br>Environment Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="340" y="410" width="130" height="55" as="geometry"/>
         </mxCell>
-        <mxCell id="brandeis" value="<b>Brandeis</b><br>Legal Compliance" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="brandeis" value="<b>Blackstone</b><br>Legal Compliance" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="485" y="410" width="130" height="55" as="geometry"/>
         </mxCell>
 
@@ -135,16 +135,16 @@
         <mxCell id="drucker" value="<b>Drucker</b><br>Jira Coordinator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="815" y="150" width="130" height="55" as="geometry"/>
         </mxCell>
-        <mxCell id="linnaeus" value="<b>Linnaeus</b><br>Traceability" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="linnaeus" value="<b>Berners-Lee</b><br>Traceability" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="670" y="235" width="130" height="55" as="geometry"/>
         </mxCell>
-        <mxCell id="babbage" value="<b>Babbage</b><br>Version Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="babbage" value="<b>Mercator</b><br>Version Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="815" y="235" width="130" height="55" as="geometry"/>
         </mxCell>
-        <mxCell id="herodotus" value="<b>Herodotus</b><br>Knowledge Capture" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="herodotus" value="<b>Pliny</b><br>Knowledge Capture" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="670" y="320" width="130" height="55" as="geometry"/>
         </mxCell>
-        <mxCell id="hypatia" value="<b>Hypatia</b><br>Documentation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="hypatia" value="<b>Hemingway</b><br>Documentation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="815" y="320" width="130" height="55" as="geometry"/>
         </mxCell>
 
@@ -155,7 +155,7 @@
         <mxCell id="gantt" value="<b>Gantt</b><br>Project Planner" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="1110" y="180" width="130" height="55" as="geometry"/>
         </mxCell>
-        <mxCell id="brooks" value="<b>Brooks</b><br>Delivery Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="brooks" value="<b>Shackleton</b><br>Delivery Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="1110" y="280" width="130" height="55" as="geometry"/>
         </mxCell>
 

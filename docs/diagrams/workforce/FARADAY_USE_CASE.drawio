@@ -20,7 +20,7 @@
         </mxCell>
 
         <!-- Actors: Left side -->
-        <mxCell id="t1_a_ada" value="Ada&lt;br&gt;Test Planner" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+        <mxCell id="t1_a_ada" value="Galileo&lt;br&gt;Test Planner" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
           <mxGeometry x="100" y="140" width="30" height="50" as="geometry"/>
         </mxCell>
         <mxCell id="t1_a_curie" value="Curie&lt;br&gt;Test Inputs" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
@@ -168,7 +168,7 @@
         </mxCell>
 
         <!-- Actors: Right side -->
-        <mxCell id="t3_a_linnaeus" value="Linnaeus&lt;br&gt;Traceability" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="t3_a_linnaeus" value="Berners-Lee&lt;br&gt;Traceability" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
           <mxGeometry x="830" y="130" width="30" height="50" as="geometry"/>
         </mxCell>
         <mxCell id="t3_a_artstore" value="Artifact&lt;br&gt;Store" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">

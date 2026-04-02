@@ -39,13 +39,13 @@ These agents form the core build-test-release pipeline.
 | Agent | Role | Description |
 |-------|------|-------------|
 | **[Josephine](JOSEPHINE_BUILD_AGENT_PLAN.md)** | Build & Package | Build orchestration, compilation management, and artifact production across all Cornelis repositories. Wraps Fuze build/package into an API-driven service. |
-| **[Ada](ADA_TEST_PLANNER_PLAN.md)** | Test Planning | Determines what to test based on trigger class (PR, merge, nightly, release), coverage targets, and environment constraints. |
-| **[Curie](CURIE_TEST_GENERATOR_PLAN.md)** | Test Generation | Materializes Ada's test plans into concrete Fuze Test runtime inputs with reproducible version hashes. |
+| **[Galileo](../../agents/galileo/docs/PLAN.md)** | Test Planning | Determines what to test based on trigger class (PR, merge, nightly, release), coverage targets, and environment constraints. |
+| **[Curie](CURIE_TEST_GENERATOR_PLAN.md)** | Test Generation | Materializes Galileo's test plans into concrete Fuze Test runtime inputs with reproducible version hashes. |
 | **[Faraday](FARADAY_TEST_EXECUTOR_PLAN.md)** | Test Execution | Runs ATF/Fuze Test cycles, captures logs/artifacts/results, classifies failures, and produces structured TestExecutionRecords. |
 | **[Tesla](TESLA_TEST_ENVIRONMENT_MANAGER_PLAN.md)** | Environment Mgmt | Shared reservation service for HIL and mock environments with capability matching and health monitoring. |
-| **[Hedy](HEDY_RELEASE_MANAGER_PLAN.md)** | Release Mgmt | Orchestrates release decisions using the Fuze release model with stage promotion (sit, qa, release) and human approval gates. |
+| **[Humphrey](../../agents/humphrey/docs/PLAN.md)** | Release Mgmt | Orchestrates release decisions using the Fuze release model with stage promotion (sit, qa, release) and human approval gates. |
 | **[Linus](LINUS_CODE_REVIEW_AGENT_PLAN.md)** | Code Review | Evaluates PRs against policy profiles (kernel, embedded C++, Python) and emits cross-agent impact signals. |
-| **[Brandeis](BRANDEIS_COMPLIANCE_AGENT_PLAN.md)** | Legal Compliance & Code Scanning | Scans dependencies for license compliance, flags policy violations on PRs, and manages license exception workflows. Named after Louis Brandeis, champion of transparency and the right to privacy. |
+| **[Blackstone](../../agents/blackstone/docs/PLAN.md)** | Legal Compliance & Code Scanning | Scans dependencies for license compliance, flags policy violations on PRs, and manages license exception workflows. Named after William Blackstone, whose legal commentaries helped codify durable rule systems and precedent. |
 
 ### Intelligence & Knowledge
 
@@ -53,10 +53,10 @@ These agents provide context, traceability, and institutional knowledge.
 
 | Agent | Role | Description |
 |-------|------|-------------|
-| **[Babbage](BABBAGE_VERSION_MANAGER_PLAN.md)** | Version Mapping | Maps Fuze internal build IDs to external customer-facing release versions with conflict detection and lineage tracking. |
-| **[Linnaeus](LINNAEUS_TRACEABILITY_AGENT_PLAN.md)** | Traceability | Maintains queryable relationships between requirements, Jira issues, commits, builds, tests, releases, and versions. |
-| **[Herodotus](HERODOTUS_KNOWLEDGE_CAPTURE_AGENT_PLAN.md)** | Knowledge Capture | Ingests Teams meeting transcripts and produces structured summaries, decisions, and action items. |
-| **[Hypatia](HYPATIA_DOCUMENTATION_AGENT_PLAN.md)** | Documentation | Produces as-built, user, and engineering docs from authoritative system records via Sphinx/ReadTheDocs. |
+| **[Mercator](../../agents/mercator/docs/PLAN.md)** | Version Mapping | Maps Fuze internal build IDs to external customer-facing release versions with conflict detection and lineage tracking. |
+| **[Berners-Lee](../../agents/bernerslee/docs/PLAN.md)** | Traceability | Maintains queryable relationships between requirements, Jira issues, commits, builds, tests, releases, and versions. |
+| **[Pliny](../../agents/pliny/docs/PLAN.md)** | Knowledge Capture | Ingests Teams meeting transcripts and produces structured summaries, decisions, and action items. |
+| **[Hemingway](../../agents/hemingway/docs/PLAN.md)** | Documentation | Produces as-built, user, and engineering docs from authoritative system records via Sphinx/ReadTheDocs. |
 | **[Nightingale](NIGHTINGALE_BUG_TRIAGE_REPRODUCTION_PLAN.md)** | Bug Investigation | Reacts to Jira bugs, assembles build/test/release context, drives targeted reproduction, and produces investigation summaries. |
 | **[Drucker](DRUCKER_JIRA_COORDINATOR_PLAN.md)** | Engineering Hygiene | Keeps Jira and GitHub operationally coherent with triage, PR lifecycle monitoring, hygiene scans, routing, and evidence-backed workflow nudges. |
 
@@ -67,7 +67,7 @@ These agents support project management and delivery tracking.
 | Agent | Role | Description |
 |-------|------|-------------|
 | **[Gantt](GANTT_PROJECT_PLANNER_PLAN.md)** | Project Planning | Converts Jira work state, technical evidence, and meeting decisions into milestone proposals, dependency graphs, and risk summaries. |
-| **[Brooks](BROOKS_DELIVERY_MANAGER_PLAN.md)** | Delivery Mgmt | Monitors execution against plan, detects schedule risk and coordination failures, produces forecasts and escalation prompts. |
+| **[Shackleton](../../agents/shackleton/docs/PLAN.md)** | Delivery Mgmt | Monitors execution against plan, detects schedule risk and coordination failures, produces forecasts and escalation prompts. |
 
 Planning backlog for the current Gantt + Drucker convergence work:
 [`GANTT_DRUCKER_PM_IMPLEMENTATION_BACKLOG.md`](GANTT_DRUCKER_PM_IMPLEMENTATION_BACKLOG.md)
@@ -101,24 +101,24 @@ graph TB
     end
     subgraph Spine["Execution Spine"]
         JOS[Josephine<br/>Build & Package]
-        ADA[Ada<br/>Test Planner]
+        ADA[Galileo<br/>Test Planner]
         CUR[Curie<br/>Test Generator]
         FAR[Faraday<br/>Test Executor]
         TES[Tesla<br/>Environment Mgr]
-        HED[Hedy<br/>Release Mgr]
+        HED[Humphrey<br/>Release Mgr]
         LIN_R[Linus<br/>Code Review]
     end
     subgraph Intel["Intelligence & Knowledge"]
-        BAB[Babbage<br/>Version Mgr]
-        LIN[Linnaeus<br/>Traceability]
-        HER[Herodotus<br/>Knowledge Capture]
-        HYP[Hypatia<br/>Documentation]
+        BAB[Mercator<br/>Version Mgr]
+        LIN[Berners-Lee<br/>Traceability]
+        HER[Pliny<br/>Knowledge Capture]
+        HYP[Hemingway<br/>Documentation]
         NIG[Nightingale<br/>Bug Investigation]
         DRU[Drucker<br/>Engineering Hygiene]
     end
     subgraph Plan["Planning & Delivery"]
         GAN[Gantt<br/>Project Planner]
-        BRO[Brooks<br/>Delivery Mgr]
+        BRO[Shackleton<br/>Delivery Mgr]
     end
     GH --> JOS & LIN_R & ADA
     FZ --> JOS
@@ -154,7 +154,7 @@ Every agent logs all actions and, for decisions, records the complete decision t
 
 ### Microsoft Teams Channel Interface
 
-Each agent has a dedicated Teams channel (`#agent-{name}`) in the "Agent Workforce" team. This is the primary human interface. All Teams channels are managed by **[Shannon](../agents/SHANNON_COMMUNICATIONS_AGENT_PLAN.md)**, the communications service agent — a single bot deployment that routes commands, renders responses, and manages approval workflows across all 15 domain agent channels. See the [Teams Bot Framework Specification](reference/TEAMS_BOT_FRAMEWORK.md) for full technical details.
+Each agent has a dedicated Teams channel (`#agent-{name}`) in the "Agent Workforce" team. This is the primary human interface. All Teams channels are managed by **[Shannon](../../agents/shannon/docs/PLAN.md)**, the communications service agent — a single bot deployment that routes commands, renders responses, and manages approval workflows across all 15 domain agent channels. See the [Teams Bot Framework Specification](reference/TEAMS_BOT_FRAMEWORK.md) for full technical details.
 
 - **Activity feed** — real-time summaries of agent actions
 - **Decision notifications** — non-trivial decisions posted with rationale
@@ -231,23 +231,23 @@ Agents are built in dependency order. Each phase delivers working capabilities t
 |-------|-------|--------|----------------|
 | **0** | Platform Foundation | Shannon | Event bus, canonical schemas, adapters (GitHub, Jira, Teams, Fuze, Env Mgr), security, observability, Teams bot (Shannon). Everything depends on this. |
 | **1** | Build Spine | Josephine | Builds are the foundation — every downstream agent needs build IDs and artifacts to operate. |
-| **2** | Test Spine | Ada, Curie, Tesla, Faraday | Test planning, generation, environment reservation, and execution form a pipeline that consumes Josephine's build output. |
-| **3** | Versioning & Traceability | Babbage, Linnaeus | Version mapping and traceability link builds, tests, issues, and releases — requires build and test records from Phases 1–2. |
-| **4** | Knowledge Capture | Herodotus | Meeting summaries and action items feed into planning and documentation. Independent of build/test but benefits from traceability links. |
-| **5** | Quality & Release | Linus, Hedy, Hypatia, Nightingale | Code review, release orchestration, documentation, and bug investigation all consume evidence from Phases 1–3. |
-| **6** | Project Management | Drucker, Gantt, Brooks | Engineering hygiene (Jira + GitHub), project planning, and delivery tracking aggregate signals from all other agents. |
+| **2** | Test Spine | Galileo, Curie, Tesla, Faraday | Test planning, generation, environment reservation, and execution form a pipeline that consumes Josephine's build output. |
+| **3** | Versioning & Traceability | Mercator, Berners-Lee | Version mapping and traceability link builds, tests, issues, and releases — requires build and test records from Phases 1–2. |
+| **4** | Knowledge Capture | Pliny | Meeting summaries and action items feed into planning and documentation. Independent of build/test but benefits from traceability links. |
+| **5** | Quality & Release | Linus, Humphrey, Hemingway, Nightingale | Code review, release orchestration, documentation, and bug investigation all consume evidence from Phases 1–3. |
+| **6** | Project Management | Drucker, Gantt, Shackleton | Engineering hygiene (Jira + GitHub), project planning, and delivery tracking aggregate signals from all other agents. |
 
 ### Dependency Chain
 
-**Phase 0** (Foundation) → **Phase 1** (Josephine builds) → **Phase 2** (Ada/Curie/Tesla/Faraday test) → **Phase 3** (Babbage/Linnaeus trace) → **Phase 5** (Linus/Hedy/Hypatia/Nightingale quality). Phase 4 (Herodotus) can run in parallel with Phase 3. Phase 6 (Drucker/Gantt/Brooks) runs last since it aggregates everything.
+**Phase 0** (Foundation) → **Phase 1** (Josephine builds) → **Phase 2** (Galileo/Curie/Tesla/Faraday test) → **Phase 3** (Mercator/Berners-Lee trace) → **Phase 5** (Linus/Humphrey/Hemingway/Nightingale quality). Phase 4 (Pliny) can run in parallel with Phase 3. Phase 6 (Drucker/Gantt/Shackleton) runs last since it aggregates everything.
 
 ```mermaid
 graph LR
     P0[Phase 0<br/>Foundation] --> P1[Phase 1<br/>Josephine]
-    P1 --> P2[Phase 2<br/>Ada, Curie<br/>Tesla, Faraday]
-    P2 --> P3[Phase 3<br/>Babbage<br/>Linnaeus]
-    P3 --> P5[Phase 5<br/>Linus, Hedy<br/>Hypatia, Nightingale]
-    P2 --> P4[Phase 4<br/>Herodotus]
-    P4 --> P6[Phase 6<br/>Drucker, Gantt<br/>Brooks]
+    P1 --> P2[Phase 2<br/>Galileo, Curie<br/>Tesla, Faraday]
+    P2 --> P3[Phase 3<br/>Mercator<br/>Berners-Lee]
+    P3 --> P5[Phase 5<br/>Linus, Humphrey<br/>Hemingway, Nightingale]
+    P2 --> P4[Phase 4<br/>Pliny]
+    P4 --> P6[Phase 6<br/>Drucker, Gantt<br/>Shackleton]
     P5 --> P6
 ```

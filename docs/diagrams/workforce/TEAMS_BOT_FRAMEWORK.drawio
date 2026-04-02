@@ -81,13 +81,13 @@
         <mxCell id="agent-group" value="Agent APIs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=13;fontStyle=1;verticalAlign=top;dashed=1;container=1;collapsible=0;" vertex="1" parent="1">
           <mxGeometry x="760" y="100" width="200" height="340" as="geometry"/>
         </mxCell>
-        <mxCell id="exec-agents" value="Execution Spine&#xa;Josephine, Hedy,&#xa;Ada, Curie, Faraday,&#xa;Tesla, Linus" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="agent-group">
+        <mxCell id="exec-agents" value="Execution Spine&#xa;Josephine, Humphrey,&#xa;Galileo, Curie, Faraday,&#xa;Tesla, Linus" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="agent-group">
           <mxGeometry x="20" y="35" width="160" height="80" as="geometry"/>
         </mxCell>
-        <mxCell id="intel-agents" value="Intelligence&#xa;Nightingale, Drucker,&#xa;Linnaeus, Babbage,&#xa;Herodotus, Hypatia" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="agent-group">
+        <mxCell id="intel-agents" value="Intelligence&#xa;Nightingale, Drucker,&#xa;Berners-Lee, Mercator,&#xa;Pliny, Hemingway" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="agent-group">
           <mxGeometry x="20" y="130" width="160" height="80" as="geometry"/>
         </mxCell>
-        <mxCell id="plan-agents" value="Planning&#xa;Gantt, Brooks" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="agent-group">
+        <mxCell id="plan-agents" value="Planning&#xa;Gantt, Shackleton" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;" vertex="1" parent="agent-group">
           <mxGeometry x="20" y="225" width="160" height="60" as="geometry"/>
         </mxCell>
 
@@ -288,12 +288,12 @@
         <mxCell id="t1" value="Teams Bot Framework — Approval Workflow" style="text;html=1;fontSize=18;fontStyle=1;align=left;" vertex="1" parent="1">
           <mxGeometry x="20" y="10" width="500" height="30" as="geometry"/>
         </mxCell>
-        <mxCell id="t2" value="Hedy requests release approval via Bot; approver responds via Adaptive Card; Bot relays decision" style="text;html=1;fontSize=11;fontColor=#666666;align=left;" vertex="1" parent="1">
+        <mxCell id="t2" value="Humphrey requests release approval via Bot; approver responds via Adaptive Card; Bot relays decision" style="text;html=1;fontSize=11;fontColor=#666666;align=left;" vertex="1" parent="1">
           <mxGeometry x="20" y="38" width="700" height="20" as="geometry"/>
         </mxCell>
 
         <!-- Lifelines -->
-        <mxCell id="a1" value="Agent API&#xa;(Hedy)" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="a1" value="Agent API&#xa;(Humphrey)" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
           <mxGeometry x="60" y="80" width="100" height="600" as="geometry"/>
         </mxCell>
         <mxCell id="a2" value="Bot API" style="shape=umlLifeline;perimeter=lifelinePerimeter;whiteSpace=wrap;html=1;container=0;collapsible=0;recursiveResize=0;outlineConnect=0;size=40;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
@@ -310,7 +310,7 @@
         </mxCell>
 
         <!-- Messages -->
-        <!-- 1. Hedy → Bot API: POST /v1/bot/request-approval -->
+        <!-- 1. Humphrey → Bot API: POST /v1/bot/request-approval -->
         <mxCell id="m1" value="1. POST /v1/bot/request-approval&#xa;   (release promotion)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="110" y="160" as="sourcePoint"/>
@@ -358,7 +358,7 @@
           </mxGeometry>
         </mxCell>
 
-        <!-- 7. Bot → Hedy API: POST /v1/approvals/{id}/respond -->
+        <!-- 7. Bot → Humphrey API: POST /v1/approvals/{id}/respond -->
         <mxCell id="m7" value="7. POST /v1/approvals/{id}/respond (approved)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="330" y="430" as="sourcePoint"/>
@@ -366,7 +366,7 @@
           </mxGeometry>
         </mxCell>
 
-        <!-- 8. Hedy processes approval -->
+        <!-- 8. Humphrey processes approval -->
         <mxCell id="m8" value="8. Process approval (promote release)" style="html=1;verticalAlign=bottom;endArrow=block;" edge="1" parent="1">
           <mxGeometry relative="1" as="geometry">
             <mxPoint x="110" y="470" as="sourcePoint"/>

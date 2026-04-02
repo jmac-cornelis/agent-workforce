@@ -18,6 +18,7 @@ from typing import Any, Dict, List, Optional
 
 import requests
 
+from agents.rename_registry import agent_display_name, canonical_agent_name
 from shannon.cards import (
     build_bug_activity_card,
     build_ci_failures_card,
@@ -439,9 +440,12 @@ class ShannonService:
         command: str,
         result: Dict[str, Any],
     ) -> ShannonResponse:
+        canonical_agent_id = canonical_agent_name(agent_id) or str(agent_id or '').strip().lower()
+        display_name = agent_display_name(canonical_agent_id) or canonical_agent_id
+
         if not result.get('ok', False):
             return ShannonResponse(
-                text=f'{agent_id}: {result.get("error", "unknown error")}',
+                text=f'{display_name}: {result.get("error", "unknown error")}',
                 command=command,
                 decision='agent_call_failed',
             )
@@ -449,7 +453,7 @@ class ShannonService:
         data = result.get('data', result)
 
         if isinstance(data, dict) and data.get('dry_run') is True:
-            card = build_dry_run_preview_card(agent_id, command, data)
+            card = build_dry_run_preview_card(canonical_agent_id, command, data)
             return ShannonResponse(
                 text=f'Dry-run preview for {command}. Send again with "execute" to confirm.',
                 card=card,
@@ -457,9 +461,9 @@ class ShannonService:
                 decision='dry_run_preview',
             )
 
-        card_builder = self.AGENT_CARD_BUILDERS.get(agent_id, {}).get(command)
+        card_builder = self.AGENT_CARD_BUILDERS.get(canonical_agent_id, {}).get(command)
         if card_builder and isinstance(data, dict):
-            if agent_id == 'drucker' and command in (
+            if canonical_agent_id == 'drucker' and command in (
                 '/pr-hygiene', '/pr-stale', '/pr-reviews', '/pr-list',
                 '/naming-compliance', '/merge-conflicts', '/ci-failures',
                 '/stale-branches', '/extended-hygiene',
@@ -475,7 +479,7 @@ class ShannonService:
                     decision='agent_call_success',
                 )
 
-            if agent_id == 'drucker':
+            if canonical_agent_id == 'drucker':
                 report = data.get('report', data)
                 card = card_builder(report)
                 if command == '/bug-activity':
@@ -508,7 +512,7 @@ class ShannonService:
                 )
 
             card = card_builder(data)
-            if agent_id == 'gantt' and command == '/planning-snapshot':
+            if canonical_agent_id == 'gantt' and command == '/planning-snapshot':
                 snapshot = data.get('snapshot', {})
                 overview = snapshot.get('backlog_overview', {})
                 return ShannonResponse(
@@ -523,7 +527,7 @@ class ShannonService:
                     decision='agent_call_success',
                 )
 
-            if agent_id == 'gantt' and command in ('/release-monitor', '/release-report'):
+            if canonical_agent_id == 'gantt' and command in ('/release-monitor', '/release-report'):
                 report = data.get('report', {})
                 return ShannonResponse(
                     text=(
@@ -537,7 +541,7 @@ class ShannonService:
                     decision='agent_call_success',
                 )
 
-            if agent_id == 'gantt' and command in (
+            if canonical_agent_id == 'gantt' and command in (
                 '/release-survey',
                 '/release-survey-report',
             ):
@@ -555,7 +559,7 @@ class ShannonService:
                     decision='agent_call_success',
                 )
 
-        if agent_id == 'drucker' and command == '/stats' and isinstance(data, dict):
+        if canonical_agent_id == 'drucker' and command == '/stats' and isinstance(data, dict):
             card = build_drucker_summary_card(data)
             return ShannonResponse(
                 text=f'Reports: {data.get("reports_generated", 0)}, Findings: {data.get("total_findings", 0)}',
@@ -569,7 +573,7 @@ class ShannonService:
             if len(data) > 10:
                 lines.append(f'...and {len(data) - 10} more')
             card = build_fact_card(
-                title=f'{agent_id.title()} — {command}',
+                title=f'{display_name} — {command}',
                 body_lines=lines or ['No data returned.'],
             )
             return ShannonResponse(
@@ -593,7 +597,7 @@ class ShannonService:
                     nested_lines.append(f'{k}: {len(v)} items')
 
             card = build_fact_card(
-                title=f'{agent_id.title()} — {command}',
+                title=f'{display_name} — {command}',
                 facts=facts or None,
                 body_lines=nested_lines or None,
             )
@@ -616,10 +620,11 @@ class ShannonService:
         agent_id: str,
         command_text: str,
     ) -> ShannonResponse:
-        registration = self.registry.get_agent(agent_id)
+        canonical_agent_id = canonical_agent_name(agent_id) or str(agent_id or '').strip().lower()
+        registration = self.registry.get_agent(canonical_agent_id)
         if not registration or not getattr(registration, 'api_base_url', ''):
             return ShannonResponse(
-                text=f'{agent_id} is registered but has no API endpoint configured.',
+                text=f'{canonical_agent_id} is registered but has no API endpoint configured.',
                 command=command_text.split()[0] if command_text else '',
                 decision='agent_no_api_base_url',
             )
@@ -640,7 +645,7 @@ class ShannonService:
                 body_lines=lines,
             )
             return ShannonResponse(
-                text=f'Commands for {agent_id}:\n' + '\n'.join(lines),
+                text=f'Commands for {registration.display_name}:\n' + '\n'.join(lines),
                 card=card,
                 command='/help',
                 decision='reported_agent_help',
@@ -650,12 +655,12 @@ class ShannonService:
             result = self._call_agent_api(
                 registration, 'GET', f'/v1/status/decisions/{parts[1]}',
             )
-            return self._agent_response_to_shannon(agent_id, command, result)
+            return self._agent_response_to_shannon(canonical_agent_id, command, result)
 
         if command in self.STANDARD_COMMAND_ROUTES:
             method, path = self.STANDARD_COMMAND_ROUTES[command]
             result = self._call_agent_api(registration, method, path)
-            return self._agent_response_to_shannon(agent_id, command, result)
+            return self._agent_response_to_shannon(canonical_agent_id, command, result)
 
         custom_commands = getattr(registration, 'custom_commands', []) or []
         for cc in custom_commands:
@@ -691,10 +696,10 @@ class ShannonService:
                 result = self._call_agent_api(
                     registration, method, path, params=params, json_body=json_body,
                 )
-                return self._agent_response_to_shannon(agent_id, command, result)
+                return self._agent_response_to_shannon(canonical_agent_id, command, result)
 
         return ShannonResponse(
-            text=f'Unknown {agent_id} command: {command}. Try /help.',
+            text=f'Unknown {registration.display_name} command: {command}. Try /help.',
             command=command,
             decision='unknown_agent_command',
         )

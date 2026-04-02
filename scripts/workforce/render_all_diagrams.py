@@ -31,22 +31,39 @@ IMG_DIR = os.path.join(REPO_ROOT, 'docs', 'confluence', 'images')
 # is relative to the repo root served on port 8766.
 RENDER_HTML = 'http://localhost:8766/scripts/render_drawio.html'
 
+
+def _diagram_set(stem):
+    return [
+        ('use-case', f'{stem}_USE_CASE.drawio'),
+        ('sequence', f'{stem}_SEQUENCE.drawio'),
+    ]
+
+
 AGENTS = [
-    ('ada', 'ADA_USE_CASE.drawio', 4),
-    ('curie', 'CURIE_USE_CASE.drawio', 3),
-    ('faraday', 'FARADAY_USE_CASE.drawio', 4),
-    ('tesla', 'TESLA_USE_CASE.drawio', 4),
-    ('hedy', 'HEDY_USE_CASE.drawio', 4),
-    ('linus', 'LINUS_USE_CASE.drawio', 4),
-    ('babbage', 'BABBAGE_USE_CASE.drawio', 4),
-    ('linnaeus', 'LINNAEUS_USE_CASE.drawio', 4),
-    ('herodotus', 'HERODOTUS_USE_CASE.drawio', 4),
-    ('hypatia', 'HYPATIA_USE_CASE.drawio', 4),
-    ('nightingale', 'NIGHTINGALE_USE_CASE.drawio', 4),
-    ('drucker', 'DRUCKER_USE_CASE.drawio', 4),
-    ('gantt', 'GANTT_USE_CASE.drawio', 4),
-    ('brooks', 'BROOKS_USE_CASE.drawio', 4),
+    ('josephine', _diagram_set('JOSEPHINE')),
+    ('galileo', _diagram_set('GALILEO')),
+    ('curie', _diagram_set('CURIE')),
+    ('faraday', _diagram_set('FARADAY')),
+    ('tesla', _diagram_set('TESLA')),
+    ('humphrey', _diagram_set('HUMPHREY')),
+    ('linus', _diagram_set('LINUS')),
+    ('mercator', _diagram_set('MERCATOR')),
+    ('bernerslee', _diagram_set('BERNERSLEE')),
+    ('pliny', _diagram_set('PLINY')),
+    ('hemingway', _diagram_set('HEMINGWAY')),
+    ('nightingale', _diagram_set('NIGHTINGALE')),
+    ('drucker', _diagram_set('DRUCKER')),
+    ('gantt', _diagram_set('GANTT')),
+    ('shackleton', _diagram_set('SHACKLETON')),
+    ('shannon', _diagram_set('SHANNON')),
+    ('blackstone', _diagram_set('BLACKSTONE')),
 ]
+
+
+def get_diagram_tab_names(drawio_path):
+    with open(drawio_path, 'r') as f:
+        content = f.read()
+    return re.findall(r'<diagram[^>]*name="([^"]*)"', content)
 
 def crop_image(path):
     img = Image.open(path)
@@ -65,20 +82,25 @@ def crop_image(path):
 # Ensure the output directory exists.
 os.makedirs(IMG_DIR, exist_ok=True)
 
-total = sum(t for _, _, t in AGENTS)
+total = 0
+for _, diagrams in AGENTS:
+    for _, diagram in diagrams:
+        total += len(get_diagram_tab_names(os.path.join(DIAGRAM_DIR, diagram)))
 done = 0
 
-for name, diagram, tabs in AGENTS:
-    for page in range(tabs):
-        out = os.path.join(IMG_DIR, f'{name}-tab{page+1}.png')
-        done += 1
-        print(f'[{done}/{total}] {name} page {page}...', end=' ', flush=True)
+for name, diagrams in AGENTS:
+    for kind, diagram in diagrams:
+        tabs = get_diagram_tab_names(os.path.join(DIAGRAM_DIR, diagram))
+        for page in range(len(tabs)):
+            out = os.path.join(IMG_DIR, f'{name}-{kind}-tab{page+1}.png')
+            done += 1
+            print(f'[{done}/{total}] {name} {kind} page {page}...', end=' ', flush=True)
 
-        # The diagram file URL is relative to the repo root served on 8766.
-        # Diagrams now live under docs/diagrams/workforce/.
-        url = f'{RENDER_HTML}?file=http://localhost:8766/docs/diagrams/workforce/{diagram}&page={page}'
+            # The diagram file URL is relative to the repo root served on 8766.
+            # Diagrams now live under docs/diagrams/workforce/.
+            url = f'{RENDER_HTML}?file=http://localhost:8766/docs/diagrams/workforce/{diagram}&page={page}'
 
-        js = f'''
+            js = f'''
 const {{ chromium }} = require('playwright');
 (async () => {{
     const browser = await chromium.launch();
@@ -90,12 +112,12 @@ const {{ chromium }} = require('playwright');
     await browser.close();
 }})();
 '''
-        result = subprocess.run(['node', '-e', js], capture_output=True, text=True, timeout=45)
-        if result.returncode != 0:
-            print(f'FAIL: {result.stderr[:200]}')
-            continue
+            result = subprocess.run(['node', '-e', js], capture_output=True, text=True, timeout=45)
+            if result.returncode != 0:
+                print(f'FAIL: {result.stderr[:200]}')
+                continue
 
-        size = crop_image(out)
-        print(f'OK ({size[0]}x{size[1]})')
+            size = crop_image(out)
+            print(f'OK ({size[0]}x{size[1]})')
 
 print(f'\nDone: {done}/{total} screenshots')

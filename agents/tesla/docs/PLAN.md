@@ -9,6 +9,10 @@ In practical terms:
 - Tesla decides whether that environment is available and reserves it
 - Faraday then uses the reserved location, DUT filters, and runtime context to execute the test cycle
 
+## Namesake
+
+Tesla is named for Nikola Tesla, the inventor and systems builder whose work on electrical power and control made complex infrastructure usable at scale. We use his name for the environment manager because Tesla coordinates scarce shared infrastructure, keeps it available, and makes the rest of the test system possible.
+
 
 ## Product definition
 ### Goal

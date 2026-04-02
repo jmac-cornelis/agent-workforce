@@ -13,7 +13,7 @@ All workflows are invoked via `agent-cli <agent> <command>` or standalone `<agen
   - [Feature Plan (Scope Document → Jira)](#feature-plan-scope-document--jira)
 - [Drucker Hygiene Workflow](#drucker-hygiene-workflow)
   - [Drucker Polling Mode](#drucker-polling-mode)
-- [Hypatia Documentation Workflow](#hypatia-documentation-workflow)
+- [Hemingway Documentation Workflow](#hemingway-documentation-workflow)
 - [Bug Report Workflow](#bug-report-workflow)
 - [Release Planning Workflow](#release-planning-workflow)
 - [Global Workflow Flags](#global-workflow-flags)
@@ -166,29 +166,32 @@ agent-cli drucker-poll --project STL --max-cycles 2 --poll-interval 300 --notify
 
 ---
 
-## Hypatia Documentation Workflow
+## Hemingway Documentation Workflow
 
 Build, persist, and review source-grounded internal documentation candidates for
 repo Markdown and optional Confluence targets.
 
+During the local rename transition, `agent-cli hypatia ...` remains accepted as
+an alias for `agent-cli hemingway ...`.
+
 ```bash
 # Generate a repo-owned documentation draft
-agent-cli hypatia-generate --doc-title "STL Build Notes" --docs README.md AGENTS.md
+agent-cli hemingway generate --doc-title "STL Build Notes" --docs README.md AGENTS.md
 
 # Target a specific repo doc path and documentation class
-agent-cli hypatia-generate --doc-title "Fabric Bring-Up Guide" \
+agent-cli hemingway generate --doc-title "Fabric Bring-Up Guide" \
   --doc-type how_to --docs docs/source.md --target-file docs/fabric-bring-up.md
 
 # Add evidence files and stricter validation for release-note support
-agent-cli hypatia-generate --doc-title "Release Notes Support" \
+agent-cli hemingway generate --doc-title "Release Notes Support" \
   --doc-type release_note_support --docs notes.md --evidence release.json --doc-validation strict
 
 # Stage a Confluence publication target alongside the repo draft
-agent-cli hypatia-generate --doc-title "STL Weekly Summary" \
+agent-cli hemingway generate --doc-title "STL Weekly Summary" \
   --docs README.md --confluence-title "STL Weekly Summary" --confluence-space ENG
 ```
 
-Each `hypatia-generate` run stores a durable copy under `data/hypatia_docs/<DOC_ID>/`
+Each `hemingway generate` run stores a durable copy under `data/hemingway_docs/<DOC_ID>/`
 and writes a review-session JSON plus per-target Markdown patch drafts alongside the
 exported record files so publication stays reviewable before execution.
 
@@ -249,18 +252,18 @@ These flags apply to all agentic workflows:
 
 | Flag | Description |
 |------|-------------|
-| `--workflow NAME` | Workflow to run (`bug-report`, `drucker-hygiene`, `drucker-poll`, `feature-plan`, `gantt-poll`, `gantt-release-monitor`, `gantt-release-monitor-get`, `gantt-release-monitor-list`, `gantt-snapshot`, `gantt-snapshot-get`, `gantt-snapshot-list`, `hypatia-generate`) |
+| `--workflow NAME` | Workflow to run (`bug-report`, `drucker-hygiene`, `drucker-poll`, `feature-plan`, `gantt-poll`, `gantt-release-monitor`, `gantt-release-monitor-get`, `gantt-release-monitor-list`, `gantt-snapshot`, `gantt-snapshot-get`, `gantt-snapshot-list`, `hemingway-generate`) |
 | `--project KEY` | Jira project key |
 | `--stale-days DAYS` | Stale threshold for `drucker-hygiene` |
 | `--poll-interval SECS` | Poll interval for `gantt-poll` and `drucker-poll` |
 | `--max-cycles N` | Number of polling cycles (`0` means continuous mode) |
 | `--notify-shannon` | Post proactive poller summaries through Shannon |
 | `--evidence FILE ...` | Evidence files for workflows that accept build/test/release/meeting context |
-| `--doc-title TEXT` | Document title for `hypatia-generate` |
-| `--doc-type TYPE` | Documentation class for `hypatia-generate` |
-| `--doc-validation PROFILE` | Validation profile for `hypatia-generate` (`default`, `strict`, `sphinx`) |
-| `--target-file FILE` | Repo Markdown target for `hypatia-generate` |
-| `--confluence-title TITLE`, `--confluence-page PAGE`, `--confluence-space SPACE` | Optional Confluence publication target for `hypatia-generate` |
+| `--doc-title TEXT` | Document title for `hemingway generate` |
+| `--doc-type TYPE` | Documentation class for `hemingway generate` |
+| `--doc-validation PROFILE` | Validation profile for `hemingway generate` (`default`, `strict`, `sphinx`) |
+| `--target-file FILE` | Repo Markdown target for `hemingway generate` |
+| `--confluence-title TITLE`, `--confluence-page PAGE`, `--confluence-space SPACE` | Optional Confluence publication target for `hemingway generate` |
 | `--model MODEL`, `-m` | LLM model name override (e.g. `developer-opus`, `gpt-4o`) |
 | `--timeout SECS` | LLM request timeout in seconds |
 | `--env FILE` | Load a specific `.env` file |

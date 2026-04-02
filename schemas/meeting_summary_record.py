@@ -49,7 +49,7 @@ class MeetingRecord(BaseModel):
 
 
 class MeetingSummaryRecord(BaseModel):
-    """Structured summary produced by Herodotus (Knowledge Capture Agent)."""
+    """Structured summary produced by Pliny (Knowledge Capture Agent)."""
 
     summary_id: str = Field(..., description="Unique summary identifier")
     meeting_id: str = Field(..., description="Source meeting this summarizes")
@@ -62,7 +62,7 @@ class MeetingSummaryRecord(BaseModel):
         default_factory=list,
         description="Suggested follow-up meeting topics",
     )
-    generated_by: str = Field("herodotus", description="Agent that produced this summary")
+    generated_by: str = Field("pliny", description="Agent that produced this summary")
     status: str = Field("draft", description="draft | reviewed | published | retracted")
     created_at: datetime = Field(default_factory=_utcnow)
     published_at: datetime | None = None

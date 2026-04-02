@@ -14,7 +14,7 @@ The goal is simple:
 - human decisions should look like human decisions
 - audit trails should always show who requested, approved, and executed the change
 
-This policy applies to Jira-writing agents such as Drucker, Gantt, Hedy, and any
+This policy applies to Jira-writing agents such as Drucker, Gantt, Humphrey, and any
 future agent that creates, updates, comments on, assigns, links, or transitions
 Jira issues.
 
@@ -145,7 +145,7 @@ Examples:
 
 - Drucker proposes component, label, or priority cleanup
 - Gantt proposes a ticket tree
-- Hedy proposes release-linking updates
+- Humphrey proposes release-linking updates
 
 Use this rule:
 
@@ -185,13 +185,13 @@ If requester credentials are not available:
 - approved bulk ticket creation from a plan: `service_account`
 - release-scope or fixVersion decisions: `requester`
 
-### Hedy
+### Humphrey
 
 - release analysis and release-readiness reporting: `draft_only`
 - non-sensitive release linkage or version bookkeeping: `service_account`
 - stage transitions, promotion, or release-signoff actions: `requester` by default
 
-### Hypatia
+### Hemingway
 
 - Jira-facing documentation bookkeeping or doc-link comments: `service_account`
 - human-authored commitment or approval comments: `requester`

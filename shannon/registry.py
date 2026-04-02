@@ -18,6 +18,7 @@ from typing import Dict, List, Optional
 
 import yaml
 
+from agents.rename_registry import canonical_agent_name
 from shannon.models import AgentChannelRegistration
 
 # Logging config - follows jira_utils.py pattern
@@ -67,6 +68,7 @@ class ShannonAgentRegistry:
         return list(self._agents)
 
     def get_agent(self, agent_id: str) -> Optional[AgentChannelRegistration]:
+        agent_id = canonical_agent_name(agent_id)
         agent_id = str(agent_id or '').strip().lower()
         if not agent_id:
             return None

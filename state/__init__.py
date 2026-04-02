@@ -25,6 +25,7 @@ __all__ = [
     'GanttReleaseMonitorStore',
     'GanttReleaseSurveyStore',
     'GanttSnapshotStore',
+    'HemingwayRecordStore',
     'HypatiaRecordStore',
     'ShannonStateStore',
 ]
@@ -51,9 +52,14 @@ def __getattr__(name: str) -> Any:
         from agents.gantt.state.snapshot_store import GanttSnapshotStore
 
         return GanttSnapshotStore
-    if name == 'HypatiaRecordStore':
-        from agents.hypatia.state.record_store import HypatiaRecordStore
+    if name in ('HemingwayRecordStore', 'HypatiaRecordStore'):
+        from agents.hemingway.state.record_store import (
+            HemingwayRecordStore,
+            HypatiaRecordStore,
+        )
 
+        if name == 'HemingwayRecordStore':
+            return HemingwayRecordStore
         return HypatiaRecordStore
     if name == 'ShannonStateStore':
         from agents.shannon.state_store import ShannonStateStore

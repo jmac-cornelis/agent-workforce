@@ -63,10 +63,10 @@
         <mxCell id="linus" value="Linus&#xa;Code Review" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
           <mxGeometry x="490" y="160" width="120" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="hedy" value="Hedy&#xa;Release Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
+        <mxCell id="hedy" value="Humphrey&#xa;Release Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
           <mxGeometry x="340" y="250" width="120" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="ada" value="Ada&#xa;Test Planner" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
+        <mxCell id="ada" value="Galileo&#xa;Test Planner" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
           <mxGeometry x="490" y="250" width="120" height="60" as="geometry"/>
         </mxCell>
         <mxCell id="curie" value="Curie&#xa;Test Generator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
@@ -85,23 +85,23 @@
         <mxCell id="drucker" value="Drucker&#xa;Jira Coordinator" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
           <mxGeometry x="900" y="160" width="125" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="linnaeus" value="Linnaeus&#xa;Traceability" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="linnaeus" value="Berners-Lee&#xa;Traceability" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
           <mxGeometry x="1050" y="160" width="125" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="babbage" value="Babbage&#xa;Version Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="babbage" value="Mercator&#xa;Version Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
           <mxGeometry x="750" y="260" width="125" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="herodotus" value="Herodotus&#xa;Knowledge Capture" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="herodotus" value="Pliny&#xa;Knowledge Capture" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
           <mxGeometry x="900" y="260" width="125" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="hypatia" value="Hypatia&#xa;Documentation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
+        <mxCell id="hypatia" value="Hemingway&#xa;Documentation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;" vertex="1" parent="1">
           <mxGeometry x="1050" y="260" width="125" height="60" as="geometry"/>
         </mxCell>
 
         <mxCell id="gantt" value="Gantt&#xa;Project Planner" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" vertex="1" parent="1">
           <mxGeometry x="1210" y="190" width="120" height="60" as="geometry"/>
         </mxCell>
-        <mxCell id="brooks" value="Brooks&#xa;Delivery Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" vertex="1" parent="1">
+        <mxCell id="brooks" value="Shackleton&#xa;Delivery Manager" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" vertex="1" parent="1">
           <mxGeometry x="1210" y="300" width="120" height="60" as="geometry"/>
         </mxCell>
 

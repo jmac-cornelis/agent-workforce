@@ -162,7 +162,7 @@ def process_file(filepath, dry_run=False):
     with open(filepath, 'r') as f:
         original = f.read()
 
-    # Skip YAML frontmatter (Brandeis has it)
+    # Skip YAML frontmatter (Blackstone has it)
     frontmatter = ''
     body = original
     if original.startswith('---'):

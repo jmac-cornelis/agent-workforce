@@ -285,7 +285,7 @@ Send an announcement (via Shannon itself, once live) with:
 
 ### 3.4 Add agent channels (future)
 
-As additional agents come online (Gantt, Drucker, Hypatia, etc.),
+As additional agents come online (Gantt, Drucker, Hemingway, etc.),
 repeat Step 2.3 for each agent's channel and update the agent registry
 (`config/shannon/agent_registry.yaml`) with the channel IDs.
 

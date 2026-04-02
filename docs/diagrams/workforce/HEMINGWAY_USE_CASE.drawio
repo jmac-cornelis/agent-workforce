@@ -1,0 +1,293 @@
+<mxfile host="app.diagrams.net" modified="2026-03-14T20:00:00.000Z" agent="Codex" version="24.7.17" type="device">
+  <diagram id="page-impact-analysis" name="1 — Impact Analysis">
+    <mxGraphModel dx="1200" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title & subtitle -->
+        <mxCell id="t1_title" value="Hemingway — Impact Analysis" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="500" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_sub" value="Receiving doc-impact signals, analyzing source changes, and assessing build/test/release context" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="50" width="650" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- System boundary -->
+        <mxCell id="t1_boundary" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=20;dashed=1;dashPattern=8 4;" vertex="1" parent="1">
+          <mxGeometry x="300" y="80" width="480" height="440" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_blabel" value="Hemingway" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=13;fontStyle=1;fontColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="310" y="85" width="120" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Actors LEFT -->
+        <mxCell id="t1_a_linus" value="Linus&lt;br&gt;(Doc Impact Signals)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="90" y="130" width="30" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_a_github" value="GitHub&lt;br&gt;(Source Changes)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="90" y="280" width="30" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Actors RIGHT -->
+        <mxCell id="t1_a_josephine" value="Josephine&lt;br&gt;(Build Metadata)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="870" y="130" width="30" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_a_faraday" value="Faraday&lt;br&gt;(Test Outcomes)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="870" y="280" width="30" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_a_hedy" value="Humphrey&lt;br&gt;(Release Context)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#d5e8d4;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="870" y="420" width="30" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Use cases -->
+        <mxCell id="t1_uc1" value="Receive Doc Impact&lt;br&gt;Signal from Linus" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="370" y="120" width="190" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_uc2" value="Analyze Source&lt;br&gt;Changes" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="370" y="240" width="190" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_uc3" value="Assess Build / Test /&lt;br&gt;Release Context" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="370" y="360" width="190" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Actor-to-use-case lines -->
+        <mxCell id="t1_e1" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="t1_a_linus" target="t1_uc1" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_e2" style="endArrow=none;html=1;strokeColor=#6c8ebf;" edge="1" source="t1_a_github" target="t1_uc2" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_e3" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="t1_uc3" target="t1_a_josephine" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_e4" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="t1_uc3" target="t1_a_faraday" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t1_e5" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" source="t1_uc3" target="t1_a_hedy" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Triggers: impact signal triggers source analysis -->
+        <mxCell id="t1_i1" value="&amp;laquo;triggers&amp;raquo;" style="endArrow=open;endSize=10;dashed=1;html=1;strokeColor=#999999;fontSize=10;fontColor=#999999;" edge="1" source="t1_uc1" target="t1_uc2" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="page-doc-generation" name="2 — Doc Generation">
+    <mxGraphModel dx="1200" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title & subtitle -->
+        <mxCell id="t2_title" value="Hemingway — Doc Generation" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="500" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_sub" value="Generating as-built, engineering reference, and user guide docs; validating factual grounding" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="50" width="650" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- System boundary -->
+        <mxCell id="t2_boundary" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=20;dashed=1;dashPattern=8 4;" vertex="1" parent="1">
+          <mxGeometry x="300" y="80" width="480" height="460" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_blabel" value="Hemingway" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=13;fontStyle=1;fontColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="310" y="85" width="120" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Actors LEFT -->
+        <mxCell id="t2_a_babbage" value="Mercator&lt;br&gt;(Version Context)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="90" y="140" width="30" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_a_linnaeus" value="Berners-Lee&lt;br&gt;(Traceability)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="90" y="300" width="30" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_a_herodotus" value="Pliny&lt;br&gt;(Meeting Suggestions)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#e1d5e7;strokeColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="90" y="440" width="30" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Use cases -->
+        <mxCell id="t2_uc1" value="Generate&lt;br&gt;As-Built Docs" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="370" y="110" width="190" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_uc2" value="Generate&lt;br&gt;Engineering Reference" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="370" y="210" width="190" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_uc3" value="Generate&lt;br&gt;User Guide" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="370" y="310" width="190" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_uc4" value="Validate Factual&lt;br&gt;Grounding" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="370" y="420" width="190" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Actor-to-use-case lines -->
+        <mxCell id="t2_e1" style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" source="t2_a_babbage" target="t2_uc1" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_e2" style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" source="t2_a_linnaeus" target="t2_uc2" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_e3" style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" source="t2_a_herodotus" target="t2_uc3" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_e4" style="endArrow=none;html=1;strokeColor=#9673a6;" edge="1" source="t2_a_linnaeus" target="t2_uc4" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Include: all generation use cases include validation -->
+        <mxCell id="t2_i1" value="&amp;laquo;include&amp;raquo;" style="endArrow=open;endSize=10;dashed=1;html=1;strokeColor=#999999;fontSize=10;fontColor=#999999;" edge="1" source="t2_uc1" target="t2_uc4" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t2_i2" value="&amp;laquo;include&amp;raquo;" style="endArrow=open;endSize=10;dashed=1;html=1;strokeColor=#999999;fontSize=10;fontColor=#999999;" edge="1" source="t2_uc2" target="t2_uc4" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="page-review-approval" name="3 — Review &amp; Approval">
+    <mxGraphModel dx="1200" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title & subtitle -->
+        <mxCell id="t3_title" value="Hemingway — Review &amp; Approval" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="500" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3_sub" value="Human review of generated docs, applying patches, and approving for publication" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="50" width="600" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- System boundary -->
+        <mxCell id="t3_boundary" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=20;dashed=1;dashPattern=8 4;" vertex="1" parent="1">
+          <mxGeometry x="300" y="80" width="480" height="440" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3_blabel" value="Hemingway" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=13;fontStyle=1;fontColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="310" y="85" width="120" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Actors LEFT -->
+        <mxCell id="t3_a_engineer" value="Engineer&lt;br&gt;(Reviewer)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="90" y="220" width="30" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Actors RIGHT -->
+        <mxCell id="t3_a_github" value="GitHub&lt;br&gt;(Doc Patches)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="870" y="220" width="30" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Use cases -->
+        <mxCell id="t3_uc1" value="Review Generated&lt;br&gt;Documentation" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="370" y="120" width="190" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3_uc2" value="Apply Doc&lt;br&gt;Patches" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="370" y="250" width="190" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3_uc3" value="Approve for&lt;br&gt;Publication" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="370" y="380" width="190" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Actor-to-use-case lines -->
+        <mxCell id="t3_e1" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="t3_a_engineer" target="t3_uc1" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3_e2" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="t3_a_engineer" target="t3_uc2" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3_e3" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="t3_a_engineer" target="t3_uc3" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t3_e4" style="endArrow=none;html=1;strokeColor=#6c8ebf;" edge="1" source="t3_uc2" target="t3_a_github" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Triggers: approval triggers publication request -->
+        <mxCell id="t3_i1" value="&amp;laquo;triggers&amp;raquo;" style="endArrow=open;endSize=10;dashed=1;html=1;strokeColor=#999999;fontSize=10;fontColor=#999999;" edge="1" source="t3_uc3" target="t3_uc2" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+  <diagram id="page-publication" name="4 — Publication">
+    <mxGraphModel dx="1200" dy="700" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="600" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title & subtitle -->
+        <mxCell id="t4_title" value="Hemingway — Publication" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=20;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="20" width="500" height="30" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_sub" value="Publishing docs to Sphinx/ReadTheDocs and Knowledge Store; emitting publication events" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=11;fontColor=#666666;" vertex="1" parent="1">
+          <mxGeometry x="40" y="50" width="650" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- System boundary -->
+        <mxCell id="t4_boundary" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;opacity=20;dashed=1;dashPattern=8 4;" vertex="1" parent="1">
+          <mxGeometry x="300" y="80" width="480" height="440" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_blabel" value="Hemingway" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=13;fontStyle=1;fontColor=#9673a6;" vertex="1" parent="1">
+          <mxGeometry x="310" y="85" width="120" height="25" as="geometry"/>
+        </mxCell>
+
+        <!-- Actors LEFT -->
+        <mxCell id="t4_a_engineer" value="Engineer&lt;br&gt;(Approver)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+          <mxGeometry x="90" y="220" width="30" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Actors RIGHT -->
+        <mxCell id="t4_a_sphinx" value="Docs Publish Target&lt;br&gt;(Sphinx / ReadTheDocs)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="870" y="130" width="30" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_a_kstore" value="Knowledge&lt;br&gt;Store" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="870" y="280" width="30" height="50" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_a_eventbus" value="Event Bus&lt;br&gt;(Subscribers)" style="shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;fontSize=11;fontStyle=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="870" y="420" width="30" height="50" as="geometry"/>
+        </mxCell>
+
+        <!-- Use cases -->
+        <mxCell id="t4_uc1" value="Publish to&lt;br&gt;Sphinx / ReadTheDocs" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="370" y="120" width="190" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_uc2" value="Publish to&lt;br&gt;Knowledge Store" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="370" y="250" width="190" height="60" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_uc3" value="Emit&lt;br&gt;docs.published Events" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=11;" vertex="1" parent="1">
+          <mxGeometry x="370" y="380" width="190" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- Actor-to-use-case lines -->
+        <mxCell id="t4_e1" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="t4_a_engineer" target="t4_uc1" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_e2" style="endArrow=none;html=1;strokeColor=#d6b656;" edge="1" source="t4_a_engineer" target="t4_uc2" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_e3" style="endArrow=none;html=1;strokeColor=#6c8ebf;" edge="1" source="t4_uc1" target="t4_a_sphinx" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_e4" style="endArrow=none;html=1;strokeColor=#6c8ebf;" edge="1" source="t4_uc2" target="t4_a_kstore" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_e5" style="endArrow=none;html=1;strokeColor=#6c8ebf;" edge="1" source="t4_uc3" target="t4_a_eventbus" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- Triggers: publish triggers event emission -->
+        <mxCell id="t4_i1" value="&amp;laquo;triggers&amp;raquo;" style="endArrow=open;endSize=10;dashed=1;html=1;strokeColor=#999999;fontSize=10;fontColor=#999999;" edge="1" source="t4_uc1" target="t4_uc3" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+        <mxCell id="t4_i2" value="&amp;laquo;triggers&amp;raquo;" style="endArrow=open;endSize=10;dashed=1;html=1;strokeColor=#999999;fontSize=10;fontColor=#999999;" edge="1" source="t4_uc2" target="t4_uc3" parent="1">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

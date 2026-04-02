@@ -19,25 +19,25 @@ The strongest mapping is:
 
 - `Gantt` — strong partial implementation
 - `Drucker` — strong partial implementation
-- `Hypatia` — strong tooling foundation, but not yet a dedicated documentation agent
+- `Hemingway` — strong tooling foundation, but not yet a dedicated documentation agent
 
 The lighter partial mappings are:
 
-- `Brooks`
-- `Hedy`
+- `Shackleton`
+- `Humphrey`
 - `Nightingale`
-- `Herodotus`
+- `Pliny`
 
 The weakest or essentially not-yet-started mappings are:
 
 - `Josephine`
-- `Ada`
+- `Galileo`
 - `Curie`
 - `Faraday`
 - `Tesla`
 - `Linus`
-- `Babbage`
-- `Linnaeus`
+- `Mercator`
+- `Berners-Lee`
 
 ## Shared Capabilities in `jira-utilities`
 
@@ -139,11 +139,11 @@ The newer dedicated Gantt slice makes this mapping more concrete than it was bef
 - no integration with execution-spine evidence like builds/tests/releases
 - no delivery-risk projection from cross-agent operational data beyond Jira-derived backlog signals
 
-#### Brooks — Delivery Manager
+#### Shackleton — Delivery Manager
 
 **Workforce intent**
 
-`Brooks` monitors execution against plan, detects schedule risk and coordination failure, and produces delivery summaries.
+`Shackleton` monitors execution against plan, detects schedule risk and coordination failure, and produces delivery summaries.
 
 **Current mapping in `jira-utilities`**
 
@@ -168,7 +168,7 @@ The repo can already:
 
 That means it can support planning snapshots and some manual reporting.
 
-**Main gaps vs workforce Brooks**
+**Main gaps vs workforce Shackleton**
 
 - no comparison of execution reality vs approved plan over time
 - no build/test/release evidence integration
@@ -176,7 +176,7 @@ That means it can support planning snapshots and some manual reporting.
 - no escalation model
 - no risk detector grounded in objective engineering execution signals
 
-`jira-utilities` can help Brooks, but it is not yet Brooks.
+`jira-utilities` can help Shackleton, but it is not yet Shackleton.
 
 ### Intelligence & Knowledge
 
@@ -242,11 +242,11 @@ The newer dedicated Drucker slice makes the mapping much more concrete:
 
 The practical conclusion is that `jira-utilities` is now a real seed implementation of Drucker, not just a precursor.
 
-#### Hypatia — Documentation Agent
+#### Hemingway — Documentation Agent
 
 **Workforce intent**
 
-`Hypatia` turns source changes, system facts, meeting clarifications, and release context into durable documentation changes.
+`Hemingway` turns source changes, system facts, meeting clarifications, and release context into durable documentation changes.
 
 **Current mapping in `jira-utilities`**
 
@@ -257,9 +257,9 @@ The practical conclusion is that `jira-utilities` is now a real seed implementat
 - `tools/web_search_tools.py`
 - `tools/mcp_tools.py`
 - `agents/research_agent.py`
-- `agents/hypatia_agent.py`
-- `agents/hypatia_models.py`
-- `state/hypatia_record_store.py`
+- `agents/hemingway/agent.py`
+- `agents/hemingway/models.py`
+- `agents/hemingway/state/record_store.py`
 
 **Maturity**
 
@@ -289,7 +289,7 @@ The repo also has supporting evidence tools:
 - durable documentation records
 - review-gated repo and Confluence publication staging
 
-The new Hypatia slice now adds:
+The new Hemingway slice now adds:
 
 - a dedicated documentation agent class
 - documentation request, impact, patch, record, and publication models
@@ -297,7 +297,7 @@ The new Hypatia slice now adds:
 - a review-gated publication path for repo docs and Confluence
 - stronger validation hooks plus optional evidence-backed publication inputs
 
-**Main gaps vs workforce Hypatia**
+**Main gaps vs workforce Hemingway**
 
 - no as-built documentation generation model
 - no always-on event-driven impact detection
@@ -306,14 +306,14 @@ The new Hypatia slice now adds:
 
 So the right reading is:
 
-- `jira-utilities` is now a real first-generation Hypatia slice
-- it is still narrower than the full workforce Hypatia design
+- `jira-utilities` is now a real first-generation Hemingway slice
+- it is still narrower than the full workforce Hemingway design
 
-#### Herodotus — Knowledge Capture
+#### Pliny — Knowledge Capture
 
 **Workforce intent**
 
-`Herodotus` ingests Teams meeting transcripts, extracts decisions and action items, and publishes durable meeting summaries.
+`Pliny` ingests Teams meeting transcripts, extracts decisions and action items, and publishes durable meeting summaries.
 
 **Current mapping in `jira-utilities`**
 
@@ -329,7 +329,7 @@ Light conceptual overlap only.
 
 **Why it maps at all**
 
-The repo has pieces Herodotus would reuse:
+The repo has pieces Pliny would reuse:
 
 - document read support
 - page publishing support
@@ -337,7 +337,7 @@ The repo has pieces Herodotus would reuse:
 
 But those are shared utilities, not a meeting-ingest implementation.
 
-**Main gaps vs workforce Herodotus**
+**Main gaps vs workforce Pliny**
 
 - no Teams transcript ingest
 - no meeting record model
@@ -345,7 +345,7 @@ But those are shared utilities, not a meeting-ingest implementation.
 - no action extraction pipeline
 - no transcript-grounded publishing workflow
 
-Herodotus is mostly future work.
+Pliny is mostly future work.
 
 #### Nightingale — Bug Investigation
 
@@ -388,11 +388,11 @@ That gives it some overlap with Nightingale's intake and summarization side.
 
 The repo is more useful for bug reporting and bug summarization than bug reproduction.
 
-#### Linnaeus — Traceability
+#### Berners-Lee — Traceability
 
 **Workforce intent**
 
-`Linnaeus` owns durable relationships between requirements, issues, builds, tests, releases, and versions.
+`Berners-Lee` owns durable relationships between requirements, issues, builds, tests, releases, and versions.
 
 **Current mapping in `jira-utilities`**
 
@@ -410,11 +410,11 @@ Minimal overlap.
 - no durable trace store
 - no build/test/release linkage model
 
-#### Babbage — Version Manager
+#### Mercator — Version Manager
 
 **Workforce intent**
 
-`Babbage` maps internal build identities to external versions and lineage.
+`Mercator` maps internal build identities to external versions and lineage.
 
 **Current mapping in `jira-utilities`**
 
@@ -435,11 +435,11 @@ Minimal overlap.
 
 This is where `jira-utilities` is currently weakest.
 
-#### Hedy — Release Manager
+#### Humphrey — Release Manager
 
 **Workforce intent**
 
-`Hedy` evaluates release readiness and governs release-state transitions using build, test, version, and traceability evidence.
+`Humphrey` evaluates release readiness and governs release-state transitions using build, test, version, and traceability evidence.
 
 **Current mapping in `jira-utilities`**
 
@@ -464,13 +464,13 @@ The "release planning" here is mostly:
 - creating Jira structures
 - reviewing changes
 
-The workforce `Hedy` is much more of a release control plane:
+The workforce `Humphrey` is much more of a release control plane:
 
 - evaluate readiness
 - promote or block
 - coordinate approvals against build/test evidence
 
-**Main gaps vs workforce Hedy**
+**Main gaps vs workforce Humphrey**
 
 - no build candidate model
 - no release readiness evaluation model
@@ -488,7 +488,7 @@ None beyond indirect consumption of outputs that a build agent would eventually 
 
 Not started.
 
-#### Ada — Test Planner
+#### Galileo — Test Planner
 
 **Current mapping**
 
@@ -538,11 +538,11 @@ None of substance in the current repo.
 
 Not started.
 
-#### Brandeis — Legal Compliance & Code Scanning
+#### Blackstone — Legal Compliance & Code Scanning
 
 **Workforce intent**
 
-`Brandeis` owns software composition analysis, license compliance, regulatory scanning, and legal-risk governance. Named after Louis Brandeis, the Supreme Court Justice who championed transparency and regulatory reform. Brandeis ensures that what ships is legally clean, license-compatible, and compliant with organizational and regulatory policy.
+`Blackstone` owns software composition analysis, license compliance, regulatory scanning, and legal-risk governance. Named after William Blackstone, whose legal commentaries helped codify durable rule systems and precedent. Blackstone ensures that what ships is legally clean, license-compatible, and compliant with organizational and regulatory policy.
 
 **Core capabilities**
 
@@ -550,10 +550,10 @@ Not started.
 - Maintain a current software bill of materials (SBOM) for tracked products and releases
 - Evaluate license compatibility across dependency trees and flag conflicts before release gates
 - Surface regulatory compliance gaps (export control, FIPS, FedRAMP, or sector-specific requirements)
-- Produce structured compliance reports that `Hedy` can consume as release-readiness evidence
+- Produce structured compliance reports that `Humphrey` can consume as release-readiness evidence
 - Track remediation status for flagged findings via `Drucker`-coordinated Jira work
 - Detect new or changed dependencies that require legal review
-- Emit compliance signals to `Hedy` (release gating), `Linus` (code-review context), and `Linnaeus` (traceability)
+- Emit compliance signals to `Humphrey` (release gating), `Linus` (code-review context), and `Berners-Lee` (traceability)
 
 **Current mapping in `jira-utilities`**
 
@@ -583,10 +583,10 @@ This is the inverse view: starting from the agents that already exist here and s
 | `PlanningAgent` | `Gantt` | Core plan synthesis behavior |
 | `FeaturePlanBuilderAgent` | `Gantt` -> `Drucker` handoff | Turns scoped work into Jira-ready structures |
 | `JiraAnalystAgent` | `Drucker` precursor | Strong current-state Jira understanding, but not yet hygiene/routing orchestration |
-| `HypatiaDocumentationAgent` | `Hypatia` | Source-grounded internal documentation generation with review-gated publication |
-| `ReviewAgent` | Shared cross-cutting capability | Reusable across `Drucker`, `Hedy`, `Hypatia`, `Brooks`, and `Gantt` |
+| `HemingwayDocumentationAgent` | `Hemingway` | Source-grounded internal documentation generation with review-gated publication |
+| `ReviewAgent` | Shared cross-cutting capability | Reusable across `Drucker`, `Humphrey`, `Hemingway`, `Shackleton`, and `Gantt` |
 | `VisionAnalyzerAgent` | `Gantt` intake adapter | Helps turn roadmap artifacts into planning inputs |
-| `ResearchAgent` | Upstream support for `Gantt`, `Hypatia`, and `Nightingale` | Better understood as shared intelligence than a workforce one-to-one mapping |
+| `ResearchAgent` | Upstream support for `Gantt`, `Hemingway`, and `Nightingale` | Better understood as shared intelligence than a workforce one-to-one mapping |
 | `HardwareAnalystAgent` | Upstream support for `Gantt` | Particularly valuable for feature-intake planning |
 | `ScopingAgent` | Upstream support for `Gantt` | Transforms ambiguity into schedulable work |
 
@@ -596,7 +596,7 @@ If the organization wants to use `jira-utilities` as a seed implementation for `
 
 - use this repo as the starting codebase for `Gantt`
 - grow `Drucker` out of the existing Jira tool and analysis layer
-- use the Hypatia slice here as the starting documentation-service foundation
+- use the Hemingway slice here as the starting documentation-service foundation
 - reuse `ReviewAgent` as a shared approval capability across the future platform
 
 That is more realistic than trying to force this repo to represent the entire workforce.
@@ -622,7 +622,7 @@ This repo should not yet claim:
 - release readiness control-plane automation
 - bug reproduction automation
 - Teams transcript knowledge capture
-- software composition analysis, license compliance, or regulatory scanning (`Brandeis`)
+- software composition analysis, license compliance, or regulatory scanning (`Blackstone`)
 
 ## Suggested Next Steps
 
@@ -631,12 +631,12 @@ If the goal is to converge this repo toward the workforce model, the most sensib
 1. Formalize `Gantt` as the umbrella role for the existing planning agents.
 2. Grow `JiraAnalystAgent` plus `jira_tools` into a real `Drucker` slice:
    metadata gaps, stale-state detection, recommendation records, and safe write-backs.
-3. Deepen the new `Hypatia` slice:
+3. Deepen the new `Hemingway` slice:
    doc-impact detection, stronger validation, and richer documentation classes.
 4. Standardize service interfaces around these agents:
    request model, response model, audit metadata, and approval hooks.
-5. Stand up `Brandeis` as the compliance gate:
-   BlackDuck integration, SBOM generation, license-compatibility checks, and compliance evidence that `Hedy` can consume for release gating.
+5. Stand up `Blackstone` as the compliance gate:
+   BlackDuck integration, SBOM generation, license-compatibility checks, and compliance evidence that `Humphrey` can consume for release gating.
 6. Leave execution-spine agents for a separate phase, since they depend on systems this repo does not currently model.
 
 ## Bottom Line
@@ -647,7 +647,7 @@ Its center of gravity is:
 
 - `Gantt` first
 - `Drucker` second
-- `Hypatia` third
+- `Hemingway` third
 
 Everything else is either an adjacency or a future integration point.
 

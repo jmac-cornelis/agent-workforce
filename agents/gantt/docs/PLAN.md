@@ -5,6 +5,10 @@ Gantt should be the project-planning agent for the platform. Its v1 job is to co
 
 Gantt should not replace human program ownership. It should make planning legible, current, and evidence-backed.
 
+## Namesake
+
+Gantt is named for Henry Gantt, the engineer and management consultant whose chart became one of the most recognizable tools in project planning. We use his name for the project planner because Gantt turns work, dependencies, and schedule intent into a planning view that humans can inspect and act on.
+
 
 ## Product definition
 ### Goal
