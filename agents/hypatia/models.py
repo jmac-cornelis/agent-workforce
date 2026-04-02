@@ -41,6 +41,7 @@ class DocumentationRequest:
     title: str = ''
     doc_type: str = 'engineering_reference'
     project_key: str = ''
+    repo_name: Optional[str] = None
     summary: str = ''
     source_paths: List[str] = field(default_factory=list)
     source_refs: List[str] = field(default_factory=list)
@@ -52,12 +53,16 @@ class DocumentationRequest:
     confluence_parent_id: Optional[str] = None
     version_message: Optional[str] = None
     validation_profile: str = 'default'
+    diff_context: str = ''  # PR diff/patch for context during PR-review generation
+    branch: Optional[str] = None  # Git branch to fetch sources from (overrides default branch detection)
+    pr_number: Optional[int] = None  # PR number — enables pull/N/head ref fallback for forks
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             'title': self.title,
             'doc_type': self.doc_type,
             'project_key': self.project_key,
+            'repo_name': self.repo_name,
             'summary': self.summary,
             'source_paths': self.source_paths,
             'source_refs': self.source_refs,
@@ -69,6 +74,9 @@ class DocumentationRequest:
             'confluence_parent_id': self.confluence_parent_id,
             'version_message': self.version_message,
             'validation_profile': self.validation_profile,
+            'diff_context': self.diff_context,
+            'branch': self.branch,
+            'pr_number': self.pr_number,
         }
 
 

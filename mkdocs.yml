@@ -1,0 +1,101 @@
+# MkDocs Material configuration for Agent Workforce documentation
+# Published to GitHub Pages via CI workflow
+site_name: Agent Workforce
+site_url: https://jmac-cornelis.github.io/agent-workforce/
+site_description: Documentation for the Cornelis Networks Agent Workforce
+repo_name: jmac-cornelis/agent-workforce
+repo_url: https://github.com/jmac-cornelis/agent-workforce
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  palette:
+    # Light mode
+    - scheme: default
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to dark mode
+    # Dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.indexes
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - tables
+  - toc:
+      permalink: true
+  - attr_list
+  - md_in_html
+  - def_list
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/jmac-cornelis/agent-workforce
+  generator: false
+
+nav:
+  - Home: index.md
+  - User Guide:
+      - Overview: user-guide/index.md
+      - Installation: user-guide/installation.md
+      - Quick Start: user-guide/quickstart.md
+  - Agents:
+      - Overview: agents/index.md
+      - Drucker (Engineering Hygiene): agents/drucker.md
+      - Gantt (Project Planning): agents/gantt.md
+      - Hypatia (Documentation): agents/hypatia.md
+      - Shannon (Communications): agents/shannon.md
+  - CLI Reference:
+      - agent-cli: cli/agent-cli.md
+      - drucker-agent: cli/drucker-agent.md
+      - gantt-agent: cli/gantt-agent.md
+      - hypatia-agent: cli/hypatia-agent.md
+      - github-utils: cli/github-utils.md
+  - Deployment:
+      - Overview: deployment/index.md
+      - Server Setup: deployment/server-setup.md
+      - Docker & Podman: deployment/containers.md
+      - Cloudflare Tunnel: deployment/cloudflare.md
+  - Architecture:
+      - Overview: architecture/index.md
+      - Agent Framework: architecture/framework.md
+      - Shannon Integration: architecture/shannon.md

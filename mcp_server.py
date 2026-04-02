@@ -593,6 +593,60 @@ async def search_confluence_pages(
 
 
 @_tool_decorator()
+async def search_confluence_fulltext(
+    query: str,
+    limit: int = 25,
+    space: Optional[str] = None,
+) -> list[Any]:
+    """Search Confluence pages by body content (full-text search).
+
+    Args:
+        query: Full-text search query to match against page body content.
+        limit: Maximum number of results to return.
+        space: Optional Confluence space key or numeric ID.
+    """
+    try:
+        confluence = confluence_utils.get_connection()
+        pages = confluence_utils.search_pages_fulltext(
+            confluence,
+            query=query,
+            limit=limit,
+            space=space,
+        )
+        return _json_result([_page_to_dict(page) for page in pages])
+    except Exception as e:
+        log.error(f'search_confluence_fulltext failed: {e}')
+        return _error_result(str(e))
+
+
+@_tool_decorator()
+async def search_confluence_by_label(
+    label: str,
+    limit: int = 25,
+    space: Optional[str] = None,
+) -> list[Any]:
+    """Search Confluence pages by label.
+
+    Args:
+        label: Label name to search for.
+        limit: Maximum number of results to return.
+        space: Optional Confluence space key or numeric ID.
+    """
+    try:
+        confluence = confluence_utils.get_connection()
+        pages = confluence_utils.search_pages_by_label(
+            confluence,
+            label=label,
+            limit=limit,
+            space=space,
+        )
+        return _json_result([_page_to_dict(page) for page in pages])
+    except Exception as e:
+        log.error(f'search_confluence_by_label failed: {e}')
+        return _error_result(str(e))
+
+
+@_tool_decorator()
 async def get_confluence_page(
     page_id_or_title: str,
     space: Optional[str] = None,
@@ -2732,6 +2786,249 @@ async def analyze_extended_hygiene(repo_full_name: str, stale_days: int = 5, bra
         return _json_result(result)
     except Exception as e:
         log.error(f'analyze_extended_hygiene failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 42: get_github_repo_readme — Get README for a GitHub repository
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def get_github_repo_readme(repo_name: str) -> list[Any]:
+    '''Get the README content for a GitHub repository.
+
+    Args:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+    '''
+    try:
+        github_utils.get_connection()
+        result = github_utils.get_repo_readme(repo_name)
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'get_github_repo_readme failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 43: list_github_repo_docs — List documentation files in a repository
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def list_github_repo_docs(repo_name: str, path: str = 'docs', extensions: Optional[str] = None) -> list[Any]:
+    '''List documentation files in a GitHub repository directory.
+
+    Args:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        path: Directory path to search (default: 'docs').
+        extensions: Comma-separated file extensions to include (default: '.md,.rst,.txt').
+    '''
+    try:
+        github_utils.get_connection()
+        ext_list = [e.strip() for e in extensions.split(',') if e.strip()] if extensions else None
+        result = github_utils.list_repo_docs(repo_name, path=path, extensions=ext_list)
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'list_github_repo_docs failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 44: search_github_repo_docs — Search documentation files in a repository
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def search_github_repo_docs(repo_name: str, query: str, extensions: Optional[str] = None) -> list[Any]:
+    '''Search documentation files in a GitHub repository by content query.
+
+    Args:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        query: Search query string to match in file contents.
+        extensions: Comma-separated file extensions to search (default: '.md,.rst,.txt').
+    '''
+    try:
+        github_utils.get_connection()
+        ext_list = [e.strip() for e in extensions.split(',') if e.strip()] if extensions else None
+        result = github_utils.search_repo_docs(repo_name, query, extensions=ext_list)
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'search_github_repo_docs failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 45: get_github_pr_changed_files — Get files changed in a PR
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def get_github_pr_changed_files(repo_full_name: str, pr_number: int) -> list[Any]:
+    '''Get the list of files changed in a GitHub pull request.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        pr_number: Pull request number.
+    '''
+    try:
+        github_utils.get_connection()
+        files = github_utils.get_pr_changed_files(repo_full_name, pr_number)
+        return _json_result(files)
+    except Exception as e:
+        log.error(f'get_github_pr_changed_files failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 46: get_github_file_content — Get file content from a repository
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def get_github_file_content(repo_full_name: str, path: str, branch: str = 'main') -> list[Any]:
+    '''Get the content of a file from a GitHub repository.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        path: File path within the repository.
+        branch: Branch name (default: 'main').
+    '''
+    try:
+        github_utils.get_connection()
+        result = github_utils.get_file_content(repo_full_name, path, branch=branch)
+        if result is None:
+            return _json_result({'found': False, 'path': path, 'branch': branch})
+        result['found'] = True
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'get_github_file_content failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 47: create_or_update_github_file — Create or update a file (mutation)
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def create_or_update_github_file(
+    repo_full_name: str,
+    path: str,
+    content: str,
+    message: str,
+    branch: str = 'main',
+    dry_run: bool = True,
+) -> list[Any]:
+    '''Create or update a single file in a GitHub repository.
+
+    MUTATION — dry-run by default.  Pass dry_run=false to execute.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        path: File path within the repository.
+        content: File content as a string.
+        message: Commit message.
+        branch: Target branch (default: 'main').
+        dry_run: Preview only — do not commit (default: true).
+    '''
+    try:
+        github_utils.get_connection()
+        if resolve_dry_run(dry_run):
+            existing = github_utils.get_file_content(repo_full_name, path, branch=branch)
+            operation = 'update' if existing else 'create'
+            return _json_result({
+                'dry_run': True,
+                'repo': repo_full_name,
+                'path': path,
+                'branch': branch,
+                'operation': operation,
+                'content_length': len(content),
+            })
+        result = github_utils.create_or_update_file(
+            repo_full_name, path, content, message, branch=branch, dry_run=False,
+        )
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'create_or_update_github_file failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 48: batch_commit_github_files — Atomic multi-file commit (mutation)
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def batch_commit_github_files(
+    repo_full_name: str,
+    files: str,
+    message: str,
+    branch: str = 'main',
+    dry_run: bool = True,
+) -> list[Any]:
+    '''Atomically commit multiple files to a GitHub repository via the Git Tree API.
+
+    MUTATION — dry-run by default.  Pass dry_run=false to execute.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        files: JSON array of objects with 'path' and 'content' keys.
+        message: Commit message.
+        branch: Target branch (default: 'main').
+        dry_run: Preview only — do not commit (default: true).
+    '''
+    import json as _json
+    try:
+        github_utils.get_connection()
+        file_list = _json.loads(files) if isinstance(files, str) else files
+        if resolve_dry_run(dry_run):
+            return _json_result({
+                'dry_run': True,
+                'repo': repo_full_name,
+                'branch': branch,
+                'file_count': len(file_list),
+                'files': [{'path': f['path'], 'content_length': len(f['content'])} for f in file_list],
+            })
+        result = github_utils.batch_commit_files(
+            repo_full_name, file_list, message, branch=branch, dry_run=False,
+        )
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'batch_commit_github_files failed: {e}')
+        return _error_result(str(e))
+
+
+# ---------------------------------------------------------------------------
+# Tool 49: post_github_pr_comment — Post a comment on a PR (mutation)
+# ---------------------------------------------------------------------------
+
+@_tool_decorator()
+async def post_github_pr_comment(
+    repo_full_name: str,
+    pr_number: int,
+    body: str,
+    dry_run: bool = True,
+) -> list[Any]:
+    '''Post a comment on a GitHub pull request.
+
+    MUTATION — dry-run by default.  Pass dry_run=false to execute.
+
+    Args:
+        repo_full_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        pr_number: Pull request number.
+        body: Comment body text.
+        dry_run: Preview only — do not post the comment (default: true).
+    '''
+    try:
+        github_utils.get_connection()
+        if resolve_dry_run(dry_run):
+            return _json_result({
+                'dry_run': True,
+                'repo': repo_full_name,
+                'pr_number': pr_number,
+                'body_length': len(body),
+                'body_preview': body[:200],
+            })
+        result = github_utils.post_pr_comment(
+            repo_full_name, pr_number, body, dry_run=False,
+        )
+        return _json_result(result)
+    except Exception as e:
+        log.error(f'post_github_pr_comment failed: {e}')
         return _error_result(str(e))
 
 

@@ -30,6 +30,8 @@ try:
         get_connection as get_confluence_connection,
         reset_connection as reset_confluence_connection,
         search_pages as _cu_search_pages,
+        search_pages_fulltext as _cu_search_pages_fulltext,
+        search_pages_by_label as _cu_search_pages_by_label,
         get_page as _cu_get_page,
         create_page as _cu_create_page,
         update_page as _cu_update_page,
@@ -93,6 +95,50 @@ def search_confluence_pages(
     except Exception as e:
         log.error(f'Failed to search Confluence pages: {e}')
         return ToolResult.failure(f'Confluence search failed: {e}')
+
+
+@tool(
+    description='Search Confluence pages by body content (full-text search)'
+)
+def search_confluence_fulltext(
+    query: str,
+    limit: int = 25,
+    space: Optional[str] = None,
+) -> ToolResult:
+    '''
+    Search Confluence pages by full-text body content.
+    '''
+    log.debug(f'search_confluence_fulltext(query={query}, limit={limit}, space={space})')
+
+    try:
+        confluence = get_confluence()
+        pages = _cu_search_pages_fulltext(confluence, query=query, limit=limit, space=space)
+        return ToolResult.success(pages, count=len(pages))
+    except Exception as e:
+        log.error(f'Failed to search Confluence pages by body text: {e}')
+        return ToolResult.failure(f'Confluence full-text search failed: {e}')
+
+
+@tool(
+    description='Search Confluence pages by label'
+)
+def search_confluence_by_label(
+    label: str,
+    limit: int = 25,
+    space: Optional[str] = None,
+) -> ToolResult:
+    '''
+    Search Confluence pages by label.
+    '''
+    log.debug(f'search_confluence_by_label(label={label}, limit={limit}, space={space})')
+
+    try:
+        confluence = get_confluence()
+        pages = _cu_search_pages_by_label(confluence, label=label, limit=limit, space=space)
+        return ToolResult.success(pages, count=len(pages))
+    except Exception as e:
+        log.error(f'Failed to search Confluence pages by label: {e}')
+        return ToolResult.failure(f'Confluence label search failed: {e}')
 
 
 @tool(
@@ -422,6 +468,24 @@ class ConfluenceTools(BaseTool):
         space: Optional[str] = None,
     ) -> ToolResult:
         return search_confluence_pages(pattern, limit, space)
+
+    @tool(description='Search Confluence pages by body content (full-text search)')
+    def search_confluence_fulltext(
+        self,
+        query: str,
+        limit: int = 25,
+        space: Optional[str] = None,
+    ) -> ToolResult:
+        return search_confluence_fulltext(query, limit, space)
+
+    @tool(description='Search Confluence pages by label')
+    def search_confluence_by_label(
+        self,
+        label: str,
+        limit: int = 25,
+        space: Optional[str] = None,
+    ) -> ToolResult:
+        return search_confluence_by_label(label, limit, space)
 
     @tool(description='Get a Confluence page by page ID or exact title')
     def get_confluence_page(

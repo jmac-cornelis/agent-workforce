@@ -341,9 +341,8 @@ def test_github_tools_collection_lists_all_tools():
     tools = GitHubTools()
 
     all_tools = tools.get_tools()
-    assert len(all_tools) == 16
+    assert len(all_tools) == 24
 
-    # Verify tool names match expected set
     tool_names = {t.name for t in all_tools}
     expected = {
         'list_repos',
@@ -362,5 +361,13 @@ def test_github_tools_collection_lists_all_tools():
         'check_ci_failures',
         'check_stale_branches',
         'analyze_extended_hygiene',
+        'get_repo_readme',
+        'list_repo_docs',
+        'search_repo_docs',
+        'get_pr_changed_files',
+        'get_file_content',
+        'create_or_update_file',
+        'batch_commit_files',
+        'post_pr_comment',
     }
     assert tool_names == expected

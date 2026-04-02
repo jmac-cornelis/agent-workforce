@@ -36,6 +36,7 @@ load_dotenv(override=False)
 
 try:
     from github import Github, Auth, GithubException, RateLimitExceededException, UnknownObjectException
+    from github import InputGitTreeElement
 except ImportError:
     Github = None
 
@@ -98,6 +99,12 @@ __all__ = [
     'analyze_naming_compliance', 'analyze_merge_conflicts',
     'analyze_ci_failures', 'analyze_stale_branches',
     'analyze_extended_hygiene',
+    # Documentation Search
+    'get_repo_readme', 'list_repo_docs', 'search_repo_docs',
+    # Write Operations
+    'get_pr_changed_files', 'get_file_content',
+    'create_or_update_file', 'batch_commit_files',
+    'post_pr_comment', 'post_commit_status',
     # Rate Limit
     'get_rate_limit', 'check_rate_limit',
     # Display helpers
@@ -1074,6 +1081,178 @@ def get_pr_review_requests(repo_name, pr_number):
 
 
 # ****************************************************************************************
+# Documentation search — find and retrieve docs from GitHub repos
+# ****************************************************************************************
+
+def get_repo_readme(repo_name):
+    '''
+    Fetch the README content for a repository.
+
+    Input:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+
+    Output:
+        Dict with: repo, filename, content (markdown text), size, sha, url.
+        If no README exists, returns dict with repo and error key.
+
+    Raises:
+        GitHubRepoError: If the repository cannot be found.
+    '''
+    log.debug(f'Entering get_repo_readme(repo_name={repo_name})')
+    gh = get_connection()
+
+    try:
+        repo = gh.get_repo(repo_name)
+        readme = repo.get_readme()
+        content = readme.decoded_content.decode('utf-8')
+        result = {
+            'repo': repo_name,
+            'filename': readme.name,
+            'content': content,
+            'size': readme.size,
+            'sha': readme.sha,
+            'url': readme.html_url,
+        }
+        log.info(f'Retrieved README ({readme.name}) for {repo_name}')
+        return result
+    except UnknownObjectException:
+        raise GitHubRepoError(f'Repository not found: {repo_name}')
+    except GithubException as e:
+        # No README found is a common case — return gracefully
+        log.warning(f'No README found for {repo_name}: {e}')
+        return {'repo': repo_name, 'error': 'No README found'}
+
+
+def list_repo_docs(repo_name, path='docs', extensions=None, ref=None):
+    '''
+    List documentation files in a repository directory.
+
+    Default: lists all .md, .rst, .txt files under the given path.
+    Recurses into subdirectories.
+
+    Input:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        path: Directory path to search (default: 'docs').
+        extensions: List of file extensions to include
+            (default: ['.md', '.rst', '.txt']).
+        ref: Git ref (branch, tag, or commit SHA) to list from.
+            Default: repository default branch.
+
+    Output:
+        List of dicts, each containing: path, name, size, sha, url, type.
+        Sorted alphabetically by path.
+
+    Raises:
+        GitHubRepoError: If the repository cannot be found.
+    '''
+    log.debug(f'Entering list_repo_docs(repo_name={repo_name}, path={path}, ref={ref})')
+    gh = get_connection()
+
+    if extensions is None:
+        extensions = ['.md', '.rst', '.txt']
+
+    try:
+        repo = gh.get_repo(repo_name)
+    except UnknownObjectException:
+        raise GitHubRepoError(f'Repository not found: {repo_name}')
+
+    docs = []
+
+    def _recurse(dir_path):
+        '''Recursively collect documentation files from a directory.'''
+        try:
+            # Pass ref so we list files on the correct branch / commit
+            contents = repo.get_contents(dir_path, ref=ref) if ref else repo.get_contents(dir_path)
+        except GithubException:
+            # Path doesn't exist — return gracefully
+            return
+        if not isinstance(contents, list):
+            contents = [contents]
+        for item in contents:
+            if item.type == 'dir':
+                _recurse(item.path)
+            elif item.type == 'file':
+                # Check if file extension matches
+                _, ext = os.path.splitext(item.name)
+                if ext.lower() in extensions:
+                    docs.append({
+                        'path': item.path,
+                        'name': item.name,
+                        'size': item.size,
+                        'sha': item.sha,
+                        'url': item.html_url,
+                        'type': 'file',
+                    })
+
+    _recurse(path)
+    docs.sort(key=lambda d: d['path'])
+
+    log.info(f'Found {len(docs)} doc files in {repo_name}/{path}')
+    return docs
+
+
+def search_repo_docs(repo_name, query, extensions=None):
+    '''
+    Search for documentation files in a repo matching a query string.
+
+    Uses the GitHub code search API scoped to the repository.
+
+    Input:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        query: Search query string to match in file contents.
+        extensions: List of file extensions to search
+            (default: ['.md', '.rst', '.txt']).
+
+    Output:
+        List of dicts (max 20), each containing: path, name, repo, url,
+        score, text_matches.
+
+    Raises:
+        GitHubRepoError: If the repository cannot be found.
+    '''
+    log.debug(f'Entering search_repo_docs(repo_name={repo_name}, query={query!r})')
+    gh = get_connection()
+
+    if extensions is None:
+        extensions = ['.md', '.rst', '.txt']
+
+    # Build search query with repo scope and extension filters
+    ext_parts = ' '.join(f'extension:{ext.lstrip(".")}' for ext in extensions)
+    query_string = f'{query} repo:{repo_name} {ext_parts}'
+
+    try:
+        results = gh.search_code(query_string)
+        docs = []
+        count = 0
+        for item in results:
+            if count >= 20:
+                break
+            text_matches = []
+            if hasattr(item, 'text_matches') and item.text_matches:
+                text_matches = [m.get('fragment', '') if isinstance(m, dict)
+                                else getattr(m, 'fragment', '')
+                                for m in item.text_matches]
+            docs.append({
+                'path': item.path,
+                'name': item.name,
+                'repo': item.repository.full_name,
+                'url': item.html_url,
+                'score': getattr(item, 'score', None),
+                'text_matches': text_matches,
+            })
+            count += 1
+
+        log.info(f'Search found {len(docs)} doc matches for "{query}" in {repo_name}')
+        return docs
+    except RateLimitExceededException:
+        log.warning(f'Rate limit exceeded during doc search in {repo_name}')
+        return []
+    except GithubException as e:
+        log.warning(f'Doc search failed for {repo_name}: {e}')
+        return []
+
+
+# ****************************************************************************************
 # Hygiene analysis — Drucker will call these directly
 # ****************************************************************************************
 
@@ -1826,6 +2005,395 @@ def analyze_extended_hygiene(repo_name, stale_days=5, branch_stale_days=30, tick
 
 
 # ****************************************************************************************
+# Write operations
+# ****************************************************************************************
+
+# Inline fallback for resolve_dry_run so github_utils.py can run standalone
+# without requiring config.env_loader on the import path.
+try:
+    from config.env_loader import resolve_dry_run as _resolve_dry_run
+except ImportError:
+    def _resolve_dry_run(explicit=None):
+        '''Standalone fallback: explicit param > DRY_RUN env var > True.'''
+        if explicit is not None:
+            return explicit
+        env_val = os.environ.get('DRY_RUN', '').strip().lower()
+        if env_val in ('0', 'false', 'no', 'off'):
+            return False
+        return True
+
+
+def get_pr_changed_files(repo_name, pr_number):
+    '''
+    Get the list of files changed in a pull request.
+
+    Input:
+        repo_name: Full repository name (e.g., 'org/repo').
+        pr_number: The pull request number.
+
+    Output:
+        List of dicts, each containing:
+            - filename: Path of the changed file
+            - status: One of 'added', 'removed', 'modified', 'renamed'
+            - additions: Number of lines added
+            - deletions: Number of lines deleted
+            - changes: Total number of line changes
+            - patch: Unified diff patch (may be None for binary files)
+            - sha: Blob SHA of the file
+
+    Raises:
+        GitHubRepoError: If the repository is not accessible.
+        GitHubPRError: If the PR does not exist or files cannot be fetched.
+    '''
+    log.debug(f'Entering get_pr_changed_files(repo_name={repo_name}, pr_number={pr_number})')
+    gh = get_connection()
+
+    try:
+        repo = gh.get_repo(repo_name)
+    except GithubException as e:
+        raise GitHubRepoError(f'Cannot access repository {repo_name}: {e}')
+
+    try:
+        pr = repo.get_pull(int(pr_number))
+        files = pr.get_files()
+        result = []
+        for f in files:
+            result.append({
+                'filename': f.filename,
+                'status': f.status,
+                'additions': f.additions,
+                'deletions': f.deletions,
+                'changes': f.changes,
+                'patch': f.patch,
+                'sha': f.sha,
+            })
+        log.info(f'PR #{pr_number} in {repo_name}: {len(result)} changed files')
+        return result
+    except GithubException as e:
+        raise GitHubPRError(f'Failed to get changed files for PR #{pr_number} in {repo_name}: {e}')
+
+
+def get_file_content(repo_name, path, branch='main'):
+    '''
+    Get the content of a file from a GitHub repository.
+
+    Input:
+        repo_name: Full repository name (e.g., 'org/repo').
+        path: File path within the repository.
+        branch: Branch name (default: 'main').
+
+    Output:
+        Dict containing:
+            - path: File path
+            - content: Decoded file content as string
+            - sha: Blob SHA (needed for updates)
+            - size: File size in bytes
+            - encoding: Content encoding
+        Returns None if the file does not exist.
+
+    Raises:
+        GitHubRepoError: If the repository is not accessible.
+    '''
+    log.debug(f'Entering get_file_content(repo_name={repo_name}, path={path}, branch={branch})')
+    gh = get_connection()
+
+    try:
+        repo = gh.get_repo(repo_name)
+    except GithubException as e:
+        raise GitHubRepoError(f'Cannot access repository {repo_name}: {e}')
+
+    try:
+        contents = repo.get_contents(path, ref=branch)
+        # get_contents can return a list for directories; we only handle files
+        if isinstance(contents, list):
+            log.warning(f'{path} is a directory, not a file')
+            return None
+        result = {
+            'path': contents.path,
+            'content': contents.decoded_content.decode('utf-8'),
+            'sha': contents.sha,
+            'size': contents.size,
+            'encoding': contents.encoding,
+        }
+        log.info(f'Retrieved file {path} from {repo_name}@{branch} ({contents.size} bytes)')
+        return result
+    except UnknownObjectException:
+        log.info(f'File {path} not found in {repo_name}@{branch}')
+        return None
+    except GithubException as e:
+        raise GitHubRepoError(f'Failed to get file {path} from {repo_name}@{branch}: {e}')
+
+
+def create_or_update_file(repo_name, path, content, message, branch='main', dry_run=None):
+    '''
+    Create or update a single file in a GitHub repository.
+
+    MUTATION — dry-run by default.  Pass dry_run=False to execute.
+
+    Input:
+        repo_name: Full repository name (e.g., 'org/repo').
+        path: File path within the repository.
+        content: File content as a string.
+        message: Commit message.
+        branch: Target branch (default: 'main').
+        dry_run: If True (default), preview only — no changes made.
+
+    Output:
+        Dict with operation result.  Dry-run returns a preview dict;
+        execute returns the commit SHA and operation type.
+
+    Raises:
+        GitHubRepoError: If the repository is not accessible or the commit fails.
+    '''
+    log.debug(f'Entering create_or_update_file(repo_name={repo_name}, path={path}, '
+              f'branch={branch}, dry_run={dry_run})')
+    gh = get_connection()
+
+    try:
+        repo = gh.get_repo(repo_name)
+    except GithubException as e:
+        raise GitHubRepoError(f'Cannot access repository {repo_name}: {e}')
+
+    # Check whether the file already exists to decide create vs update
+    existing = get_file_content(repo_name, path, branch=branch)
+    operation = 'update' if existing else 'create'
+
+    if _resolve_dry_run(dry_run):
+        preview = {
+            'dry_run': True,
+            'repo': repo_name,
+            'path': path,
+            'branch': branch,
+            'operation': operation,
+            'content_length': len(content),
+        }
+        log.info(f'Dry-run: would {operation} {path} in {repo_name}@{branch}')
+        return preview
+
+    try:
+        if existing:
+            result = repo.update_file(path, message, content, existing['sha'], branch=branch)
+        else:
+            result = repo.create_file(path, message, content, branch=branch)
+
+        commit_sha = result['commit'].sha
+        log.info(f'{operation.capitalize()}d {path} in {repo_name}@{branch} (commit {commit_sha})')
+        return {
+            'repo': repo_name,
+            'path': path,
+            'branch': branch,
+            'operation': operation,
+            'commit_sha': commit_sha,
+            'content_length': len(content),
+        }
+    except GithubException as e:
+        raise GitHubRepoError(f'Failed to {operation} {path} in {repo_name}@{branch}: {e}')
+
+
+def batch_commit_files(repo_name, files, message, branch='main', dry_run=None):
+    '''
+    Atomically commit multiple files to a GitHub repository via the Git Tree API.
+
+    MUTATION — dry-run by default.  Pass dry_run=False to execute.
+
+    Input:
+        repo_name: Full repository name (e.g., 'org/repo').
+        files: Dict[str, str] mapping path→content, or List of dicts with 'path' and 'content' keys.
+        message: Commit message.
+        branch: Target branch (default: 'main').
+        dry_run: If True (default), preview only — no changes made.
+
+    Output:
+        Dict with operation result.  Dry-run returns a preview dict;
+        execute returns the commit SHA and per-file operations.
+
+    Raises:
+        GitHubRepoError: If the repository is not accessible or the commit fails.
+    '''
+    # Normalize files: accept Dict[str,str] (path→content) or List[Dict] with path+content keys
+    if isinstance(files, dict):
+        files = [{'path': p, 'content': c} for p, c in files.items()]
+
+    log.debug(f'Entering batch_commit_files(repo_name={repo_name}, file_count={len(files)}, '
+              f'branch={branch}, dry_run={dry_run})')
+    gh = get_connection()
+
+    try:
+        repo = gh.get_repo(repo_name)
+    except GithubException as e:
+        raise GitHubRepoError(f'Cannot access repository {repo_name}: {e}')
+
+    if _resolve_dry_run(dry_run):
+        preview = {
+            'dry_run': True,
+            'repo': repo_name,
+            'branch': branch,
+            'file_count': len(files),
+            'files': [{'path': f['path'], 'content_length': len(f['content'])} for f in files],
+        }
+        log.info(f'Dry-run: would batch-commit {len(files)} files to {repo_name}@{branch}')
+        return preview
+
+    try:
+        # Step 1: Create blobs and tree elements for each file
+        elements = []
+        for f in files:
+            blob = repo.create_git_blob(f['content'], 'utf-8')
+            elements.append(InputGitTreeElement(
+                path=f['path'], mode='100644', type='blob', sha=blob.sha,
+            ))
+
+        # Step 2: Get current HEAD and base tree
+        head_sha = repo.get_branch(branch).commit.sha
+        base_tree = repo.get_git_tree(sha=head_sha)
+
+        # Step 3: Create new tree, commit, and update ref
+        new_tree = repo.create_git_tree(elements, base_tree=base_tree)
+        parent = repo.get_git_commit(head_sha)
+        commit = repo.create_git_commit(message, new_tree, [parent])
+        repo.get_git_ref(f'heads/{branch}').edit(sha=commit.sha)
+
+        log.info(f'Batch-committed {len(files)} files to {repo_name}@{branch} '
+                 f'(commit {commit.sha})')
+        return {
+            'repo': repo_name,
+            'branch': branch,
+            'commit_sha': commit.sha,
+            'file_count': len(files),
+            'files': [{'path': f['path'], 'operation': 'committed'} for f in files],
+        }
+    except GithubException as e:
+        raise GitHubRepoError(
+            f'Failed to batch-commit {len(files)} files to {repo_name}@{branch}: {e}'
+        )
+
+
+def post_pr_comment(repo_name, pr_number, body, dry_run=None):
+    '''
+    Post a comment on a GitHub pull request.
+
+    MUTATION — dry-run by default.  Pass dry_run=False to execute.
+
+    Input:
+        repo_name: Full repository name (e.g., 'org/repo').
+        pr_number: The pull request number.
+        body: Comment body text.
+        dry_run: If True (default), preview only — no comment posted.
+
+    Output:
+        Dict with operation result.  Dry-run returns a preview dict;
+        execute returns the comment ID and URL.
+
+    Raises:
+        GitHubRepoError: If the repository is not accessible.
+        GitHubPRError: If the PR does not exist or the comment fails.
+    '''
+    log.debug(f'Entering post_pr_comment(repo_name={repo_name}, pr_number={pr_number}, '
+              f'body_length={len(body)}, dry_run={dry_run})')
+    gh = get_connection()
+
+    try:
+        repo = gh.get_repo(repo_name)
+    except GithubException as e:
+        raise GitHubRepoError(f'Cannot access repository {repo_name}: {e}')
+
+    if _resolve_dry_run(dry_run):
+        preview = {
+            'dry_run': True,
+            'repo': repo_name,
+            'pr_number': int(pr_number),
+            'body_length': len(body),
+            'body_preview': body[:200],
+        }
+        log.info(f'Dry-run: would post comment on PR #{pr_number} in {repo_name}')
+        return preview
+
+    try:
+        pr = repo.get_pull(int(pr_number))
+        comment = pr.create_issue_comment(body)
+        log.info(f'Posted comment {comment.id} on PR #{pr_number} in {repo_name}')
+        return {
+            'repo': repo_name,
+            'pr_number': int(pr_number),
+            'comment_id': comment.id,
+            'html_url': comment.html_url,
+        }
+    except GithubException as e:
+        raise GitHubPRError(
+            f'Failed to post comment on PR #{pr_number} in {repo_name}: {e}'
+        )
+
+
+# ****************************************************************************************
+# Commit status
+# ****************************************************************************************
+
+def post_commit_status(repo_name, sha, state, context='default', description='',
+                       target_url=None, dry_run=None):
+    '''
+    Set a commit status check on a specific SHA.
+
+    MUTATION — dry-run by default.
+
+    Input:
+        repo_name: Full repository name (e.g., 'org/repo').
+        sha: Full commit SHA to set status on.
+        state: One of 'pending', 'success', 'failure', 'error'.
+        context: Status check name (e.g., 'hypatia/documentation').
+        description: Short human-readable description.
+        target_url: Optional URL linking to details.
+        dry_run: If True (default), preview only.
+
+    Output:
+        Dict with status result or dry-run preview.
+    '''
+    log.debug(f'Entering post_commit_status(repo_name={repo_name}, sha={sha[:8]}, '
+              f'state={state}, context={context}, dry_run={dry_run})')
+    gh = get_connection()
+
+    valid_states = ('pending', 'success', 'failure', 'error')
+    if state not in valid_states:
+        raise GitHubPRError(f'Invalid state {state!r}. Must be one of: {valid_states}')
+
+    try:
+        repo = gh.get_repo(repo_name)
+    except GithubException as e:
+        raise GitHubRepoError(f'Cannot access repository {repo_name}: {e}')
+
+    if _resolve_dry_run(dry_run):
+        return {
+            'dry_run': True,
+            'repo': repo_name,
+            'sha': sha,
+            'state': state,
+            'context': context,
+            'description': description,
+        }
+
+    try:
+        commit = repo.get_commit(sha)
+        kwargs = {
+            'state': state,
+            'context': context,
+            'description': description[:140],
+        }
+        if target_url:
+            kwargs['target_url'] = target_url
+        status = commit.create_status(**kwargs)
+        log.info(f'Set status {state!r} on {sha[:8]} in {repo_name} (context={context})')
+        return {
+            'repo': repo_name,
+            'sha': sha,
+            'state': state,
+            'context': context,
+            'status_id': status.id,
+            'url': status.url,
+        }
+    except GithubException as e:
+        raise GitHubPRError(f'Failed to set commit status on {sha[:8]} in {repo_name}: {e}')
+
+
+# ****************************************************************************************
 # Rate limit
 # ****************************************************************************************
 
@@ -1997,6 +2565,30 @@ Examples:
                         help='Full extended hygiene report (all scans)')
     parser.add_argument('--branch-stale-days', type=int, default=30,
                         help='Branch staleness threshold in days (default: 30)')
+
+    # Documentation search
+    parser.add_argument('--get-readme', type=str, metavar='REPO',
+                        help='Get the README content for a repository')
+    parser.add_argument('--list-docs', type=str, metavar='REPO',
+                        help='List documentation files in a repository')
+    parser.add_argument('--search-docs', nargs=2, metavar=('REPO', 'QUERY'),
+                        help='Search documentation files in a repository')
+    parser.add_argument('--docs-path', type=str, default='docs',
+                        help='Directory path for --list-docs (default: docs)')
+
+    # Write operations
+    parser.add_argument('--pr-files', nargs=2, metavar=('REPO', 'NUMBER'),
+                        help='List files changed in a pull request')
+    parser.add_argument('--get-file', nargs='+', metavar=('REPO', 'PATH'),
+                        help='Get file content from a repository (REPO PATH [BRANCH])')
+    parser.add_argument('--commit-file', nargs='+', metavar=('REPO', 'PATH'),
+                        help='Create or update a file (REPO PATH CONTENT MESSAGE [BRANCH])')
+    parser.add_argument('--batch-commit', nargs='+', metavar=('REPO', 'ARG'),
+                        help='Batch commit files (REPO MESSAGE PATH:CONTENT [PATH:CONTENT ...] [--branch BRANCH])')
+    parser.add_argument('--pr-comment', nargs=3, metavar=('REPO', 'NUMBER', 'BODY'),
+                        help='Post a comment on a pull request')
+    parser.add_argument('--execute', action='store_true',
+                        help='Execute mutation operations (default is dry-run)')
 
     # Rate limit
     parser.add_argument('--rate-limit', action='store_true',
@@ -2380,6 +2972,176 @@ def main():
                 output(f'Total open PRs scanned: {report.get("total_open_prs")}')
                 output(f'Total findings: {report.get("total_findings")}')
                 output('')
+
+        # --- Documentation search ---
+
+        if args.get_readme:
+            result = get_repo_readme(args.get_readme)
+            if args.json:
+                output(json.dumps(result, indent=2))
+            else:
+                if 'error' in result:
+                    output('')
+                    output(f'README for {result.get("repo")}: {result.get("error")}')
+                    output('')
+                else:
+                    output('')
+                    output(f'README for {result.get("repo")} — {result.get("filename")}')
+                    output(f'Size: {result.get("size")} bytes  |  URL: {result.get("url")}')
+                    output('=' * 80)
+                    output(result.get('content', ''))
+                    output('')
+
+        if args.list_docs:
+            docs = list_repo_docs(args.list_docs, path=args.docs_path)
+            if args.json:
+                output(json.dumps(docs, indent=2))
+            else:
+                output('')
+                output(f'Documentation files in {args.list_docs}/{args.docs_path}:')
+                output('-' * 100)
+                output(f'{"Path":<50} {"Size":<10} {"URL":<40}')
+                output('-' * 100)
+                for d in docs:
+                    path = d.get('path', '')
+                    size = str(d.get('size', 0))
+                    url = d.get('url', '')
+                    if len(path) > 48:
+                        path = path[:48] + '..'
+                    if len(url) > 38:
+                        url = url[:38] + '..'
+                    output(f'{path:<50} {size:<10} {url:<40}')
+                output('=' * 100)
+                output(f'Total: {len(docs)} documentation files')
+                output('')
+
+        if args.search_docs:
+            repo, query = args.search_docs[0], args.search_docs[1]
+            docs = search_repo_docs(repo, query)
+            if args.json:
+                output(json.dumps(docs, indent=2))
+            else:
+                output('')
+                output(f'Documentation search in {repo} for "{query}":')
+                output('-' * 120)
+                output(f'{"Path":<50} {"Score":<10} {"URL":<40}')
+                output('-' * 120)
+                for d in docs:
+                    path = d.get('path', '')
+                    score = str(d.get('score', ''))
+                    url = d.get('url', '')
+                    if len(path) > 48:
+                        path = path[:48] + '..'
+                    if len(url) > 38:
+                        url = url[:38] + '..'
+                    output(f'{path:<50} {score:<10} {url:<40}')
+                output('=' * 120)
+                output(f'Total: {len(docs)} matches')
+                output('')
+
+        # --- Write operations ---
+
+        if args.pr_files:
+            repo, number = args.pr_files[0], int(args.pr_files[1])
+            files = get_pr_changed_files(repo, number)
+            if args.json:
+                output(json.dumps(files, indent=2))
+            else:
+                output('')
+                output(f'Changed files in PR #{number} for {repo}:')
+                output('-' * 130)
+                output(f'{"Filename":<60} {"Status":<12} {"Additions":<10} {"Deletions":<10} {"Changes":<10}')
+                output('-' * 130)
+                for f in files:
+                    fname = f.get('filename', '')
+                    if len(fname) > 58:
+                        fname = fname[:58] + '..'
+                    output(f'{fname:<60} {f.get("status", ""):<12} '
+                           f'{str(f.get("additions", 0)):<10} '
+                           f'{str(f.get("deletions", 0)):<10} '
+                           f'{str(f.get("changes", 0)):<10}')
+                output('=' * 130)
+                output(f'Total: {len(files)} changed files')
+                output('')
+
+        if args.get_file:
+            parts = args.get_file
+            if len(parts) < 2:
+                output('ERROR: --get-file requires REPO PATH [BRANCH]')
+                sys.exit(1)
+            repo, path = parts[0], parts[1]
+            branch = parts[2] if len(parts) > 2 else 'main'
+            result = get_file_content(repo, path, branch=branch)
+            if result is None:
+                output(f'File {path} not found in {repo}@{branch}')
+            elif args.json:
+                output(json.dumps(result, indent=2))
+            else:
+                output('')
+                output(f'File: {result.get("path")} ({result.get("size")} bytes)')
+                output(f'SHA: {result.get("sha")}')
+                output('=' * 80)
+                output(result.get('content', ''))
+
+        if args.commit_file:
+            parts = args.commit_file
+            if len(parts) < 4:
+                output('ERROR: --commit-file requires REPO PATH CONTENT MESSAGE [BRANCH]')
+                sys.exit(1)
+            repo, path, content, message = parts[0], parts[1], parts[2], parts[3]
+            branch = parts[4] if len(parts) > 4 else 'main'
+            dry = not args.execute
+            result = create_or_update_file(repo, path, content, message, branch=branch, dry_run=dry)
+            if args.json:
+                output(json.dumps(result, indent=2))
+            else:
+                if result.get('dry_run'):
+                    output(f'[DRY-RUN] Would {result.get("operation")} {path} '
+                           f'in {repo}@{branch} ({result.get("content_length")} bytes)')
+                else:
+                    output(f'{result.get("operation").capitalize()}d {path} '
+                           f'in {repo}@{branch} (commit {result.get("commit_sha")})')
+
+        if args.batch_commit:
+            parts = args.batch_commit
+            if len(parts) < 3:
+                output('ERROR: --batch-commit requires REPO MESSAGE PATH:CONTENT [PATH:CONTENT ...]')
+                sys.exit(1)
+            repo, message = parts[0], parts[1]
+            file_specs = parts[2:]
+            files_list = []
+            for spec in file_specs:
+                if ':' not in spec:
+                    output(f'ERROR: Invalid file spec "{spec}" — expected PATH:CONTENT')
+                    sys.exit(1)
+                fpath, fcontent = spec.split(':', 1)
+                files_list.append({'path': fpath, 'content': fcontent})
+            dry = not args.execute
+            result = batch_commit_files(repo, files_list, message, dry_run=dry)
+            if args.json:
+                output(json.dumps(result, indent=2))
+            else:
+                if result.get('dry_run'):
+                    output(f'[DRY-RUN] Would batch-commit {result.get("file_count")} files '
+                           f'to {repo}@{result.get("branch")}')
+                    for f in result.get('files', []):
+                        output(f'  {f.get("path")} ({f.get("content_length")} bytes)')
+                else:
+                    output(f'Batch-committed {result.get("file_count")} files '
+                           f'to {repo}@{result.get("branch")} (commit {result.get("commit_sha")})')
+
+        if args.pr_comment:
+            repo, number, body = args.pr_comment[0], int(args.pr_comment[1]), args.pr_comment[2]
+            dry = not args.execute
+            result = post_pr_comment(repo, number, body, dry_run=dry)
+            if args.json:
+                output(json.dumps(result, indent=2))
+            else:
+                if result.get('dry_run'):
+                    output(f'[DRY-RUN] Would post comment on PR #{number} in {repo} '
+                           f'({result.get("body_length")} chars)')
+                else:
+                    output(f'Posted comment on PR #{number} in {repo}: {result.get("html_url")}')
 
         # --- Rate limit ---
 

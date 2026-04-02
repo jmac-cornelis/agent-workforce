@@ -120,6 +120,70 @@ def create_app() -> FastAPI:
     def health() -> Dict[str, Any]:
         return {'service': 'drucker', 'ok': True}
 
+    @app.get('/v1/info')
+    def info() -> Dict[str, Any]:
+        return {
+            'agent_id': 'drucker',
+            'name': 'Drucker Engineering Hygiene Agent',
+            'version': '1.0.0',
+            'description': (
+                'Deterministic engineering hygiene analysis for Jira ticket quality '
+                'and GitHub PR lifecycle. Zero LLM token usage.'
+            ),
+            'capabilities': [
+                'Jira project-wide hygiene analysis (stale tickets, missing fields, label compliance)',
+                'Single-ticket intake validation',
+                'Recent ticket intake reports',
+                'GitHub PR hygiene (stale PRs, missing reviews, naming compliance)',
+                'GitHub CI failure and merge conflict detection',
+                'Stale branch analysis',
+                'Bug activity reporting',
+            ],
+            'endpoints': [
+                {'method': 'GET', 'path': '/v1/health', 'description': 'Service liveness check'},
+                {'method': 'GET', 'path': '/v1/info', 'description': 'Agent identity and capabilities'},
+                {'method': 'GET', 'path': '/v1/status/stats', 'description': 'Report counts and finding totals'},
+                {'method': 'GET', 'path': '/v1/status/load', 'description': 'Current load state'},
+                {'method': 'GET', 'path': '/v1/status/work-summary', 'description': 'Reports generated today'},
+                {'method': 'GET', 'path': '/v1/status/tokens', 'description': 'Token usage (always zero)'},
+                {'method': 'GET', 'path': '/v1/status/decisions', 'description': 'Recent hygiene reports'},
+                {'method': 'GET', 'path': '/v1/status/decisions/{record_id}', 'description': 'Detail for one report'},
+                {'method': 'POST', 'path': '/v1/hygiene/run', 'description': 'Run project-wide hygiene analysis'},
+                {'method': 'POST', 'path': '/v1/hygiene/issue', 'description': 'Run single-ticket intake validation'},
+                {'method': 'POST', 'path': '/v1/hygiene/intake', 'description': 'Run recent ticket intake report'},
+                {'method': 'GET', 'path': '/v1/hygiene/reports', 'description': 'List stored hygiene reports'},
+                {'method': 'GET', 'path': '/v1/hygiene/report/{report_id}', 'description': 'Get a specific report'},
+                {'method': 'POST', 'path': '/v1/activity/bugs', 'description': 'Bug activity report for a date'},
+                {'method': 'POST', 'path': '/v1/github/pr-hygiene', 'description': 'Full PR hygiene scan'},
+                {'method': 'POST', 'path': '/v1/github/pr-stale', 'description': 'Find stale PRs'},
+                {'method': 'POST', 'path': '/v1/github/pr-reviews', 'description': 'Find PRs missing code review'},
+                {'method': 'GET', 'path': '/v1/github/prs/{owner}/{repo}', 'description': 'List PRs for a repo'},
+                {'method': 'POST', 'path': '/v1/github/naming-compliance', 'description': 'Check branch/PR naming'},
+                {'method': 'POST', 'path': '/v1/github/merge-conflicts', 'description': 'Find PRs with merge conflicts'},
+                {'method': 'POST', 'path': '/v1/github/ci-failures', 'description': 'Find PRs with failing CI'},
+                {'method': 'POST', 'path': '/v1/github/stale-branches', 'description': 'Find stale branches'},
+                {'method': 'POST', 'path': '/v1/github/extended-hygiene', 'description': 'Comprehensive hygiene scan'},
+                {'method': 'POST', 'path': '/v1/poller/tick', 'description': 'Scheduled poller entrypoint'},
+            ],
+            'shannon_commands': [
+                {'command': '/issue-check', 'description': 'Run intake validation for one Jira ticket'},
+                {'command': '/intake-report', 'description': 'Run a recent-ticket intake report'},
+                {'command': '/hygiene-run', 'description': 'Run project-wide hygiene analysis'},
+                {'command': '/hygiene-report', 'description': 'Get a stored report'},
+                {'command': '/hygiene-list', 'description': 'List stored reports'},
+                {'command': '/bug-activity', 'description': 'Bug ticket activity today'},
+                {'command': '/pr-hygiene', 'description': 'Full PR hygiene scan'},
+                {'command': '/pr-stale', 'description': 'Find stale PRs'},
+                {'command': '/pr-reviews', 'description': 'Find PRs missing code review'},
+                {'command': '/pr-list', 'description': 'List open PRs for a repository'},
+                {'command': '/naming-compliance', 'description': 'Check branch/PR naming compliance'},
+                {'command': '/merge-conflicts', 'description': 'Find PRs with merge conflicts'},
+                {'command': '/ci-failures', 'description': 'Find PRs with failing CI checks'},
+                {'command': '/stale-branches', 'description': 'Find stale branches'},
+                {'command': '/extended-hygiene', 'description': 'Run comprehensive extended hygiene analysis'},
+            ],
+        }
+
     @app.get('/v1/status/stats')
     def status_stats() -> Dict[str, Any]:
         reports = store.list_reports(limit=100)
