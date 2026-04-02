@@ -88,10 +88,6 @@ from agents.gantt.state.release_survey_store import GanttReleaseSurveyStore
 from agents.gantt.state.snapshot_store import GanttSnapshotStore
 from agents.hemingway.state.record_store import HemingwayRecordStore
 
-# Legacy compatibility aliases during the rename transition.
-HypatiaDocumentationAgent = HemingwayDocumentationAgent
-HypatiaRecordStore = HemingwayRecordStore
-
 # CRITICAL: Suppress all stdout output from jira_utils.  The MCP protocol
 # uses stdout exclusively for JSON-RPC 2.0 messages; any stray print()
 # would corrupt the transport.
@@ -1348,11 +1344,11 @@ async def list_drucker_reports(
 
 
 # ---------------------------------------------------------------------------
-# Hypatia documentation tools
+# Hemingway documentation tools
 # ---------------------------------------------------------------------------
 
 @_tool_decorator()
-async def generate_hypatia_documentation(
+async def generate_hemingway_documentation(
     title: str,
     doc_type: str = 'engineering_reference',
     project_key: str = '',
@@ -1369,9 +1365,9 @@ async def generate_hypatia_documentation(
     validation_profile: str = 'default',
     persist: bool = True,
 ) -> list[Any]:
-    """Generate a Hypatia documentation record and review session."""
+    """Generate a Hemingway documentation record and review session."""
     try:
-        agent = HypatiaDocumentationAgent(project_key=project_key or None)
+        agent = HemingwayDocumentationAgent(project_key=project_key or None)
         request = DocumentationRequest(
             title=title,
             doc_type=doc_type,
@@ -1394,40 +1390,40 @@ async def generate_hypatia_documentation(
             'review_session': review_session.to_dict(),
         }
         if persist:
-            result['stored'] = HypatiaRecordStore().save_record(
+            result['stored'] = HemingwayRecordStore().save_record(
                 record,
                 summary_markdown=record.summary_markdown,
             )
         return _json_result(result)
     except Exception as e:
-        log.error(f'generate_hypatia_documentation failed: {e}')
+        log.error(f'generate_hemingway_documentation failed: {e}')
         return _error_result(str(e))
 
 
 @_tool_decorator()
-async def get_hypatia_record(doc_id: str) -> list[Any]:
-    """Get a persisted Hypatia documentation record by document ID."""
+async def get_hemingway_record(doc_id: str) -> list[Any]:
+    """Get a persisted Hemingway documentation record by document ID."""
     try:
-        record = HypatiaRecordStore().get_record(doc_id)
+        record = HemingwayRecordStore().get_record(doc_id)
         if not record:
-            return _error_result(f'Hypatia record {doc_id} not found')
+            return _error_result(f'Hemingway record {doc_id} not found')
         return _json_result(record)
     except Exception as e:
-        log.error(f'get_hypatia_record failed: {e}')
+        log.error(f'get_hemingway_record failed: {e}')
         return _error_result(str(e))
 
 
 @_tool_decorator()
-async def list_hypatia_records(
+async def list_hemingway_records(
     doc_type: Optional[str] = None,
     limit: int = 20,
 ) -> list[Any]:
-    """List persisted Hypatia documentation records."""
+    """List persisted Hemingway documentation records."""
     try:
-        rows = HypatiaRecordStore().list_records(doc_type=doc_type, limit=limit)
+        rows = HemingwayRecordStore().list_records(doc_type=doc_type, limit=limit)
         return _json_result(rows)
     except Exception as e:
-        log.error(f'list_hypatia_records failed: {e}')
+        log.error(f'list_hemingway_records failed: {e}')
         return _error_result(str(e))
 
 

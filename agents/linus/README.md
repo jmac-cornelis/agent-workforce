@@ -29,7 +29,7 @@ Linus focuses on high-signal review findings tied to correctness, maintainabilit
 | Agent | Relationship |
 |-------|-------------|
 | Drucker | Drucker owns PR lifecycle; Linus owns review quality |
-| Hypatia | Emits documentation-impact signals |
+| Hemingway | Emits documentation-impact signals |
 | Ada | Emits test-impact signals |
 | Brandeis | Coordinates on compliance-related PR findings |
 

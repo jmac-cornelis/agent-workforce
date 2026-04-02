@@ -25,7 +25,10 @@ from agents.gantt.components import (
     PlanningSummarizer,
     RiskProjector,
 )
-from agents.hemingway.agent import HemingwayDocumentationAgent, HypatiaDocumentationAgent
+from agents.hemingway.agent import HemingwayDocumentationAgent
+
+# Legacy backward-compat alias
+HypatiaDocumentationAgent = HemingwayDocumentationAgent
 from agents.hemingway.models import (
     DocumentationImpactRecord,
     DocumentationPatch,

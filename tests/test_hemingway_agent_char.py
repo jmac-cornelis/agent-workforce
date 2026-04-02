@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from agents.hypatia.models import (
+from agents.hemingway.models import (
     DocumentationPatch,
     DocumentationRecord,
     DocumentationRequest,
@@ -13,12 +13,12 @@ from agents.review_agent import ApprovalStatus, ReviewItem, ReviewSession, Revie
 from tools.base import ToolResult
 
 
-def test_hypatia_agent_builds_record_and_review_session(
+def test_hemingway_agent_builds_record_and_review_session(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents.hypatia.agent import HypatiaDocumentationAgent
-    from agents.hypatia import agent as hypatia_agent_module
+    from agents.hemingway.agent import HemingwayDocumentationAgent
+    from agents.hemingway import agent as hemingway_agent_module
 
     source_path = tmp_path / 'inputs.md'
     source_path.write_text(
@@ -27,12 +27,12 @@ def test_hypatia_agent_builds_record_and_review_session(
     )
 
     monkeypatch.setattr(
-        HypatiaDocumentationAgent,
+        HemingwayDocumentationAgent,
         '_load_prompt_file',
-        staticmethod(lambda: 'hypatia prompt'),
+        staticmethod(lambda: 'hemingway prompt'),
     )
     monkeypatch.setattr(
-        hypatia_agent_module,
+        hemingway_agent_module,
         'create_confluence_page',
         lambda **kwargs: ToolResult.success({
             'mode': 'create',
@@ -42,7 +42,7 @@ def test_hypatia_agent_builds_record_and_review_session(
         }),
     )
 
-    agent = HypatiaDocumentationAgent(project_key='STL')
+    agent = HemingwayDocumentationAgent(project_key='STL')
     record, session = agent.plan_documentation(DocumentationRequest(
         title='Fabric Bring-Up Guide',
         doc_type='how_to',
@@ -71,10 +71,10 @@ def test_hypatia_agent_builds_record_and_review_session(
     assert record.patches[1].preview['preview_available'] is True
 
 
-def test_hypatia_record_store_save_load_list_and_publications(tmp_path):
-    from agents.hypatia.state.record_store import HypatiaRecordStore
+def test_hemingway_record_store_save_load_list_and_publications(tmp_path):
+    from agents.hemingway.state.record_store import HemingwayRecordStore
 
-    store = HypatiaRecordStore(storage_dir=str(tmp_path / 'hypatia'))
+    store = HemingwayRecordStore(storage_dir=str(tmp_path / 'hemingway'))
 
     store.save_record({
         'doc_id': 'doc-001',
@@ -121,12 +121,12 @@ def test_hypatia_record_store_save_load_list_and_publications(tmp_path):
     assert [row['doc_id'] for row in listed] == ['doc-002', 'doc-001']
 
 
-def test_hypatia_publish_approved_executes_repo_and_confluence_targets(
+def test_hemingway_publish_approved_executes_repo_and_confluence_targets(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents.hypatia.agent import HypatiaDocumentationAgent
-    from agents.hypatia import agent as hypatia_agent_module
+    from agents.hemingway.agent import HemingwayDocumentationAgent
+    from agents.hemingway import agent as hemingway_agent_module
     from tools import file_tools as file_tools_module
     from tools import confluence_tools as confluence_tools_module
 
@@ -134,9 +134,9 @@ def test_hypatia_publish_approved_executes_repo_and_confluence_targets(
     source_path.write_text('# System\n\n- Secure link required\n', encoding='utf-8')
 
     monkeypatch.setattr(
-        HypatiaDocumentationAgent,
+        HemingwayDocumentationAgent,
         '_load_prompt_file',
-        staticmethod(lambda: 'hypatia prompt'),
+        staticmethod(lambda: 'hemingway prompt'),
     )
     monkeypatch.setattr(
         ReviewAgent,
@@ -144,7 +144,7 @@ def test_hypatia_publish_approved_executes_repo_and_confluence_targets(
         staticmethod(lambda: 'review prompt'),
     )
     monkeypatch.setattr(
-        hypatia_agent_module,
+        hemingway_agent_module,
         'create_confluence_page',
         lambda **kwargs: ToolResult.success({
             'mode': 'create',
@@ -173,7 +173,7 @@ def test_hypatia_publish_approved_executes_repo_and_confluence_targets(
         ),
     )
 
-    agent = HypatiaDocumentationAgent(project_key='STL')
+    agent = HemingwayDocumentationAgent(project_key='STL')
     record, session = agent.plan_documentation(DocumentationRequest(
         title='Secure Link Notes',
         doc_type='engineering_reference',
@@ -196,19 +196,19 @@ def test_hypatia_publish_approved_executes_repo_and_confluence_targets(
     assert session.items[1].status.value == 'executed'
 
 
-def test_hypatia_strict_validation_requires_source_refs(
+def test_hemingway_strict_validation_requires_source_refs(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents.hypatia.agent import HypatiaDocumentationAgent
+    from agents.hemingway.agent import HemingwayDocumentationAgent
 
     monkeypatch.setattr(
-        HypatiaDocumentationAgent,
+        HemingwayDocumentationAgent,
         '_load_prompt_file',
-        staticmethod(lambda: 'hypatia prompt'),
+        staticmethod(lambda: 'hemingway prompt'),
     )
 
-    agent = HypatiaDocumentationAgent(project_key='STL')
+    agent = HemingwayDocumentationAgent(project_key='STL')
     record, _session = agent.plan_documentation(DocumentationRequest(
         title='Ungrounded Draft',
         doc_type='engineering_reference',
@@ -222,12 +222,12 @@ def test_hypatia_strict_validation_requires_source_refs(
     assert any('source references' in issue.casefold() for issue in record.validation['blocking_issues'])
 
 
-def test_hypatia_sphinx_validation_runs_when_requested(
+def test_hemingway_sphinx_validation_runs_when_requested(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents.hypatia.agent import HypatiaDocumentationAgent
-    from agents.hypatia import agent as hypatia_agent_module
+    from agents.hemingway.agent import HemingwayDocumentationAgent
+    from agents.hemingway import agent as hemingway_agent_module
 
     docs_source = tmp_path / 'docs' / 'source'
     docs_source.mkdir(parents=True)
@@ -238,20 +238,20 @@ def test_hypatia_sphinx_validation_runs_when_requested(
     run_calls = []
 
     monkeypatch.setattr(
-        HypatiaDocumentationAgent,
+        HemingwayDocumentationAgent,
         '_load_prompt_file',
-        staticmethod(lambda: 'hypatia prompt'),
+        staticmethod(lambda: 'hemingway prompt'),
     )
-    monkeypatch.setattr(hypatia_agent_module.shutil, 'which', lambda name: '/usr/bin/sphinx-build')
+    monkeypatch.setattr(hemingway_agent_module.shutil, 'which', lambda name: '/usr/bin/sphinx-build')
     monkeypatch.setattr(
-        hypatia_agent_module.subprocess,
+        hemingway_agent_module.subprocess,
         'run',
         lambda args, capture_output, text, check: (
             run_calls.append(args) or SimpleNamespace(returncode=0, stdout='', stderr='')
         ),
     )
 
-    agent = HypatiaDocumentationAgent(project_key='STL')
+    agent = HemingwayDocumentationAgent(project_key='STL')
     record, _session = agent.plan_documentation(DocumentationRequest(
         title='Sphinx Draft',
         doc_type='engineering_reference',
@@ -266,12 +266,12 @@ def test_hypatia_sphinx_validation_runs_when_requested(
     assert record.patches[0].metadata['sphinx_validation']['validated'] is True
 
 
-def test_workflow_hypatia_generate_writes_record_and_publications(
+def test_workflow_hemingway_generate_writes_record_and_publications(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents.hypatia.cli import cmd_generate as hypatia_cmd_generate
-    from agents.hypatia import agent as hypatia_agent_module
+    from agents.hemingway.cli import cmd_generate as hemingway_cmd_generate
+    from agents.hemingway import agent as hemingway_agent_module
 
     class _FakeReviewAgent:
         def approve_all(self, session):
@@ -279,7 +279,7 @@ def test_workflow_hypatia_generate_writes_record_and_publications(
                 item.status = ApprovalStatus.APPROVED
             return len(session.items)
 
-    class _FakeHypatiaAgent:
+    class _FakeHemingwayAgent:
         def __init__(self, project_key=None, **kwargs):
             self.project_key = project_key
             self.review_agent = _FakeReviewAgent()
@@ -293,7 +293,7 @@ def test_workflow_hypatia_generate_writes_record_and_publications(
                 title=request['title'],
                 doc_type=request['doc_type'],
                 project_key=request['project_key'],
-                summary_markdown='# Hypatia\n\nSummary',
+                summary_markdown='# Hemingway\n\nSummary',
                 validation={'valid': True},
                 patches=[
                     DocumentationPatch(
@@ -334,17 +334,17 @@ def test_workflow_hypatia_generate_writes_record_and_publications(
                     title='Draft',
                     target_type='document',
                     operation='write',
-                    target_ref='docs/hypatia.md',
+                    target_ref='docs/hemingway.md',
                     status='published',
                     published_at='2026-03-16T12:05:00+00:00',
-                    result={'path': 'docs/hypatia.md'},
+                    result={'path': 'docs/hemingway.md'},
                 )
             ]
 
-    monkeypatch.setattr(hypatia_agent_module, 'HypatiaDocumentationAgent', _FakeHypatiaAgent)
-    monkeypatch.setenv('HYPATIA_DOC_DIR', str(tmp_path / 'store'))
+    monkeypatch.setattr(hemingway_agent_module, 'HemingwayDocumentationAgent', _FakeHemingwayAgent)
+    monkeypatch.setenv('HEMINGWAY_DOC_DIR', str(tmp_path / 'store'))
 
-    output_path = tmp_path / 'hypatia_record.json'
+    output_path = tmp_path / 'hemingway_record.json'
     args = SimpleNamespace(
         project='STL',
         doc_title='Draft',
@@ -352,7 +352,7 @@ def test_workflow_hypatia_generate_writes_record_and_publications(
         doc_summary='Build summary',
         docs=[],
         evidence=[],
-        target_file=str(tmp_path / 'docs' / 'hypatia.md'),
+        target_file=str(tmp_path / 'docs' / 'hemingway.md'),
         confluence_title=None,
         confluence_page=None,
         confluence_space=None,
@@ -366,18 +366,18 @@ def test_workflow_hypatia_generate_writes_record_and_publications(
     )
 
     with pytest.raises(SystemExit) as exc_info:
-        hypatia_cmd_generate(args)
+        hemingway_cmd_generate(args)
 
     assert exc_info.value.code == 0
     assert output_path.exists()
-    assert (tmp_path / 'hypatia_record.md').exists()
-    assert (tmp_path / 'hypatia_record_review.json').exists()
-    assert (tmp_path / 'hypatia_record_publications.json').exists()
+    assert (tmp_path / 'hemingway_record.md').exists()
+    assert (tmp_path / 'hemingway_record_review.json').exists()
+    assert (tmp_path / 'hemingway_record_publications.json').exists()
     assert (tmp_path / 'store' / 'doc-101' / 'record.json').exists()
 
     exported = json.loads(output_path.read_text(encoding='utf-8'))
     publications = json.loads(
-        (tmp_path / 'hypatia_record_publications.json').read_text(encoding='utf-8')
+        (tmp_path / 'hemingway_record_publications.json').read_text(encoding='utf-8')
     )
 
     assert exported['doc_id'] == 'doc-101'

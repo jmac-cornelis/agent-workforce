@@ -283,12 +283,12 @@ agents:
         api_path: /v1/release-survey/reports
     timeout_seconds: 30
 
-  - agent_id: hypatia
-    display_name: Hypatia
+  - agent_id: hemingway
+    display_name: Hemingway
     role: Documentation
     description: Source-grounded documentation generation, impact analysis, and review-gated publication
     zone: intelligence_knowledge
-    channel_name: agent-hypatia
+    channel_name: agent-hemingway
     channel_id: "19:7210321d1f45408c94a82b089b543206@thread.tacv2"
     team_id: "19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2"
     api_base_url: http://host.containers.internal:8203
@@ -381,7 +381,7 @@ agents:
             required: false
             label: Jira project key
       - command: /search-docs
-        description: Search Hypatia documentation records by query, project, type, or source
+        description: Search Hemingway documentation records by query, project, type, or source
         api_method: POST
         api_path: /v1/docs/search
         mutation: false

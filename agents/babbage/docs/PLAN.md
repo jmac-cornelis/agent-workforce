@@ -198,7 +198,7 @@ Babbage must support:
 ### Linnaeus
 - consumes accepted mappings to join internal builds, releases, tests, and defects
 
-### Hypatia
+### Hemingway
 - may consume mappings for release notes, as-built docs, and version tables
 
 
@@ -340,7 +340,7 @@ Exit criteria:
 
 Exit criteria:
 - Hedy can consume version mappings without ambiguity
-- Linnaeus and Hypatia can read mappings as stable system records
+- Linnaeus and Hemingway can read mappings as stable system records
 
 
 ## Test and acceptance plan

@@ -45,9 +45,9 @@ channels:
     display_name: '#agent-gantt'
     enabled: true
 
-  hypatia:
+  hemingway:
     channel_id: ''
-    display_name: '#agent-hypatia'
+    display_name: '#agent-hemingway'
     enabled: true
 
   shannon:

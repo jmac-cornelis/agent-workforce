@@ -15,7 +15,7 @@ Herodotus does not become a generic chatbot for meetings. It produces durable, r
 - Extract decisions, action items, and follow-ups
 - Link captured knowledge to relevant Jira tickets and engineering context
 - Maintain a searchable knowledge base of meeting outcomes
-- Surface documentation suggestions to Hypatia
+- Surface documentation suggestions to Hemingway
 
 ## Non-Goals
 
@@ -30,7 +30,7 @@ Herodotus does not become a generic chatbot for meetings. It produces durable, r
 |-------|-------------|
 | Shannon | Receives meeting notification signals |
 | Drucker | Provides Jira context for linking action items |
-| Hypatia | Feeds documentation suggestions |
+| Hemingway | Feeds documentation suggestions |
 | Gantt | Provides planning context for decision linking |
 
 ## Zone

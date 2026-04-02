@@ -11,7 +11,7 @@ Babbage is the version-mapping agent for the platform. It connects internal buil
 - Map internal Fuze build IDs to external customer-facing version strings
 - Detect and prevent version mapping conflicts
 - Maintain lineage and audit trail for all version assignments
-- Serve version lookups for other agents (Hedy, Linnaeus, Hypatia)
+- Serve version lookups for other agents (Hedy, Linnaeus, Hemingway)
 - Track version progression across branches and release trains
 
 ## Non-Goals
@@ -27,7 +27,7 @@ Babbage is the version-mapping agent for the platform. It connects internal buil
 | Josephine | Receives internal build identity |
 | Hedy | Receives release intent and scope |
 | Linnaeus | Provides version facts for traceability |
-| Hypatia | Provides version context for documentation |
+| Hemingway | Provides version context for documentation |
 
 ## Zone
 

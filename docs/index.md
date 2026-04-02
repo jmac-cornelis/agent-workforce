@@ -8,7 +8,7 @@ The Cornelis Networks Agent Workforce is a coordinated system of AI-powered agen
 |-------|------|------|-------------|
 | [Drucker](agents/drucker.md) | Engineering Hygiene | 8201 | Jira ticket quality analysis + GitHub PR lifecycle scanning |
 | [Gantt](agents/gantt.md) | Project Planning | 8202 | Planning snapshots, release monitoring, dependency review |
-| [Hypatia](agents/hypatia.md) | Documentation | 8203 | Source-grounded documentation generation and publication |
+| [Hemingway](agents/hemingway.md) | Documentation | 8203 | Source-grounded documentation generation and publication |
 | [Shannon](agents/shannon.md) | Communications | 8200 | Microsoft Teams bot — routing surface for all agents |
 
 ## Three Access Surfaces
@@ -30,8 +30,8 @@ drucker-agent hygiene --project-key STL --stale-days 30
 # Run Gantt planning snapshot
 gantt-agent snapshot --project-key STL --planning-horizon 90
 
-# Generate documentation with Hypatia
-hypatia-agent generate --doc-title "Module Overview" --docs src/module/
+# Generate documentation with Hemingway
+hemingway-agent generate --doc-title "Module Overview" --docs src/module/
 
 # Start Shannon API server
 uvicorn shannon.app:app --host 0.0.0.0 --port 8200

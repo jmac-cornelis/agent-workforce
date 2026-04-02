@@ -11,11 +11,11 @@ def _payload(result):
 
 
 @pytest.mark.asyncio
-async def test_generate_hypatia_documentation_tool(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
-    from agents.hypatia.models import DocumentationPatch, DocumentationRecord
+async def test_generate_hemingway_documentation_tool(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
+    from agents.hemingway.models import DocumentationPatch, DocumentationRecord
     from agents.review_agent import ReviewItem, ReviewSession
 
-    class _FakeHypatiaAgent:
+    class _FakeHemingwayAgent:
         def __init__(self, project_key=None, **_kwargs):
             self.project_key = project_key
 
@@ -27,7 +27,7 @@ async def test_generate_hypatia_documentation_tool(import_mcp_server, monkeypatc
                 title=request.title,
                 doc_type=request.doc_type,
                 project_key=request.project_key,
-                summary_markdown='# Hypatia',
+                summary_markdown='# Hemingway',
                 validation={'valid': True},
                 evidence_summary={'record_count': 1, 'by_type': {'release': 1}},
                 patches=[
@@ -49,12 +49,12 @@ async def test_generate_hypatia_documentation_tool(import_mcp_server, monkeypatc
 
     class _FakeStore:
         def save_record(self, record, summary_markdown=None):
-            return {'doc_id': record.doc_id, 'storage_dir': '/tmp/hypatia/doc-401'}
+            return {'doc_id': record.doc_id, 'storage_dir': '/tmp/hemingway/doc-401'}
 
-    monkeypatch.setattr(import_mcp_server, 'HypatiaDocumentationAgent', _FakeHypatiaAgent)
-    monkeypatch.setattr(import_mcp_server, 'HypatiaRecordStore', _FakeStore)
+    monkeypatch.setattr(import_mcp_server, 'HemingwayDocumentationAgent', _FakeHemingwayAgent)
+    monkeypatch.setattr(import_mcp_server, 'HemingwayRecordStore', _FakeStore)
 
-    result = await import_mcp_server.generate_hypatia_documentation(
+    result = await import_mcp_server.generate_hemingway_documentation(
         title='Release Notes Support',
         doc_type='release_note_support',
         project_key='STL',
@@ -69,7 +69,7 @@ async def test_generate_hypatia_documentation_tool(import_mcp_server, monkeypatc
 
 
 @pytest.mark.asyncio
-async def test_get_and_list_hypatia_records_tools(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
+async def test_get_and_list_hemingway_records_tools(import_mcp_server, monkeypatch: pytest.MonkeyPatch):
     class _FakeStore:
         def get_record(self, doc_id):
             assert doc_id == 'doc-501'
@@ -80,10 +80,10 @@ async def test_get_and_list_hypatia_records_tools(import_mcp_server, monkeypatch
             assert limit == 5
             return [{'doc_id': 'doc-501', 'doc_type': doc_type}]
 
-    monkeypatch.setattr(import_mcp_server, 'HypatiaRecordStore', _FakeStore)
+    monkeypatch.setattr(import_mcp_server, 'HemingwayRecordStore', _FakeStore)
 
-    get_result = await import_mcp_server.get_hypatia_record('doc-501')
-    list_result = await import_mcp_server.list_hypatia_records(
+    get_result = await import_mcp_server.get_hemingway_record('doc-501')
+    list_result = await import_mcp_server.list_hemingway_records(
         doc_type='engineering_reference',
         limit=5,
     )

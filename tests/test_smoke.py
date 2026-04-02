@@ -44,10 +44,10 @@ def test_import_drucker_tools_class():
     assert DruckerTools is not None
 
 
-def test_import_hypatia_tools_class():
-    from agents.hypatia.tools import HypatiaTools
+def test_import_hemingway_tools_class():
+    from agents.hemingway.tools import HemingwayTools
 
-    assert HypatiaTools is not None
+    assert HemingwayTools is not None
 
 
 def test_import_excel_tools_class():
@@ -92,10 +92,10 @@ def test_import_drucker_agent_class():
     assert DruckerCoordinatorAgent is not None
 
 
-def test_import_hypatia_agent_class():
-    from agents.hypatia.agent import HypatiaDocumentationAgent
+def test_import_hemingway_agent_class():
+    from agents.hemingway.agent import HemingwayDocumentationAgent
 
-    assert HypatiaDocumentationAgent is not None
+    assert HemingwayDocumentationAgent is not None
 
 
 def test_import_shannon_service_package():
@@ -138,10 +138,10 @@ def test_import_drucker_report_store():
     assert DruckerReportStore is not None
 
 
-def test_import_hypatia_record_store():
-    from agents.hypatia.state.record_store import HypatiaRecordStore
+def test_import_hemingway_record_store():
+    from agents.hemingway.state.record_store import HemingwayRecordStore
 
-    assert HypatiaRecordStore is not None
+    assert HemingwayRecordStore is not None
 
 
 def test_import_gantt_dependency_review_store():
@@ -154,15 +154,15 @@ def test_import_tools_package_exports():
     from tools import (
         DruckerTools,
         GanttTools,
-        HypatiaTools,
+        HemingwayTools,
         KnowledgeTools,
         WebSearchTools,
         MCPTools,
         create_drucker_hygiene_report,
         create_gantt_snapshot,
-        generate_hypatia_documentation,
+        generate_hemingway_documentation,
         get_drucker_report,
-        get_hypatia_record,
+        get_hemingway_record,
         review_gantt_dependency,
         list_gantt_dependency_reviews,
         search_knowledge,
@@ -172,15 +172,15 @@ def test_import_tools_package_exports():
 
     assert DruckerTools is not None
     assert GanttTools is not None
-    assert HypatiaTools is not None
+    assert HemingwayTools is not None
     assert KnowledgeTools is not None
     assert WebSearchTools is not None
     assert MCPTools is not None
     assert callable(create_drucker_hygiene_report)
     assert callable(create_gantt_snapshot)
-    assert callable(generate_hypatia_documentation)
+    assert callable(generate_hemingway_documentation)
     assert callable(get_drucker_report)
-    assert callable(get_hypatia_record)
+    assert callable(get_hemingway_record)
     assert callable(review_gantt_dependency)
     assert callable(list_gantt_dependency_reviews)
     assert callable(search_knowledge)

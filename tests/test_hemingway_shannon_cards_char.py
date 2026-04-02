@@ -1,18 +1,18 @@
 ##########################################################################################
 #
-# Module: tests/test_hypatia_shannon_cards_char.py
+# Module: tests/test_hemingway_shannon_cards_char.py
 #
-# Description: Characterization tests for the 4 Hypatia card builders in shannon/cards.py.
+# Description: Characterization tests for the 4 Hemingway card builders in shannon/cards.py.
 #
 # Author: Cornelis Networks
 #
 ##########################################################################################
 
 from shannon.cards import (
-    build_hypatia_doc_card,
-    build_hypatia_impact_card,
-    build_hypatia_records_card,
-    build_hypatia_publication_card,
+    build_hemingway_doc_card,
+    build_hemingway_impact_card,
+    build_hemingway_records_card,
+    build_hemingway_publication_card,
 )
 
 
@@ -54,10 +54,10 @@ def _body_texts(card: dict) -> list[str]:
 
 
 # ===========================================================================
-# A) build_hypatia_doc_card
+# A) build_hemingway_doc_card
 # ===========================================================================
 
-def test_hypatia_doc_card_typical():
+def test_hemingway_doc_card_typical():
     '''Card with typical data shows facts, patches, validation, and warnings.'''
     data = {
         'doc_id': 'DOC-001',
@@ -71,7 +71,7 @@ def test_hypatia_doc_card_typical():
         'content_markdown': '# Architecture\n\nThis document describes...',
     }
 
-    card = build_hypatia_doc_card(data)
+    card = build_hemingway_doc_card(data)
 
     _card_schema_ok(card)
 
@@ -94,11 +94,11 @@ def test_hypatia_doc_card_typical():
     assert '**Preview:**' in body
 
 
-def test_hypatia_doc_card_empty_minimal():
+def test_hemingway_doc_card_empty_minimal():
     '''Card with empty/minimal data still produces valid schema.'''
     data = {}
 
-    card = build_hypatia_doc_card(data)
+    card = build_hemingway_doc_card(data)
 
     _card_schema_ok(card)
 
@@ -115,7 +115,7 @@ def test_hypatia_doc_card_empty_minimal():
     assert '**Preview:**' not in body
 
 
-def test_hypatia_doc_card_long_content_truncated():
+def test_hemingway_doc_card_long_content_truncated():
     '''Content preview is truncated at 200 chars with ellipsis.'''
     long_content = 'A' * 300
     data = {
@@ -124,7 +124,7 @@ def test_hypatia_doc_card_long_content_truncated():
         'content_markdown': long_content,
     }
 
-    card = build_hypatia_doc_card(data)
+    card = build_hemingway_doc_card(data)
     _card_schema_ok(card)
 
     texts = _body_texts(card)
@@ -137,10 +137,10 @@ def test_hypatia_doc_card_long_content_truncated():
 
 
 # ===========================================================================
-# B) build_hypatia_impact_card
+# B) build_hemingway_impact_card
 # ===========================================================================
 
-def test_hypatia_impact_card_with_targets_and_blockers():
+def test_hemingway_impact_card_with_targets_and_blockers():
     '''Card with affected targets and blocking issues shows both sections.'''
     data = {
         'impact_id': 'IMP-101',
@@ -152,7 +152,7 @@ def test_hypatia_impact_card_with_targets_and_blockers():
         'blocking_issues': ['STL-1234', 'STL-5678'],
     }
 
-    card = build_hypatia_impact_card(data)
+    card = build_hemingway_impact_card(data)
 
     _card_schema_ok(card)
 
@@ -175,7 +175,7 @@ def test_hypatia_impact_card_with_targets_and_blockers():
     assert 'STL-5678' in body
 
 
-def test_hypatia_impact_card_no_impacts():
+def test_hemingway_impact_card_no_impacts():
     '''Card with no targets, reasons, or blockers shows fallback message.'''
     data = {
         'impact_id': 'IMP-102',
@@ -187,7 +187,7 @@ def test_hypatia_impact_card_no_impacts():
         'blocking_issues': [],
     }
 
-    card = build_hypatia_impact_card(data)
+    card = build_hemingway_impact_card(data)
 
     _card_schema_ok(card)
 
@@ -197,7 +197,7 @@ def test_hypatia_impact_card_no_impacts():
     assert '**Affected Targets:**' not in body
 
 
-def test_hypatia_impact_card_truncates_targets_at_five():
+def test_hemingway_impact_card_truncates_targets_at_five():
     '''Affected targets list is capped at 5 with a "...and N more" trailer.'''
     targets = [f'target-{i}' for i in range(1, 9)]
     data = {
@@ -208,7 +208,7 @@ def test_hypatia_impact_card_truncates_targets_at_five():
         'affected_targets': targets,
     }
 
-    card = build_hypatia_impact_card(data)
+    card = build_hemingway_impact_card(data)
     _card_schema_ok(card)
 
     texts = _body_texts(card)
@@ -221,7 +221,7 @@ def test_hypatia_impact_card_truncates_targets_at_five():
 
 
 # ===========================================================================
-# C) build_hypatia_records_card
+# C) build_hemingway_records_card
 # ===========================================================================
 
 def _record_item(doc_id: str = 'DOC-001', title: str = 'Some Doc',
@@ -235,7 +235,7 @@ def _record_item(doc_id: str = 'DOC-001', title: str = 'Some Doc',
     }
 
 
-def test_hypatia_records_card_multiple():
+def test_hemingway_records_card_multiple():
     '''Card with multiple records shows each record line.'''
     data = {
         'total': 3,
@@ -246,7 +246,7 @@ def test_hypatia_records_card_multiple():
         ],
     }
 
-    card = build_hypatia_records_card(data)
+    card = build_hemingway_records_card(data)
 
     _card_schema_ok(card)
 
@@ -262,14 +262,14 @@ def test_hypatia_records_card_multiple():
     assert '**DOC-003**' in body
 
 
-def test_hypatia_records_card_empty():
+def test_hemingway_records_card_empty():
     '''Card with no records shows fallback message.'''
     data = {
         'total': 0,
         'records': [],
     }
 
-    card = build_hypatia_records_card(data)
+    card = build_hemingway_records_card(data)
 
     _card_schema_ok(card)
 
@@ -281,7 +281,7 @@ def test_hypatia_records_card_empty():
     assert 'No documentation records found.' in body
 
 
-def test_hypatia_records_card_truncates_at_ten():
+def test_hemingway_records_card_truncates_at_ten():
     '''Records list is capped at 10 with a "...and N more" trailer.'''
     records = [_record_item(f'DOC-{i:03d}', f'Doc {i}') for i in range(1, 15)]
     data = {
@@ -289,7 +289,7 @@ def test_hypatia_records_card_truncates_at_ten():
         'records': records,
     }
 
-    card = build_hypatia_records_card(data)
+    card = build_hemingway_records_card(data)
     _card_schema_ok(card)
 
     texts = _body_texts(card)
@@ -304,10 +304,10 @@ def test_hypatia_records_card_truncates_at_ten():
 
 
 # ===========================================================================
-# D) build_hypatia_publication_card
+# D) build_hemingway_publication_card
 # ===========================================================================
 
-def test_hypatia_publication_card_with_publications():
+def test_hemingway_publication_card_with_publications():
     '''Card with successful publications shows each target line.'''
     data = {
         'doc_id': 'DOC-050',
@@ -318,7 +318,7 @@ def test_hypatia_publication_card_with_publications():
         ],
     }
 
-    card = build_hypatia_publication_card(data)
+    card = build_hemingway_publication_card(data)
 
     _card_schema_ok(card)
 
@@ -333,7 +333,7 @@ def test_hypatia_publication_card_with_publications():
     assert 'markdown: written (docs/psm3-guide.md)' in body
 
 
-def test_hypatia_publication_card_no_publications():
+def test_hemingway_publication_card_no_publications():
     '''Card with no publications shows fallback message.'''
     data = {
         'doc_id': 'DOC-051',
@@ -341,7 +341,7 @@ def test_hypatia_publication_card_no_publications():
         'publications': [],
     }
 
-    card = build_hypatia_publication_card(data)
+    card = build_hemingway_publication_card(data)
 
     _card_schema_ok(card)
 

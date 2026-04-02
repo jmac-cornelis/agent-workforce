@@ -29,7 +29,7 @@ Linus is named for Linus Torvalds, the creator of Linux and Git, two foundationa
 - Linus evaluates code and policy risk in the PR
 - Josephine may consume build-relevant risk signals
 - Ada may consume test-scope hints from review findings
-- Hypatia may consume documentation-impact signals
+- Hemingway may consume documentation-impact signals
 - humans remain the approval authority for consequential merges
 
 
@@ -93,7 +93,7 @@ sequenceDiagram
 sequenceDiagram
     participant L as Linus
     participant EB as Event Bus
-    participant Hy as Hypatia
+    participant Hy as Hemingway
     participant A as Ada
     participant J as Josephine
     L->>L: Detect doc impact in PR
@@ -114,7 +114,7 @@ sequenceDiagram
 - repository, branch, commit, and diff metadata
 - policy profile selection inputs
 - optional prior review history on the PR
-- optional build/test/doc context from Josephine, Ada, or Hypatia for re-review enrichment
+- optional build/test/doc context from Josephine, Ada, or Hemingway for re-review enrichment
 
 ### Outputs
 Linus should produce:
@@ -141,7 +141,7 @@ V1 should explicitly support:
 - uncertain findings should be marked as low-confidence, not stated as fact
 - review output should be path-aware and language-aware
 - low-signal bulk commenting should be suppressed
-- documentation-impact findings should be emitted separately so Hypatia can consume them cleanly
+- documentation-impact findings should be emitted separately so Hemingway can consume them cleanly
 
 
 ## Public API and contracts
@@ -244,7 +244,7 @@ Normalize:
 - requested reviewers
 
 ### 2. Shared source-reference model
-Use a common record shape for file path, line, commit, and PR references so Linus, Hypatia, and Linnaeus speak the same language.
+Use a common record shape for file path, line, commit, and PR references so Linus, Hemingway, and Linnaeus speak the same language.
 
 ### 3. Review-result schema
 Publish machine-readable review findings with:
@@ -257,7 +257,7 @@ Publish machine-readable review findings with:
 
 ### 4. Review-to-agent handoff events
 Emit explicit downstream signals for:
-- documentation impact to Hypatia
+- documentation impact to Hemingway
 - test attention to Ada
 - build-risk hints to Josephine when the PR touches build-critical areas
 
@@ -347,7 +347,7 @@ Exit criteria:
 
 ### Phase 3. Cross-agent impact signals
 - emit documentation-impact, test-attention, and build-risk signals
-- connect review results to Hypatia, Ada, and Josephine
+- connect review results to Hemingway, Ada, and Josephine
 
 Exit criteria:
 - downstream agents can consume Linus outputs without parsing prose
@@ -374,7 +374,7 @@ Exit criteria:
 - advisory status reflects policy failures accurately
 
 ### Cross-agent behavior
-- documentation-impact finding emits a clean signal to Hypatia
+- documentation-impact finding emits a clean signal to Hemingway
 - test-attention finding emits a clean signal to Ada
 - build-critical change can emit a bounded signal to Josephine
 

@@ -5,10 +5,6 @@ Hemingway should be the documentation agent for the platform. Its v1 job is to t
 
 Hemingway should not be a prose generator detached from implementation truth. It should produce documentation from authoritative system records.
 
-## Namesake
-
-Hemingway is named for Ernest Hemingway, one of the most famous authors of the twentieth century, known for prose that was clear, direct, and economical without losing meaning. We use his name for the documentation agent because Hemingway should produce writing that is grounded, readable, and stripped of unnecessary fluff.
-
 
 ## Product definition
 ### Goal

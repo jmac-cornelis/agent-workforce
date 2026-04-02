@@ -1,6 +1,6 @@
 ##########
-# Module:      test_hypatia_confluence_publish_char.py
-# Description: Characterization tests for Hypatia Confluence publish functionality.
+# Module:      test_hemingway_confluence_publish_char.py
+# Description: Characterization tests for Hemingway Confluence publish functionality.
 #              Covers the POST /v1/docs/confluence/publish-page API endpoint,
 #              the confluence-publish CLI subcommand, and the Shannon card builder.
 # Author:      Cornelis Networks Engineering Tools
@@ -16,7 +16,7 @@ from tools.base import ToolResult
 
 
 # ---------------------------------------------------------------------------
-# Helpers — card assertion utilities (mirrors test_hypatia_shannon_cards_char)
+# Helpers — card assertion utilities (mirrors test_hemingway_shannon_cards_char)
 # ---------------------------------------------------------------------------
 
 def _card_schema_ok(card: dict) -> None:
@@ -59,7 +59,7 @@ def _body_texts(card: dict) -> list[str]:
 @pytest.fixture
 def client(monkeypatch):
     '''
-    Create a Starlette TestClient for the Hypatia API.
+    Create a Starlette TestClient for the Hemingway API.
 
     The confluence tools are lazily imported inside the endpoint function,
     so we patch them on the tools.confluence_tools module which is where
@@ -68,7 +68,7 @@ def client(monkeypatch):
     # Ensure DRY_RUN defaults to '1' for safety
     monkeypatch.setenv('DRY_RUN', '1')
 
-    import agents.hypatia.api as api_mod
+    import agents.hemingway.api as api_mod
 
     # Reset session counters for isolation
     monkeypatch.setattr(api_mod, '_run_count', 0)
@@ -310,7 +310,7 @@ class TestConfluencePublishAPI:
 # ---------------------------------------------------------------------------
 
 class TestConfluencePublishCLI:
-    '''Tests for cmd_confluence_publish in agents/hypatia/cli.py.'''
+    '''Tests for cmd_confluence_publish in agents/hemingway/cli.py.'''
 
     def test_cli_confluence_publish_create(self, monkeypatch, tmp_path):
         '''CLI create operation calls create_confluence_page and exits 0.'''
@@ -332,7 +332,7 @@ class TestConfluencePublishCLI:
         # Prevent dotenv from loading real .env
         monkeypatch.setattr('dotenv.load_dotenv', lambda *a, **kw: None)
 
-        from agents.hypatia.cli import cmd_confluence_publish
+        from agents.hemingway.cli import cmd_confluence_publish
 
         args = SimpleNamespace(
             input_file=str(md_file),
@@ -373,7 +373,7 @@ class TestConfluencePublishCLI:
         )
         monkeypatch.setattr('dotenv.load_dotenv', lambda *a, **kw: None)
 
-        from agents.hypatia.cli import cmd_confluence_publish
+        from agents.hemingway.cli import cmd_confluence_publish
 
         args = SimpleNamespace(
             input_file=str(md_file),
@@ -398,15 +398,15 @@ class TestConfluencePublishCLI:
 
 
 # ---------------------------------------------------------------------------
-# C) Shannon card builder — build_hypatia_confluence_publish_card
+# C) Shannon card builder — build_hemingway_confluence_publish_card
 # ---------------------------------------------------------------------------
 
 class TestConfluencePublishCard:
-    '''Tests for build_hypatia_confluence_publish_card in shannon/cards.py.'''
+    '''Tests for build_hemingway_confluence_publish_card in shannon/cards.py.'''
 
     def test_confluence_publish_card_success(self):
         '''Success data produces a valid card with page facts.'''
-        from shannon.cards import build_hypatia_confluence_publish_card
+        from shannon.cards import build_hemingway_confluence_publish_card
 
         data = {
             'page_id': '12345',
@@ -417,7 +417,7 @@ class TestConfluencePublishCard:
             'dry_run': False,
         }
 
-        card = build_hypatia_confluence_publish_card(data)
+        card = build_hemingway_confluence_publish_card(data)
 
         _card_schema_ok(card)
 
@@ -441,7 +441,7 @@ class TestConfluencePublishCard:
 
     def test_confluence_publish_card_dry_run(self):
         '''Dry-run data shows preview indicator in title and body.'''
-        from shannon.cards import build_hypatia_confluence_publish_card
+        from shannon.cards import build_hemingway_confluence_publish_card
 
         data = {
             'page_id': '99999',
@@ -451,7 +451,7 @@ class TestConfluencePublishCard:
             'dry_run': True,
         }
 
-        card = build_hypatia_confluence_publish_card(data)
+        card = build_hemingway_confluence_publish_card(data)
 
         _card_schema_ok(card)
 
@@ -464,9 +464,9 @@ class TestConfluencePublishCard:
 
     def test_confluence_publish_card_empty_data(self):
         '''Empty dict produces a valid card without crashing.'''
-        from shannon.cards import build_hypatia_confluence_publish_card
+        from shannon.cards import build_hemingway_confluence_publish_card
 
-        card = build_hypatia_confluence_publish_card({})
+        card = build_hemingway_confluence_publish_card({})
 
         _card_schema_ok(card)
 

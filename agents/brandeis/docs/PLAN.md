@@ -197,7 +197,7 @@ sbom.updated
 
 Brandeis
 
-Linnaeus, Hypatia
+Linnaeus, Hemingway
 
 SBOM regenerated for a build/release
 

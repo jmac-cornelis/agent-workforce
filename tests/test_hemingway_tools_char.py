@@ -1,22 +1,22 @@
 import pytest
 
-from agents.hypatia.tools import (
-    HypatiaTools,
-    generate_hypatia_documentation,
-    get_hypatia_record,
-    list_hypatia_records,
+from agents.hemingway.tools import (
+    HemingwayTools,
+    generate_hemingway_documentation,
+    get_hemingway_record,
+    list_hemingway_records,
 )
 
 
-def test_generate_hypatia_documentation_tool_persists_record(
+def test_generate_hemingway_documentation_tool_persists_record(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path,
 ):
-    from agents.hypatia import agent as hypatia_agent_module
-    from agents.hypatia.models import DocumentationPatch, DocumentationRecord
+    from agents.hemingway import agent as hemingway_agent_module
+    from agents.hemingway.models import DocumentationPatch, DocumentationRecord
     from agents.review_agent import ReviewItem, ReviewSession
 
-    class _FakeHypatiaAgent:
+    class _FakeHemingwayAgent:
         def __init__(self, project_key=None, **_kwargs):
             self.project_key = project_key
 
@@ -28,7 +28,7 @@ def test_generate_hypatia_documentation_tool_persists_record(
                 title=request.title,
                 doc_type=request.doc_type,
                 project_key=request.project_key,
-                summary_markdown='# Hypatia\n\nSummary',
+                summary_markdown='# Hemingway\n\nSummary',
                 validation={'valid': True},
                 evidence_summary={'record_count': 1, 'by_type': {'release': 1}},
                 patches=[
@@ -49,10 +49,10 @@ def test_generate_hypatia_documentation_tool_persists_record(
             )
             return record, session
 
-    monkeypatch.setattr(hypatia_agent_module, 'HypatiaDocumentationAgent', _FakeHypatiaAgent)
-    monkeypatch.setenv('HYPATIA_DOC_DIR', str(tmp_path / 'store'))
+    monkeypatch.setattr(hemingway_agent_module, 'HemingwayDocumentationAgent', _FakeHemingwayAgent)
+    monkeypatch.setenv('HEMINGWAY_DOC_DIR', str(tmp_path / 'store'))
 
-    result = generate_hypatia_documentation(
+    result = generate_hemingway_documentation(
         title='Release Notes Support',
         doc_type='release_note_support',
         project_key='STL',
@@ -69,10 +69,10 @@ def test_generate_hypatia_documentation_tool_persists_record(
     assert (tmp_path / 'store' / 'doc-201' / 'record.json').exists()
 
 
-def test_get_and_list_hypatia_records_tools(monkeypatch: pytest.MonkeyPatch, tmp_path):
-    from agents.hypatia.state.record_store import HypatiaRecordStore
+def test_get_and_list_hemingway_records_tools(monkeypatch: pytest.MonkeyPatch, tmp_path):
+    from agents.hemingway.state.record_store import HemingwayRecordStore
 
-    store = HypatiaRecordStore(storage_dir=str(tmp_path / 'store'))
+    store = HemingwayRecordStore(storage_dir=str(tmp_path / 'store'))
     store.save_record({
         'doc_id': 'doc-301',
         'title': 'Guide',
@@ -83,10 +83,10 @@ def test_get_and_list_hypatia_records_tools(monkeypatch: pytest.MonkeyPatch, tmp
         'summary_markdown': '# Guide',
     }, summary_markdown='# Guide')
 
-    monkeypatch.setenv('HYPATIA_DOC_DIR', str(tmp_path / 'store'))
+    monkeypatch.setenv('HEMINGWAY_DOC_DIR', str(tmp_path / 'store'))
 
-    get_result = get_hypatia_record('doc-301')
-    list_result = list_hypatia_records(doc_type='engineering_reference', limit=5)
+    get_result = get_hemingway_record('doc-301')
+    list_result = list_hemingway_records(doc_type='engineering_reference', limit=5)
 
     assert get_result.is_success
     assert get_result.data['record']['doc_id'] == 'doc-301'
@@ -94,9 +94,9 @@ def test_get_and_list_hypatia_records_tools(monkeypatch: pytest.MonkeyPatch, tmp
     assert list_result.data[0]['doc_id'] == 'doc-301'
 
 
-def test_hypatia_tools_collection_registers_methods():
-    tools = HypatiaTools()
+def test_hemingway_tools_collection_registers_methods():
+    tools = HemingwayTools()
 
-    assert tools.get_tool('generate_hypatia_documentation') is not None
-    assert tools.get_tool('get_hypatia_record') is not None
-    assert tools.get_tool('list_hypatia_records') is not None
+    assert tools.get_tool('generate_hemingway_documentation') is not None
+    assert tools.get_tool('get_hemingway_record') is not None
+    assert tools.get_tool('list_hemingway_records') is not None

@@ -2339,7 +2339,7 @@ def post_commit_status(repo_name, sha, state, context='default', description='',
         repo_name: Full repository name (e.g., 'org/repo').
         sha: Full commit SHA to set status on.
         state: One of 'pending', 'success', 'failure', 'error'.
-        context: Status check name (e.g., 'hypatia/documentation').
+        context: Status check name (e.g., 'hemingway/documentation').
         description: Short human-readable description.
         target_url: Optional URL linking to details.
         dry_run: If True (default), preview only.

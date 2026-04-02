@@ -11,7 +11,7 @@ it actually needs (**least-privilege principle**).
 |------|--------|-------------------|
 | `shared.env` | Non-sensitive shared config | All agents |
 | `jira.env` | Jira credentials | Drucker, Gantt, Hedy, Babbage, Linnaeus, Nightingale, Brooks |
-| `llm.env` | LLM provider keys | Shannon, Drucker, Gantt, Hypatia, Ada, Curie, Hedy, Linus, Herodotus, Nightingale, Brooks |
+| `llm.env` | LLM provider keys | Shannon, Drucker, Gantt, Hemingway, Ada, Curie, Hedy, Linus, Herodotus, Nightingale, Brooks |
 | `github.env` | GitHub credentials | Drucker, Josephine, Hedy, Linus, Nightingale, Brandeis |
 | `teams.env` | Teams / Azure credentials | Shannon, Herodotus |
 

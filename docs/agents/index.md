@@ -8,7 +8,7 @@ The Agent Workforce consists of 17 agents organized across 6 zones. Four agents 
 |-------|------|------|--------|
 | [Drucker](drucker.md) | Intelligence & Knowledge | Engineering Hygiene | Deployed |
 | [Gantt](gantt.md) | Planning & Delivery | Project Planning | Deployed |
-| [Hypatia](hypatia.md) | Intelligence & Knowledge | Documentation | Deployed |
+| [Hemingway](hemingway.md) | Intelligence & Knowledge | Documentation | Deployed |
 | [Shannon](shannon.md) | Service Infrastructure | Communications | Deployed |
 
 ## Planned

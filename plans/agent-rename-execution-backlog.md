@@ -15,7 +15,7 @@ It covers:
 
 | Current | New | Internal Slug | Notes |
 |---|---|---|---|
-| Hypatia | Hemingway | `hemingway` | Implemented and deployed; highest-risk rename |
+| ~~Hypatia~~ | Hemingway | `hemingway` | Implemented and deployed; rename complete |
 | Hedy | Humphrey | `humphrey` | Planned |
 | Brandeis | Blackstone | `blackstone` | Planned |
 | Babbage | Mercator | `mercator` | Planned |

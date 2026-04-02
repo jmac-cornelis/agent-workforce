@@ -1,6 +1,6 @@
 ##########
-# Module:      test_hypatia_pr_review_char.py
-# Description: Characterization tests for the Hypatia POST /v1/docs/pr-review endpoint.
+# Module:      test_hemingway_pr_review_char.py
+# Description: Characterization tests for the Hemingway POST /v1/docs/pr-review endpoint.
 #              Covers input validation, dry-run, doc-relevant filtering, agent run,
 #              batch commit, and record persistence. Updated for async job pattern.
 # Author:      Cornelis Networks Engineering Tools
@@ -25,7 +25,7 @@ def mock_github_utils(monkeypatch):
 def mock_agent(monkeypatch):
     mock_cls = MagicMock()
     monkeypatch.setattr(
-        'agents.hypatia.agent.HypatiaDocumentationAgent', mock_cls,
+        'agents.hemingway.agent.HemingwayDocumentationAgent', mock_cls,
     )
     return mock_cls
 
@@ -36,7 +36,7 @@ def mock_record_store(monkeypatch):
     mock_store.list_records.return_value = []
     mock_store.get_record.return_value = None
     monkeypatch.setattr(
-        'agents.hypatia.state.record_store.HypatiaRecordStore',
+        'agents.hemingway.state.record_store.HemingwayRecordStore',
         lambda: mock_store,
     )
     return mock_store
@@ -47,10 +47,10 @@ def client(mock_github_utils, monkeypatch):
     monkeypatch.setenv('DRY_RUN', 'false')
     # Ensure fresh import with mocked github_utils
     for mod_name in list(sys.modules):
-        if mod_name.startswith('agents.hypatia.api'):
+        if mod_name.startswith('agents.hemingway.api'):
             del sys.modules[mod_name]
 
-    from agents.hypatia.api import create_app
+    from agents.hemingway.api import create_app
     from fastapi.testclient import TestClient
 
     app = create_app()
@@ -115,9 +115,9 @@ class TestPRReviewDryRun:
         monkeypatch.setenv('DRY_RUN', 'true')
         # Re-import to pick up DRY_RUN=true
         for mod_name in list(sys.modules):
-            if mod_name.startswith('agents.hypatia.api'):
+            if mod_name.startswith('agents.hemingway.api'):
                 del sys.modules[mod_name]
-        from agents.hypatia.api import create_app
+        from agents.hemingway.api import create_app
         from fastapi.testclient import TestClient
         app = create_app()
         dry_client = TestClient(app)
@@ -168,10 +168,10 @@ class TestPRReviewGitHubErrors:
         )
 
         for mod_name in list(sys.modules):
-            if mod_name.startswith('agents.hypatia.api'):
+            if mod_name.startswith('agents.hemingway.api'):
                 del sys.modules[mod_name]
 
-        from agents.hypatia.api import create_app
+        from agents.hemingway.api import create_app
         from fastapi.testclient import TestClient
         app = create_app()
         err_client = TestClient(app)
@@ -252,7 +252,7 @@ class TestPRReviewFullFlow:
         mock_agent_instance = MagicMock()
         mock_agent_instance.run.return_value = self._make_agent_result()
         monkeypatch.setattr(
-            'agents.hypatia.api.HypatiaDocumentationAgent',
+            'agents.hemingway.api.HemingwayDocumentationAgent',
             lambda **kw: mock_agent_instance,
         )
 
@@ -272,7 +272,7 @@ class TestPRReviewFullFlow:
         mock_agent_instance = MagicMock()
         mock_agent_instance.run.return_value = self._make_agent_result()
         monkeypatch.setattr(
-            'agents.hypatia.api.HypatiaDocumentationAgent',
+            'agents.hemingway.api.HemingwayDocumentationAgent',
             lambda **kw: mock_agent_instance,
         )
 
@@ -292,7 +292,7 @@ class TestPRReviewFullFlow:
         mock_agent_instance = MagicMock()
         mock_agent_instance.run.return_value = self._make_agent_result()
         monkeypatch.setattr(
-            'agents.hypatia.api.HypatiaDocumentationAgent',
+            'agents.hemingway.api.HemingwayDocumentationAgent',
             lambda **kw: mock_agent_instance,
         )
 
@@ -311,7 +311,7 @@ class TestPRReviewFullFlow:
         mock_agent_instance = MagicMock()
         mock_agent_instance.run.return_value = self._make_agent_result()
         monkeypatch.setattr(
-            'agents.hypatia.api.HypatiaDocumentationAgent',
+            'agents.hemingway.api.HemingwayDocumentationAgent',
             lambda **kw: mock_agent_instance,
         )
 
@@ -319,7 +319,7 @@ class TestPRReviewFullFlow:
         mock_store.list_records.return_value = []
         mock_store.get_record.return_value = None
         monkeypatch.setattr(
-            'agents.hypatia.api.record_store', mock_store,
+            'agents.hemingway.api.record_store', mock_store,
         )
 
         body = _submit_and_poll(

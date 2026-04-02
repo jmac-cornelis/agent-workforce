@@ -144,7 +144,7 @@
         <mxCell id="herodotus" value="<b>Pliny</b><br>Knowledge Capture" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="670" y="320" width="130" height="55" as="geometry"/>
         </mxCell>
-        <mxCell id="hypatia" value="<b>Hemingway</b><br>Documentation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
+        <mxCell id="hemingway" value="<b>Hemingway</b><br>Documentation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#9673a6;fontSize=12;" vertex="1" parent="1">
           <mxGeometry x="815" y="320" width="130" height="55" as="geometry"/>
         </mxCell>
 

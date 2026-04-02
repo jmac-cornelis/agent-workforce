@@ -48,7 +48,7 @@ There is exactly one bot service deployed. It is not 15 separate bots. The bot d
 | `#agent-babbage` | Babbage -- Version Manager | Intelligence and Knowledge |
 | `#agent-linnaeus` | Linnaeus -- Traceability | Intelligence and Knowledge |
 | `#agent-herodotus` | Herodotus -- Knowledge Capture | Intelligence and Knowledge |
-| `#agent-hypatia` | Hypatia -- Documentation | Intelligence and Knowledge |
+| `#agent-hemingway` | Hemingway -- Documentation | Intelligence and Knowledge |
 | `#agent-nightingale` | Nightingale -- Bug Investigation | Intelligence and Knowledge |
 | `#agent-drucker` | Drucker -- Jira Coordinator | Intelligence and Knowledge |
 | `#agent-gantt` | Gantt -- Project Planner | Planning and Delivery |
@@ -1764,7 +1764,7 @@ sequenceDiagram
 | **Hedy** | `release_promotion` | Promote a build from one release stage to the next (sit to qa, qa to release) | Release Approvers |
 | **Linus** | `review_policy_override` | Override a review policy finding that the agent flagged as blocking | Engineers, Tech Leads |
 | **Linnaeus** | `traceability_exception` | Allow a release or build to proceed despite a traceability gap | Project Leads |
-| **Hypatia** | `external_doc_publish` | Publish documentation to an external-facing target | Documentation Owners, Engineering Managers |
+| **Hemingway** | `external_doc_publish` | Publish documentation to an external-facing target | Documentation Owners, Engineering Managers |
 
 ### Approval Request Payload
 
@@ -2471,7 +2471,7 @@ The bot's agent-to-bot API is accessible only on the internal network (no TLS re
 
 **Deliverables:**
 
-- Hedy, Linus, Linnaeus, and Hypatia can request human approvals.
+- Hedy, Linus, Linnaeus, and Hemingway can request human approvals.
 - Users can approve/reject via Adaptive Card buttons.
 - Timeouts trigger escalation.
 - All approval actions are audited with user identity.
@@ -2539,7 +2539,7 @@ graph TB
         CH_B["#agent-babbage"]
         CH_LN["#agent-linnaeus"]
         CH_HE["#agent-herodotus"]
-        CH_HY["#agent-hypatia"]
+        CH_HY["#agent-hemingway"]
         CH_N["#agent-nightingale"]
         CH_D["#agent-drucker"]
         CH_G["#agent-gantt"]
@@ -2565,7 +2565,7 @@ graph TB
         BA["Babbage API"]
         LN["Linnaeus API"]
         HR["Herodotus API"]
-        HY["Hypatia API"]
+        HY["Hemingway API"]
         NI["Nightingale API"]
         DR["Drucker API"]
         GA["Gantt API"]
