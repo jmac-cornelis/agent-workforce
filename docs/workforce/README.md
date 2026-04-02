@@ -38,13 +38,13 @@ These agents form the core build-test-release pipeline.
 
 | Agent | Role | Description |
 |-------|------|-------------|
-| **[Josephine](JOSEPHINE_BUILD_AGENT_PLAN.md)** | Build & Package | Build orchestration, compilation management, and artifact production across all Cornelis repositories. Wraps Fuze build/package into an API-driven service. |
+| **[Josephine](../../agents/josephine/docs/PLAN.md)** | Build & Package | Build orchestration, compilation management, and artifact production across all Cornelis repositories. Wraps Fuze build/package into an API-driven service. |
 | **[Galileo](../../agents/galileo/docs/PLAN.md)** | Test Planning | Determines what to test based on trigger class (PR, merge, nightly, release), coverage targets, and environment constraints. |
-| **[Curie](CURIE_TEST_GENERATOR_PLAN.md)** | Test Generation | Materializes Galileo's test plans into concrete Fuze Test runtime inputs with reproducible version hashes. |
-| **[Faraday](FARADAY_TEST_EXECUTOR_PLAN.md)** | Test Execution | Runs ATF/Fuze Test cycles, captures logs/artifacts/results, classifies failures, and produces structured TestExecutionRecords. |
-| **[Tesla](TESLA_TEST_ENVIRONMENT_MANAGER_PLAN.md)** | Environment Mgmt | Shared reservation service for HIL and mock environments with capability matching and health monitoring. |
+| **[Curie](../../agents/curie/docs/PLAN.md)** | Test Generation | Materializes Galileo's test plans into concrete Fuze Test runtime inputs with reproducible version hashes. |
+| **[Faraday](../../agents/faraday/docs/PLAN.md)** | Test Execution | Runs ATF/Fuze Test cycles, captures logs/artifacts/results, classifies failures, and produces structured TestExecutionRecords. |
+| **[Tesla](../../agents/tesla/docs/PLAN.md)** | Environment Mgmt | Shared reservation service for HIL and mock environments with capability matching and health monitoring. |
 | **[Humphrey](../../agents/humphrey/docs/PLAN.md)** | Release Mgmt | Orchestrates release decisions using the Fuze release model with stage promotion (sit, qa, release) and human approval gates. |
-| **[Linus](LINUS_CODE_REVIEW_AGENT_PLAN.md)** | Code Review | Evaluates PRs against policy profiles (kernel, embedded C++, Python) and emits cross-agent impact signals. |
+| **[Linus](../../agents/linus/docs/PLAN.md)** | Code Review | Evaluates PRs against policy profiles (kernel, embedded C++, Python) and emits cross-agent impact signals. |
 | **[Blackstone](../../agents/blackstone/docs/PLAN.md)** | Legal Compliance & Code Scanning | Scans dependencies for license compliance, flags policy violations on PRs, and manages license exception workflows. Named after William Blackstone, whose legal commentaries helped codify durable rule systems and precedent. |
 
 ### Intelligence & Knowledge
@@ -57,8 +57,8 @@ These agents provide context, traceability, and institutional knowledge.
 | **[Berners-Lee](../../agents/bernerslee/docs/PLAN.md)** | Traceability | Maintains queryable relationships between requirements, Jira issues, commits, builds, tests, releases, and versions. |
 | **[Pliny](../../agents/pliny/docs/PLAN.md)** | Knowledge Capture | Ingests Teams meeting transcripts and produces structured summaries, decisions, and action items. |
 | **[Hemingway](../../agents/hemingway/docs/PLAN.md)** | Documentation | Produces as-built, user, and engineering docs from authoritative system records via Sphinx/ReadTheDocs. |
-| **[Nightingale](NIGHTINGALE_BUG_TRIAGE_REPRODUCTION_PLAN.md)** | Bug Investigation | Reacts to Jira bugs, assembles build/test/release context, drives targeted reproduction, and produces investigation summaries. |
-| **[Drucker](DRUCKER_JIRA_COORDINATOR_PLAN.md)** | Engineering Hygiene | Keeps Jira and GitHub operationally coherent with triage, PR lifecycle monitoring, hygiene scans, routing, and evidence-backed workflow nudges. |
+| **[Nightingale](../../agents/nightingale/docs/PLAN.md)** | Bug Investigation | Reacts to Jira bugs, assembles build/test/release context, drives targeted reproduction, and produces investigation summaries. |
+| **[Drucker](../../agents/drucker/docs/PLAN.md)** | Engineering Hygiene | Keeps Jira and GitHub operationally coherent with triage, PR lifecycle monitoring, hygiene scans, routing, and evidence-backed workflow nudges. |
 
 ### Planning & Delivery
 
@@ -66,14 +66,14 @@ These agents support project management and delivery tracking.
 
 | Agent | Role | Description |
 |-------|------|-------------|
-| **[Gantt](GANTT_PROJECT_PLANNER_PLAN.md)** | Project Planning | Converts Jira work state, technical evidence, and meeting decisions into milestone proposals, dependency graphs, and risk summaries. |
+| **[Gantt](../../agents/gantt/docs/PLAN.md)** | Project Planning | Converts Jira work state, technical evidence, and meeting decisions into milestone proposals, dependency graphs, and risk summaries. |
 | **[Shackleton](../../agents/shackleton/docs/PLAN.md)** | Delivery Mgmt | Monitors execution against plan, detects schedule risk and coordination failures, produces forecasts and escalation prompts. |
 
 Planning backlog for the current Gantt + Drucker convergence work:
-[`GANTT_DRUCKER_PM_IMPLEMENTATION_BACKLOG.md`](GANTT_DRUCKER_PM_IMPLEMENTATION_BACKLOG.md)
+[GANTT_DRUCKER_PM_IMPLEMENTATION_BACKLOG.md](GANTT_DRUCKER_PM_IMPLEMENTATION_BACKLOG.md)
 
 Jira automation identity policy for choosing between service-account and human-attributed writes:
-[`JIRA_ACTOR_IDENTITY_POLICY.md`](JIRA_ACTOR_IDENTITY_POLICY.md)
+[JIRA_ACTOR_IDENTITY_POLICY.md](JIRA_ACTOR_IDENTITY_POLICY.md)
 
 ### Service Infrastructure
 
@@ -81,7 +81,7 @@ This agent provides the shared communications layer for all other agents.
 
 | Agent | Role | Description |
 |-------|------|-------------|
-| **[Shannon](SHANNON_COMMUNICATIONS_AGENT_PLAN.md)** | Communications | Single Teams bot serving all agent channels. Routes commands, manages approvals, posts notifications, and logs all human-agent interactions. Named after Claude Shannon, father of information theory. |
+| **[Shannon](../../agents/shannon/docs/PLAN.md)** | Communications | Single Teams bot serving all agent channels. Routes commands, manages approvals, posts notifications, and logs all human-agent interactions. Named after Claude Shannon, father of information theory. |
 
 ---
 

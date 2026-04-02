@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
-"""Render all agent workforce draw.io diagrams to PNG screenshots.
+'''Render all agent workforce draw.io diagrams to PNG screenshots.
 
-Uses Playwright to open each draw.io diagram tab in a headless browser via a
-local ``render_drawio.html`` page, captures a screenshot, and crops whitespace.
+Uses the local ``drawio`` CLI to export each draw.io page as a PNG, then crops
+excess whitespace to keep Confluence attachments readable.
 
 Diagrams are read from ``docs/diagrams/workforce/`` and screenshots are written
 to ``docs/confluence/images/``.
 
 Prerequisites:
-  - A local HTTP server serving the repo root on port 8766
-  - Node.js with the ``playwright`` package installed
+  - draw.io desktop CLI available as ``drawio``
   - Pillow (``pip install Pillow``)
-"""
-import subprocess, os, re, time, json
+'''
+import os
+import re
+import subprocess
 from PIL import Image, ImageChops
 
 # ---------------------------------------------------------------------------
@@ -26,11 +27,6 @@ DIAGRAM_DIR = os.path.join(REPO_ROOT, 'docs', 'diagrams', 'workforce')
 
 # Pre-rendered screenshot PNGs are stored here for upload by publish_all.py.
 IMG_DIR = os.path.join(REPO_ROOT, 'docs', 'confluence', 'images')
-
-# The render HTML page is served from the local HTTP server.  The URL path
-# is relative to the repo root served on port 8766.
-RENDER_HTML = 'http://localhost:8766/scripts/render_drawio.html'
-
 
 def _diagram_set(stem):
     return [
@@ -94,25 +90,26 @@ for name, diagrams in AGENTS:
         for page in range(len(tabs)):
             out = os.path.join(IMG_DIR, f'{name}-{kind}-tab{page+1}.png')
             done += 1
-            print(f'[{done}/{total}] {name} {kind} page {page}...', end=' ', flush=True)
+            print(f'[{done}/{total}] {name} {kind} page {page + 1}...', end=' ', flush=True)
 
-            # The diagram file URL is relative to the repo root served on 8766.
-            # Diagrams now live under docs/diagrams/workforce/.
-            url = f'{RENDER_HTML}?file=http://localhost:8766/docs/diagrams/workforce/{diagram}&page={page}'
-
-            js = f'''
-const {{ chromium }} = require('playwright');
-(async () => {{
-    const browser = await chromium.launch();
-    const page = await browser.newPage();
-    await page.setViewportSize({{ width: 1200, height: 700 }});
-    await page.goto('{url}', {{ waitUntil: 'networkidle', timeout: 30000 }});
-    await page.waitForTimeout(3000);
-    await page.screenshot({{ path: '{out}', fullPage: false }});
-    await browser.close();
-}})();
-'''
-            result = subprocess.run(['node', '-e', js], capture_output=True, text=True, timeout=45)
+            diagram_path = os.path.join(DIAGRAM_DIR, diagram)
+            result = subprocess.run(
+                [
+                    'drawio',
+                    '-x',
+                    '-f',
+                    'png',
+                    '--crop',
+                    '-p',
+                    str(page + 1),
+                    '-o',
+                    out,
+                    diagram_path,
+                ],
+                capture_output=True,
+                text=True,
+                timeout=60,
+            )
             if result.returncode != 0:
                 print(f'FAIL: {result.stderr[:200]}')
                 continue
