@@ -1,0 +1,13 @@
+# GitHub-to-Teams identity mapping for PR reminder DMs.
+# Each entry maps a GitHub login to the corresponding Microsoft Teams identity.
+# teams_email is used to resolve the Teams user ID via Graph API.
+
+users:
+  jmac-cornelis:
+    name: John MacDonald
+    teams_email: john.macdonald@cornelisnetworks.com
+
+  # Add more mappings as needed:
+  # github-login:
+  #   name: Display Name
+  #   teams_email: user@cornelisnetworks.com

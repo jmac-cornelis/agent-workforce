@@ -113,8 +113,65 @@ class ExtendedHygieneRequest(BaseModel):
     branch_stale_days: int = 30
 
 
+class PRReminderSnoozeRequest(BaseModel):
+    repo: str
+    pr_number: int
+    snooze_days: int
+    snoozed_by: str
+
+
+class PRReminderMergeRequest(BaseModel):
+    repo: str
+    pr_number: int
+    merge_method: str = 'squash'
+    requested_by: str = ''
+    dry_run: Optional[bool] = None
+
+
+class JiraQueryRequest(BaseModel):
+    project_key: str = 'STL'
+    jql: str
+    limit: int = 100
+
+
+class JiraTicketsRequest(BaseModel):
+    project_key: str = 'STL'
+    issue_types: Optional[List[str]] = None
+    statuses: Optional[List[str]] = None
+    exclude_statuses: Optional[List[str]] = None
+    date_filter: Optional[str] = None
+    limit: int = 100
+
+
+class JiraReleaseStatusRequest(BaseModel):
+    project_key: str = 'STL'
+    releases: List[str]
+    issue_types: Optional[List[str]] = None
+    statuses: Optional[List[str]] = None
+    limit: int = 500
+
+
+class JiraTicketCountsRequest(BaseModel):
+    project_key: str = 'STL'
+    issue_types: Optional[List[str]] = None
+    statuses: Optional[List[str]] = None
+    date_filter: Optional[str] = None
+
+
+class JiraStatusReportRequest(BaseModel):
+    project_key: str = 'STL'
+    include_bugs: bool = True
+    include_activity: bool = True
+    recent_days: int = 7
+
+
+class NLQueryRequest(BaseModel):
+    query: str
+    project_key: str = 'STL'
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title='Drucker Agent API', version='1.0.0')
+    app = FastAPI(title='Drucker Agent API', version='1.3.0')
 
     @app.get('/v1/health')
     def health() -> Dict[str, Any]:
@@ -125,7 +182,7 @@ def create_app() -> FastAPI:
         return {
             'agent_id': 'drucker',
             'name': 'Drucker Engineering Hygiene Agent',
-            'version': '1.0.0',
+            'version': '1.3.0',
             'description': (
                 'Deterministic engineering hygiene analysis for Jira ticket quality '
                 'and GitHub PR lifecycle. Zero LLM token usage.'
@@ -138,6 +195,13 @@ def create_app() -> FastAPI:
                 'GitHub CI failure and merge conflict detection',
                 'Stale branch analysis',
                 'Bug activity reporting',
+                'PR reminder DMs with snooze and merge actions via Teams',
+                'Jira JQL query execution with ticket normalization',
+                'Jira ticket search with status/type/date filters',
+                'Jira release status reporting across multiple versions',
+                'Jira ticket count aggregation',
+                'Jira project status reports with bug and activity breakdowns',
+                'Natural language query translation via LLM function calling',
             ],
             'endpoints': [
                 {'method': 'GET', 'path': '/v1/health', 'description': 'Service liveness check'},
@@ -164,6 +228,18 @@ def create_app() -> FastAPI:
                 {'method': 'POST', 'path': '/v1/github/stale-branches', 'description': 'Find stale branches'},
                 {'method': 'POST', 'path': '/v1/github/extended-hygiene', 'description': 'Comprehensive hygiene scan'},
                 {'method': 'POST', 'path': '/v1/poller/tick', 'description': 'Scheduled poller entrypoint'},
+                {'method': 'POST', 'path': '/v1/github/pr-reminders/scan', 'description': 'Scan repos and track open PRs'},
+                {'method': 'POST', 'path': '/v1/github/pr-reminders/process', 'description': 'Send due PR reminder DMs'},
+                {'method': 'GET', 'path': '/v1/github/pr-reminders/active', 'description': 'List active PR reminders'},
+                {'method': 'GET', 'path': '/v1/github/pr-reminders/history', 'description': 'PR reminder action history'},
+                {'method': 'POST', 'path': '/v1/github/pr-reminders/snooze', 'description': 'Snooze PR reminders'},
+                {'method': 'POST', 'path': '/v1/github/pr-reminders/merge', 'description': 'Merge a PR (dry-run default)'},
+                {'method': 'POST', 'path': '/v1/jira/query', 'description': 'Run arbitrary JQL query'},
+                {'method': 'POST', 'path': '/v1/jira/tickets', 'description': 'Query tickets with filters'},
+                {'method': 'POST', 'path': '/v1/jira/release-status', 'description': 'Release status across versions'},
+                {'method': 'POST', 'path': '/v1/jira/ticket-counts', 'description': 'Get ticket count aggregations'},
+                {'method': 'POST', 'path': '/v1/jira/status-report', 'description': 'Project status report with breakdowns'},
+                {'method': 'POST', 'path': '/v1/nl/query', 'description': 'Translate plain English to Jira/GitHub queries'},
             ],
             'shannon_commands': [
                 {'command': '/issue-check', 'description': 'Run intake validation for one Jira ticket'},
@@ -181,6 +257,13 @@ def create_app() -> FastAPI:
                 {'command': '/ci-failures', 'description': 'Find PRs with failing CI checks'},
                 {'command': '/stale-branches', 'description': 'Find stale branches'},
                 {'command': '/extended-hygiene', 'description': 'Run comprehensive extended hygiene analysis'},
+                {'command': '/pr-reminder-scan', 'description': 'Scan repos and schedule PR reminders'},
+                {'command': '/pr-reminder-process', 'description': 'Send due PR reminder DMs'},
+                {'command': '/pr-reminder-active', 'description': 'List active PR reminders'},
+                {'command': '/pr-reminder-history', 'description': 'PR reminder action history'},
+                {'command': '/pr-reminder-snooze', 'description': 'Snooze a PR reminder'},
+                {'command': '/pr-reminder-merge', 'description': 'Merge a PR via reminder'},
+                {'command': '/ask', 'description': 'Ask Drucker a question in plain English'},
             ],
         }
 
@@ -589,6 +672,180 @@ def create_app() -> FastAPI:
             return {'ok': True, 'data': report}
         except Exception as e:
             log.error(f'GitHub extended hygiene scan failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/github/pr-reminders/scan')
+    def pr_reminders_scan() -> Dict[str, Any]:
+        try:
+            from agents.drucker.pr_reminders import PRReminderEngine
+            engine = PRReminderEngine()
+            result = engine.scan_repos()
+            return {'ok': True, 'data': result}
+        except Exception as e:
+            log.error(f'PR reminder scan failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/github/pr-reminders/process')
+    def pr_reminders_process() -> Dict[str, Any]:
+        try:
+            from agents.drucker.pr_reminders import PRReminderEngine
+            engine = PRReminderEngine()
+            result = engine.process_due_reminders()
+            return {'ok': True, 'data': result}
+        except Exception as e:
+            log.error(f'PR reminder processing failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.get('/v1/github/pr-reminders/active')
+    def pr_reminders_active(
+        repo: Optional[str] = Query(default=None),
+        limit: int = Query(default=50, ge=1, le=500),
+    ) -> Dict[str, Any]:
+        try:
+            from agents.drucker.pr_reminders import PRReminderEngine
+            engine = PRReminderEngine()
+            active = engine._state.list_active(repo=repo, limit=limit)
+            return {'ok': True, 'data': {'prs': active, 'total': len(active)}}
+        except Exception as e:
+            log.error(f'PR reminder active list failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.get('/v1/github/pr-reminders/history')
+    def pr_reminders_history(
+        repo: Optional[str] = Query(default=None),
+        pr_number: Optional[int] = Query(default=None),
+        limit: int = Query(default=50, ge=1, le=500),
+    ) -> Dict[str, Any]:
+        try:
+            from agents.drucker.pr_reminders import PRReminderEngine
+            engine = PRReminderEngine()
+            history = engine._state.get_history(
+                repo=repo, pr_number=pr_number, limit=limit,
+            )
+            return {'ok': True, 'data': {'entries': history, 'total': len(history)}}
+        except Exception as e:
+            log.error(f'PR reminder history query failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/github/pr-reminders/snooze')
+    def pr_reminders_snooze(body: PRReminderSnoozeRequest) -> Dict[str, Any]:
+        try:
+            from agents.drucker.pr_reminders import PRReminderEngine
+            engine = PRReminderEngine()
+            result = engine.handle_snooze(
+                repo=body.repo,
+                pr_number=body.pr_number,
+                snooze_days=body.snooze_days,
+                snoozed_by=body.snoozed_by,
+            )
+            return {'ok': True, 'data': result}
+        except Exception as e:
+            log.error(f'PR reminder snooze failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/github/pr-reminders/merge')
+    def pr_reminders_merge(body: PRReminderMergeRequest) -> Dict[str, Any]:
+        from config.env_loader import resolve_dry_run
+        is_dry_run = resolve_dry_run(body.dry_run)
+        try:
+            from agents.drucker.pr_reminders import PRReminderEngine
+            engine = PRReminderEngine()
+            result = engine.handle_merge_request(
+                repo=body.repo,
+                pr_number=body.pr_number,
+                merge_method=body.merge_method,
+                requested_by=body.requested_by,
+                dry_run=is_dry_run,
+            )
+            return {'ok': result.get('ok', False), 'data': result}
+        except Exception as e:
+            log.error(f'PR reminder merge failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/jira/query')
+    def jira_query(body: JiraQueryRequest) -> Dict[str, Any]:
+        try:
+            from agents.drucker.jira_reporting import query_jql
+            result = query_jql(jql=body.jql, project_key=body.project_key, limit=body.limit)
+            return {'ok': True, 'data': result}
+        except Exception as e:
+            log.error(f'Jira query failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/jira/tickets')
+    def jira_tickets(body: JiraTicketsRequest) -> Dict[str, Any]:
+        try:
+            from agents.drucker.jira_reporting import query_tickets
+            result = query_tickets(
+                project_key=body.project_key,
+                issue_types=body.issue_types,
+                statuses=body.statuses,
+                exclude_statuses=body.exclude_statuses,
+                date_filter=body.date_filter,
+                limit=body.limit,
+            )
+            return {'ok': True, 'data': result}
+        except Exception as e:
+            log.error(f'Jira tickets query failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/jira/release-status')
+    def jira_release_status(body: JiraReleaseStatusRequest) -> Dict[str, Any]:
+        try:
+            from agents.drucker.jira_reporting import query_release_status
+            result = query_release_status(
+                project_key=body.project_key,
+                releases=body.releases,
+                issue_types=body.issue_types,
+                statuses=body.statuses,
+                limit=body.limit,
+            )
+            return {'ok': True, 'data': result}
+        except Exception as e:
+            log.error(f'Jira release status failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/jira/ticket-counts')
+    def jira_ticket_counts(body: JiraTicketCountsRequest) -> Dict[str, Any]:
+        try:
+            from agents.drucker.jira_reporting import get_ticket_counts
+            result = get_ticket_counts(
+                project_key=body.project_key,
+                issue_types=body.issue_types,
+                statuses=body.statuses,
+                date_filter=body.date_filter,
+            )
+            return {'ok': True, 'data': result}
+        except Exception as e:
+            log.error(f'Jira ticket counts failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/jira/status-report')
+    def jira_status_report(body: JiraStatusReportRequest) -> Dict[str, Any]:
+        try:
+            from agents.drucker.jira_reporting import get_status_report
+            result = get_status_report(
+                project_key=body.project_key,
+                include_bugs=body.include_bugs,
+                include_activity=body.include_activity,
+                recent_days=body.recent_days,
+            )
+            return {'ok': True, 'data': result}
+        except Exception as e:
+            log.error(f'Jira status report failed: {e}')
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/nl/query')
+    def nl_query(body: NLQueryRequest) -> Dict[str, Any]:
+        try:
+            from agents.drucker.nl_query import run_nl_query
+            result = run_nl_query(
+                query=body.query,
+                project_key=body.project_key,
+            )
+            return result
+        except Exception as e:
+            log.error(f'NL query failed: {e}')
             return {'ok': False, 'error': str(e)}
 
     return app

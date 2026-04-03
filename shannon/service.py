@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import threading
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -36,6 +37,11 @@ from shannon.cards import (
     build_hemingway_publication_card,
     build_hemingway_records_card,
     build_hemingway_search_card,
+    build_jira_query_card,
+    build_jira_release_status_card,
+    build_jira_status_report_card,
+    build_nl_query_card,
+    build_jira_ticket_counts_card,
     build_merge_conflicts_card,
     build_naming_compliance_card,
     build_pr_hygiene_card,
@@ -455,6 +461,12 @@ class ShannonService:
             '/ci-failures': build_ci_failures_card,
             '/stale-branches': build_stale_branches_card,
             '/extended-hygiene': build_pr_hygiene_card,
+            '/jira-query': build_jira_query_card,
+            '/jira-tickets': build_jira_query_card,
+            '/jira-release-status': build_jira_release_status_card,
+            '/jira-ticket-counts': build_jira_ticket_counts_card,
+            '/jira-status-report': build_jira_status_report_card,
+            '/ask': build_nl_query_card,
         },
         'gantt': {
             '/planning-snapshot': build_gantt_snapshot_card,
@@ -517,6 +529,22 @@ class ShannonService:
                 label = 'findings' if command != '/pr-list' else 'PRs'
                 return ShannonResponse(
                     text=f'{repo}: {total} {label}',
+                    card=card,
+                    command=command,
+                    decision='agent_call_success',
+                )
+
+            if canonical_agent_id == 'drucker' and command == '/ask':
+                card = card_builder(data)
+                summary_text = data.get('summary', '')
+                total = (
+                    data.get('result', {}).get('total')
+                    or data.get('result', {}).get('count')
+                    or ''
+                )
+                prefix = f'{total} results — ' if total else ''
+                return ShannonResponse(
+                    text=f'{prefix}{summary_text[:300]}',
                     card=card,
                     command=command,
                     decision='agent_call_success',
@@ -737,11 +765,20 @@ class ShannonService:
                     args = args[:-1]
 
                 if method.upper() == 'POST':
-                    raw_body = {
-                        args[i]: args[i + 1]
-                        for i in range(0, len(args) - 1, 2)
-                    } if args else {}
-                    json_body = _coerce_params(raw_body, cc.get('params') or [])
+                    cc_params = cc.get('params') or []
+                    required_params = [p for p in cc_params if p.get('required')]
+                    if (
+                        len(required_params) == 1
+                        and required_params[0].get('type', 'str') == 'str'
+                        and args
+                    ):
+                        raw_body = {required_params[0]['name']: ' '.join(args)}
+                    else:
+                        raw_body = {
+                            args[i]: args[i + 1]
+                            for i in range(0, len(args) - 1, 2)
+                        } if args else {}
+                    json_body = _coerce_params(raw_body, cc_params)
                     is_mutation = (
                         command in self.MUTATION_COMMANDS
                         or cc.get('mutation', False)
@@ -754,6 +791,19 @@ class ShannonService:
                     registration, method, path, params=params, json_body=json_body,
                 )
                 return self._agent_response_to_shannon(canonical_agent_id, command, result)
+
+        if not command.startswith('/'):
+            nl_result = self._call_agent_api(
+                registration, 'POST', '/v1/nl/query',
+                json_body={'query': command_text, 'project_key': 'STL'},
+            )
+            if nl_result.get('ok'):
+                return self._agent_response_to_shannon(canonical_agent_id, '/ask', nl_result)
+            return ShannonResponse(
+                text=nl_result.get('summary') or nl_result.get('error', 'Query failed.'),
+                command='nl-query',
+                decision='nl_query_fallback',
+            )
 
         return ShannonResponse(
             text=f'Unknown {registration.display_name} command: {command}. Try /help.',
@@ -901,6 +951,48 @@ class ShannonService:
             'post_result': post_result,
         }
 
+    _SLOW_COMMANDS = frozenset({'/ask'})
+
+    def _is_slow_command(self, command_text: str) -> bool:
+        parts = normalize_command_text(command_text).split()
+        command = parts[0].lower() if parts else ''
+        if command in self._SLOW_COMMANDS:
+            return True
+        if not command.startswith('/'):
+            return True
+        return False
+
+    def _run_async_and_post(
+        self,
+        activity: Dict[str, Any],
+        agent_id: str,
+        reference: ConversationReference,
+    ) -> None:
+        try:
+            reference, response = self._build_command_response(activity)
+            self._record(
+                'decision',
+                reference=reference,
+                agent_id=agent_id,
+                command=response.command or '/ask',
+                decision=response.decision,
+                details={
+                    'input': normalize_command_text(str(activity.get('text') or '')),
+                    'transport': 'outgoing_webhook_async',
+                },
+            )
+            post_result = self._post_response(reference, response, reply=True, agent_id=agent_id)
+            self._record(
+                'notification_posted',
+                reference=reference,
+                agent_id=agent_id,
+                command=response.command,
+                decision=response.decision,
+                details=post_result,
+            )
+        except Exception:
+            log.exception('Async outgoing webhook handler failed for %s', agent_id)
+
     def process_outgoing_webhook_activity(self, activity: Dict[str, Any]) -> Dict[str, Any]:
         '''
         Process a Teams Outgoing Webhook activity and return the synchronous
@@ -922,8 +1014,35 @@ class ShannonService:
                 text='Shannon only handles message activities through the outgoing webhook.',
                 decision='ignored_non_message_outgoing_webhook_activity',
             )
-        else:
-            reference, response = self._build_command_response(activity)
+            return response.to_outgoing_webhook_response()
+
+        raw_text = str(activity.get('text') or '').strip()
+        command_text = normalize_command_text(raw_text)
+        if self._is_slow_command(command_text):
+            thread = threading.Thread(
+                target=self._run_async_and_post,
+                args=(activity, agent_id, reference),
+                daemon=True,
+            )
+            thread.start()
+            ack = ShannonResponse(
+                text='Processing your query — results will follow shortly.',
+                decision='deferred_slow_command',
+            )
+            self._record(
+                'decision',
+                reference=reference,
+                agent_id=agent_id,
+                command='/ask',
+                decision='deferred_slow_command',
+                details={
+                    'input': command_text,
+                    'transport': 'outgoing_webhook',
+                },
+            )
+            return ack.to_outgoing_webhook_response()
+
+        reference, response = self._build_command_response(activity)
 
         self._record(
             'decision',

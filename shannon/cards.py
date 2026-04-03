@@ -10,14 +10,26 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, Iterable, Optional
 
 from agents.rename_registry import agent_display_name
 
 
+_JIRA_BASE = 'https://cornelisnetworks.atlassian.net/browse'
+_TICKET_RE = re.compile(r'(?<!\[)(?<!/)\b([A-Z][A-Z0-9]+-\d+)\b')
+
+
+def _linkify_tickets(text: str) -> str:
+    return _TICKET_RE.sub(
+        lambda m: f'[{m.group(1)}]({_JIRA_BASE}/{m.group(1)})',
+        text,
+    )
+
+
 def _fact_entries(facts: Dict[str, Any]) -> list[dict[str, str]]:
     return [
-        {'title': str(key), 'value': str(value)}
+        {'title': str(key), 'value': _linkify_tickets(str(value))}
         for key, value in facts.items()
         if value is not None and str(value) != ''
     ]
@@ -62,7 +74,7 @@ def build_fact_card(
         if str(line).strip():
             body.append({
                 'type': 'TextBlock',
-                'text': str(line),
+                'text': _linkify_tickets(str(line)),
                 'wrap': True,
             })
 
@@ -730,7 +742,7 @@ def build_dry_run_preview_card(
         if str(line).strip():
             card_body.append({
                 'type': 'TextBlock',
-                'text': str(line),
+                'text': _linkify_tickets(str(line)),
                 'wrap': True,
             })
 
@@ -1083,3 +1095,209 @@ def build_drucker_summary_card(summary: Dict[str, Any]) -> Dict[str, Any]:
         'Proposed Actions': summary.get('proposed_actions', 0),
     }
     return build_fact_card(title=title, facts=facts)
+
+
+def build_jira_query_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''Build an Adaptive Card for a Jira query result.'''
+    project_key = data.get('project_key', 'Unknown')
+    jql = data.get('jql', '')
+    total = data.get('total', 0)
+    tickets = data.get('tickets', [])
+    by_status = data.get('by_status', {})
+    by_type = data.get('by_type', {})
+
+    # Build facts: Total, top 3 statuses (sorted by count desc), top 3 types
+    facts: Dict[str, Any] = {'Total': total}
+    sorted_statuses = sorted(by_status.items(), key=lambda x: x[1], reverse=True)[:3]
+    for status_name, count in sorted_statuses:
+        facts[status_name] = count
+    sorted_types = sorted(by_type.items(), key=lambda x: x[1], reverse=True)[:3]
+    for type_name, count in sorted_types:
+        facts[type_name] = count
+
+    # Body lines: first 10 tickets
+    body_lines: list[str] = []
+    for ticket in tickets[:10]:
+        key = ticket.get('key', '')
+        status = ticket.get('status', '')
+        summary = ticket.get('summary', '')
+        assignee = ticket.get('assignee') or 'Unassigned'
+        body_lines.append(f'• {key} [{status}] {summary} ({assignee})')
+    if len(tickets) > 10:
+        body_lines.append(f'...and {len(tickets) - 10} more')
+
+    if not body_lines:
+        body_lines.append('No tickets matched the query.')
+
+    return build_fact_card(
+        title=f'Jira Query — {project_key}',
+        subtitle=f'{total} ticket(s) matched',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_jira_release_status_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''Build an Adaptive Card for a Jira release status result.'''
+    project_key = data.get('project_key', 'Unknown')
+    releases = data.get('releases', [])
+    grand_total = data.get('grand_total', 0)
+
+    # Facts: Grand Total, then per-release totals
+    facts: Dict[str, Any] = {'Grand Total': grand_total}
+    for release in releases:
+        name = release.get('name', '')
+        release_total = release.get('total', 0)
+        facts[name] = release_total
+
+    # Body lines: for each release (max 5), show top 3 status counts
+    body_lines: list[str] = []
+    for release in releases[:5]:
+        name = release.get('name', '')
+        by_status = release.get('by_status', {})
+        open_count = by_status.get('Open', 0)
+        in_progress_count = by_status.get('In Progress', 0)
+        closed_count = by_status.get('Closed', 0)
+        body_lines.append(
+            f'**{name}**: Open {open_count}, In Progress {in_progress_count}, Closed {closed_count}'
+        )
+
+    if not body_lines:
+        body_lines.append('No release data available.')
+
+    return build_fact_card(
+        title=f'Release Status — {project_key}',
+        subtitle=f'{grand_total} total ticket(s) across {len(releases)} release(s)',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_jira_ticket_counts_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''Build an Adaptive Card for a Jira ticket count result.'''
+    project_key = data.get('project_key', 'Unknown')
+    count = data.get('count', 0)
+    jql = data.get('jql', '')
+    filters = data.get('filters', {})
+    issue_types = filters.get('issue_types', [])
+    statuses = filters.get('statuses', [])
+
+    facts: Dict[str, Any] = {
+        'Count': count,
+        'Issue Types': ', '.join(issue_types) if issue_types else 'All',
+        'Statuses': ', '.join(statuses) if statuses else 'All',
+    }
+
+    # Body lines: JQL truncated to 200 chars
+    truncated_jql = jql[:200] if len(jql) > 200 else jql
+    body_lines: list[str] = [f'JQL: {truncated_jql}']
+
+    return build_fact_card(
+        title=f'Ticket Count — {project_key}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_jira_status_report_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''Build an Adaptive Card for a Jira project status report.'''
+    project_key = data.get('project_key', 'Unknown')
+    generated_at = data.get('generated_at', '')
+    total_open = data.get('total_open', 0)
+    by_status = data.get('by_status', {})
+    by_priority = data.get('by_priority', {})
+    bugs = data.get('bugs', {})
+    recently_updated = data.get('recently_updated', {})
+    no_fix_version_count = data.get('no_fix_version_count', 0)
+
+    recent_count = recently_updated.get('count', 0) if recently_updated else 0
+    period_days = recently_updated.get('period_days', 0) if recently_updated else 0
+
+    facts: Dict[str, Any] = {
+        'Total Open': total_open,
+        'Bugs Open': bugs.get('total_open', 0) if bugs else 0,
+        'No Fix Version': no_fix_version_count,
+        'Recently Updated': f'{recent_count} ({period_days}d)',
+    }
+
+    body_lines: list[str] = []
+
+    # By Status: top 5
+    sorted_statuses = sorted(by_status.items(), key=lambda x: x[1], reverse=True)[:5]
+    if sorted_statuses:
+        body_lines.append('**By Status:**')
+        for status_name, count in sorted_statuses:
+            body_lines.append(f'{status_name}: {count}')
+
+    # By Priority: all
+    if by_priority:
+        body_lines.append('**By Priority:**')
+        for priority_name, count in by_priority.items():
+            body_lines.append(f'{priority_name}: {count}')
+
+    # Bug Breakdown
+    if bugs:
+        bug_by_priority = bugs.get('by_priority', {})
+        if bug_by_priority:
+            body_lines.append('**Bug Breakdown:**')
+            for priority_name, count in bug_by_priority.items():
+                body_lines.append(f'{priority_name}: {count}')
+
+    # Recently Updated
+    if recently_updated:
+        body_lines.append(f'**Recent Activity ({period_days}d):** {recent_count} tickets updated')
+        recent_tickets = recently_updated.get('tickets', [])
+        for ticket in recent_tickets[:5]:
+            key = ticket.get('key', '')
+            status = ticket.get('status', '')
+            summary = ticket.get('summary', '')
+            body_lines.append(f'• {key} [{status}] {summary}')
+
+    if not body_lines:
+        body_lines.append('No status data available.')
+
+    return build_fact_card(
+        title=f'Project Status — {project_key}',
+        subtitle=f'Generated {generated_at}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_nl_query_card(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not data or not data.get('ok'):
+        error = data.get('error', 'Query failed') if data else 'No data'
+        return build_fact_card(
+            title='Query Failed',
+            subtitle=str(error),
+        )
+
+    query = data.get('query', '')
+    tool_used = data.get('tool_used', 'unknown')
+    tool_args = data.get('tool_args', {})
+    summary = data.get('summary', '')
+    result = data.get('result') or {}
+
+    facts = {'Query': query, 'Tool': tool_used}
+
+    if tool_args.get('jql'):
+        facts['JQL'] = tool_args['jql']
+    if tool_args.get('releases'):
+        facts['Releases'] = ', '.join(tool_args['releases'])
+    if tool_args.get('project_key'):
+        facts['Project'] = tool_args['project_key']
+
+    total = result.get('total') or result.get('grand_total') or result.get('count') or result.get('total_open')
+    if total is not None:
+        facts['Total'] = str(total)
+
+    body_lines = []
+    if summary:
+        body_lines.append(summary)
+
+    return build_fact_card(
+        title='Drucker Query Result',
+        subtitle=f'Tool: {tool_used}',
+        facts=facts,
+        body_lines=body_lines,
+    )

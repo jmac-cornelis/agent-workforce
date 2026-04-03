@@ -7,6 +7,33 @@ defaults:
   persist: true
   notify_shannon: false
   github_stale_days: 5
+  github_repos:
+    - jmac-cornelis/agent-workforce
+    - cornelisnetworks/ifs-all
+    - cornelisnetworks/opa400-port-manager
+    - cornelisnetworks/opa400-meta-cornelis
+    - cornelisnetworks/opa400-cli
+    - cornelisnetworks/opa400-FirmwareTools
+    - cornelisnetworks/emb-dev-tools
+    - cornelisnetworks/libfabric-internal
+    - cornelisnetworks/openbmc-linux
+    - cornelisnetworks/wfr-linux-devel
+    - cornelisnetworks/scm-jenkins-shared-library
+    - cornelisnetworks/swvl
+    - cornelisnetworks/hfisvc_client
+    - cornelisnetworks/libfabric-devel
+    - cornelisnetworks/wfr-pcie-gen3
+    - cornelisnetworks/bmc-all
+    - cornelisnetworks/brandy
+    - cornelisnetworks/opa-distro-drivers-internal
+    - cornelisnetworks/scm-tools
+    - cornelisnetworks/opa400-MFG
+    - cornelisnetworks/wfr-driver
+    - cornelisnetworks/cn-fabric-k8s
+
+    - cornelisnetworks/rdma-core-internal
+    - cornelisnetworks/opa-psm2
+    - cornelisnetworks/opa-psm3
 
 jobs:
   - job_id: hygiene-scan
@@ -24,7 +51,6 @@ jobs:
     scan_type: github
     enabled: false
     github_stale_days: 5
-    github_repos: []
 
   - job_id: github-extended-scan
     description: Extended GitHub hygiene scan including naming, conflicts, CI, and stale branches.
@@ -32,4 +58,8 @@ jobs:
     enabled: false
     github_stale_days: 5
     branch_stale_days: 30
-    github_repos: []
+
+  - job_id: github-pr-reminders
+    description: Scan repos for stale PRs and send Teams DM reminders to authors and reviewers.
+    scan_type: github-pr-reminders
+    enabled: false
