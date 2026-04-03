@@ -519,6 +519,165 @@ class TeamsGraphClient:
         return messages
 
     # ------------------------------------------------------------------
+    # 1:1 Chat / DM messaging
+    # ------------------------------------------------------------------
+
+    async def resolve_user_by_email(self, email: str) -> Dict[str, Any]:
+        '''
+        Resolve a Teams user ID from their email address.
+
+        Input:
+            email: User email address (mail or userPrincipalName).
+
+        Output:
+            Dict with 'id', 'displayName', 'mail', 'userPrincipalName'.
+
+        Raises:
+            GraphAPIError: If user not found (404) or query fails.
+        '''
+        params = {
+            '$filter': f"mail eq '{email}' or userPrincipalName eq '{email}'",
+            '$select': 'id,displayName,mail,userPrincipalName',
+        }
+        result = await self._request('GET', '/users', params=params)
+        users = result.get('value', [])
+
+        if not users:
+            log.warning(f'No user found for email: {email}')
+            raise GraphAPIError(
+                status=404,
+                error_code='user_not_found',
+                message=f'No user found matching email: {email}',
+            )
+
+        user = users[0]
+        log.info(f'Resolved user {user.get("displayName")} ({user.get("id")}) from {email}')
+        return user
+
+    async def create_one_on_one_chat(self, user_id: str) -> Dict[str, Any]:
+        '''
+        Create (or get existing) 1:1 chat between the bot app and a user.
+
+        Graph API returns the existing chat if one already exists (idempotent).
+
+        Input:
+            user_id: Azure AD user ID of the target user.
+
+        Output:
+            Dict with chat 'id' and metadata.
+
+        Raises:
+            GraphAPIError: If chat creation fails.
+        '''
+        payload = {
+            'chatType': 'oneOnOne',
+            'members': [
+                {
+                    '@odata.type': '#microsoft.graph.aadUserConversationMember',
+                    'roles': ['owner'],
+                    'user@odata.bind': f"https://graph.microsoft.com/v1.0/users('{self._app_id}')",
+                },
+                {
+                    '@odata.type': '#microsoft.graph.aadUserConversationMember',
+                    'roles': ['owner'],
+                    'user@odata.bind': f"https://graph.microsoft.com/v1.0/users('{user_id}')",
+                },
+            ],
+        }
+        result = await self._request('POST', '/chats', json_body=payload)
+        chat_id = result.get('id', 'unknown')
+        log.info(f'Created/resolved 1:1 chat {chat_id} with user {user_id}')
+        return result
+
+    async def send_chat_message(
+        self,
+        chat_id: str,
+        content: str,
+        content_type: str = 'html',
+    ) -> Dict[str, Any]:
+        '''
+        Send a text/html message to a 1:1 chat.
+
+        Input:
+            chat_id: The chat ID.
+            content: Message content (HTML or text).
+            content_type: Content type — 'html' (default) or 'text'.
+
+        Output:
+            Created message dict from Graph API.
+
+        Raises:
+            GraphAPIError: If sending fails.
+        '''
+        payload = {
+            'body': {
+                'contentType': content_type,
+                'content': content,
+            }
+        }
+        result = await self._request(
+            'POST',
+            f'/chats/{chat_id}/messages',
+            json_body=payload,
+        )
+        msg_id = result.get('id', 'unknown')
+        log.info(f'Sent chat message {msg_id} to chat {chat_id}')
+        return result
+
+    async def send_chat_adaptive_card(
+        self,
+        chat_id: str,
+        card: Dict[str, Any],
+        summary: str = 'Adaptive Card',
+    ) -> Dict[str, Any]:
+        '''
+        Send an Adaptive Card to a 1:1 chat.
+
+        Input:
+            chat_id: The chat ID.
+            card: Adaptive Card JSON payload (the card body).
+            summary: Fallback summary text for notifications.
+
+        Output:
+            Created message dict from Graph API.
+
+        Raises:
+            GraphAPIError: If sending fails.
+        '''
+        # Ensure the card has the required schema and type
+        if '$schema' not in card:
+            card['$schema'] = 'http://adaptivecards.io/schemas/adaptive-card.json'
+        if 'type' not in card:
+            card['type'] = 'AdaptiveCard'
+        if 'version' not in card:
+            card['version'] = '1.4'
+
+        payload = {
+            'body': {
+                'contentType': 'html',
+                'content': f'<attachment id="card"></attachment>',
+            },
+            'attachments': [
+                {
+                    'id': 'card',
+                    'contentType': 'application/vnd.microsoft.card.adaptive',
+                    'contentUrl': None,
+                    'content': json.dumps(card),
+                    'name': None,
+                    'thumbnailUrl': None,
+                }
+            ],
+        }
+        result = await self._request(
+            'POST',
+            f'/chats/{chat_id}/messages',
+            json_body=payload,
+        )
+        msg_id = result.get('id', 'unknown')
+        log.info(f'Sent Adaptive Card {msg_id} to chat {chat_id}')
+        return result
+
+    # ------------------------------------------------------------------
     # Context manager support
     # ------------------------------------------------------------------
 
