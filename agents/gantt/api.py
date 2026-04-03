@@ -120,6 +120,11 @@ class PlanImportRequest(BaseModel):
     execute: bool = False
 
 
+
+class NLQueryRequest(BaseModel):
+    query: str
+    project_key: str = 'STL'
+
 def create_app() -> FastAPI:
     app = FastAPI(title='Gantt Agent API', version='1.0.0')
 
@@ -169,6 +174,7 @@ def create_app() -> FastAPI:
                 {'method': 'POST', 'path': '/v1/query/release-tasks', 'description': 'Query/count tickets by fixVersion'},
                 {'method': 'POST', 'path': '/v1/plan/export', 'description': 'Export plan scope to indented Excel'},
                 {'method': 'POST', 'path': '/v1/plan/import', 'description': 'Import plan file into Jira (dry-run or execute)'},
+                {'method': 'POST', 'path': '/v1/nl/query', 'description': 'Natural language query interface'},
             ],
             'shannon_commands': [
                 {'command': '/planning-snapshot', 'description': 'Create a planning snapshot'},
@@ -878,6 +884,20 @@ def create_app() -> FastAPI:
                 'error': f'Execution failed: {e}',
                 'plan': plan_summary,
             }
+
+
+    @app.post('/v1/nl/query')
+    def nl_query(body: NLQueryRequest) -> Dict[str, Any]:
+        try:
+            from agents.gantt.nl_query import run_nl_query
+            result = run_nl_query(
+                query=body.query,
+                project_key=body.project_key,
+            )
+            return result
+        except Exception as e:
+            log.error(f'NL query failed: {e}')
+            return {'ok': False, 'error': str(e)}
 
     return app
 
