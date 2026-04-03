@@ -461,13 +461,16 @@ def test_dump_tickets_to_file_latest_comments_json(issue_factory, tmp_path: Path
 def test_dump_tickets_to_file_excel_and_write_excel(issue_factory, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     _silence_cli(monkeypatch)
 
-    issue = issue_factory(key='STL-500', summary='Excel ticket')
+    issue = issue_factory(key='STL-500', summary='Excel ticket', found_in_build=['12.1.2.0.3'])
     output_path = jira_utils.dump_tickets_to_file([issue], str(tmp_path / 'tickets_excel'), 'excel')
 
     wb = openpyxl.load_workbook(output_path)
     ws = wb['Tickets']
+    headers = [ws.cell(row=1, column=col).value for col in range(1, ws.max_column + 1)]
+    found_in_build_col = headers.index('found_in_build') + 1
     assert ws.cell(row=2, column=1).value == 'STL-500'
     assert ws.cell(row=2, column=1).hyperlink is not None
+    assert ws.cell(row=2, column=found_in_build_col).value == '12.1.2.0.3'
     assert ws.freeze_panes == 'A2'
     wb.close()
 

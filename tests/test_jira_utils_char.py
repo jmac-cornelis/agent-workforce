@@ -213,16 +213,19 @@ def test_get_tickets_returns_issue_dicts(mock_jira, issue_factory, monkeypatch: 
     monkeypatch.setattr(jira_utils, 'get_jira_credentials', lambda: ('e', 't'))
 
     issue = issue_factory(key='STL-100', summary='A ticket')
+    captured_payload = {}
 
     def _fake_post(_url: str, auth=None, headers=None, json=None):
+        captured_payload['json'] = json
         return _Response(status_code=200, payload={'issues': [issue], 'nextPageToken': None})
 
     monkeypatch.setattr(jira_utils.requests, 'post', _fake_post)
 
-    issues = jira_utils.get_tickets(mock_jira, 'STL', limit=10)
+    issues = jira_utils.get_tickets(mock_jira, 'STL', issue_types=['Bug'], limit=10)
 
     assert isinstance(issues, list)
     assert issues[0]['key'] == 'STL-100'
+    assert 'customfield_16905' in captured_payload['json']['fields']
 
 
 def test_get_release_tickets_returns_issue_dicts(mock_jira, issue_factory, monkeypatch: pytest.MonkeyPatch):

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
+import openpyxl
 import pytest
 
 from agents.base import AgentResponse
@@ -1023,9 +1024,10 @@ def test_gantt_agent_query_release_tickets_uses_product_family_scope_clause(
         staticmethod(lambda: 'gantt prompt'),
     )
 
-    def _fake_search_tickets(*, jql, limit=500):
+    def _fake_search_tickets(*, jql, limit=500, fields=None):
         captured['jql'] = jql
         captured['limit'] = limit
+        captured['fields'] = fields
         return ToolResult.success([])
 
     monkeypatch.setattr(gantt_agent_module, 'search_tickets', _fake_search_tickets)
@@ -1037,6 +1039,133 @@ def test_gantt_agent_query_release_tickets_uses_product_family_scope_clause(
     assert captured['limit'] == 500
     assert 'fixVersion = "12.2.0.x"' in captured['jql']
     assert '(labels = "CN6000" OR "product family" = "CN6000")' in captured['jql']
+    assert 'customfield_16905' in captured['fields']
+
+
+def test_gantt_agent_query_release_tickets_normalizes_found_in_build(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from agents.gantt.agent import GanttProjectPlannerAgent
+    from agents.gantt import agent as gantt_agent_module
+
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'gantt prompt'),
+    )
+
+    def _fake_search_tickets(*, jql, limit=500, fields=None):
+        return ToolResult.success([
+            {
+                'key': 'STL-100',
+                'summary': 'Bug ticket',
+                'status': 'Verify',
+                'priority': 'P0-Stopper',
+                'issue_type': 'Bug',
+                'assignee': 'Owner',
+                'reporter': 'Reporter',
+                'fix_versions': ['12.1.2.x'],
+                'components': ['OFI OPX'],
+                'customfield_28382': ['CN5000'],
+                'customfield_16905': ['12.1.2.0.3'],
+                'labels': ['CN5000'],
+                'created': '2026-03-01T00:00:00+00:00',
+                'updated': '2026-03-02T00:00:00+00:00',
+                'resolved': '2026-03-03T00:00:00+00:00',
+                'url': 'https://example.test/browse/STL-100',
+            }
+        ])
+
+    monkeypatch.setattr(gantt_agent_module, 'search_tickets', _fake_search_tickets)
+
+    agent = GanttProjectPlannerAgent(project_key='STL')
+    tickets = agent._query_release_tickets('12.1.2.x', 'CN5000')
+
+    assert tickets[0]['found_in_build'] == ['12.1.2.0.3']
+    assert tickets[0]['found_in_build_csv'] == '12.1.2.0.3'
+    assert tickets[0]['resolutiondate'] == '2026-03-03T00:00:00+00:00'
+
+
+def test_gantt_release_survey_ticket_sheet_includes_found_in_build(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from agents.gantt.agent import GanttProjectPlannerAgent
+
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'gantt prompt'),
+    )
+
+    agent = GanttProjectPlannerAgent(project_key='STL')
+    wb = openpyxl.Workbook()
+    ws = wb.active
+
+    agent._write_release_survey_ticket_sheet(ws, [
+        {
+            'release': '12.1.2.x',
+            'key': 'STL-100',
+            'summary': 'Bug ticket',
+            'status': 'Verify',
+            'priority': 'P0-Stopper',
+            'issue_type': 'Bug',
+            'assignee': 'Owner',
+            'component_csv': 'OFI OPX',
+            'found_in_build_csv': '12.1.2.0.3',
+            'updated': '2026-03-02T00:00:00+00:00',
+            'resolutiondate': '2026-03-03T00:00:00+00:00',
+            'age_days': 1,
+            'url': 'https://example.test/browse/STL-100',
+        }
+    ])
+
+    headers = [ws.cell(row=1, column=col).value for col in range(1, ws.max_column + 1)]
+    found_in_build_col = headers.index('Found in Build') + 1
+
+    assert ws.cell(row=2, column=found_in_build_col).value == '12.1.2.0.3'
+
+
+def test_gantt_bug_details_sheet_includes_found_in_build(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    from agents.gantt.agent import GanttProjectPlannerAgent
+
+    monkeypatch.setattr(
+        GanttProjectPlannerAgent,
+        '_load_prompt_file',
+        staticmethod(lambda: 'gantt prompt'),
+    )
+
+    agent = GanttProjectPlannerAgent(project_key='STL')
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    report = ReleaseMonitorReport(
+        project_key='STL',
+        releases_monitored=['12.1.2.x'],
+        bug_summaries=[BugSummary(release='12.1.2.x', total_bugs=1)],
+    )
+
+    agent._write_bug_details_sheet(ws, report, {
+        '12.1.2.x': [
+            {
+                'key': 'STL-100',
+                'summary': 'Bug ticket',
+                'status': 'Verify',
+                'priority': 'P0-Stopper',
+                'issuetype': 'Bug',
+                'assignee': 'Owner',
+                'components': ['OFI OPX'],
+                'found_in_build_csv': '12.1.2.0.3',
+                'created': '2026-03-02T00:00:00+00:00',
+                'updated': '2026-03-03T00:00:00+00:00',
+            }
+        ]
+    })
+
+    headers = [ws.cell(row=1, column=col).value for col in range(1, ws.max_column + 1)]
+    found_in_build_col = headers.index('Found in Build') + 1
+
+    assert ws.cell(row=2, column=found_in_build_col).value == '12.1.2.0.3'
 
 
 def test_gantt_release_survey_confluence_markdown_uses_live_jira_macros():

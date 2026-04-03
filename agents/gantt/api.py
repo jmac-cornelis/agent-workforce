@@ -546,6 +546,30 @@ def create_app() -> FastAPI:
         all_releases: Dict[str, Any] = {}
         total_count = 0
 
+        def _field_csv(raw_value: Any) -> str:
+            if raw_value is None:
+                return ''
+            values = raw_value if isinstance(raw_value, list) else [raw_value]
+            parts: List[str] = []
+            for item in values:
+                if item is None:
+                    continue
+                if isinstance(item, str):
+                    if item.strip():
+                        parts.extend(
+                            part.strip() for part in item.split(',') if part.strip()
+                        )
+                    continue
+                if isinstance(item, dict):
+                    candidate = item.get('name') or item.get('value')
+                    if candidate:
+                        parts.append(str(candidate).strip())
+                    continue
+                candidate = getattr(item, 'name', None) or getattr(item, 'value', None)
+                if candidate:
+                    parts.append(str(candidate).strip())
+            return ', '.join(part for part in parts if part)
+
         for release in releases:
             try:
                 jql_parts = [
@@ -576,6 +600,7 @@ def create_app() -> FastAPI:
                     assignee_obj = fields.get('assignee') or {}
                     fix_versions = fields.get('fixVersions') or []
                     fv_names = ', '.join(v.get('name', '') for v in fix_versions if isinstance(v, dict))
+                    found_in_build = _field_csv(fields.get('customfield_16905'))
                     tickets.append({
                         'key': t.get('key', ''),
                         'summary': fields.get('summary', ''),
@@ -584,6 +609,7 @@ def create_app() -> FastAPI:
                         'priority': priority_obj.get('name', '') if isinstance(priority_obj, dict) else str(priority_obj),
                         'assignee': assignee_obj.get('displayName', '') if isinstance(assignee_obj, dict) else str(assignee_obj),
                         'fix_version': fv_names,
+                        'found_in_build': found_in_build,
                     })
 
                 all_releases[release] = {

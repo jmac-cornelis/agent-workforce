@@ -87,6 +87,26 @@ from tools.knowledge_tools import search_knowledge, list_knowledge_files, read_k
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
 
+_RELEASE_TICKET_QUERY_FIELDS = [
+    'summary',
+    'status',
+    'issuetype',
+    'created',
+    'updated',
+    'resolutiondate',
+    'assignee',
+    'reporter',
+    'priority',
+    'project',
+    'fixVersions',
+    'versions',
+    'components',
+    'labels',
+    'customfield_16905',
+    'customfield_28382',
+    'customfield_28434',
+]
+
 # ---------------------------------------------------------------------------
 # Roadmap constants (from roadmap_agent.py)
 # ---------------------------------------------------------------------------
@@ -2349,6 +2369,9 @@ class GanttProjectPlannerAgent(BaseAgent):
         product_family = self._normalize_release_survey_field_values(
             ticket.get('product_family')
         )
+        found_in_build = self._normalize_release_survey_field_values(
+            ticket.get('found_in_build')
+        )
 
         status_lower = status.casefold()
         is_done = bool(resolved_dt) or self.backlog_interpreter.is_done_status(status)
@@ -2401,6 +2424,8 @@ class GanttProjectPlannerAgent(BaseAgent):
             'product_family_csv': (
                 ', '.join(product_family) if product_family else 'Unspecified'
             ),
+            'found_in_build': found_in_build,
+            'found_in_build_csv': ', '.join(found_in_build),
             'created': str(ticket.get('created') or ''),
             'updated': updated_raw,
             'resolutiondate': resolution_raw,
@@ -2871,7 +2896,11 @@ class GanttProjectPlannerAgent(BaseAgent):
         log.debug(f'Release ticket query JQL: {jql}')
 
         try:
-            result = search_tickets(jql=jql, limit=500)
+            result = search_tickets(
+                jql=jql,
+                limit=500,
+                fields=_RELEASE_TICKET_QUERY_FIELDS,
+            )
             if not result.is_success:
                 log.warning(f'Release ticket search failed: {result.error}')
                 return []
@@ -2883,6 +2912,9 @@ class GanttProjectPlannerAgent(BaseAgent):
         # Normalize ticket dicts to ensure consistent field names
         normalized: List[Dict[str, Any]] = []
         for t in tickets:
+            found_in_build = self._normalize_release_survey_field_values(
+                t.get('found_in_build') or t.get('customfield_16905')
+            )
             normalized.append({
                 'key': t.get('key', ''),
                 'summary': t.get('summary', ''),
@@ -2899,10 +2931,17 @@ class GanttProjectPlannerAgent(BaseAgent):
                     or t.get('customfield_28382')
                     or []
                 ),
+                'found_in_build': found_in_build,
+                'found_in_build_csv': ', '.join(found_in_build),
                 'labels': t.get('labels') or [],
                 'created': t.get('created', ''),
                 'updated': t.get('updated', ''),
-                'resolutiondate': t.get('resolutiondate', ''),
+                'resolutiondate': (
+                    t.get('resolutiondate')
+                    or t.get('resolved')
+                    or t.get('resolved_ts')
+                    or ''
+                ),
                 'url': t.get('url', ''),
             })
         return normalized
@@ -3067,7 +3106,7 @@ class GanttProjectPlannerAgent(BaseAgent):
         '''Write the Bug Details sheet — all bugs sorted by priority then release.'''
         headers = [
             'Release', 'Key', 'Summary', 'Status', 'Priority',
-            'Assignee', 'Component', 'Created', 'Updated',
+            'Assignee', 'Component', 'Found in Build', 'Created', 'Updated',
         ]
         for col_idx, header in enumerate(headers, 1):
             ws.cell(row=1, column=col_idx, value=header)
@@ -3097,8 +3136,9 @@ class GanttProjectPlannerAgent(BaseAgent):
                 if isinstance(comps, list):
                     comps = ', '.join(str(c) for c in comps)
                 ws.cell(row=row, column=7, value=comps)
-                ws.cell(row=row, column=8, value=bug.get('created', ''))
-                ws.cell(row=row, column=9, value=bug.get('updated', ''))
+                ws.cell(row=row, column=8, value=bug.get('found_in_build_csv', ''))
+                ws.cell(row=row, column=9, value=bug.get('created', ''))
+                ws.cell(row=row, column=10, value=bug.get('updated', ''))
                 row += 1
 
         _apply_header_style(ws, len(headers))
@@ -3523,6 +3563,7 @@ class GanttProjectPlannerAgent(BaseAgent):
             'Issue Type',
             'Assignee',
             'Components',
+            'Found in Build',
             'Updated',
             'Resolved',
             'Age Days',
@@ -3546,9 +3587,10 @@ class GanttProjectPlannerAgent(BaseAgent):
             ws.cell(row=row, column=6, value=ticket.get('issue_type', ''))
             ws.cell(row=row, column=7, value=ticket.get('assignee', ''))
             ws.cell(row=row, column=8, value=ticket.get('component_csv', ''))
-            ws.cell(row=row, column=9, value=ticket.get('updated', ''))
-            ws.cell(row=row, column=10, value=ticket.get('resolutiondate', ''))
-            ws.cell(row=row, column=11, value=ticket.get('age_days', 0))
+            ws.cell(row=row, column=9, value=ticket.get('found_in_build_csv', ''))
+            ws.cell(row=row, column=10, value=ticket.get('updated', ''))
+            ws.cell(row=row, column=11, value=ticket.get('resolutiondate', ''))
+            ws.cell(row=row, column=12, value=ticket.get('age_days', 0))
             row += 1
 
         _apply_header_style(ws, len(headers))

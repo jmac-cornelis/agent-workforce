@@ -73,6 +73,7 @@ def issue_factory():
         resolutiondate: Optional[str] = "2026-01-04T05:06:07.000+0000",
         customer_ids: Optional[Iterable[str]] = None,
         product_family: Optional[Iterable[str]] = None,
+        found_in_build: Optional[Any] = None,
         description: Any = "Plain description",
         issuelinks: Optional[List[Dict[str, Any]]] = None,
         comments: Optional[List[Dict[str, Any]]] = None,
@@ -102,6 +103,9 @@ def issue_factory():
             "issuelinks": issuelinks,
             "description": description,
         }
+
+        if found_in_build is not None:
+            fields["customfield_16905"] = found_in_build
 
         if assignee is not None:
             fields["assignee"] = {

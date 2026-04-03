@@ -392,6 +392,71 @@ _include_comments = None
 # Set by main() when --no-formatting is active.
 _no_formatting = False
 
+_BASE_TICKET_SEARCH_FIELDS = [
+    'summary', 'status', 'issuetype', 'created', 'updated', 'assignee',
+    'priority', 'project', 'fixVersions', 'versions', 'components',
+    'labels', 'customfield_17504', 'customfield_28434', 'customfield_28382',
+]
+
+_FOUND_IN_BUILD_FIELD_IDS = ['customfield_16905']
+
+
+def _build_ticket_fields_to_fetch(issue_types=None, include_parent=False, include_links=False, include_reporter=False):
+    '''
+    Build the Jira field list used by ticket retrieval helpers.
+
+    Bug and mixed-type queries always include the custom "Found in build"
+    field so downstream reporting can rely on it being present.
+    '''
+    fields_to_fetch = list(_BASE_TICKET_SEARCH_FIELDS)
+
+    normalized_types = [str(item).strip().lower() for item in issue_types or [] if item]
+    include_found_in_build = (not normalized_types or 'bug' in normalized_types)
+    if include_found_in_build:
+        for field_id in _FOUND_IN_BUILD_FIELD_IDS:
+            if field_id not in fields_to_fetch:
+                fields_to_fetch.append(field_id)
+
+    if include_parent and 'parent' not in fields_to_fetch:
+        fields_to_fetch.append('parent')
+    if include_links and 'issuelinks' not in fields_to_fetch:
+        fields_to_fetch.append('issuelinks')
+    if _include_comments and 'comment' not in fields_to_fetch:
+        fields_to_fetch.append('comment')
+    if include_reporter:
+        for field_name in ['reporter', 'resolutiondate']:
+            if field_name not in fields_to_fetch:
+                fields_to_fetch.append(field_name)
+
+    return fields_to_fetch
+
+
+def _stringify_custom_field_value(value):
+    '''
+    Normalize Jira custom field values into a display/export string.
+    '''
+    if value in (None, '', []):
+        return ''
+
+    if isinstance(value, list):
+        parts = []
+        for item in value:
+            if isinstance(item, dict):
+                text = item.get('value') or item.get('name') or item.get('displayName')
+                if text:
+                    parts.append(str(text))
+                elif item:
+                    parts.append(str(item))
+            elif item is not None:
+                parts.append(str(item))
+        return ', '.join(parts)
+
+    if isinstance(value, dict):
+        text = value.get('value') or value.get('name') or value.get('displayName')
+        return str(text) if text is not None else str(value)
+
+    return str(value)
+
 def show_jql(jql):
     '''
     Store the JQL query for display at end of operation if --show-jql flag is set.
@@ -2088,7 +2153,7 @@ def _get_children_data(jira, root_key, limit=None):
     # Helper: fetch a single issue and return its raw dict (matches search API structure)
     def _fetch_issue_raw(issue_key):
         log.debug(f'Fetching root/child issue via jira.issue: {issue_key}')
-        issue_obj = jira.issue(issue_key)
+        issue_obj = jira.issue(issue_key, fields=','.join(_build_ticket_fields_to_fetch(include_parent=True)))
         return issue_obj.raw
 
     # Helper: search for direct children of a parent key using the /rest/api/3/search/jql endpoint
@@ -2100,9 +2165,7 @@ def _get_children_data(jira, root_key, limit=None):
         max_retries = 5
 
         # Fields needed for display/dump; keep aligned with print_ticket_row/dump_tickets_to_file
-        fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'parent', 'customfield_17504', 'customfield_28434', 'customfield_28382']
-        if _include_comments:
-            fields_to_fetch.append('comment')
+        fields_to_fetch = _build_ticket_fields_to_fetch(include_parent=True)
 
         while True:
             if remaining_limit is not None and remaining_limit <= 0:
@@ -2297,9 +2360,7 @@ def _get_related_data(jira, root_key, hierarchy=None, limit=None):
     '''
     log.debug(f'Entering _get_related_data(root_key={root_key}, hierarchy={hierarchy}, limit={limit})')
 
-    fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'issuelinks', 'customfield_17504', 'customfield_28434', 'customfield_28382']
-    if _include_comments:
-        fields_to_fetch.append('comment')
+    fields_to_fetch = _build_ticket_fields_to_fetch(include_links=True)
 
     def _fetch_issue_raw(issue_key):
         log.debug(f'Fetching issue for related traversal: {issue_key}')
@@ -2786,11 +2847,10 @@ def get_release_tickets(jira, project_key, release_name, issue_types=None, statu
             else:
                 current_batch = batch_size
             
-            fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'customfield_17504', 'customfield_28434', 'customfield_28382']
-            if _include_comments:
-                fields_to_fetch.append('comment')
-            if dump_file:
-                fields_to_fetch.extend(['reporter', 'resolutiondate'])
+            fields_to_fetch = _build_ticket_fields_to_fetch(
+                issue_types=normalized_types,
+                include_reporter=bool(dump_file),
+            )
             
             payload = {
                 'jql': jql,
@@ -2967,11 +3027,10 @@ def get_releases_tickets(jira, project_key, release_pattern, issue_types=None, s
             else:
                 current_batch = batch_size
             
-            fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'customfield_17504', 'customfield_28434', 'customfield_28382']
-            if _include_comments:
-                fields_to_fetch.append('comment')
-            if dump_file:
-                fields_to_fetch.extend(['reporter', 'resolutiondate'])
+            fields_to_fetch = _build_ticket_fields_to_fetch(
+                issue_types=normalized_types,
+                include_reporter=bool(dump_file),
+            )
             
             payload = {
                 'jql': jql,
@@ -3128,11 +3187,10 @@ def get_no_release_tickets(jira, project_key, issue_types=None, statuses=None, d
             else:
                 current_batch = batch_size
             
-            fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'customfield_17504', 'customfield_28434', 'customfield_28382']
-            if _include_comments:
-                fields_to_fetch.append('comment')
-            if dump_file:
-                fields_to_fetch.extend(['reporter', 'resolutiondate'])
+            fields_to_fetch = _build_ticket_fields_to_fetch(
+                issue_types=normalized_types,
+                include_reporter=bool(dump_file),
+            )
             
             payload = {
                 'jql': jql,
@@ -3418,11 +3476,10 @@ def get_tickets(jira, project_key, issue_types=None, statuses=None, date_filter=
                 current_batch = batch_size
             
             # Build request payload - include extra fields if dumping
-            fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'customfield_17504', 'customfield_28434', 'customfield_28382']
-            if _include_comments:
-                fields_to_fetch.append('comment')
-            if dump_file:
-                fields_to_fetch.extend(['reporter', 'resolutiondate'])
+            fields_to_fetch = _build_ticket_fields_to_fetch(
+                issue_types=normalized_types,
+                include_reporter=bool(dump_file),
+            )
             
             payload = {
                 'jql': jql,
@@ -3567,7 +3624,8 @@ def _write_excel(rows, output_path, extra_fields=None, table_format='flat'):
     # ---------------------------------------------------------------
     base_fields = ['key', 'project', 'issue_type', 'status', 'priority', 'summary',
                    'assignee', 'reporter', 'created', 'updated', 'resolved',
-                   'fix_version', 'affects_version', 'component', 'labels', 'customer']
+                   'fix_version', 'affects_version', 'found_in_build',
+                   'component', 'labels', 'customer']
 
     is_indented = (table_format == 'indented' and any('depth' in r for r in rows))
 
@@ -3751,6 +3809,13 @@ def dump_tickets_to_file(issues, dump_file, dump_format, extra_fields=None, tabl
         # Extract affects versions (for bugs)
         affects_versions = fields.get('versions', [])
         affects_version_str = ', '.join([v.get('name', '') for v in affects_versions]) if affects_versions else ''
+
+        found_in_build_raw = None
+        for field_id in _FOUND_IN_BUILD_FIELD_IDS:
+            if fields.get(field_id) not in (None, '', []):
+                found_in_build_raw = fields.get(field_id)
+                break
+        found_in_build_str = _stringify_custom_field_value(found_in_build_raw)
         
         # Extract components
         components = fields.get('components', [])
@@ -3787,6 +3852,7 @@ def dump_tickets_to_file(issues, dump_file, dump_format, extra_fields=None, tabl
             'resolved': '',
             'fix_version': fix_version_str,
             'affects_version': affects_version_str,
+            'found_in_build': found_in_build_str,
             'component': component_str,
             'labels': labels_str,
             'customer': customer_str,
@@ -3887,7 +3953,8 @@ def dump_tickets_to_file(issues, dump_file, dump_format, extra_fields=None, tabl
         if rows:
             base_fields = ['key', 'project', 'issue_type', 'status', 'priority', 'summary',
                            'assignee', 'reporter', 'created', 'updated', 'resolved',
-                           'fix_version', 'affects_version', 'component', 'labels', 'customer']
+                           'fix_version', 'affects_version', 'found_in_build',
+                           'component', 'labels', 'customer']
 
             # ------------------------------------------------------------------
             # "indented" table format: replace the depth column with per-level
@@ -3978,7 +4045,8 @@ def dump_tickets_to_file(issues, dump_file, dump_format, extra_fields=None, tabl
                 writer = csv.writer(f)
                 writer.writerow(['key', 'project', 'issue_type', 'status', 'priority', 'summary',
                                  'assignee', 'reporter', 'created', 'updated', 'resolved',
-                                 'fix_version', 'affects_version', 'component', 'labels', 'customer'])
+                                 'fix_version', 'affects_version', 'found_in_build',
+                                 'component', 'labels', 'customer'])
     
     log.info(f'Wrote {len(rows)} tickets to: {output_path}')
 
@@ -4633,11 +4701,7 @@ def run_jql_query(jira, jql_query, limit=None, dump_file=None, dump_format='csv'
                 current_batch = batch_size
             
             # Build request payload - include extra fields if dumping
-            fields_to_fetch = ['summary', 'status', 'issuetype', 'created', 'updated', 'assignee', 'priority', 'project', 'fixVersions', 'versions', 'components', 'labels', 'customfield_17504', 'customfield_28434', 'customfield_28382']
-            if _include_comments:
-                fields_to_fetch.append('comment')
-            if dump_file:
-                fields_to_fetch.extend(['reporter', 'resolutiondate'])
+            fields_to_fetch = _build_ticket_fields_to_fetch(include_reporter=bool(dump_file))
             
             payload = {
                 'jql': jql_query,
