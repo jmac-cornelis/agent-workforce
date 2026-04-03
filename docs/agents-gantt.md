@@ -8,45 +8,45 @@ status: "draft"
 ---
 ```
 
-# Module Overview
+## 1. Module Overview
 
-Gantt is the project-planning agent for the Cornelis Networks agent workforce platform. It consumes Jira work state — epics, stories, bugs, priorities, assignees, workflow statuses, and release targets — cross-references that data with technical evidence from other platform agents, and produces structured planning outputs: durable planning snapshots, release health monitoring reports, release execution surveys, dependency graphs, milestone proposals, and risk signals. The agent is deterministic-first: core planning logic runs through specialized component classes (`BacklogInterpreter`, `DependencyMapper`, `MilestonePlanner`, `RiskProjector`, `PlanningSummarizer`) without LLM involvement, while optional LLM-powered features (roadmap gap analysis, natural language query translation) are isolated behind explicit opt-in paths. Gantt is accessible through a FastAPI REST API (port 8202), a standalone CLI (`gantt-agent`), the unified `agent-cli`, and the Shannon Teams bot.
+Gantt is the project-planning agent for the Cornelis Networks agent workforce platform. It reads Jira epics, stories, bugs, priorities, and workflow states, cross-references them with technical evidence from other agents (build results, test outcomes, release readiness), and produces structured planning outputs: durable planning snapshots, dependency graphs, milestone proposals, risk signals, release health monitoring reports, release execution surveys, and roadmap gap analyses. The agent is deterministic-first — specialized planner components handle backlog interpretation, dependency mapping, milestone planning, risk projection, and summary formatting without LLM involvement. LLM usage is reserved for roadmap gap analysis and the newly added natural language query interface. Gantt is accessible through a FastAPI REST API (port 8202), a standalone CLI (`gantt-agent`), the unified `agent-cli`, and the Shannon Teams bot. All artifacts are persisted to JSON+Markdown file stores under `data/`.
 
-# What Changed
+## 2. What Changed
 
-- **Before:** Gantt operated as a structured tool-call and CLI-driven agent. Users interacted through explicit commands specifying exact tool names, parameters, and release versions. There was no way to ask a plain-English question and have it translated into the appropriate Gantt operation.
+**Before:** Gantt operated as a deterministic planning and release monitoring service. Users interacted through the REST API, CLI commands, or Shannon bot commands. All queries required structured parameters — project keys, release names, and explicit flags.
 
-- **After:** A new natural language query interface was added via `agents/gantt/nl_query.py` and exposed at `POST /v1/nl/query`. This module uses OpenAI function-calling to translate plain English questions (e.g., "how healthy is release 12.2?") into structured Gantt tool calls, executes them, and returns both raw results and an LLM-generated summary. The API layer gained the `NLQueryRequest` Pydantic model and the `/v1/nl/query` endpoint in `api.py`.
+**After:** A natural language query interface was added via `agents/gantt/nl_query.py` and a new `POST /v1/nl/query` API endpoint. Users can now ask plain English questions (e.g., "how healthy is release 12.2?") which are translated into structured Gantt tool calls using LLM function calling, executed, and summarized back in natural language.
 
-- **Impact:** Shannon and any API consumer can now route free-form planning questions to Gantt without requiring the caller to know the exact tool name or parameter format. The NL layer depends on `CornelisLLM` with the `developer-sonnet` model and makes two LLM calls per query (one for tool selection, one for result summarization), which introduces token cost for this path. All other Gantt operations remain deterministic and unaffected.
+**Impact:** The API surface gained one new endpoint (`/v1/nl/query`) and one new Pydantic request model (`NLQueryRequest`). The `info` endpoint now advertises this capability. Shannon and CLI consumers are not yet wired to the NL query path — it is currently API-only. The NL query module introduces a dependency on `CornelisLLM` with the `developer-sonnet` model and on `jira_utils` for the release-tasks executor path.
 
-# Component Diagram
+## 3. Component Diagram
 
 ```mermaid
 graph TB
-    subgraph "agents/gantt"
+    subgraph "agents/gantt/"
         AGENT["agent.py<br/>GanttProjectPlannerAgent"]
         API["api.py<br/>FastAPI Service"]
         CLI["cli.py<br/>Standalone CLI"]
-        NL["nl_query.py<br/>NL Query Translator"]
-        COMPONENTS["components.py<br/>BacklogInterpreter<br/>DependencyMapper<br/>MilestonePlanner<br/>RiskProjector<br/>PlanningSummarizer"]
         MODELS["models.py<br/>Data Models"]
+        COMPONENTS["components.py<br/>Deterministic Planners"]
+        NL["nl_query.py<br/>NL Query Translator"]
         TOOLS["tools.py<br/>Agent Tool Wrappers"]
-        PROMPTS["prompts/system.md<br/>LLM Instructions"]
+        PROMPT["prompts/system.md<br/>LLM Instructions"]
     end
 
-    subgraph "agents/gantt/state"
+    subgraph "agents/gantt/state/"
         SNAP_STORE["snapshot_store.py"]
         RM_STORE["release_monitor_store.py"]
         RS_STORE["release_survey_store.py"]
         DR_STORE["dependency_review_store.py"]
     end
 
-    subgraph "External"
-        JIRA["Jira API"]
+    subgraph "External Systems"
+        JIRA["Jira (via jira_tools)"]
         LLM["CornelisLLM"]
         SHANNON["Shannon Bot"]
-        KNOWLEDGE["Knowledge Base"]
+        KB["Knowledge Base"]
     end
 
     API --> AGENT
@@ -55,44 +55,44 @@ graph TB
     NL --> LLM
     AGENT --> COMPONENTS
     AGENT --> MODELS
-    COMPONENTS --> MODELS
+    AGENT --> PROMPT
+    AGENT --> JIRA
+    AGENT --> KB
+    TOOLS --> AGENT
     AGENT --> SNAP_STORE
     AGENT --> RM_STORE
     AGENT --> RS_STORE
     COMPONENTS --> DR_STORE
-    AGENT --> JIRA
-    AGENT --> KNOWLEDGE
-    TOOLS --> AGENT
-    TOOLS --> SNAP_STORE
-    TOOLS --> DR_STORE
     SHANNON --> API
 ```
 
-# Key Flows
+## 4. Key Flows
 
-## Flow 1: Planning Snapshot Creation
+### 4.1 Planning Snapshot Creation
 
-The primary flow. A user requests a planning snapshot for a Jira project. The agent queries Jira, normalizes issues, builds a dependency graph, proposes milestones, projects risks, and produces a durable snapshot with Markdown summary.
+The primary flow: a user requests a planning snapshot for a Jira project. The agent queries Jira, normalizes issues, builds a dependency graph, proposes milestones, projects risks, and produces a durable snapshot.
 
 ```mermaid
 sequenceDiagram
-    participant Caller as API / CLI / Shannon
+    participant User
+    participant API as api.py
     participant Agent as GanttProjectPlannerAgent
     participant BI as BacklogInterpreter
     participant DM as DependencyMapper
     participant MP as MilestonePlanner
     participant RP as RiskProjector
     participant PS as PlanningSummarizer
-    participant Jira as Jira API
     participant Store as GanttSnapshotStore
+    participant Jira
 
-    Caller->>Agent: run() or run_once("planning_snapshot", request)
+    User->>API: POST /v1/planning/snapshot
+    API->>Agent: create_snapshot(PlanningRequest)
     Agent->>BI: load_backlog_issues(request)
     BI->>Jira: search_issues(JQL)
     Jira-->>BI: Raw issues
     BI-->>Agent: Normalized issues
     Agent->>DM: attach_dependency_edges(issues)
-    DM-->>Agent: Enriched issues with edges
+    DM-->>Agent: Enriched issues
     Agent->>DM: build_graph(issues)
     DM-->>Agent: DependencyGraph
     Agent->>MP: propose_milestones(issues, graph)
@@ -103,109 +103,118 @@ sequenceDiagram
     PS-->>Agent: summary_markdown
     Agent->>Store: save_snapshot(snapshot)
     Store-->>Agent: stored summary
-    Agent-->>Caller: AgentResponse / result dict
+    Agent-->>API: PlanningSnapshot
+    API-->>User: JSON response
 ```
 
-The `BacklogInterpreter.load_backlog_issues()` method builds JQL from the `PlanningRequest` (defaulting to `project = "X" AND issuetype != "Sub-task" AND statusCategory != Done ORDER BY updated DESC`) and normalizes each issue via `normalize_issue()`, which computes `age_days`, `is_stale`, `is_done`, and extracts `_issue_links` for downstream dependency processing.
+The `BacklogInterpreter.load_backlog_issues()` method in `components.py` builds JQL from the `PlanningRequest`, queries Jira, and normalizes each issue via `normalize_issue()`. This adds computed fields like `is_stale`, `age_days`, `is_done`, and `_issue_links`. The `DependencyMapper` then consumes `_issue_links` to extract explicit edges and infers additional edges from text references in summaries and descriptions. The `MilestonePlanner` groups issues by `fixVersions` into `MilestoneProposal` objects. The `RiskProjector` flags blocked, stale, unassigned, and unscheduled work.
 
-## Flow 2: Release Monitor Report
+### 4.2 Release Monitor Report
 
-Tracks the health of active releases by analyzing bug counts, velocity trends, readiness, and optionally running roadmap gap analysis.
+Produces a release health report with bug breakdowns, velocity metrics, readiness assessment, and optional roadmap gap analysis.
 
 ```mermaid
 sequenceDiagram
-    participant Caller as API / CLI / Poller
+    participant User
+    participant API as api.py
     participant Agent as GanttProjectPlannerAgent
-    participant Jira as Jira API
-    participant RMStore as GanttReleaseMonitorStore
-    participant LLM as CornelisLLM (optional)
+    participant Jira
+    participant ReleaseTracking as core/release_tracking
+    participant Store as GanttReleaseMonitorStore
+    participant PrevStore as Previous Report Lookup
 
-    Caller->>Agent: create_release_monitor(ReleaseMonitorRequest)
+    User->>API: POST /v1/release-monitor/run
+    API->>Agent: create_release_monitor(ReleaseMonitorRequest)
     Agent->>Jira: Query tickets by fixVersion
     Jira-->>Agent: Release tickets
-    Agent->>Agent: Compute bug summary, velocity, readiness
-    opt include_gap_analysis
-        Agent->>LLM: Roadmap gap analysis
-        LLM-->>Agent: Proposed gaps
-    end
-    opt compare_to_previous
-        Agent->>RMStore: get_latest_compatible_report()
-        RMStore-->>Agent: Previous report (if any)
-        Agent->>Agent: compute_delta()
-    end
+    Agent->>ReleaseTracking: build_snapshot, compute_velocity, assess_readiness
+    ReleaseTracking-->>Agent: ReleaseSnapshot, velocity, readiness
+    Agent->>PrevStore: get_latest_compatible_report()
+    PrevStore-->>Agent: Previous report (or None)
+    Agent->>ReleaseTracking: compute_delta(current, previous)
+    ReleaseTracking-->>Agent: Delta comparison
     Agent->>Agent: Build ReleaseMonitorReport
-    Agent->>RMStore: save_report(report)
-    RMStore-->>Agent: stored summary
-    Agent-->>Caller: ReleaseMonitorReport
+    Agent->>Store: save_report(report)
+    Store-->>Agent: stored summary
+    Agent-->>API: ReleaseMonitorReport
+    API-->>User: JSON response
 ```
 
-The store's `get_latest_compatible_report()` method matches on project key, sorted release names, and scope label to find the most recent prior report for delta comparison.
+The agent uses `_RELEASE_TICKET_QUERY_FIELDS` (defined in `agent.py`) to fetch specific Jira fields. The `core.release_tracking` module provides `build_snapshot()`, `compute_velocity()`, `compute_cycle_time_stats()`, `assess_readiness()`, and `compute_delta()`. The `GanttReleaseMonitorStore.get_latest_compatible_report()` method finds the most recent stored report with matching project, releases, and scope label for delta comparison.
 
-## Flow 3: Natural Language Query
+### 4.3 Natural Language Query (New)
 
-The newly added NL interface translates plain English into a structured Gantt tool call via LLM function-calling, executes it, and summarizes the results.
+Translates plain English questions into structured Gantt tool calls via LLM function calling, executes them, and summarizes results.
 
 ```mermaid
 sequenceDiagram
-    participant User as API Caller
-    participant API as /v1/nl/query
-    participant NL as nl_query.run_nl_query()
+    participant User
+    participant API as api.py
+    participant NL as nl_query.py
     participant LLM as CornelisLLM
     participant Executor as Tool Executor
     participant Agent as GanttProjectPlannerAgent
 
-    User->>API: POST {query, project_key}
+    User->>API: POST /v1/nl/query {query, project_key}
     API->>NL: run_nl_query(query, project_key)
-    NL->>LLM: Chat with TOOL_SCHEMAS (temperature=0.1)
+    NL->>LLM: chat(NL_SYSTEM_PROMPT + query, tools=TOOL_SCHEMAS)
     LLM-->>NL: tool_call(name, arguments)
     NL->>Executor: TOOL_EXECUTORS[tool_name](args)
-    Executor->>Agent: Instantiate agent, execute operation
-    Agent-->>Executor: Structured result dict
-    Executor-->>NL: Result
-    NL->>LLM: Summarize results (temperature=0.3)
-    LLM-->>NL: Human-readable summary
+    Executor->>Agent: Execute appropriate Gantt operation
+    Agent-->>Executor: Structured result
+    Executor-->>NL: Result dict
+    NL->>LLM: chat(summarize results for user)
+    LLM-->>NL: Natural language summary
     NL-->>API: {ok, tool_used, tool_args, result, summary}
     API-->>User: JSON response
 ```
 
-The `NL_SYSTEM_PROMPT` in `nl_query.py` encodes Cornelis-specific conventions (e.g., "user says '12.2' → use '12.2.0.x'") and maps question types to the five available tools: `gantt_release_health`, `gantt_release_tasks`, `gantt_planning_snapshot`, `gantt_release_survey`, and `gantt_plan_export`.
+The `run_nl_query()` function in `nl_query.py` makes two LLM calls: the first uses `TOOL_SCHEMAS` (five function definitions) with `NL_SYSTEM_PROMPT` to select and parameterize a tool call; the second summarizes the execution results. The five tool executors are:
 
-# Data Model
+- `_exec_gantt_release_health` — delegates to `GanttProjectPlannerAgent.create_release_monitor()`
+- `_exec_gantt_release_tasks` — queries Jira directly via `jira_utils`
+- `_exec_gantt_planning_snapshot` — delegates to `GanttProjectPlannerAgent.create_snapshot()`
+- `_exec_gantt_release_survey` — delegates to `GanttProjectPlannerAgent.create_release_survey()`
+- `_exec_gantt_plan_export` — exports to Excel via `excel_utils` or `jira_utils`
 
-The core data structures are defined as Python dataclasses in `agents/gantt/models.py`. All models implement `to_dict()` for JSON serialization.
+## 5. Data Model
 
-**Planning Domain:**
+The core data structures are defined as Python dataclasses in `agents/gantt/models.py`. All include `to_dict()` serialization methods.
+
+### Planning Domain
 
 | Dataclass | Purpose | Key Fields |
 |-----------|---------|------------|
-| `PlanningRequest` | Input parameters for snapshot creation | `project_key`, `planning_horizon_days`, `limit`, `include_done`, `backlog_jql`, `policy_profile`, `evidence_paths` |
-| `PlanningSnapshot` | Durable snapshot of project state | `snapshot_id` (8-char UUID), `project_key`, `created_at`, `backlog_overview`, `milestones`, `dependency_graph`, `risks`, `issues`, `summary_markdown` |
-| `DependencyEdge` | Single directed dependency between two issues | `source_key`, `target_key`, `relationship`, `inferred`, `confidence`, `rule_id`, `review_state`, `rationale` |
-| `DependencyGraph` | Full dependency graph for a backlog | `nodes`, `edges`, `blocked_keys`, `unscheduled_keys`, `cycle_paths`, `depth_by_key`, `blocker_chains`, `root_blockers`, `review_summary`, `suppressed_edges` |
+| `PlanningRequest` | Input for snapshot generation | `project_key`, `planning_horizon_days`, `limit`, `include_done`, `backlog_jql`, `policy_profile`, `evidence_paths` |
+| `PlanningSnapshot` | Durable snapshot output | `snapshot_id` (8-char UUID), `project_key`, `created_at`, `backlog_overview`, `milestones`, `dependency_graph`, `risks`, `issues`, `evidence_summary`, `summary_markdown` |
+| `DependencyEdge` | Single dependency relationship | `source_key`, `target_key`, `relationship`, `inferred`, `confidence`, `rule_id`, `review_state`, `rationale` |
+| `DependencyGraph` | Full project dependency graph | `nodes`, `edges`, `blocked_keys`, `unscheduled_keys`, `cycle_paths`, `depth_by_key`, `blocker_chains`, `root_blockers`, `review_summary`, `suppressed_edges` |
 | `MilestoneProposal` | Proposed milestone grouping | `name`, `source`, `target_date`, `issue_keys`, `total_issues`, `open_issues`, `done_issues`, `blocked_issues`, `confidence`, `risk_level` |
 | `PlanningRiskRecord` | Identified planning risk | `risk_type`, `severity`, `title`, `description`, `issue_keys`, `evidence`, `recommendation` |
 
-**Roadmap Domain:**
-
-| Dataclass | Purpose | Key Fields |
-|-----------|---------|------------|
-| `RoadmapRequest` | Input for roadmap analysis | `project_key`, `scope_label`, `initiative_keys`, `fix_versions`, `hierarchy_depth`, `include_gap_analysis` |
-| `RoadmapItem` | Single Jira ticket in the roadmap | `key`, `summary`, `issue_type`, `status`, `depth`, `source` ("Jira" or "Proposed") |
-| `RoadmapGap` | LLM-identified missing work item | `summary`, `issue_type`, `priority`, `suggested_component`, `acceptance_criteria`, `dependencies` |
-| `RoadmapSection` | Logical grouping of items and gaps | `title`, `items`, `gaps` |
-| `RoadmapSnapshot` | Durable roadmap analysis output | `project_key`, `scope_label`, `snapshot_id`, `sections`, `summary_markdown` |
-
-**Release Domain** (referenced in agent.py imports but defined later in models.py):
+### Release Monitoring Domain
 
 | Dataclass | Purpose |
 |-----------|---------|
-| `ReleaseMonitorRequest` / `ReleaseMonitorReport` | Release health monitoring input/output |
-| `ReleaseSurveyRequest` / `ReleaseSurveyReport` | Release execution survey input/output |
+| `ReleaseMonitorRequest` | Input for release health monitoring |
+| `ReleaseMonitorReport` | Output with bug counts, velocity, readiness, gap analysis |
+| `ReleaseSurveyRequest` | Input for release execution survey |
+| `ReleaseSurveyReport` | Output with done/in-progress/remaining/blocked counts |
 | `BugSummary` | Bug status and priority breakdown |
 
-**Persistence Layout:**
+### Roadmap Domain
 
-All stores use JSON-file-based persistence under `data/`:
+| Dataclass | Purpose |
+|-----------|---------|
+| `RoadmapRequest` | Input for roadmap analysis |
+| `RoadmapItem` | Single Jira ticket or proposed item in roadmap |
+| `RoadmapGap` | LLM-identified missing Epic or Story |
+| `RoadmapSection` | Logical grouping of items and gaps |
+| `RoadmapSnapshot` | Durable roadmap analysis output |
+
+### Persistence Layout
+
+All stores use JSON files organized by project key:
 
 ```
 data/gantt_snapshots/<PROJECT>/<SNAPSHOT_ID>/snapshot.json + summary.md
@@ -214,94 +223,121 @@ data/gantt_release_surveys/<PROJECT>/<SURVEY_ID>/survey.json + summary.md [+ .xl
 data/gantt_dependency_reviews/<PROJECT>.json
 ```
 
-# Dependencies
+## 6. Dependencies
 
 | Dependency | Purpose | Version |
 |------------|---------|---------|
 | `agents.base` (internal) | `BaseAgent`, `AgentConfig`, `AgentResponse` base classes | — |
-| `llm.base` / `llm.cornelis_llm` (internal) | `Message`, `CornelisLLM` for LLM interactions | — |
+| `llm.base`, `llm.cornelis_llm` (internal) | `Message`, `CornelisLLM` for LLM interactions | — |
 | `core.evidence` (internal) | `EvidenceBundle`, `load_evidence_bundle` for technical evidence | — |
-| `core.release_tracking` (internal) | `ReleaseSnapshot`, `build_snapshot`, `compute_delta`, `compute_velocity`, `compute_cycle_time_stats`, `assess_readiness` | — |
+| `core.release_tracking` (internal) | `ReleaseSnapshot`, `build_snapshot`, `compute_delta`, `compute_velocity`, `assess_readiness` | — |
 | `core.tickets` (internal) | `issue_to_dict` for Jira issue normalization | — |
-| `tools.jira_tools` (internal) | `JiraTools`, `get_jira`, `get_project_info`, `search_tickets`, `get_children_hierarchy`, `get_releases` | — |
+| `tools.jira_tools` (internal) | `JiraTools`, `get_jira`, `search_tickets`, `get_children_hierarchy`, `get_releases` | — |
 | `tools.knowledge_tools` (internal) | `search_knowledge`, `list_knowledge_files`, `read_knowledge_file` | — |
 | `tools.base` (internal) | `BaseTool`, `ToolResult`, `tool` decorator | — |
 | `agents.pm_runtime` (internal) | `normalize_csv_list`, `notify_shannon` | — |
-| `excel_utils` (internal) | `STATUS_FILL_COLORS`, `PRIORITY_FILL_COLORS`, header/formatting helpers | — |
+| `excel_utils` (internal) | Excel formatting helpers, `build_excel_map` | — |
+| `jira_utils` (internal) | `connect_to_jira`, `run_jql_query`, `dump_tickets_to_file` (used by NL query) | — |
 | `config.env_loader` (internal) | `load_env` for environment bootstrapping | — |
 | `FastAPI` (external) | REST API framework | — |
 | `Pydantic` (external) | Request/response validation models | — |
 | `openpyxl` (external) | Excel workbook generation | — |
 | `python-dotenv` (external) | `.env` file loading in CLI | — |
 
-# Configuration
+## 7. Configuration
 
-| Variable / File | Purpose | Default |
-|-----------------|---------|---------|
-| `GANTT_SNAPSHOT_DIR` | Override storage directory for planning snapshots | `data/gantt_snapshots` |
-| `GANTT_RELEASE_MONITOR_DIR` | Override storage directory for release monitor reports | `data/gantt_release_monitors` |
-| `GANTT_RELEASE_SURVEY_DIR` | Override storage directory for release survey reports | `data/gantt_release_surveys` |
-| `GANTT_DEPENDENCY_REVIEW_DIR` | Override storage directory for dependency review decisions | `data/gantt_dependency_reviews` |
-| `GANTT_EXPORT_DIR` | Override directory for plan exports | `data/gantt_exports` |
-| `CONFLUENCE_JIRA_SERVER` | Jira server name for Confluence links | `System Jira` |
-| `CONFLUENCE_JIRA_SERVER_ID` / `JIRA_SERVER_ID` | Jira server ID for Confluence integration | `332fe428-27be-3c06-ad09-b2cd4d269bee` |
-| `agents/gantt/prompts/system.md` | LLM system prompt — **required** at startup | No fallback; `FileNotFoundError` raised if missing |
-| `--env FILE` (CLI flag) | Alternate `.env` file path | `.env` |
-| `--poll-interval SECS` | Polling interval for scheduled mode | `300` |
-| `--planning-horizon DAYS` | Planning horizon for snapshots | `90` |
-| `--limit N` | Maximum issues to query | `200` |
-| `--survey-mode MODE` | Survey mode: `feature_dev` or `bug` | `feature_dev` |
+### Environment Variables
 
-The API service listens on port **8202** (configured via uvicorn startup: `--port 8202`).
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `GANTT_SNAPSHOT_DIR` | `data/gantt_snapshots` | Storage directory for planning snapshots |
+| `GANTT_RELEASE_MONITOR_DIR` | `data/gantt_release_monitors` | Storage directory for release monitor reports |
+| `GANTT_RELEASE_SURVEY_DIR` | `data/gantt_release_surveys` | Storage directory for release survey reports |
+| `GANTT_DEPENDENCY_REVIEW_DIR` | `data/gantt_dependency_reviews` | Storage directory for dependency review decisions |
+| `GANTT_EXPORT_DIR` | `data/gantt_exports` | Directory for plan export files |
+| `CONFLUENCE_JIRA_SERVER` | `System Jira` | Jira server name for Confluence links |
+| `CONFLUENCE_JIRA_SERVER_ID` / `JIRA_SERVER_ID` | `332fe428-27be-3c06-ad09-b2cd4d269bee` | Jira server ID for Confluence integration |
 
-# Error Handling
+### Configuration Files
 
-**Agent-level:** The `run()` method wraps `create_snapshot()` in a try/except and returns `AgentResponse.error_response(str(e))` on any exception. The `run_once()` method raises `TypeError` for mismatched request types and `ValueError` for unsupported `task_type` values.
+| File | Purpose |
+|------|---------|
+| `agents/gantt/prompts/system.md` | **Required.** LLM system prompt loaded at agent initialization. Agent raises `FileNotFoundError` if missing. |
+| `.env` | Standard dotenv file loaded by CLI and API |
 
-**Prompt loading:** `_load_prompt_file()` raises `FileNotFoundError` if `prompts/system.md` is missing — there is no hardcoded fallback prompt. This is an intentional fail-fast design:
+### Key Constants (in `agent.py`)
 
 ```python
-instruction = self._load_prompt_file()
-if not instruction:
-    raise FileNotFoundError(
-        'agents/gantt/prompts/system.md is required but not found. '
-        'The Gantt Project Planner Agent has no hardcoded fallback prompt.'
-    )
+STALE_DAYS = 30                          # Issues unchanged for 30+ days flagged as stale
+JIRA_BASE_URL = 'https://cornelisnetworks.atlassian.net'
+_DONE_STATUSES = {'Closed', 'Done', 'Resolved'}
+_EXCLUDED_TYPES = {'Bug', 'bug'}         # Excluded from roadmap items
 ```
 
-**API-level:** Each endpoint catches exceptions and returns `{'ok': False, 'error': str(e)}`. The `/v1/status/decisions/{record_id}` endpoint raises `HTTPException(404)` when a record is not found.
+### API Port
 
-**Store-level:** All four stores (`GanttSnapshotStore`, `GanttReleaseMonitorStore`, `GanttReleaseSurveyStore`, `GanttDependencyReviewStore`) handle file I/O errors with `log.warning()` and return `None` or skip the unreadable record. `save_*` methods raise `ValueError` for missing required fields (`snapshot_id`, `project_key`, etc.).
+The FastAPI service runs on port **8202** as documented in the README:
 
-**NL Query:** `run_nl_query()` catches tool execution exceptions and returns `{'ok': False, 'error': str(e), 'tool_used': ..., 'tool_args': ...}`. If the LLM does not select a tool, the text response is returned directly.
+```bash
+uvicorn agents.gantt.api:app --host 0.0.0.0 --port 8202
+```
 
-**Dependency inference:** The `DependencyMapper` applies review-state filtering — edges with `review_state == 'rejected'` are moved to `suppressed_edges` rather than discarded, preserving audit trail.
+## 8. Error Handling
 
-# Known Limitations / Technical Debt
+### Agent Layer (`agent.py`)
 
-1. **God class risk — `GanttProjectPlannerAgent`:** The `agent.py` file is very large (the provided source is truncated well past 500 lines). The class handles planning snapshots, release monitoring, release surveys, roadmap analysis, Excel export, plan import, polling, Shannon notification payload construction, and release survey manager alias resolution. This is a candidate for further decomposition.
+The `run()` method wraps `create_snapshot()` in a try/except and returns `AgentResponse.error_response(str(e))` on failure. The `run_once()` method raises `TypeError` for mismatched request types and `ValueError` for unsupported `task_type` values. The `tick()` method catches exceptions per-task and accumulates them in an `errors` list, allowing partial success across planning, release monitoring, and survey tasks within a single polling cycle.
 
-2. **Hardcoded Jira base URL:** `JIRA_BASE_URL` is hardcoded to `'https://cornelisnetworks.atlassian.net'` in `agent.py` rather than being read from configuration:
-   ```python
-   JIRA_BASE_URL = 'https://cornelisnetworks.atlassian.net'
-   ```
+```python
+# From agent.py — tick() error accumulation pattern
+try:
+    snapshot = self.create_snapshot(request)
+except Exception as e:
+    errors.append(f'planning_snapshot: {e}')
+```
 
-3. **Hardcoded Confluence server ID:** `CONFLUENCE_JIRA_SERVER_ID` falls back to a hardcoded UUID `'332fe428-27be-3c06-ad09-b2cd4d269bee'` if no environment variable is set.
+### API Layer (`api.py`)
 
-4. **NL query uses a separate Jira connection path:** `_exec_gantt_release_tasks()` in `nl_query.py` imports `jira_utils.connect_to_jira()` directly rather than going through the agent's `JiraTools` or `get_jira()` provider, creating an inconsistent Jira access pattern.
+API endpoints catch exceptions from agent operations and return `{'ok': False, 'error': str(e)}` rather than raising HTTP exceptions. The `status_decision_detail` endpoint is the exception — it raises `HTTPException(status_code=404)` when a record is not found.
 
-5. **NL query result truncation is lossy:** `_summarize_results()` truncates large payloads to 8000 characters and keeps only the first 10 items in list fields. The truncation flag (`{key}_truncated`) is passed to the LLM but the summarizer has no way to request the full data.
+### Store Layer (`state/*.py`)
 
-6. **No token tracking in NL query path:** The `run_nl_query()` function makes two LLM calls but does not log token usage to any tracking system, despite the agent's design plan specifying per-call token logging.
+All store classes handle file I/O errors gracefully:
+- `_load_project_reviews()` in `GanttDependencyReviewStore` returns an empty dict on read failure
+- `get_snapshot()`, `get_report()`, `get_survey()` return `None` on read failure
+- `list_*()` methods skip unreadable files with `log.warning()` and continue
+- `save_*()` methods raise `ValueError` for missing required fields (`snapshot_id`, `project_key`)
 
-7. **File-based persistence only:** All four stores use JSON files on the local filesystem. There is no database backend, no locking for concurrent writes, and no cleanup/retention policy for old artifacts.
+### NL Query Layer (`nl_query.py`)
 
-8. **Manager alias cache is class-level mutable:** `_release_survey_manager_lookup_cache` is defined as `Optional[Dict[str, str]] = None` on the class, meaning it is shared across all instances and persists for the process lifetime without invalidation.
+Tool execution failures are caught and returned as `{'ok': False, 'error': str(e), 'tool_used': ..., 'tool_args': ...}`. If the LLM does not produce a tool call, the text response is returned directly. Large result payloads (>8000 chars) are truncated before the summarization LLM call, with list fields like `tickets` capped at 10 items.
 
-9. **Missing error handling on Shannon notifications:** The `tick()` method calls `notify_shannon()` but the notification error handling path is not visible in the provided source (the method is truncated). Based on the pattern, notification failures may silently fail.
+### Component Layer (`components.py`)
 
-10. **Stale days threshold is hardcoded:** `STALE_DAYS = 30` is a class constant with no configuration override mechanism.
+The `BacklogInterpreter.parse_jira_datetime()` method tries multiple datetime formats and returns `None` on failure rather than raising. The `DependencyMapper` silently skips edges that reference unknown keys or fail review lookup.
 
-11. **`_EXCLUDED_TYPES` and `_DONE_STATUSES` are module-level sets** that cannot be configured per-project or per-request, limiting flexibility for projects with non-standard workflows.
+## 9. Known Limitations / Technical Debt
+
+1. **`agent.py` is a god class.** `GanttProjectPlannerAgent` exceeds 500 lines and contains snapshot creation, release monitoring, release survey, roadmap analysis, Excel export, plan import, polling, notification payload building, and release survey manager alias resolution. It has well over 10 public methods. The class should be decomposed into focused service classes.
+
+2. **Hardcoded Jira URL.** `JIRA_BASE_URL = 'https://cornelisnetworks.atlassian.net'` is hardcoded in `agent.py` (line ~89). This should be an environment variable.
+
+3. **Hardcoded Jira server ID.** `CONFLUENCE_JIRA_SERVER_ID` falls back to a hardcoded UUID `'332fe428-27be-3c06-ad09-b2cd4d269bee'` in `agent.py`.
+
+4. **NL query uses `jira_utils` directly.** The `_exec_gantt_release_tasks()` function in `nl_query.py` imports `jira_utils.connect_to_jira()` and `jira_utils.run_jql_query()` directly, bypassing the agent's `JiraTools` abstraction. Similarly, `_exec_gantt_plan_export()` uses both `excel_utils` and `jira_utils` directly. This creates a parallel Jira access path that does not go through the agent's tool registration.
+
+5. **No error handling on NL query LLM calls.** The `run_nl_query()` function in `nl_query.py` does not wrap the two `llm.chat()` calls in try/except. Network failures or LLM service outages will propagate as unhandled exceptions to the API layer.
+
+6. **File-based persistence only.** All four stores (`GanttSnapshotStore`, `GanttReleaseMonitorStore`, `GanttReleaseSurveyStore`, `GanttDependencyReviewStore`) use JSON files on the local filesystem. The `PLAN.md` mentions PostgreSQL for audit and decision logging, but this is not implemented. File-based storage has no concurrency protection.
+
+7. **Truncated source files.** Several source files provided are truncated (`agent.py` `tick()` method, `api.py` endpoint handlers, `cli.py` survey commands, `models.py` `RoadmapSnapshot` properties, `nl_query.py` plan export, `tools.py` roadmap tools). The documentation covers the visible code; additional functionality may exist beyond the truncation points.
+
+8. **`_release_survey_manager_lookup_cache` is a mutable class variable.** In `agent.py`, `_release_survey_manager_lookup_cache: Optional[Dict[str, str]] = None` is defined as a class-level attribute, meaning it is shared across all instances. This is intentional caching but could cause subtle issues in testing or multi-tenant scenarios.
+
+9. **NL query model is hardcoded.** `run_nl_query()` instantiates `CornelisLLM(model='developer-sonnet')` with no configuration override. The model selection should be configurable.
+
+10. **Missing `RoadmapSnapshotStore` import in tools.** The `create_roadmap_snapshot` tool in `tools.py` imports `from agents.gantt.state.snapshot_store import RoadmapSnapshotStore`, but the provided `snapshot_store.py` only defines `GanttSnapshotStore`. The `RoadmapSnapshotStore` class likely exists beyond the truncation point of `snapshot_store.py`.
+
+11. **API module-level side effects.** `api.py` calls `load_env()` and instantiates all three stores at module import time (before `create_app()` is called), which can cause import-time failures if the environment is not configured.
 
 <!-- End Documentation Agent generated content -->
