@@ -2,218 +2,187 @@
 
 ```yaml
 ---
-title: "As-Built: Shannon"
+title: "As-Built: Shannon — Communications Agent"
 date: "2026-04-03"
 status: "draft"
 ---
 ```
 
-# Shannon — Design Reference
+## Module Overview
 
-## 1. Module Overview
+Shannon is the single Microsoft Teams bot and routing surface for the Cornelis agent workforce. It receives commands from Teams users — via Bot Framework activities, outgoing webhooks, or direct API calls — normalizes them, resolves the target agent from a YAML-based channel-to-agent registry, proxies the request to that agent's REST API, and renders the response as an Adaptive Card posted back to the originating Teams channel. Shannon also exposes its own introspection commands (`/stats`, `/busy`, `/work-today`, `/decision-tree`, `/why`) and a notification endpoint that any agent can call to push alerts into Teams. The module is implemented as a FastAPI service (`shannon/app.py`) backed by a service layer (`shannon/service.py`), a pluggable posting subsystem (`shannon/poster.py`), an Adaptive Card rendering library (`shannon/cards.py`), and a YAML-driven agent registry (`shannon/registry.py`).
 
-Shannon is the communications gateway for the Cornelis agent workforce. It is a FastAPI service that acts as the single Microsoft Teams bot surface: it receives messages from Teams (via Bot Framework activities and Outgoing Webhooks), routes slash commands to the appropriate backend agent APIs (Drucker, Gantt, Hemingway, etc.), renders agent responses as Adaptive Cards, and posts notifications back to Teams channels. Shannon itself is stateless in the persistent sense — it keeps an in-memory audit log and conversation reference store — and is deterministic in v1 (no LLM token usage). The service is defined across seven source files under the `shannon/` package: `app.py` (HTTP layer), `service.py` (core routing logic), `registry.py` (agent/channel configuration), `models.py` (data structures), `cards.py` (Adaptive Card builders), `poster.py` (Teams posting adapters), and `outgoing_webhook.py` (HMAC authentication).
+## What Changed
 
-## 2. What Changed
+**Before:** Jira ticket references in Adaptive Card text were rendered as plain text. The Drucker `/stats` card displayed a simple four-field fact card (`total_reports`, `projects_analyzed`, `total_findings`, `proposed_actions`). Natural-language queries (`/ask` and free-text input) were not supported. Outgoing webhook requests were always handled synchronously. Commands sent to the wrong channel received a generic "unknown command" error. The `build_gantt_nl_query_card`, `build_jira_query_card`, `build_jira_release_status_card`, `build_jira_ticket_counts_card`, `build_jira_status_report_card`, and `build_nl_query_card` card builders did not exist.
 
-### Before
-- Jira ticket references in Adaptive Card text were rendered as plain text with no hyperlinks.
-- The `build_drucker_summary_card` function accepted a simple summary dict with fields like `total_reports` and `total_findings`.
-- Natural-language (`/ask`) commands and Gantt NL query cards did not exist.
-- Outgoing Webhook processing was fully synchronous — slow commands blocked the HTTP response.
-- Unknown commands in the Shannon channel returned a generic "unknown command" message with no cross-channel redirect hint.
-- POST command parameter parsing always used positional key-value pair splitting, even for single-parameter commands.
+**After:** All card text and fact values are now auto-linkified — any Jira ticket key (e.g. `STL-1234`) is converted to a clickable Markdown link via `_linkify_tickets()`. The Drucker `/stats` card now renders a richer payload with `total_requests`, `total_errors`, `hygiene_reports`, per-category breakdowns, and PR reminder state. Shannon supports natural-language query routing: `/ask` commands and free-text (non-slash) input in registered agent channels are forwarded to the agent's `/v1/nl/query` endpoint. Slow commands (`/ask`, `/planning-snapshot`, `/release-monitor`, `/release-survey`, and all free-text queries) arriving via outgoing webhook are now handled asynchronously — Shannon returns an immediate acknowledgment and posts the real result in a background thread. A `_find_command_owner()` method redirects users who type a command in the wrong channel. Six new card builders cover Jira queries, release status, ticket counts, status reports, and NL query results for both Drucker and Gantt agents. POST command parameter parsing now supports a single-required-string-param shortcut that joins all trailing arguments into one value (enabling `/ask how many open bugs in STL?`).
 
-### After
-- All Adaptive Card text (fact values and body lines) is now auto-linkified: Jira ticket keys like `STL-1234` become clickable Markdown links via `_linkify_tickets()` in `cards.py`.
-- `build_drucker_summary_card` now renders a richer card with `total_requests`, `total_errors`, per-category breakdowns, and PR reminder state.
-- New card builders added: `build_gantt_nl_query_card`, `build_jira_query_card`, `build_jira_release_status_card`, `build_jira_ticket_counts_card`, `build_jira_status_report_card`, and `build_nl_query_card`.
-- Slow commands (`/ask`, `/planning-snapshot`, `/release-monitor`, `/release-survey`, and free-text NL queries) are now deferred in the Outgoing Webhook path: Shannon returns an immediate acknowledgment and processes the command asynchronously on a daemon thread, posting results back via the configured poster.
-- A `_find_command_owner` method redirects users who type a command in the wrong channel (e.g., typing `/hygiene` in `#agent-shannon` when it belongs to `#agent-drucker`).
-- POST commands with a single required string parameter now join all trailing arguments into one value instead of treating them as key-value pairs.
+**Impact:** All downstream agents that post notifications through Shannon benefit from automatic Jira ticket linkification. Teams users in any registered channel can now issue free-text questions. The async outgoing-webhook path introduces a `threading.Thread` per slow request, which changes the concurrency model for webhook-originated traffic. The Drucker `/stats` response contract changed — callers expecting the old `total_reports` / `projects_analyzed` shape will see different fields.
 
-### Impact
-- **Teams users** see clickable Jira links in all card responses.
-- **Outgoing Webhook consumers** receive faster acknowledgments for slow queries; results arrive as follow-up posts.
-- **Agent integrations** for Drucker and Gantt gain `/ask` NL query routing and richer Jira-oriented card rendering.
-- **Operators** must ensure the poster is configured for async follow-up posting (Workflows or BotFramework mode) if using the Outgoing Webhook path for slow commands.
-
-## 3. Component Diagram
+## Component Diagram
 
 ```mermaid
-graph TB
-    subgraph "Shannon Service"
-        APP["app.py<br/>FastAPI HTTP Layer"]
-        SVC["service.py<br/>ShannonService"]
-        REG["registry.py<br/>ShannonAgentRegistry"]
-        MDL["models.py<br/>Data Models"]
-        CRD["cards.py<br/>Adaptive Card Builders"]
-        PST["poster.py<br/>Teams Posting Adapters"]
-        OWH["outgoing_webhook.py<br/>HMAC Auth"]
-        SST["state_store<br/>ShannonStateStore"]
+graph TD
+    subgraph Shannon Service
+        APP["FastAPI App<br/>(shannon/app.py)"]
+        SVC["ShannonService<br/>(shannon/service.py)"]
+        REG["ShannonAgentRegistry<br/>(shannon/registry.py)"]
+        CARDS["Adaptive Card Builders<br/>(shannon/cards.py)"]
+        POSTER["Poster Subsystem<br/>(shannon/poster.py)"]
+        MODELS["Data Models<br/>(shannon/models.py)"]
+        WEBHOOK["Outgoing Webhook Auth<br/>(shannon/outgoing_webhook.py)"]
+        STATE["ShannonStateStore<br/>(agents/shannon/state_store.py)"]
     end
 
-    TEAMS["Microsoft Teams"]
-    AGENTS["Agent APIs<br/>(Drucker, Gantt, Hemingway, etc.)"]
-    YAML["agent_registry.yaml"]
-
-    TEAMS -->|"Activities / Webhooks"| APP
+    TEAMS["Microsoft Teams"] -->|Activity / Webhook| APP
     APP --> SVC
     SVC --> REG
-    SVC --> CRD
-    SVC --> PST
-    SVC --> SST
-    SVC --> MDL
-    APP --> OWH
-    REG --> YAML
-    PST -->|"Post Cards"| TEAMS
-    SVC -->|"HTTP calls"| AGENTS
+    SVC --> CARDS
+    SVC --> POSTER
+    SVC --> STATE
+    SVC --> MODELS
+    APP --> WEBHOOK
+    POSTER -->|HTTP| TEAMS
+    SVC -->|HTTP Proxy| AGENTS["Registered Agent APIs"]
+    REG -->|YAML| YAML["config/shannon/agent_registry.yaml"]
 ```
 
-## 4. Key Flows
+## Key Flows
 
 ### Flow 1: Outgoing Webhook Command (Synchronous Fast Path)
 
-A user @-mentions Shannon in a Teams channel. Teams sends an Outgoing Webhook POST. Shannon verifies the HMAC signature, resolves the channel to an agent, dispatches the command to the agent API, builds an Adaptive Card, and returns it synchronously.
+A Teams user @-mentions Shannon in a registered agent channel. Teams sends an outgoing webhook POST. Shannon verifies the HMAC signature, resolves the agent, proxies the command, builds an Adaptive Card, and returns the response synchronously.
 
 ```mermaid
 sequenceDiagram
-    participant T as Teams
-    participant A as app.py
-    participant O as outgoing_webhook.py
-    participant S as ShannonService
-    participant R as ShannonAgentRegistry
-    participant AG as Agent API
-    participant C as cards.py
+    participant Teams
+    participant App as FastAPI (app.py)
+    participant WH as outgoing_webhook.py
+    participant Svc as ShannonService
+    participant Reg as Registry
+    participant Agent as Agent API
+    participant Cards as cards.py
 
-    T->>A: POST /v1/teams/outgoing-webhook
-    A->>O: verify_hmac_signature()
-    O-->>A: True
-    A->>S: process_outgoing_webhook_activity(activity)
-    S->>R: resolve_channel(channel_id)
-    R-->>S: AgentChannelRegistration
-    S->>S: _is_slow_command() → False
-    S->>S: _build_command_response(activity)
-    S->>AG: HTTP GET/POST to agent API
-    AG-->>S: JSON response
-    S->>C: card_builder(data)
-    C-->>S: Adaptive Card dict
-    S-->>A: ShannonResponse.to_outgoing_webhook_response()
-    A-->>T: 200 JSON (card)
+    Teams->>App: POST /v1/teams/outgoing-webhook
+    App->>WH: verify_hmac_signature()
+    WH-->>App: True
+    App->>Svc: process_outgoing_webhook_activity(activity)
+    Svc->>Svc: _is_slow_command() → False
+    Svc->>Svc: _build_command_response(activity)
+    Svc->>Reg: resolve_channel(channel_id)
+    Reg-->>Svc: AgentChannelRegistration
+    Svc->>Agent: GET /v1/status/stats (proxied)
+    Agent-->>Svc: JSON response
+    Svc->>Cards: build_fact_card(...)
+    Cards-->>Svc: Adaptive Card dict
+    Svc-->>App: ShannonResponse
+    App-->>Teams: JSON (outgoing webhook response)
 ```
 
-The fast-path check happens in `_is_slow_command()` (`service.py`). Commands not in `_SLOW_COMMANDS` and starting with `/` take this path.
+The entry point is `teams_outgoing_webhook()` in `app.py`, which reads the `Authorization` header and calls `verify_hmac_signature()` from `outgoing_webhook.py`. On success, `ShannonService.process_outgoing_webhook_activity()` normalizes the command text, checks `_is_slow_command()`, and for fast commands calls `_build_command_response()` synchronously. That method calls `_handle_registered_agent_command()`, which matches the slash command against `STANDARD_COMMAND_ROUTES` or `custom_commands` from the registry, calls `_call_agent_api()`, and passes the result through `_agent_response_to_shannon()` to select the correct card builder.
 
-### Flow 2: Outgoing Webhook Command (Async Slow Path)
+### Flow 2: Outgoing Webhook — Async Slow Command (`/ask` / NL Query)
 
-For commands in `_SLOW_COMMANDS` (`/ask`, `/planning-snapshot`, `/release-monitor`, `/release-survey`) or free-text NL queries, Shannon returns an immediate acknowledgment and spawns a daemon thread.
+When a slow command is detected, Shannon returns an immediate acknowledgment and processes the real request in a background thread.
 
 ```mermaid
 sequenceDiagram
-    participant T as Teams
-    participant A as app.py
-    participant S as ShannonService
-    participant TH as Daemon Thread
-    participant AG as Agent API
-    participant P as Poster
+    participant Teams
+    participant App as FastAPI (app.py)
+    participant Svc as ShannonService
+    participant Thread as Background Thread
+    participant Agent as Agent API
+    participant Poster as Poster
 
-    T->>A: POST /v1/teams/outgoing-webhook
-    A->>S: process_outgoing_webhook_activity(activity)
-    S->>S: _is_slow_command() → True
-    S->>TH: threading.Thread(_run_async_and_post)
-    S-->>A: "Processing your query — results will follow shortly."
-    A-->>T: 200 JSON (ack)
-    TH->>S: _build_command_response(activity)
-    S->>AG: HTTP POST to agent /v1/nl/query
-    AG-->>S: JSON response
-    TH->>P: _post_response(reference, response)
-    P->>T: POST card to Teams (Workflows/BotFramework)
+    Teams->>App: POST /v1/teams/outgoing-webhook
+    App->>Svc: process_outgoing_webhook_activity(activity)
+    Svc->>Svc: _is_slow_command() → True
+    Svc->>Thread: threading.Thread(_run_async_and_post)
+    Svc-->>App: "Processing your query — results will follow shortly."
+    App-->>Teams: Ack response (synchronous)
+    Thread->>Svc: _build_command_response(activity)
+    Svc->>Agent: POST /v1/nl/query {query, project_key}
+    Agent-->>Svc: JSON result
+    Svc->>Poster: _post_response(reference, response)
+    Poster->>Teams: Adaptive Card (async post)
 ```
 
-The thread is started in `process_outgoing_webhook_activity()`:
+The set of slow commands is defined in `ShannonService._SLOW_COMMANDS`:
 
 ```python
-thread = threading.Thread(
-    target=self._run_async_and_post,
-    args=(activity, agent_id, reference),
-    daemon=True,
-)
-thread.start()
+_SLOW_COMMANDS = frozenset({'/ask', '/planning-snapshot', '/release-monitor', '/release-survey'})
 ```
 
-### Flow 3: Notification Posting via `/v1/bot/notify`
+Free-text (non-slash) input is also classified as slow by `_is_slow_command()`:
 
-An agent service (e.g., Drucker) calls Shannon's notify endpoint to push an alert card into a Teams channel.
+```python
+if not command.startswith('/'):
+    return True
+```
+
+The background thread calls `_run_async_and_post()`, which re-invokes `_build_command_response()`, records audit entries, and posts the result via the configured poster.
+
+### Flow 3: Agent Notification Push
+
+Any agent in the workforce can POST to `/v1/bot/notify` to push a message into a Teams channel.
 
 ```mermaid
 sequenceDiagram
-    participant AG as Agent Service
-    participant A as app.py
-    participant S as ShannonService
-    participant R as ShannonAgentRegistry
-    participant C as cards.py
-    participant P as Poster
-    participant T as Teams
+    participant Agent as Calling Agent
+    participant App as FastAPI (app.py)
+    participant Svc as ShannonService
+    participant Reg as Registry
+    participant Cards as cards.py
+    participant Poster as Poster
+    participant Teams
 
-    AG->>A: POST /v1/bot/notify {agent_id, title, text, body_lines}
-    A->>S: post_notification(...)
-    S->>R: get_agent(agent_id)
-    R-->>S: AgentChannelRegistration
-    S->>C: build_fact_card(title, text, body_lines)
-    C-->>S: Adaptive Card dict
-    S->>P: send_to_conversation(reference, activity)
-    P->>T: POST to Teams webhook/API
-    T-->>P: 200
-    P-->>S: {ok: True}
-    S-->>A: {ok: True, ...}
-    A-->>AG: 200 JSON
+    Agent->>App: POST /v1/bot/notify {agent_id, title, text, body_lines}
+    App->>Svc: post_notification(...)
+    Svc->>Reg: get_agent(agent_id)
+    Reg-->>Svc: AgentChannelRegistration
+    Svc->>Cards: build_fact_card(title, text, body_lines)
+    Cards-->>Svc: Adaptive Card dict
+    Svc->>Poster: send_to_conversation(reference, activity)
+    Poster->>Teams: HTTP POST (webhook or Bot Framework)
+    Poster-->>Svc: {ok: True}
+    Svc-->>App: {ok: True, ...}
+    App-->>Agent: 200 OK
 ```
 
-The `post_notification` method on `ShannonService` resolves the target channel from the agent registry, builds a fact card, and delegates to the configured poster.
+The `NotificationRequest` Pydantic model validates the inbound payload. `ShannonService.post_notification()` resolves the target channel from the registry (by `agent_id` or explicit `channel_id`), builds a fact card, and delegates to the poster.
 
-## 5. Data Model
+## Data Model
 
-### `AgentChannelRegistration` (`models.py`)
+### `AgentChannelRegistration` (`shannon/models.py`)
 
-Maps a Teams channel to a backend agent. Loaded from `agent_registry.yaml` by `ShannonAgentRegistry`.
+Maps a Teams channel to an agent. Loaded from `config/shannon/agent_registry.yaml` by `ShannonAgentRegistry`. Key fields:
 
 ```python
 @dataclass
 class AgentChannelRegistration:
-    agent_id: str
-    display_name: str
-    role: str
-    description: str
-    zone: str = 'service_infrastructure'
-    channel_id: str = ''
-    channel_name: str = ''
-    team_id: str = ''
-    api_base_url: str = ''
-    custom_commands: List[Dict[str, Any]] = field(default_factory=list)
-    timeout_seconds: int = 30
-    # ... additional fields
+    agent_id: str           # e.g. 'drucker', 'gantt'
+    display_name: str       # Human-readable name
+    channel_id: str         # Teams channel ID
+    channel_name: str       # e.g. '#agent-drucker'
+    api_base_url: str       # e.g. 'http://cn-ai-03:8201'
+    custom_commands: List[Dict[str, Any]]  # Per-agent slash commands
+    timeout_seconds: int    # API call timeout (default 30)
 ```
 
-### `ConversationReference` (`models.py`)
+### `ConversationReference` (`shannon/models.py`)
 
-Captures the Teams conversation context from an inbound activity. Used by posters to address replies.
+Captures the full Teams conversation context from an inbound activity. Used by posters to address replies. Constructed via `ConversationReference.from_activity()`, which extracts `serviceUrl`, `channelData.team.id`, `channelData.channel.id`, `conversation.id`, sender/recipient info, and `tenantId`.
 
-Key fields: `service_url`, `channel_id`, `conversation_id`, `tenant_id`, `reply_to_id`, `user_id`, `bot_id`.
+### `AuditRecord` (`shannon/models.py`)
 
-Factory method `from_activity()` extracts these from a raw Teams activity dict, navigating `channelData.team`, `channelData.channel`, `channelData.tenant`, `conversation`, `from`, and `recipient`.
+Every routing decision and notification post is recorded as an `AuditRecord` with a short UUID `record_id`, timestamp, event type, status, agent/channel/user context, the command text, and a decision label. Stored in `ShannonStateStore` and queryable via `/v1/status/decisions`.
 
-### `AuditRecord` (`models.py`)
+### `ShannonResponse` (`shannon/models.py`)
 
-Immutable record of a Shannon event or routing decision. Stored in `ShannonStateStore` (in-memory). Fields include `record_id` (8-char UUID prefix), `event_type`, `status`, `command`, `decision`, and a freeform `details` dict.
+Internal response envelope carrying `text`, an optional Adaptive Card `card`, the `command` and `decision` labels, and arbitrary `metadata`. Provides `to_message_activity()` for Bot Framework and `to_outgoing_webhook_response()` for outgoing webhook replies (which adds `contentUrl`, `name`, `thumbnailUrl` stubs to attachments).
 
-### `ShannonResponse` (`models.py`)
-
-Internal response object carrying `text`, an optional Adaptive Card `card`, the resolved `command` and `decision` labels, and arbitrary `metadata`. Provides two serialization methods:
-
-- `to_message_activity()` — Bot Framework activity shape
-- `to_outgoing_webhook_response()` — adds `contentUrl`, `name`, `thumbnailUrl` nulls required by the Outgoing Webhook contract
-
-### Command Text Normalization (`models.py`)
+### Command Text Normalization
 
 ```python
 MENTION_RE = re.compile(r'<at>.*?</at>', re.IGNORECASE | re.DOTALL)
@@ -227,94 +196,85 @@ def normalize_command_text(text: str) -> str:
     return clean
 ```
 
-Strips `<at>Shannon</at>` mention markup and HTML tags, collapses whitespace.
+Strips `<at>Shannon</at>` mention markup, HTML tags, and `&nbsp;` entities.
 
-## 6. Dependencies
+## Dependencies
 
 | Dependency | Purpose | Version |
 |---|---|---|
 | `fastapi` | HTTP framework for all Shannon endpoints | Not pinned in source |
-| `pydantic` | Request body validation (`NotificationRequest`) | Not pinned in source |
+| `pydantic` | Request validation (`NotificationRequest`, `BaseModel`) | Not pinned in source |
 | `uvicorn` | ASGI server (used in `run()`) | Not pinned in source |
-| `requests` | HTTP client for agent API calls and Bot Framework token exchange | Not pinned in source |
-| `pyyaml` | Loading `agent_registry.yaml` | Not pinned in source |
-| `python-dotenv` | `.env` file loading at import time in `app.py` | Not pinned in source |
+| `requests` | HTTP client for agent API proxying and Bot Framework token exchange | Not pinned in source |
+| `pyyaml` | YAML parsing for agent registry | Not pinned in source |
+| `python-dotenv` | `.env` file loading at import time | Not pinned in source |
 | `agents.rename_registry` | `canonical_agent_name()` and `agent_display_name()` for agent ID normalization | Internal |
-| `agents.shannon.state_store` | `ShannonStateStore` — in-memory audit and stats store | Internal |
-| `config.env_loader` | `resolve_dry_run()` — dry-run flag resolution | Internal |
+| `agents.shannon.state_store` | `ShannonStateStore` for audit records and statistics | Internal |
+| `config.env_loader` | `resolve_dry_run()` for dry-run mode resolution | Internal |
 
-## 7. Configuration
+## Configuration
 
 | Variable | Purpose | Default |
 |---|---|---|
 | `SHANNON_HOST` | Bind address for uvicorn | `0.0.0.0` |
 | `SHANNON_PORT` | Bind port for uvicorn | `8200` |
-| `SHANNON_TEAMS_BOT_NAME` | Display name used in health responses | `Shannon` |
-| `SHANNON_AGENT_REGISTRY_PATH` | Path to `agent_registry.yaml` | `config/shannon/agent_registry.yaml` |
+| `SHANNON_TEAMS_BOT_NAME` | Display name used in responses | `Shannon` |
 | `SHANNON_TEAMS_POST_MODE` | Poster backend: `memory`, `workflows`, or `botframework` | `memory` |
 | `SHANNON_TEAMS_WORKFLOWS_WEBHOOK_URL` | Workflows incoming webhook URL (when mode=`workflows`) | — |
-| `SHANNON_TEAMS_APP_ID` | Azure Bot app ID (when mode=`botframework`) | — |
-| `SHANNON_TEAMS_APP_PASSWORD` | Azure Bot app password (when mode=`botframework`) | — |
-| `SHANNON_TEAMS_OUTGOING_WEBHOOK_SECRET` | Base64-encoded HMAC secret for Outgoing Webhook verification | — |
+| `SHANNON_TEAMS_APP_ID` | Azure Bot registration app ID (when mode=`botframework`) | — |
+| `SHANNON_TEAMS_APP_PASSWORD` | Azure Bot registration app secret (when mode=`botframework`) | — |
+| `SHANNON_TEAMS_OUTGOING_WEBHOOK_SECRET` | Base64-encoded HMAC secret for outgoing webhook verification | — |
+| `SHANNON_AGENT_REGISTRY_PATH` | Path to agent registry YAML | `config/shannon/agent_registry.yaml` |
 | `SHANNON_SEND_WELCOME_ON_INSTALL` | Send welcome card on `installationUpdate` activity | `true` |
-| `{AGENT_ID}_API_URL` | Per-agent API base URL override (e.g., `DRUCKER_API_URL`) | — |
+| `{AGENT_ID}_API_URL` | Per-agent override for `api_base_url` (e.g. `DRUCKER_API_URL`) | — |
 | `DRY_RUN` | Global dry-run flag (resolved by `config.env_loader`) | — |
 
-The YAML registry file (`agent_registry.yaml`) defines the `agents` list, each entry mapping to an `AgentChannelRegistration`. Environment variable overrides for `api_base_url` are applied at registry load time in `ShannonAgentRegistry.reload()`.
+## Error Handling
 
-## 8. Error Handling
-
-**HMAC Verification** — `outgoing_webhook.py` provides `verify_hmac_signature()` which uses `hmac.compare_digest` for timing-safe comparison. On failure, `app.py` returns HTTP 401:
+**HMAC verification failure:** The outgoing webhook endpoint returns HTTP 401 immediately if `verify_hmac_signature()` returns `False`. The function uses `hmac.compare_digest()` for timing-safe comparison.
 
 ```python
 if not verify_hmac_signature(authorization, secret, body_bytes):
     raise HTTPException(status_code=401, detail='Invalid outgoing webhook signature')
 ```
 
-**Agent API Calls** — `_call_agent_api()` in `service.py` wraps `requests` calls. Failures are caught and returned as error dicts:
+**Agent API call failures:** `_call_agent_api()` in `service.py` wraps `requests` calls in a try/except, catching `requests.RequestException` and returning an error dict with `ok: False`. The caller (`_handle_registered_agent_command`) propagates this as a `ShannonResponse` with the error text.
 
-```python
-except requests.RequestException as exc:
-    log.warning(...)
-    return {'ok': False, 'error': str(exc), ...}
-```
+**Activity processing:** Both `/api/messages` and `/v1/teams/outgoing-webhook` catch broad `Exception` at the endpoint level, log the traceback via `log.exception()`, and raise `HTTPException(status_code=500)`.
 
-The `_agent_response_to_shannon()` method checks for `ok: False` in agent responses and builds error cards accordingly.
+**Notification validation:** `post_notification()` raises `ValueError` for missing agent/channel resolution, which `bot_notify()` converts to HTTP 400.
 
-**Activity Processing** — Both `/api/messages` and `/v1/teams/outgoing-webhook` catch broad `Exception` at the endpoint level, log the traceback, and return HTTP 500.
+**Decision not found:** `GET /v1/status/decisions/{record_id}` returns HTTP 404 when the record ID is not in the state store.
 
-**Notification Posting** — `bot_notify` catches `ValueError` (e.g., missing agent) and returns HTTP 400.
+**Poster construction:** Both `WorkflowsPoster` and `BotFrameworkPoster` raise `ValueError` in `__init__` if required credentials are missing, failing fast at startup.
 
-**Async Thread Errors** — `_run_async_and_post()` wraps its entire body in a try/except, logging failures but not propagating them (fire-and-forget):
+**Bot Framework token exchange:** `_get_access_token()` raises `RuntimeError` if the token response lacks an `access_token` field. HTTP errors from the token endpoint propagate via `response.raise_for_status()`.
 
-```python
-except Exception:
-    log.exception('Async outgoing webhook handler failed for %s', agent_id)
-```
+**Async thread failures:** `_run_async_and_post()` wraps its entire body in a try/except and logs failures, but does not notify the user if the background post fails.
 
-**Registry Loading** — `ShannonAgentRegistry.reload()` raises `FileNotFoundError` if the YAML file is missing, which will crash the service at startup — this is intentional (fail-fast).
+## Known Limitations / Technical Debt
 
-## 9. Known Limitations / Technical Debt
+1. **God class — `ShannonService`:** `shannon/service.py` contains the `ShannonService` class which, based on the visible source, has well over 500 lines and more than 10 public methods (`get_health`, `get_stats`, `get_load`, `get_work_summary`, `get_token_status`, `get_decisions`, `get_decision`, `post_notification`, `process_teams_activity`, `process_outgoing_webhook_activity`, plus numerous `_build_*_response` and `_handle_*` methods). This class handles command parsing, agent API proxying, card builder dispatch, audit recording, and posting — multiple responsibilities that could be decomposed.
 
-1. **`service.py` is a God class candidate.** `ShannonService` contains command routing, agent API dispatch, card builder selection, notification posting, status reporting, and async thread management. The file imports 30+ card builders and contains large routing tables (`STANDARD_COMMAND_ROUTES`, `CARD_BUILDERS`). While the public method count is moderate, the file likely exceeds 500 lines with high internal complexity.
+2. **Hardcoded Jira base URL:** `_JIRA_BASE` in `cards.py` is hardcoded to `https://cornelisnetworks.atlassian.net/browse`. This should be configurable for portability.
 
-2. **Hardcoded Jira base URL.** `cards.py` contains `_JIRA_BASE = 'https://cornelisnetworks.atlassian.net/browse'`. This should be configurable for portability.
-
-3. **Hardcoded project key in NL fallback.** In `_handle_registered_agent_command()`, the NL query fallback passes `'project_key': 'STL'` as a hardcoded default:
+3. **Hardcoded project key in NL fallback:** When free-text input falls through to the NL query endpoint, the project key is hardcoded to `'STL'`:
    ```python
    json_body={'query': command_text, 'project_key': 'STL'},
    ```
 
-4. **No token refresh for `BotFrameworkPoster`.** The `_get_access_token()` method caches the token indefinitely (`self._access_token`). Bot Framework tokens expire (typically after 1 hour), but there is no expiry check or refresh logic.
+4. **No token expiry handling:** `BotFrameworkPoster._get_access_token()` caches the token indefinitely in `self._access_token` with no TTL or refresh logic. Long-running instances will eventually use an expired token.
 
-5. **Daemon threads for async commands have no backpressure.** Each slow command spawns a new `threading.Thread` with no pool, queue, or concurrency limit. Under load, this could create unbounded threads.
+5. **Thread-per-request for slow commands:** `_run_async_and_post()` spawns an unbounded `threading.Thread` for each slow outgoing webhook request. Under load, this could exhaust system resources. No thread pool or concurrency limit is applied.
 
-6. **`cards.py` source is truncated in the provided files.** Several card builder functions referenced in `service.py` imports (e.g., `build_ci_failures_card`, `build_hemingway_doc_card`, `build_pr_list_card`, `build_stale_branches_card`, etc.) are not visible in the provided source. The `build_pr_stale_card` function is cut off mid-body. Documentation of these builders is based on their usage patterns in `service.py`.
+6. **Silent failure on async post:** If `_run_async_and_post()` fails, the error is logged but the user who issued the command receives only the initial "Processing your query" acknowledgment with no follow-up error notification.
 
-7. **Missing error handling on poster HTTP calls.** `WorkflowsPoster._post()` calls `response.raise_for_status()` which raises `requests.HTTPError`, but this is not caught within the poster — it propagates up to the caller. In the async thread path, this is caught by the broad except in `_run_async_and_post()`, but error details are only logged, not recorded as audit records.
+7. **Incomplete source files provided:** The source for `shannon/cards.py` and `shannon/service.py` is truncated. Several card builders imported in `service.py` (e.g. `build_ci_failures_card`, `build_stale_branches_card`, `build_hemingway_doc_card`, `build_merge_conflicts_card`, `build_naming_compliance_card`, `build_pr_list_card`, `build_pr_reviews_card`) are not visible in the provided `cards.py` source. The `_handle_registered_agent_command`, `_build_command_response`, `_post_response`, `post_notification`, and `process_teams_activity` method bodies are only partially visible. Documentation of those methods is based on the diff context and visible fragments.
 
-8. **In-memory state store.** `ShannonStateStore` (imported from `agents.shannon.state_store`) is in-memory. All audit records, conversation references, and stats are lost on service restart.
+8. **Duplicate card builder logic:** `build_gantt_nl_query_card` and `build_nl_query_card` in `cards.py` are structurally identical except for the card title (`'Gantt Query Result'` vs `'Drucker Query Result'`). These should be consolidated with a parameterized title.
 
-9. **Duplicate NL query card builders.** `build_gantt_nl_query_card` and `build_nl_query_card` in `cards.py` have nearly identical implementations — the only difference is the card title (`'Gantt Query Result'` vs. `'Drucker Query Result'`). This is a candidate for consolidation.
+9. **Missing error handling on `requests.Session.post` in `WorkflowsPoster`:** `response.raise_for_status()` is called but the resulting `HTTPError` is not caught — it propagates as an unhandled exception to the caller.
+
+10. **`__init__.py` is empty:** `shannon/__init__.py` exports nothing (`__all__ = []`). All imports go through submodules directly.
 
 <!-- End Documentation Agent generated content -->

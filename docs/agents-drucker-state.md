@@ -10,18 +10,20 @@ status: "draft"
 
 ## Module Overview
 
-The `agents/drucker/state/` package is the persistence layer for the Drucker agent — a Jira hygiene and PR review automation service within the Cornelis Networks agent workforce. It comprises five SQLite-backed stores and one filesystem-backed store, each owning a distinct slice of Drucker's operational state: API request activity counters, ticket-intake learning patterns, intake-monitor checkpoints, PR reminder lifecycle tracking, and hygiene report artifacts. Every SQLite store follows a consistent internal pattern — thread-safe access via `threading.RLock`, `check_same_thread=False` connections, auto-creating parent directories, an `_init_db()` schema bootstrap, a `_require_conn()` guard, and a `close()` teardown method. The filesystem store (`DruckerReportStore`) persists JSON and Markdown report artifacts under a configurable directory tree keyed by project and report ID.
+The `agents/drucker/state/` package provides the persistence layer for the Drucker agent — a Jira hygiene and PR review automation system within the Cornelis Networks agent workforce. The package contains five SQLite-backed and filesystem-backed stores, each responsible for a distinct domain of durable state: API request activity counters, ticket-intake learning patterns, intake-monitor checkpoints, PR reminder lifecycle tracking, and hygiene report artifact storage. Every SQLite store follows a consistent architectural pattern — thread-safe access via `threading.RLock`, `sqlite3.Row`-based result handling, automatic parent-directory creation, and an explicit `close()` lifecycle method. The filesystem store (`DruckerReportStore`) persists JSON and Markdown report artifacts to a configurable directory tree. Together, these stores give the Drucker agent crash-resilient, queryable state without requiring an external database server.
 
 ## What Changed
 
-- **Before:** The state layer consisted of two stores: `DruckerMonitorState` for intake-monitor checkpoints and processed-ticket tracking, `DruckerLearningStore` for keyword/reporter pattern learning, and `DruckerReportStore` for hygiene report persistence.
-- **After:** Two new stores were added: `ActivityCounter` for tracking per-category API request and error counts with timestamps, and `PRReminderState` for managing the full PR reminder lifecycle including scheduling, snoozing, unsnoozing, closure, and action history.
-- **Impact:** Upstream Drucker API routes and background tasks now have dedicated persistence for request telemetry (via `ActivityCounter`) and PR reminder workflows (via `PRReminderState`). Existing consumers of `DruckerMonitorState`, `DruckerLearningStore`, and `DruckerReportStore` are unaffected. The new stores introduce two additional SQLite database files (`data/drucker_activity.db` and `data/drucker_pr_reminder_state.db`) to the `data/` directory.
+- **Before:** The state layer consisted of three stores: `DruckerLearningStore` (keyword/reporter pattern learning), `DruckerMonitorState` (intake checkpoint tracking), and `DruckerReportStore` (hygiene report persistence). There was no centralized API activity tracking and no PR reminder state management.
+
+- **After:** Two new stores were added: `ActivityCounter` for tracking per-category API request and error counts with timestamps, and `PRReminderState` for full PR reminder lifecycle management including scheduling, snoozing, unsnoozing, and action history. The existing three stores remain unchanged.
+
+- **Impact:** Upstream API route handlers now have a dedicated counter store to call `record()` on every request. The PR reminder subsystem gains durable state for reminder scheduling, snooze windows, and audit history — enabling the Drucker agent to persist reminder state across restarts and query due reminders on a schedule.
 
 ## Component Diagram
 
 ```mermaid
-graph TD
+graph TB
     subgraph "agents/drucker/state"
         AC[ActivityCounter<br/>activity_counter.py]
         LS[DruckerLearningStore<br/>learning_store.py]
@@ -30,51 +32,50 @@ graph TD
         RS[DruckerReportStore<br/>report_store.py]
     end
 
-    subgraph "Storage"
-        DB_ACT[(drucker_activity.db)]
-        DB_LEARN[(drucker_learning.db)]
-        DB_MON[(drucker_monitor_state.db)]
-        DB_PR[(drucker_pr_reminder_state.db)]
-        FS_REPORTS[/drucker_reports/\nFilesystem/]
+    subgraph "Storage Backends"
+        DB_AC[(drucker_activity.db)]
+        DB_LS[(drucker_learning.db)]
+        DB_MS[(drucker_monitor_state.db)]
+        DB_PRS[(drucker_pr_reminder_state.db)]
+        FS[("data/drucker_reports/<br/>filesystem")]
     end
 
     subgraph "External Dependencies"
-        MODELS[agents.drucker.models<br/>DruckerHygieneReport]
+        Models[agents.drucker.models<br/>DruckerHygieneReport]
     end
 
-    AC --> DB_ACT
-    LS --> DB_LEARN
-    MS --> DB_MON
-    PRS --> DB_PR
-    RS --> FS_REPORTS
-    RS --> MODELS
+    AC --> DB_AC
+    LS --> DB_LS
+    MS --> DB_MS
+    PRS --> DB_PRS
+    RS --> FS
+    RS --> Models
 ```
 
 ## Key Flows
 
-### Flow 1: Recording API Activity
+### Flow 1: Recording and Querying API Activity
 
-When a Drucker API endpoint handles a request, it calls `ActivityCounter.record()` with a category string (e.g., `'hygiene'`, `'jira'`, `'github'`, `'pr-reminders'`) and an error flag. The counter upserts a row using SQLite's `ON CONFLICT` clause, atomically incrementing `request_count` and conditionally `error_count`, while preserving `first_request_at` and updating `last_request_at`.
+The `ActivityCounter` provides a fire-and-forget `record()` call for every API request, using SQLite's `ON CONFLICT` upsert to atomically increment counters and update timestamps.
 
 ```mermaid
 sequenceDiagram
-    participant API as Drucker API Route
+    participant Handler as API Route Handler
     participant AC as ActivityCounter
     participant DB as drucker_activity.db
 
-    API->>AC: record("hygiene", is_error=False)
-    AC->>AC: _require_conn()
+    Handler->>AC: record("hygiene", is_error=False)
     AC->>AC: _utc_now_iso()
     AC->>DB: INSERT ... ON CONFLICT DO UPDATE<br/>request_count + 1
     DB-->>AC: commit
-    Note over API: Later, for dashboards:
-    API->>AC: get_totals()
-    AC->>DB: SELECT SUM(request_count), SUM(error_count), MIN/MAX timestamps
-    DB-->>AC: aggregated row
-    AC-->>API: {total_requests, total_errors, first_request_at, last_request_at}
+
+    Handler->>AC: get_totals()
+    AC->>DB: SELECT SUM(request_count), SUM(error_count), ...
+    DB-->>AC: Row
+    AC-->>Handler: {"total_requests": N, "total_errors": M, ...}
 ```
 
-The `record()` method uses a single SQL statement with `ON CONFLICT` to handle both first-seen and subsequent requests:
+The `record()` method uses a single SQL statement that inserts a new category row or increments the existing one:
 
 ```python
 def record(self, category: str, is_error: bool = False) -> None:
@@ -98,43 +99,61 @@ def record(self, category: str, is_error: bool = False) -> None:
 
 ### Flow 2: PR Reminder Lifecycle (Upsert → Schedule → Remind → Snooze → Close)
 
-The `PRReminderState` manages the full lifecycle of a pull request reminder. A PR is first registered via `upsert_pr()`, then scheduled with `schedule_next_reminder()`. When due, `get_due_reminders()` returns eligible PRs, and `record_reminder()` logs the action. PRs can be snoozed and later auto-reactivated via `unsnooze_expired()`, or permanently closed via `mark_closed()`.
+`PRReminderState` tracks pull requests through a multi-state lifecycle: `active` → `snoozed` → `active` (unsnooze) → `closed`/`merged`. Each state transition is logged to `reminder_history`.
 
 ```mermaid
 sequenceDiagram
-    participant Svc as PR Reminder Service
+    participant Caller as PR Reminder Service
     participant PRS as PRReminderState
     participant DB as drucker_pr_reminder_state.db
 
-    Svc->>PRS: upsert_pr(repo, pr_number, title, url, author, reviewers, created_at)
+    Caller->>PRS: upsert_pr(repo, pr_number, ...)
     PRS->>DB: INSERT ... ON CONFLICT DO UPDATE
-    DB-->>PRS: row dict
+    DB-->>PRS: row
+    PRS-->>Caller: Dict (pr record)
 
-    Svc->>PRS: schedule_next_reminder(repo, pr_number, next_at)
-    PRS->>DB: UPDATE pr_reminders SET next_reminder_at
+    Caller->>PRS: schedule_next_reminder(repo, pr_number, next_at)
+    PRS->>DB: UPDATE pr_reminders SET next_reminder_at = ?
 
-    Svc->>PRS: get_due_reminders(as_of=now)
-    PRS->>DB: SELECT WHERE status='active' AND next_reminder_at <= now AND not snoozed
-    DB-->>PRS: list of due PRs
+    Caller->>PRS: get_due_reminders(as_of=now)
+    PRS->>DB: SELECT WHERE status='active' AND next_reminder_at <= ?
+    DB-->>PRS: rows
+    PRS-->>Caller: List[Dict]
 
-    Svc->>PRS: record_reminder(repo, pr_number, target_user)
-    PRS->>DB: UPDATE reminder_count + 1, INSERT reminder_history
+    Caller->>PRS: record_reminder(repo, pr_number, target_user)
+    PRS->>DB: UPDATE reminder_count + 1; INSERT reminder_history
 
-    Svc->>PRS: snooze_pr(repo, pr_number, snooze_until, snoozed_by)
-    PRS->>DB: UPDATE status='snoozed', INSERT history
+    Caller->>PRS: snooze_pr(repo, pr_number, snooze_until, snoozed_by)
+    PRS->>DB: UPDATE status='snoozed'; INSERT reminder_history
 
-    Note over Svc: Later, on timer tick:
-    Svc->>PRS: unsnooze_expired(as_of=now)
-    PRS->>DB: UPDATE status='active' WHERE snoozed_until <= now
-    DB-->>PRS: count of unsnoozes
+    Caller->>PRS: unsnooze_expired(as_of=now)
+    PRS->>DB: UPDATE status='active' WHERE snoozed_until <= ?
+    DB-->>PRS: count
+    PRS-->>Caller: int (unsnooze count)
 
-    Svc->>PRS: mark_closed(repo, pr_number, action='merged')
-    PRS->>DB: UPDATE status='merged', INSERT history
+    Caller->>PRS: mark_closed(repo, pr_number, action='merged')
+    PRS->>DB: UPDATE status='merged'; INSERT reminder_history
 ```
 
-### Flow 3: Learning from Ticket Intake (Keyword & Reporter Pattern Updates)
+The `get_due_reminders()` query filters for active, non-snoozed PRs whose `next_reminder_at` has passed:
 
-When a ticket is processed, `DruckerLearningStore` extracts keywords from the summary and updates keyword-to-field-value confidence scores. It simultaneously tracks per-reporter compliance rates and value preferences. These patterns are later queried by `predict_component()` to suggest metadata for new tickets.
+```python
+cursor.execute(
+    '''
+    SELECT * FROM pr_reminders
+    WHERE status = 'active'
+      AND next_reminder_at IS NOT NULL
+      AND next_reminder_at <= ?
+      AND (snoozed_until IS NULL OR snoozed_until <= ?)
+    ORDER BY next_reminder_at ASC
+    ''',
+    (now, now),
+)
+```
+
+### Flow 3: Learning Store — Observe Ticket and Predict Component
+
+`DruckerLearningStore` ingests resolved ticket data to build keyword→component and reporter→field-value frequency tables, then uses those patterns to predict metadata for new tickets.
 
 ```mermaid
 sequenceDiagram
@@ -142,37 +161,31 @@ sequenceDiagram
     participant LS as DruckerLearningStore
     participant DB as drucker_learning.db
 
+    Note over Intake,LS: Learning Phase (resolved ticket)
     Intake->>LS: _extract_keywords(summary)
-    LS-->>Intake: ["firmware", "crash", "pcie"]
-
-    loop For each keyword × field × value
-        Intake->>LS: _update_keyword_pattern(keyword, field, value)
-        LS->>DB: SELECT hit_count, miss_count
-        LS->>LS: confidence = hit / (hit + miss + 2)
-        LS->>DB: INSERT ... ON CONFLICT DO UPDATE
+    LS-->>Intake: ["firmware", "pcie", "link"]
+    loop For each keyword
+        Intake->>LS: _update_keyword_pattern(keyword, "components", "Firmware")
+        LS->>DB: SELECT hit_count, miss_count; UPSERT with new confidence
     end
+    Intake->>LS: _update_reporter_compliance(reporter, field, has_value)
+    LS->>DB: UPSERT reporter_profiles (count, total, compliance_rate)
+    Intake->>LS: _update_reporter_value(reporter, "components", "Firmware")
+    LS->>DB: UPSERT reporter_profiles; UPDATE totals for all values
 
-    Intake->>LS: _update_reporter_compliance(reporter_id, field, has_value)
-    LS->>DB: UPSERT reporter_profiles (value='__present__')
-
-    Intake->>LS: _update_reporter_value(reporter_id, field, value)
-    LS->>DB: UPSERT reporter_profiles, UPDATE totals for all values
-
-    Note over Intake: Later, for suggestions:
+    Note over Intake,LS: Prediction Phase (new ticket)
     Intake->>LS: predict_component(ticket_dict)
     LS->>LS: _extract_keywords(summary)
     LS->>DB: SELECT keyword_patterns WHERE field='components' AND keyword IN (...)
+    DB-->>LS: rows with hit_count, confidence
     LS->>LS: Weighted aggregation across keywords
-    LS->>LS: _predict_from_reporter(field, ticket_dict)
-    LS-->>Intake: (predicted_component, confidence)
+    LS-->>Intake: ("Firmware", 0.72)
 ```
 
-The keyword extraction filters out stopwords and short tokens:
+Keyword extraction strips stopwords and short tokens:
 
 ```python
 def _extract_keywords(self, summary: str) -> list[str]:
-    if not summary:
-        return []
     tokens = re.split(r'[^a-zA-Z0-9]+', summary.lower())
     keywords: list[str] = []
     seen: set[str] = set()
@@ -192,89 +205,74 @@ def _extract_keywords(self, summary: str) -> list[str]:
 
 ### ActivityCounter — `drucker_activity.db`
 
-| Table | Column | Type | Constraint | Description |
-|-------|--------|------|------------|-------------|
-| `activity` | `category` | TEXT | PRIMARY KEY | Endpoint category (e.g., `'hygiene'`, `'jira'`, `'github'`) |
-| | `request_count` | INTEGER | NOT NULL DEFAULT 0 | Cumulative successful + failed requests |
-| | `error_count` | INTEGER | NOT NULL DEFAULT 0 | Cumulative error requests |
-| | `first_request_at` | TEXT | | ISO 8601 UTC timestamp of first request |
-| | `last_request_at` | TEXT | | ISO 8601 UTC timestamp of most recent request |
+| Table | Column | Type | Description |
+|-------|--------|------|-------------|
+| `activity` | `category` | `TEXT PRIMARY KEY` | Endpoint category (e.g. `hygiene`, `jira`, `github`, `nl`, `pr-reminders`) |
+| | `request_count` | `INTEGER` | Total requests for this category |
+| | `error_count` | `INTEGER` | Total errors for this category |
+| | `first_request_at` | `TEXT` | ISO 8601 UTC timestamp of first request |
+| | `last_request_at` | `TEXT` | ISO 8601 UTC timestamp of most recent request |
 
 ### DruckerLearningStore — `drucker_learning.db`
 
-| Table | Column | Type | Constraint | Description |
-|-------|--------|------|------------|-------------|
-| `observations` | `id` | INTEGER | PK AUTOINCREMENT | Row ID |
-| | `ticket_key` | TEXT | NOT NULL | Jira ticket key |
-| | `field` | TEXT | NOT NULL | Normalized field name |
-| | `predicted_value` | TEXT | | What was predicted |
-| | `actual_value` | TEXT | | What was actually set |
-| | `correct` | INTEGER | NOT NULL | 1 if prediction matched |
-| | `timestamp` | TEXT | NOT NULL | ISO 8601 UTC |
-| `keyword_patterns` | `keyword` | TEXT | PK (composite) | Lowercased keyword token |
-| | `field` | TEXT | PK (composite) | Normalized field name |
-| | `value` | TEXT | PK (composite) | Field value associated with keyword |
-| | `hit_count` | INTEGER | DEFAULT 0 | Times keyword co-occurred with value |
-| | `miss_count` | INTEGER | DEFAULT 0 | Times keyword appeared without value |
-| | `confidence` | REAL | DEFAULT 0.0 | `hit / (hit + miss + 2)` — Laplace-smoothed |
-| `reporter_profiles` | `reporter_id` | TEXT | PK (composite) | Reporter identifier |
-| | `field` | TEXT | PK (composite) | Normalized field name |
-| | `value` | TEXT | PK (composite) | Field value or `'__present__'` sentinel |
-| | `count` | INTEGER | DEFAULT 0 | Occurrences of this value |
-| | `total` | INTEGER | DEFAULT 0 | Total observations for this reporter+field |
-| | `compliance_rate` | REAL | DEFAULT 0.0 | `count / total` |
-| `learned_tickets` | `ticket_key` | TEXT | PK (composite) | Ticket key |
-| | `fingerprint` | TEXT | PK (composite) | Content hash for deduplication |
-| | `learned_at` | TEXT | NOT NULL | ISO 8601 UTC |
-
-**Indexes:** `idx_drucker_obs_ticket_field`, `idx_drucker_keyword_patterns`, `idx_drucker_reporter_profiles`, `idx_drucker_learned_tickets_key`.
+| Table | Column | Type | Description |
+|-------|--------|------|-------------|
+| `observations` | `id` | `INTEGER PK AUTOINCREMENT` | Row ID |
+| | `ticket_key` | `TEXT` | Jira ticket key |
+| | `field` | `TEXT` | Metadata field name |
+| | `predicted_value` | `TEXT` | What the model predicted |
+| | `actual_value` | `TEXT` | What was actually set |
+| | `correct` | `INTEGER` | 1 if prediction matched |
+| | `timestamp` | `TEXT` | ISO 8601 UTC |
+| `keyword_patterns` | `(keyword, field, value)` | `TEXT PK` | Composite primary key |
+| | `hit_count` | `INTEGER` | Times this keyword co-occurred with this field value |
+| | `miss_count` | `INTEGER` | Times keyword appeared without this value |
+| | `confidence` | `REAL` | `hit_count / (hit_count + miss_count + 2)` — Laplace-smoothed |
+| `reporter_profiles` | `(reporter_id, field, value)` | `TEXT PK` | Composite primary key |
+| | `count` | `INTEGER` | Times this reporter used this value (or `__present__` sentinel for compliance) |
+| | `total` | `INTEGER` | Total observations for this reporter+field |
+| | `compliance_rate` | `REAL` | `count / total` |
+| `learned_tickets` | `(ticket_key, fingerprint)` | `TEXT PK` | Deduplication — prevents re-learning the same ticket state |
+| | `learned_at` | `TEXT` | ISO 8601 UTC |
 
 ### DruckerMonitorState — `drucker_monitor_state.db`
 
-| Table | Column | Type | Constraint | Description |
-|-------|--------|------|------------|-------------|
-| `checkpoints` | `project` | TEXT | PRIMARY KEY | Jira project key |
-| | `last_checked` | TEXT | NOT NULL | ISO 8601 UTC polling cursor |
-| `processed_tickets` | `ticket_key` | TEXT | PRIMARY KEY | Jira ticket key |
-| | `project` | TEXT | | Project key |
-| | `processed_at` | TEXT | NOT NULL | ISO 8601 UTC |
-| `validation_history` | `id` | INTEGER | PK AUTOINCREMENT | Row ID |
-| | `ticket_key` | TEXT | NOT NULL | Jira ticket key |
-| | `project` | TEXT | | Project key |
-| | `result_json` | TEXT | | JSON-serialized validation result |
-| | `timestamp` | TEXT | NOT NULL | ISO 8601 UTC |
-
-**Indexes:** `idx_drucker_processed_project`, `idx_drucker_history_ticket`, `idx_drucker_history_project`.
+| Table | Column | Type | Description |
+|-------|--------|------|-------------|
+| `checkpoints` | `project` | `TEXT PRIMARY KEY` | Jira project key |
+| | `last_checked` | `TEXT` | ISO 8601 UTC polling cursor |
+| `processed_tickets` | `ticket_key` | `TEXT PRIMARY KEY` | Ticket already processed |
+| | `project` | `TEXT` | Owning project |
+| | `processed_at` | `TEXT` | ISO 8601 UTC |
+| `validation_history` | `id` | `INTEGER PK AUTOINCREMENT` | Row ID |
+| | `ticket_key` | `TEXT` | Ticket key |
+| | `project` | `TEXT` | Project key |
+| | `result_json` | `TEXT` | JSON-serialized validation result |
+| | `timestamp` | `TEXT` | ISO 8601 UTC |
 
 ### PRReminderState — `drucker_pr_reminder_state.db`
 
-| Table | Column | Type | Constraint | Description |
-|-------|--------|------|------------|-------------|
-| `pr_reminders` | `id` | INTEGER | PK AUTOINCREMENT | Row ID |
-| | `repo` | TEXT | NOT NULL | Repository identifier (e.g., `org/repo`) |
-| | `pr_number` | INTEGER | NOT NULL | Pull request number |
-| | `pr_title` | TEXT | DEFAULT '' | PR title |
-| | `pr_url` | TEXT | DEFAULT '' | PR URL |
-| | `author_github` | TEXT | DEFAULT '' | PR author GitHub handle |
-| | `reviewers_github` | TEXT | DEFAULT '' | Comma-separated reviewer handles |
-| | `created_at` | TEXT | NOT NULL | PR creation timestamp |
-| | `first_reminded_at` | TEXT | | First reminder timestamp |
-| | `last_reminded_at` | TEXT | | Most recent reminder timestamp |
-| | `next_reminder_at` | TEXT | | Scheduled next reminder |
-| | `reminder_count` | INTEGER | DEFAULT 0 | Total reminders sent |
-| | `snoozed_until` | TEXT | | Snooze expiry timestamp |
-| | `snoozed_by` | TEXT | DEFAULT '' | Who snoozed it |
-| | `status` | TEXT | DEFAULT 'active' | `active`, `snoozed`, `closed`, `merged` |
-| | | | UNIQUE(repo, pr_number) | |
-| `reminder_history` | `id` | INTEGER | PK AUTOINCREMENT | Row ID |
-| | `repo` | TEXT | NOT NULL | Repository identifier |
-| | `pr_number` | INTEGER | NOT NULL | Pull request number |
-| | `action` | TEXT | NOT NULL | `reminded`, `snoozed`, `closed`, `merged` |
-| | `target_user` | TEXT | DEFAULT '' | User targeted by action |
-| | `details_json` | TEXT | | JSON payload for action-specific data |
-| | `timestamp` | TEXT | NOT NULL | ISO 8601 UTC |
-
-**Indexes:** `idx_pr_reminders_repo_status`, `idx_pr_reminders_next` (partial, `WHERE status = 'active'`), `idx_reminder_history_pr`.
+| Table | Column | Type | Description |
+|-------|--------|------|-------------|
+| `pr_reminders` | `id` | `INTEGER PK AUTOINCREMENT` | Row ID |
+| | `(repo, pr_number)` | `UNIQUE` | Natural key for a PR |
+| | `pr_title`, `pr_url` | `TEXT` | Display metadata |
+| | `author_github` | `TEXT` | PR author's GitHub handle |
+| | `reviewers_github` | `TEXT` | Comma-separated reviewer handles |
+| | `created_at` | `TEXT` | PR creation timestamp |
+| | `first_reminded_at` | `TEXT` | First reminder sent |
+| | `last_reminded_at` | `TEXT` | Most recent reminder sent |
+| | `next_reminder_at` | `TEXT` | Scheduled next reminder (indexed, filtered on `status='active'`) |
+| | `reminder_count` | `INTEGER` | Total reminders sent |
+| | `snoozed_until` | `TEXT` | Snooze expiry |
+| | `snoozed_by` | `TEXT` | Who snoozed it |
+| | `status` | `TEXT` | `active`, `snoozed`, `closed`, `merged` |
+| `reminder_history` | `id` | `INTEGER PK AUTOINCREMENT` | Row ID |
+| | `repo`, `pr_number` | `TEXT`, `INTEGER` | PR reference |
+| | `action` | `TEXT` | `reminded`, `snoozed`, `closed`, `merged` |
+| | `target_user` | `TEXT` | User targeted by the action |
+| | `details_json` | `TEXT` | Optional JSON payload |
+| | `timestamp` | `TEXT` | ISO 8601 UTC |
 
 ### DruckerReportStore — Filesystem
 
@@ -284,40 +282,40 @@ data/drucker_reports/<PROJECT_KEY>/<REPORT_ID>/report.json
 data/drucker_reports/<PROJECT_KEY>/<REPORT_ID>/summary.md
 ```
 
-The store reads/writes plain JSON and Markdown files. It depends on `DruckerHygieneReport` from `agents.drucker.models` for the `to_dict()` and `summary_markdown` interface.
+The store reads/writes `DruckerHygieneReport` model objects (from `agents.drucker.models`) or plain dicts. Listing and retrieval use `pathlib.Path.glob()` patterns.
 
 ## Dependencies
 
 | Dependency | Purpose | Version |
 |---|---|---|
-| `sqlite3` (stdlib) | Persistence engine for all four SQLite-backed stores | Python stdlib |
-| `threading` (stdlib) | `RLock` for thread-safe database access | Python stdlib |
-| `json` (stdlib) | Serialization of validation results, PR reminder details, and reports | Python stdlib |
-| `pathlib` (stdlib) | Directory creation and file path resolution | Python stdlib |
-| `hashlib` (stdlib) | Imported in `learning_store.py` (available for fingerprinting) | Python stdlib |
-| `re` (stdlib) | Keyword tokenization in `DruckerLearningStore._extract_keywords()` | Python stdlib |
-| `logging` (stdlib) | Diagnostic logging in `DruckerLearningStore` and `DruckerReportStore` | Python stdlib |
-| `agents.drucker.models.DruckerHygieneReport` | Report model with `to_dict()` and `summary_markdown` | Internal |
+| `sqlite3` | Persistent storage for all four SQLite-backed stores | Python stdlib |
+| `threading` | `RLock` for thread-safe database access | Python stdlib |
+| `pathlib` | Directory creation and file path resolution | Python stdlib |
+| `json` | Serialization of validation results, reminder details, and reports | Python stdlib |
+| `hashlib` | Imported in `learning_store.py` (available for fingerprint computation) | Python stdlib |
+| `re` | Keyword tokenization in `DruckerLearningStore._extract_keywords()` | Python stdlib |
+| `logging` | Structured logging in `learning_store.py` and `report_store.py` | Python stdlib |
+| `agents.drucker.models.DruckerHygieneReport` | Report data model for `DruckerReportStore.save_report()` | Internal |
 
 ## Configuration
 
 | Parameter | Source | Default | Description |
 |---|---|---|---|
-| `db_path` (ActivityCounter) | Constructor argument | `'data/drucker_activity.db'` | SQLite database file path |
-| `db_path` (DruckerLearningStore) | Constructor argument | `'data/drucker_learning.db'` | SQLite database file path |
-| `min_observations` (DruckerLearningStore) | Constructor argument / `set_min_observations()` | `20` | Minimum observation count before predictions are returned; clamped to ≥ 1 |
-| `db_path` (DruckerMonitorState) | Constructor argument | `'data/drucker_monitor_state.db'` | SQLite database file path |
-| `db_path` (PRReminderState) | Constructor argument | `'data/drucker_pr_reminder_state.db'` | SQLite database file path |
+| `db_path` (ActivityCounter) | Constructor argument | `data/drucker_activity.db` | SQLite database file path |
+| `db_path` (DruckerLearningStore) | Constructor argument | `data/drucker_learning.db` | SQLite database file path |
+| `min_observations` (DruckerLearningStore) | Constructor argument | `20` | Minimum observation count before predictions are returned; floor-clamped to 1 |
+| `db_path` (DruckerMonitorState) | Constructor argument | `data/drucker_monitor_state.db` | SQLite database file path |
+| `db_path` (PRReminderState) | Constructor argument | `data/drucker_pr_reminder_state.db` | SQLite database file path |
 | `storage_dir` (DruckerReportStore) | Constructor argument | `None` (falls through) | Filesystem directory for report artifacts |
-| `DRUCKER_REPORT_DIR` | Environment variable | `'data/drucker_reports'` | Overrides `storage_dir` when constructor arg is `None` |
+| `DRUCKER_REPORT_DIR` | Environment variable | `data/drucker_reports` | Overrides default report storage directory when `storage_dir` is not passed |
 
-All SQLite stores accept `':memory:'` as `db_path` for testing; when a real path is given, parent directories are created automatically via `Path.mkdir(parents=True, exist_ok=True)`.
+All SQLite stores accept `':memory:'` as `db_path` for testing — in that case, parent directory creation is skipped.
 
 ## Error Handling
 
 All five stores follow a consistent error handling pattern:
 
-1. **Connection guard:** Every public method calls `_require_conn()`, which raises `RuntimeError` with a descriptive message if `close()` has already been called:
+1. **Connection guard** — Every store implements `_require_conn()`, which raises `RuntimeError` if the connection has been closed:
 
    ```python
    def _require_conn(self) -> sqlite3.Connection:
@@ -326,28 +324,38 @@ All five stores follow a consistent error handling pattern:
        return self.conn
    ```
 
-2. **Thread safety:** All database operations are wrapped in `with self._lock:` blocks using a `threading.RLock`, preventing concurrent mutation from multiple threads sharing the same store instance.
+2. **Thread safety** — All database operations are wrapped in `with self._lock:` blocks using a `threading.RLock`. The reentrant lock allows nested calls within the same thread.
 
-3. **Filesystem errors in `DruckerReportStore`:** The `get_report()` method catches generic `Exception` on file reads and logs errors via `log.error()`, returning `None` on failure. The `list_reports()` method catches and logs `Exception` per file, skipping unreadable reports rather than aborting the listing. The `save_report()` method raises `ValueError` for missing `report_id` or `project_key` but does not catch I/O errors from `open()` or `json.dump()` — those propagate to the caller.
+3. **SQLite `check_same_thread=False`** — All connections are opened with this flag to permit multi-threaded access (guarded by the application-level lock).
 
-4. **No explicit SQLite error handling:** None of the SQLite stores catch `sqlite3.Error` or its subclasses. Database errors (e.g., disk full, corruption) propagate as unhandled exceptions.
+4. **`DruckerReportStore` file I/O** — `get_report()` catches generic `Exception` on file reads and returns `None` / logs a warning rather than propagating. `list_reports()` similarly catches and skips unreadable files:
+
+   ```python
+   except Exception as e:
+       log.warning(f'Skipping unreadable report file {json_path}: {e}')
+       continue
+   ```
+
+5. **No retry logic** — None of the stores implement retry or backoff on SQLite busy/locked errors. The `RLock` serializes access within a single process, but cross-process contention is not handled.
 
 ## Known Limitations / Technical Debt
 
-1. **Truncated source file — `learning_store.py`:** The `predict_component()` method in `DruckerLearningStore` is truncated in the provided source (cuts off mid-iteration at `for row in r`). The weighted aggregation logic, the reporter-based fallback path, and the return statement are missing from the visible code. This means the full prediction pipeline cannot be verified from the available source.
+1. **Truncated source file** — `learning_store.py` is truncated mid-method in the provided source. The `predict_component()` method's weighted aggregation logic and any remaining public methods (e.g., `learn_from_ticket()`, `predict_priority()`) are not visible. The `_ticket_keywords` instance dict is initialized but never populated in the visible code, suggesting caching logic exists in the truncated portion.
 
-2. **No SQLite error handling on I/O boundaries:** None of the four SQLite-backed stores catch `sqlite3.OperationalError`, `sqlite3.DatabaseError`, or other SQLite exceptions. A disk-full condition, database corruption, or locked-database scenario will propagate as an unhandled exception. This is an anti-pattern for production services.
+2. **No connection pooling or WAL mode** — All SQLite stores use the default journal mode. For concurrent read-heavy workloads (e.g., `get_due_reminders()` polled frequently), enabling WAL mode (`PRAGMA journal_mode=WAL`) would reduce reader/writer contention.
 
-3. **Missing error handling on filesystem writes in `DruckerReportStore.save_report()`:** While `get_report()` and `list_reports()` catch I/O exceptions, `save_report()` lets `open()` and `json.dump()` exceptions propagate uncaught. A permissions error or disk-full condition during report persistence will surface as an unhandled `OSError`.
+3. **Hardcoded default database paths** — Each store has a hardcoded default path (e.g., `'data/drucker_activity.db'`, `'data/drucker_learning.db'`). These are not centralized in a configuration module; changing the data directory requires updating each constructor call site.
 
-4. **Hardcoded default database paths:** All four SQLite stores have hardcoded default paths under `data/` (e.g., `'data/drucker_activity.db'`, `'data/drucker_learning.db'`). These are not configurable via environment variables — only `DruckerReportStore` supports `DRUCKER_REPORT_DIR`. In containerized or multi-instance deployments, callers must explicitly pass `db_path` to avoid collisions.
+4. **`DruckerLearningStore` is a potential god class** — The visible portion already contains 10+ methods spanning keyword extraction, pattern updates, reporter compliance tracking, reporter value tracking, and prediction. With the truncated portion likely adding more public methods, this class may exceed 500 lines with >10 public methods.
 
-5. **No connection pooling or WAL mode:** Each store opens a single `sqlite3.Connection` with `check_same_thread=False` and relies on an `RLock` for serialization. Write-heavy workloads under concurrent access may experience contention. SQLite WAL mode is not enabled, which would improve concurrent read performance.
+5. **Missing `close()` in `DruckerReportStore`** — Unlike the four SQLite stores, `DruckerReportStore` has no `close()` method. While it uses no persistent connection, the inconsistency breaks the uniform lifecycle contract.
 
-6. **`DruckerLearningStore` approaches god-class territory:** The class contains extensive logic spanning keyword extraction, keyword pattern updates, reporter compliance tracking, reporter value tracking, reporter-based prediction, and component prediction — all in a single class. While the line count is within bounds, the breadth of responsibilities suggests this could benefit from decomposition.
+6. **No schema migration support** — All stores use `CREATE TABLE IF NOT EXISTS`. Adding columns to existing tables requires manual migration; there is no versioning or `ALTER TABLE` logic.
 
-7. **`_STOPWORDS` set is hardcoded in `DruckerLearningStore`:** The stopword list is a class-level constant with no mechanism for runtime extension or project-specific customization. Domain-specific terms that should be filtered (or preserved) require a code change.
+7. **`_sort_timestamp` fallback** — In `DruckerReportStore._sort_timestamp()`, unparseable timestamps silently fall back to `datetime.min`, which could cause reports with malformed timestamps to sort to the bottom without any warning.
 
-8. **Laplace smoothing constant is hardcoded:** The confidence formula in `_update_keyword_pattern()` uses `hit_count / (hit_count + miss_count + 2)` with a fixed smoothing factor of 2. This is not configurable.
+8. **`hashlib` imported but unused in visible code** — `learning_store.py` imports `hashlib` but the fingerprint computation that uses it is in the truncated portion. If the truncated code is missing from the actual deployment, this is dead code.
+
+9. **No index on `pr_reminders.status` alone** — The `idx_pr_reminders_next` partial index filters on `status = 'active'`, but `list_active()` queries `status NOT IN ('closed', 'merged')` which cannot use this index efficiently. A broader index on `(status)` would help.
 
 <!-- End Documentation Agent generated content -->
