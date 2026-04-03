@@ -77,7 +77,7 @@ def test_hemingway_doc_card_typical():
 
     # -- facts
     fs = _find_fact_set(card)
-    assert _fact_value(fs, 'Doc ID') == 'DOC-001'
+    assert _fact_value(fs, 'Doc ID') == '[DOC-001](https://cornelisnetworks.atlassian.net/browse/DOC-001)'
     assert _fact_value(fs, 'Title') == 'OPA PSM Architecture'
     assert _fact_value(fs, 'Type') == 'architecture'
     assert _fact_value(fs, 'Confidence') == '0.92'
@@ -157,7 +157,7 @@ def test_hemingway_impact_card_with_targets_and_blockers():
     _card_schema_ok(card)
 
     fs = _find_fact_set(card)
-    assert _fact_value(fs, 'Impact ID') == 'IMP-101'
+    assert _fact_value(fs, 'Impact ID') == '[IMP-101](https://cornelisnetworks.atlassian.net/browse/IMP-101)'
     assert _fact_value(fs, 'Title') == 'PSM API Change'
     assert _fact_value(fs, 'Type') == 'api-change'
     assert _fact_value(fs, 'Confidence') == '0.85'
@@ -171,8 +171,8 @@ def test_hemingway_impact_card_with_targets_and_blockers():
     assert '**Reasons:**' in body
     assert 'API signature changed' in body
     assert '**Blocking Issues:**' in body
-    assert 'STL-1234' in body
-    assert 'STL-5678' in body
+    assert '[STL-1234](https://cornelisnetworks.atlassian.net/browse/STL-1234)' in body
+    assert '[STL-5678](https://cornelisnetworks.atlassian.net/browse/STL-5678)' in body
 
 
 def test_hemingway_impact_card_no_impacts():
@@ -255,11 +255,11 @@ def test_hemingway_records_card_multiple():
 
     texts = _body_texts(card)
     body = '\n'.join(texts)
-    assert '**DOC-001**' in body
+    assert '**[DOC-001](https://cornelisnetworks.atlassian.net/browse/DOC-001)**' in body
     assert 'Architecture Guide' in body
     assert '[architecture]' in body
-    assert '**DOC-002**' in body
-    assert '**DOC-003**' in body
+    assert '**[DOC-002](https://cornelisnetworks.atlassian.net/browse/DOC-002)**' in body
+    assert '**[DOC-003](https://cornelisnetworks.atlassian.net/browse/DOC-003)**' in body
 
 
 def test_hemingway_records_card_empty():
@@ -323,7 +323,7 @@ def test_hemingway_publication_card_with_publications():
     _card_schema_ok(card)
 
     fs = _find_fact_set(card)
-    assert _fact_value(fs, 'Doc ID') == 'DOC-050'
+    assert _fact_value(fs, 'Doc ID') == '[DOC-050](https://cornelisnetworks.atlassian.net/browse/DOC-050)'
     assert _fact_value(fs, 'Title') == 'PSM3 User Guide'
     assert _fact_value(fs, 'Publications') == '2'
 

@@ -1320,14 +1320,14 @@ def register_subcommands(subparsers) -> None:
     p.set_defaults(func=cmd_pr_reminder_merge)
 
     # --- Jira query & reporting commands ---
-    sp_jql = subs.add_parser('jira-query', help='Run an ad-hoc JQL query')
+    sp_jql = subparsers.add_parser('jira-query', help='Run an ad-hoc JQL query')
     sp_jql.add_argument('--project', default='STL', help='Jira project key')
     sp_jql.add_argument('--jql', required=True, help='JQL query string')
     sp_jql.add_argument('--limit', type=int, default=100, help='Max tickets')
     _add_common_args(sp_jql)
     sp_jql.set_defaults(func=cmd_jira_query)
 
-    sp_jt = subs.add_parser('jira-tickets', help='Query tickets by type, status, date')
+    sp_jt = subparsers.add_parser('jira-tickets', help='Query tickets by type, status, date')
     sp_jt.add_argument('--project', default='STL', help='Jira project key')
     sp_jt.add_argument('--issue-types', default=None, help='Comma-separated issue types')
     sp_jt.add_argument('--statuses', default=None, help='Comma-separated statuses')
@@ -1337,14 +1337,14 @@ def register_subcommands(subparsers) -> None:
     _add_common_args(sp_jt)
     sp_jt.set_defaults(func=cmd_jira_tickets)
 
-    sp_rs = subs.add_parser('jira-release-status', help='Status breakdown by release version')
+    sp_rs = subparsers.add_parser('jira-release-status', help='Status breakdown by release version')
     sp_rs.add_argument('--project', default='STL', help='Jira project key')
     sp_rs.add_argument('--releases', required=True, help='Comma-separated release versions')
     sp_rs.add_argument('--limit', type=int, default=500, help='Max tickets per release')
     _add_common_args(sp_rs)
     sp_rs.set_defaults(func=cmd_jira_release_status)
 
-    sp_tc = subs.add_parser('jira-ticket-counts', help='Fast ticket count')
+    sp_tc = subparsers.add_parser('jira-ticket-counts', help='Fast ticket count')
     sp_tc.add_argument('--project', default='STL', help='Jira project key')
     sp_tc.add_argument('--issue-types', default=None, help='Comma-separated issue types')
     sp_tc.add_argument('--statuses', default=None, help='Comma-separated statuses')
@@ -1352,7 +1352,7 @@ def register_subcommands(subparsers) -> None:
     _add_common_args(sp_tc)
     sp_tc.set_defaults(func=cmd_jira_ticket_counts)
 
-    sp_sr = subs.add_parser('jira-status-report', help='Full project status dashboard')
+    sp_sr = subparsers.add_parser('jira-status-report', help='Full project status dashboard')
     sp_sr.add_argument('--project', default='STL', help='Jira project key')
     sp_sr.add_argument('--no-bugs', action='store_true', help='Exclude bug breakdown')
     sp_sr.add_argument('--no-activity', action='store_true', help='Exclude recent activity')
