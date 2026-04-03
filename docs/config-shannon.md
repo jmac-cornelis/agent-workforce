@@ -10,249 +10,224 @@ status: "draft"
 
 # Module Overview
 
-Shannon is the single Microsoft Teams bot and command-routing surface for the Cornelis agent workforce. Rather than each agent maintaining its own Teams presence, Shannon acts as a unified gateway: it receives slash-commands from Teams channels, resolves which back-end agent should handle the request, proxies the call to that agent's API, and returns the formatted result. The configuration layer documented here — `config/shannon/agent_registry.yaml` and `config/shannon/teams-app-manifest.template.json` — defines the complete command catalog, agent routing table, Teams application identity, and per-agent connection parameters that Shannon uses at runtime.
+Shannon is the single Microsoft Teams bot and command-routing surface for the Cornelis agent workforce. Rather than each agent maintaining its own Teams presence, Shannon acts as a unified gateway: it receives slash-commands from Teams channels, resolves which back-end agent should handle the request, proxies the call to that agent's API, and returns the response. The configuration layer documented here — `config/shannon/agent_registry.yaml` and `config/shannon/teams-app-manifest.template.json` — defines the complete roster of agents Shannon knows about, every command those agents expose, and the Teams application identity Shannon uses to operate as a bot.
 
 # What Changed
 
-**Before:** The Drucker agent entry in `agent_registry.yaml` exposed Jira hygiene commands (`/issue-check`, `/intake-report`, `/hygiene-run`, etc.) and a core set of GitHub PR hygiene commands (`/pr-hygiene`, `/pr-stale`, `/pr-reviews`, `/pr-list`, `/naming-compliance`, `/merge-conflicts`, `/ci-failures`, `/stale-branches`, `/extended-hygiene`). There were no Jira ad-hoc query commands, no natural-language query support, and no PR reminder lifecycle commands.
+**Before:** The Drucker agent entry in the registry contained Jira hygiene commands (`/issue-check`, `/intake-report`, `/hygiene-run`, etc.) and core GitHub PR hygiene commands (`/pr-hygiene`, `/pr-stale`, `/pr-reviews`, `/pr-list`, `/naming-compliance`, `/merge-conflicts`, `/ci-failures`, `/stale-branches`, `/extended-hygiene`). There were no Jira ad-hoc query commands, no natural-language query support, and no PR reminder lifecycle commands.
 
-**After:** Two new command groups were added to the Drucker agent definition:
+**After:** Two new command groups were added to the `drucker` agent entry:
 
-1. **Jira query & reporting commands** — seven new commands: `/jira-query`, `/jira-tickets`, `/jira-release-status`, `/jira-ticket-counts`, `/jira-status-report`, and `/ask` (LLM-powered natural-language query). These route to Drucker's `/v1/jira/*` and `/v1/nl/query` API endpoints.
-2. **PR reminder commands** — seven new commands: `/pr-reminder-scan`, `/pr-reminder-process`, `/pr-reminders-active`, `/pr-reminder-history`, `/pr-reminder-snooze`, and `/pr-reminder-merge`. These route to Drucker's `/v1/github/pr-reminders/*` endpoints. Notably, `/pr-reminder-snooze` and `/pr-reminder-merge` are the first commands in the registry marked `mutation: true`.
+1. **Jira query & reporting commands** — seven new commands: `/jira-query`, `/jira-tickets`, `/jira-release-status`, `/jira-ticket-counts`, `/jira-status-report`, and `/ask` (LLM-powered natural-language query via `/v1/nl/query`).
+2. **PR reminder commands** — seven new commands: `/pr-reminder-scan`, `/pr-reminder-process`, `/pr-reminders-active`, `/pr-reminder-history`, `/pr-reminder-snooze`, `/pr-reminder-merge`. The last two are the first `mutation: true` commands in the registry, meaning they alter state (snoozing reminders, merging PRs).
 
-**Impact:** Any component that reads the agent registry to build help text, validate commands, or render Adaptive Cards will now see the expanded Drucker command set. Teams users gain direct access to ad-hoc Jira querying, project status dashboards, natural-language questions, and a full PR reminder lifecycle (scan → notify → snooze → merge) without leaving the Teams channel.
+**Impact:** Shannon's command router must now recognize and dispatch 14 additional slash-commands to the Drucker back-end at `http://host.containers.internal:8201`. Any command-help or auto-complete surface Shannon exposes will show a significantly larger Drucker command set. The introduction of `mutation: true` commands means Shannon (or its consumers) should enforce confirmation flows before executing `/pr-reminder-snooze` and `/pr-reminder-merge`.
 
 # Component Diagram
 
 ```mermaid
 graph TD
-    subgraph "Shannon Configuration Layer"
-        AR["agent_registry.yaml<br/>(Agent & Command Catalog)"]
-        TM["teams-app-manifest.template.json<br/>(Teams App Identity)"]
+    subgraph "Microsoft Teams"
+        A[Teams Client / Channel]
     end
 
-    subgraph "Registered Agents"
-        SH["Shannon<br/>(Self — Status API)"]
-        DR["Drucker<br/>(Engineering Hygiene)"]
-        GA["Gantt<br/>(Project Planning)"]
+    subgraph "Shannon — Bot & Router"
+        B[Teams Bot Endpoint]
+        C[Agent Registry<br/>agent_registry.yaml]
+        D[Command Router]
     end
 
-    subgraph "Drucker Command Groups"
-        JH["Jira Hygiene<br/>(/issue-check, /intake-report, …)"]
-        JQ["Jira Query & Reporting<br/>(/jira-query, /jira-tickets, /ask, …)"]
-        GH["GitHub PR Hygiene<br/>(/pr-hygiene, /pr-stale, …)"]
-        GX["GitHub Extended Hygiene<br/>(/naming-compliance, /ci-failures, …)"]
-        PR["PR Reminders<br/>(/pr-reminder-scan, /pr-reminder-merge, …)"]
+    subgraph "Back-End Agents"
+        E[Drucker<br/>:8201 — Engineering Hygiene]
+        F[Gantt<br/>:8202 — Project Planning]
     end
 
-    AR --> SH
-    AR --> DR
-    AR --> GA
-    DR --> JH
-    DR --> JQ
-    DR --> GH
-    DR --> GX
-    DR --> PR
-    TM --> SH
+    subgraph "External Services"
+        G[Jira]
+        H[GitHub]
+        I[Power Automate<br/>Notifications Webhook]
+    end
+
+    A -->|slash-command| B
+    B --> D
+    D -->|lookup| C
+    D -->|proxy HTTP| E
+    D -->|proxy HTTP| F
+    E --> G
+    E --> H
+    E --> I
+    F --> G
 ```
 
 # Key Flows
 
-## Flow 1 — Slash-Command Routing via the Agent Registry
+## Flow 1 — Slash-Command Dispatch (Read-Only)
 
-When a user types a slash-command in Teams, Shannon's runtime looks up the command in the registry, resolves the target agent, constructs the HTTP request, and proxies it.
+A user types a command like `/jira-tickets` in a Teams channel. Shannon resolves the command to the Drucker agent, builds the HTTP request from the registry metadata, proxies it, and returns the result.
 
 ```mermaid
 sequenceDiagram
     participant User as Teams User
     participant Shannon as Shannon Bot
-    participant AR as agent_registry.yaml
-    participant Agent as Target Agent API
+    participant Registry as agent_registry.yaml
+    participant Drucker as Drucker API (:8201)
 
     User->>Shannon: /jira-tickets project_key=STL statuses=Open
-    Shannon->>AR: Lookup command "/jira-tickets"
-    AR-->>Shannon: agent_id=drucker, api_base_url, api_path, params schema
-    Shannon->>Shannon: Validate & bind params against schema
-    Shannon->>Agent: POST http://host.containers.internal:8201/v1/jira/tickets
-    Agent-->>Shannon: JSON response
-    Shannon->>User: Formatted Adaptive Card in Teams
+    Shannon->>Registry: Lookup command "/jira-tickets"
+    Registry-->>Shannon: agent_id=drucker, POST /v1/jira/tickets, mutation=false
+    Shannon->>Drucker: POST http://host.containers.internal:8201/v1/jira/tickets<br/>{project_key: "STL", statuses: ["Open"]}
+    Drucker-->>Shannon: 200 OK — ticket list payload
+    Shannon-->>User: Formatted ticket list in Teams
 ```
 
-Shannon resolves the target by scanning each agent's `custom_commands` list for a matching `command` string. The `api_base_url` from the agent entry is concatenated with the command's `api_path` to form the full URL. Parameters are validated against the `params` list — each param specifies `name`, `type`, `required`, and `label`.
+The registry entry for `/jira-tickets` specifies `mutation: false`, so Shannon can dispatch immediately without a confirmation step. Parameters like `issue_types`, `statuses`, and `date_filter` are typed as `list` or `str` and are optional unless marked `required: true`.
 
-## Flow 2 — Mutation Command with Approval Gate (PR Reminder Merge)
+## Flow 2 — Mutation Command with Confirmation (PR Merge)
 
-Commands marked `mutation: true` represent state-changing operations. The `/pr-reminder-merge` command is a representative example.
+A user requests `/pr-reminder-merge`. Because the registry marks this command as `mutation: true`, Shannon should gate execution behind a confirmation step before proxying.
 
 ```mermaid
 sequenceDiagram
     participant User as Teams User
     participant Shannon as Shannon Bot
-    participant AR as agent_registry.yaml
-    participant Drucker as Drucker API
+    participant Registry as agent_registry.yaml
+    participant Drucker as Drucker API (:8201)
 
     User->>Shannon: /pr-reminder-merge repo=cornelis/opa-psm2 pr_number=42
-    Shannon->>AR: Lookup "/pr-reminder-merge"
-    AR-->>Shannon: mutation=true, params schema
-    Shannon->>Shannon: Flag as mutation — apply approval policy
-    Shannon->>Drucker: POST /v1/github/pr-reminders/merge {repo, pr_number, merge_method}
-    Drucker-->>Shannon: Merge result
-    Shannon->>User: Confirmation card with merge status
+    Shannon->>Registry: Lookup command "/pr-reminder-merge"
+    Registry-->>Shannon: agent_id=drucker, POST /v1/github/pr-reminders/merge, mutation=true
+    Shannon-->>User: ⚠️ Confirm merge of PR #42 in cornelis/opa-psm2? (squash)
+    User->>Shannon: ✅ Confirm
+    Shannon->>Drucker: POST /v1/github/pr-reminders/merge<br/>{repo: "cornelis/opa-psm2", pr_number: 42, merge_method: "squash"}
+    Drucker-->>Shannon: 200 OK — merge result
+    Shannon-->>User: PR #42 merged (squash)
 ```
 
-The `mutation` flag on the command definition (`mutation: true`) signals Shannon's runtime to apply any configured approval or confirmation gates before forwarding the request. Currently, two Drucker commands carry this flag: `/pr-reminder-snooze` and `/pr-reminder-merge`.
+The `merge_method` parameter defaults to `squash` and accepts `merge` or `rebase` as alternatives, per the registry label.
 
-## Flow 3 — Natural-Language Query Routing
+## Flow 3 — Shannon Self-Status Query
 
-The `/ask` command routes a free-text question to Drucker's LLM-powered natural-language endpoint.
+Shannon exposes its own operational commands (`/stats`, `/busy`, `/work-today`, `/token-status`, `/decision-tree`, `/why`) that do not proxy to an external agent. These hit Shannon's own `/v1/status/*` endpoints.
 
 ```mermaid
 sequenceDiagram
     participant User as Teams User
     participant Shannon as Shannon Bot
-    participant Drucker as Drucker NL API
 
-    User->>Shannon: /ask query="How many bugs were opened this week in STL?"
-    Shannon->>Shannon: Resolve command, extract "query" param
-    Shannon->>Drucker: POST /v1/nl/query {query: "How many bugs…"}
-    Drucker-->>Shannon: Structured answer (text + optional data)
-    Shannon->>User: Rendered answer in Teams
+    User->>Shannon: /stats
+    Shannon->>Shannon: GET /v1/status/stats (internal)
+    Shannon-->>User: Service status & throughput summary
+
+    User->>Shannon: /why record_id=abc123
+    Shannon->>Shannon: GET /v1/status/decisions/abc123 (internal)
+    Shannon-->>User: Decision deep-dive for abc123
 ```
 
-This is the only command in the registry that delegates to an LLM-backed endpoint (`/v1/nl/query`). It accepts a single required `query` parameter of type `str`.
+Shannon's `api_base_url` is set to `""` (empty string), which signals the router that these commands are handled locally rather than proxied to an external service.
 
 # Data Model
 
-The agent registry defines a hierarchical data model expressed in YAML:
+The registry is the authoritative data model for this configuration layer. Its structure is:
 
-### Agent Entry
-
-| Field | Type | Description |
-|---|---|---|
-| `agent_id` | `str` | Unique identifier (e.g., `shannon`, `drucker`, `gantt`) |
-| `display_name` | `str` | Human-readable name |
-| `role` | `str` | Functional role description |
-| `description` | `str` | Full-text description |
-| `zone` | `str` | Deployment zone (`service_infrastructure`, `planning_delivery`) |
-| `channel_name` | `str` | Teams channel name for this agent |
-| `channel_id` | `str` | Teams channel ID |
-| `team_id` | `str` | Teams team ID |
-| `api_base_url` | `str` | Base URL for the agent's HTTP API (empty for Shannon itself) |
-| `notifications_webhook_url` | `str` | Power Automate webhook for outbound notifications (Drucker only) |
-| `approval_types` | `list` | Approval workflow types (currently empty for all agents) |
-| `custom_commands` | `list[Command]` | Ordered list of command definitions |
-| `timeout_seconds` | `int` | HTTP timeout for proxied calls |
-
-### Command Entry
-
-| Field | Type | Description |
-|---|---|---|
-| `command` | `str` | Slash-command trigger (e.g., `/jira-query`) |
-| `description` | `str` | Help text shown to users |
-| `api_method` | `str` | HTTP method (`GET` or `POST`) |
-| `api_path` | `str` | URL path appended to `api_base_url` |
-| `mutation` | `bool` | Whether the command mutates state (optional, defaults to `false`) |
-| `params` | `list[Param]` | Parameter definitions (optional) |
-
-### Param Entry
-
-| Field | Type | Description |
-|---|---|---|
-| `name` | `str` | Parameter key |
-| `type` | `str` | Data type: `str`, `int`, or `list` |
-| `required` | `bool` | Whether the parameter is mandatory |
-| `label` | `str` | Human-readable label with default hint |
-
-### Teams App Manifest
-
-The `teams-app-manifest.template.json` defines the Teams application identity using template variables:
-
-```json
-{
-  "id": "${SHANNON_TEAMS_APP_ID}",
-  "packageName": "com.cornelis.agentworkforce.shannon",
-  "bots": [
-    {
-      "botId": "${SHANNON_TEAMS_APP_ID}",
-      "scopes": ["team"],
-      "isNotificationOnly": false
-    }
-  ],
-  "validDomains": ["${SHANNON_PUBLIC_DOMAIN}"]
-}
+```yaml
+agents:                          # Top-level list
+  - agent_id: str                # Unique identifier (e.g., "drucker")
+    display_name: str            # Human-readable name
+    role: str                    # Functional role label
+    description: str             # One-line purpose
+    zone: str                    # Deployment zone (service_infrastructure, planning_delivery)
+    channel_name: str            # Teams channel slug
+    channel_id: str              # Teams channel ID (tacv2 format)
+    team_id: str                 # Teams team ID
+    api_base_url: str            # Base URL for proxied calls ("" = local)
+    notifications_webhook_url: str  # Optional Power Automate webhook
+    approval_types: list         # Reserved, currently empty for all agents
+    timeout_seconds: int         # Per-agent HTTP timeout
+    custom_commands:             # List of routable commands
+      - command: str             # Slash-command trigger (e.g., "/jira-query")
+        description: str         # Help text
+        api_method: str          # HTTP method (GET | POST)
+        api_path: str            # URL path (may contain {placeholders})
+        mutation: bool           # true = state-changing, requires confirmation
+        params:                  # Optional parameter definitions
+          - name: str
+            type: str            # str | int | list
+            required: bool
+            label: str           # Human-readable description
 ```
 
-The manifest declares a single bot scoped to `team` (not personal or group chat), with permissions for `identity` and `messageTeamMembers`.
+**Current agent count:** 3 (`shannon`, `drucker`, `gantt`).
+
+**Current command count by agent:**
+
+| Agent   | Commands |
+|---------|----------|
+| shannon | 6        |
+| drucker | 30       |
+| gantt   | 8        |
+
+The Teams app manifest (`teams-app-manifest.template.json`) uses environment-variable placeholders (`${SHANNON_TEAMS_APP_ID}`, `${SHANNON_PUBLIC_DOMAIN}`) and defines the bot with `team` scope, non-notification-only mode, and `identity` + `messageTeamMembers` permissions.
 
 # Dependencies
 
 | Dependency | Purpose | Version |
 |---|---|---|
-| Microsoft Teams Bot Framework | Bot registration and message handling | Manifest v1.19 |
-| Drucker API | Back-end for all Jira hygiene, Jira query, GitHub hygiene, and PR reminder commands | `http://host.containers.internal:8201` |
-| Gantt API | Back-end for planning snapshot and release monitoring commands | `http://host.containers.internal:8202` |
-| Power Automate | Outbound notification webhook for Drucker | Workflow endpoint (hardcoded URL) |
-| Microsoft Teams Platform | Channel and team identity resolution | Teams API v2 (tacv2 thread format) |
+| Microsoft Teams Bot Framework | Bot registration, message receive/send | Manifest v1.19 |
+| Drucker API | Back-end for all engineering hygiene commands | Internal `:8201` |
+| Gantt API | Back-end for planning and release monitoring commands | Internal `:8202` |
+| Power Automate | Drucker notification delivery webhook | SaaS (workflow `7346f433…`) |
+| Jira (via Drucker/Gantt) | Ticket data source for hygiene, query, and planning commands | Transitive |
+| GitHub (via Drucker) | PR and branch data source for hygiene and reminder commands | Transitive |
 
 # Configuration
 
-### Environment Variables (Template Substitution)
-
-| Variable | Used In | Purpose |
+| Variable / Setting | Location | Purpose |
 |---|---|---|
-| `SHANNON_TEAMS_APP_ID` | `teams-app-manifest.template.json` | Azure AD app registration ID for the bot |
-| `SHANNON_PUBLIC_DOMAIN` | `teams-app-manifest.template.json` | Public domain for webhook/messaging endpoint validation |
+| `${SHANNON_TEAMS_APP_ID}` | `teams-app-manifest.template.json` | Azure AD app registration ID for the bot |
+| `${SHANNON_PUBLIC_DOMAIN}` | `teams-app-manifest.template.json` | Public domain for the bot messaging endpoint |
+| `notifications_webhook_url` | `agent_registry.yaml` (drucker) | Power Automate webhook URL for Drucker notifications |
+| `api_base_url` | `agent_registry.yaml` (per agent) | Base URL for HTTP proxying; empty string means local handling |
+| `timeout_seconds` | `agent_registry.yaml` (per agent) | HTTP timeout for proxied calls (Shannon: 15s, Drucker: 30s) |
+| `channel_id` / `team_id` | `agent_registry.yaml` (per agent) | Teams channel and team identifiers for message routing |
 
-### Registry Configuration Constants
-
-| Constant | Value | Location |
-|---|---|---|
-| Shannon timeout | `15` seconds | `agent_registry.yaml` → `shannon.timeout_seconds` |
-| Drucker timeout | `30` seconds | `agent_registry.yaml` → `drucker.timeout_seconds` |
-| Drucker API base | `http://host.containers.internal:8201` | `agent_registry.yaml` → `drucker.api_base_url` |
-| Gantt API base | `http://host.containers.internal:8202` | `agent_registry.yaml` → `gantt.api_base_url` |
-| Default Jira project | `STL` | Implied by param labels (e.g., "Jira project key (default STL)") |
-| Default stale days (PR) | `5` | Param labels on PR hygiene commands |
-| Default stale days (branch) | `30` | Param labels on stale-branches commands |
-
-### Teams Manifest Settings
-
-| Setting | Value |
-|---|---|
-| Manifest schema version | `1.19` |
-| App version | `0.1.0` |
-| Bot scopes | `team` only |
-| Accent color | `#004b87` |
-| File support | `false` |
-| Notification-only | `false` |
+**Note:** The Gantt agent's `channel_id` is currently set to `""` (empty string), indicating the channel has not yet been provisioned or linked.
 
 # Error Handling
 
-Error handling in this configuration layer is implicit rather than explicit:
+Error handling patterns are implicit in the registry design rather than explicitly coded in these configuration files:
 
-- **Timeout enforcement:** Each agent entry specifies a `timeout_seconds` value (15s for Shannon, 30s for Drucker). Shannon's runtime is expected to enforce these as HTTP client timeouts when proxying commands.
-- **Required parameter validation:** Each command's `params` list marks parameters as `required: true` or `required: false`. Shannon's runtime should reject commands with missing required parameters before making the API call.
-- **Mutation gating:** Commands with `mutation: true` signal that additional confirmation or approval should be required. The `approval_types` field on each agent is currently an empty list `[]`, meaning no formal approval workflow is configured yet — mutation gating behavior depends on Shannon's runtime implementation.
-- **No retry or circuit-breaker configuration** is present in the registry. Resilience patterns must be implemented in Shannon's runtime code.
+- **Timeout enforcement:** Each agent declares a `timeout_seconds` value (15 for Shannon, 30 for Drucker). The router is expected to enforce these as HTTP client timeouts when proxying.
+- **Mutation gating:** Commands marked `mutation: true` signal the router to require user confirmation before execution, preventing accidental state changes (e.g., merging a PR).
+- **Required parameter validation:** Parameters with `required: true` must be validated by Shannon before dispatching. Missing required parameters should produce a user-facing error with the parameter's `label` text.
+- **Empty `api_base_url`:** Shannon's own commands have `api_base_url: ""`, which the router must interpret as "handle locally" rather than attempting an HTTP proxy to an empty URL.
 
 # Known Limitations / Technical Debt
 
-1. **Hardcoded URLs:**
-   - Drucker's `api_base_url` is hardcoded to `http://host.containers.internal:8201` — this is a container-local address that assumes a specific deployment topology (Podman/Docker with host networking).
-   - Gantt's `api_base_url` is hardcoded to `http://host.containers.internal:8202`.
-   - Drucker's `notifications_webhook_url` contains a full Power Automate webhook URL with embedded API key (`sig=DX5rVpdRL5wpv_H9huN668nWIvrhGTWwe97q6NGpxh4`). **This is a hardcoded credential** that should be externalized to a secrets manager or environment variable.
+1. **Hardcoded webhook URL:** The Drucker agent's `notifications_webhook_url` contains a full Power Automate URL with an embedded SAS signature (`sig=DX5rVpdRL5wpv_H9huN668nWIvrhGTWwe97q6NGpxh4`). This is a **hardcoded credential** that should be externalized to a secrets manager or environment variable. If the signature rotates, this YAML must be redeployed.
 
-2. **Gantt agent incomplete:** The Gantt agent entry has an empty `channel_id: ""`, indicating the Teams channel has not been provisioned or linked. Several Gantt commands (`/release-survey-reports`) are missing `api_method` and `api_path` fields — the YAML entry appears truncated.
+   ```yaml
+   notifications_webhook_url: "https://default4dbdb7da74ee4b458747ef5ce5ebe6.8a.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/7346f433283a433fb6a530451879227b/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=DX5rVpdRL5wpv_H9huN668nWIvrhGTWwe97q6NGpxh4"
+   ```
 
-3. **Shannon self-reference has no `api_base_url`:** Shannon's own agent entry sets `api_base_url: ""`. The five Shannon status commands (`/stats`, `/busy`, `/work-today`, `/token-status`, `/decision-tree`) presumably resolve to Shannon's own internal handlers, but this routing convention is implicit and undocumented in the registry schema.
+2. **Hardcoded internal URLs:** Agent `api_base_url` values use `http://host.containers.internal:8201` and `:8202`. These are container-runtime-specific DNS names that will break outside of Docker Desktop or Podman environments.
 
-4. **`approval_types` unused:** All three agents declare `approval_types: []`. The mutation flag on `/pr-reminder-snooze` and `/pr-reminder-merge` has no corresponding approval workflow definition, meaning mutation gating may be a no-op.
+3. **Gantt channel_id is empty:** The Gantt agent has `channel_id: ""`, meaning Shannon cannot post proactive notifications to a Gantt-specific channel. Commands will work if invoked from any channel, but agent-targeted notifications are not routable.
 
-5. **No schema versioning:** The `agent_registry.yaml` file has no version field or schema reference. As the command catalog grows (Drucker alone now has 28 commands), a schema validation mechanism would prevent malformed entries.
+4. **No schema validation:** The registry YAML has no associated JSON Schema or validation tooling referenced in the repository. Typos in `api_method`, `type`, or `mutation` fields would only surface at runtime.
 
-6. **Shared `team_id` across agents:** All three agents share the same `team_id` value (`19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2`), and Shannon's `channel_id` is identical to its `team_id`. This may be intentional (single-team deployment) but could cause confusion if the workforce expands to multiple teams.
+5. **Drucker command count (30 commands):** The Drucker agent has grown to 30 commands, which may degrade the Teams slash-command discovery experience. Consider grouping commands into sub-agents or introducing a command-category taxonomy.
 
-7. **Parameter type `list` lacks delimiter specification:** Several params use `type: list` with labels like "comma-separated", but the delimiter convention is encoded only in the human-readable label, not as a machine-readable field.
+6. **`approval_types` unused:** All three agents declare `approval_types: []`. The field exists in the schema but has no active implementation, suggesting a planned but unbuilt approval workflow feature.
+
+7. **Inconsistent `mutation` field:** Many Drucker commands explicitly set `mutation: false`, but some commands (e.g., `/pr-reminder-scan`, `/pr-reminder-process`) omit the `mutation` field entirely. The router must treat missing `mutation` as `false` by convention, but this is not documented.
+
+8. **Gantt registry entry is incomplete:** The last command (`/release-survey-reports`) in the Gantt agent is missing its `api_method` and `api_path` fields — the YAML entry ends abruptly after `description`:
+
+   ```yaml
+   - command: /release-survey-reports
+     description: List stored release surveys
+   ```
+
+   This will likely cause a parse error or silent routing failure at runtime.
 
 <!-- End Documentation Agent generated content -->
