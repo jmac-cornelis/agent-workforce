@@ -24,6 +24,7 @@ from pydantic import BaseModel, Field
 
 from shannon.outgoing_webhook import verify_hmac_signature
 from shannon.service import ShannonService
+from shannon.notification_router import send_notification
 
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
@@ -35,6 +36,15 @@ class NotificationRequest(BaseModel):
     title: str
     text: str
     body_lines: List[str] = Field(default_factory=list)
+
+
+class DMNotifyRequest(BaseModel):
+    """Request body for direct DM + email notifications."""
+    agent_id: str
+    title: str
+    text: str
+    body_lines: Optional[List[str]] = None
+    target_users: Optional[List[str]] = None
 
 
 def create_app(service: Optional[ShannonService] = None) -> FastAPI:
@@ -82,6 +92,7 @@ def create_app(service: Optional[ShannonService] = None) -> FastAPI:
                 {'method': 'GET', 'path': '/v1/status/decisions/{record_id}', 'description': 'Detail for one decision'},
                 {'method': 'GET', 'path': '/v1/shannon/registry', 'description': 'Registered agent commands'},
                 {'method': 'POST', 'path': '/v1/bot/notify', 'description': 'Post notification to Teams channel'},
+                {'method': 'POST', 'path': '/v1/bot/notify/dm', 'description': 'Send DM + email notification to users'},
                 {'method': 'POST', 'path': '/api/messages', 'description': 'Teams Bot Framework activity endpoint'},
                 {'method': 'POST', 'path': '/v1/teams/activities', 'description': 'Teams activity endpoint (alias)'},
                 {'method': 'POST', 'path': '/v1/teams/outgoing-webhook', 'description': 'Teams outgoing webhook endpoint'},
@@ -139,6 +150,22 @@ def create_app(service: Optional[ShannonService] = None) -> FastAPI:
             )
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.post('/v1/bot/notify/dm')
+    def bot_notify_dm(body: DMNotifyRequest) -> Dict[str, Any]:
+        '''Send DM + email notification to target users (or all users in identity map).'''
+        try:
+            result = send_notification(
+                agent_id=body.agent_id,
+                title=body.title,
+                text=body.text,
+                body_lines=body.body_lines,
+                target_users=body.target_users,
+            )
+            return result
+        except Exception as exc:
+            log.error('DM notification failed: %s', exc)
+            raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     @app.post('/api/messages')
     def bot_messages(activity: Dict[str, Any]) -> Dict[str, Any]:

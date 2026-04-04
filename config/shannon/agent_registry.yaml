@@ -435,6 +435,7 @@ agents:
     api_method: GET
     api_path: /v1/release-survey/reports
   timeout_seconds: 30
+  notify_shannon: true
 - agent_id: hemingway
   display_name: Hemingway
   role: Documentation
