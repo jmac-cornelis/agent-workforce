@@ -37,6 +37,7 @@ from agents.hemingway.models import (
     PublicationRecord,
 )
 from agents.hemingway.state.record_store import HemingwayRecordStore
+from agents.pm_runtime import notify_shannon
 
 import re
 
@@ -399,6 +400,24 @@ def create_app() -> FastAPI:
         _run_count += 1
         _last_run_at = datetime.now(timezone.utc).isoformat()
 
+        # --- notify Shannon of significant impact detection ---
+        try:
+            _impact_dict = impact.to_dict()
+            _impact_level = _impact_dict.get('impact_level', 'unknown')
+            if _impact_level in ('high', 'medium'):
+                _affected = _impact_dict.get('affected_sections', [])
+                notify_shannon(
+                    agent_id='hemingway',
+                    title=f'Doc Impact: {body.doc_title} ({_impact_level})',
+                    text=f'{_impact_level.upper()} impact detected on "{body.doc_title}"',
+                    body_lines=[
+                        f'Impact Level: {_impact_level}',
+                        f'Affected Sections: {len(_affected)}',
+                    ] + [f'\u2022 {s}' for s in _affected[:5]],
+                )
+        except Exception as e:
+            log.warning('Hemingway impact notification failed (non-fatal): %s', e)
+
         return {'ok': True, 'data': impact.to_dict()}
 
     @app.post('/v1/docs/publish')
@@ -475,6 +494,24 @@ def create_app() -> FastAPI:
             body.doc_id,
             publications,
         )
+
+        # --- notify Shannon of successful publication ---
+        try:
+            _doc_title = record_data.get('title', body.doc_id)
+            _doc_type = record_data.get('doc_type', 'unknown')
+            _patch_count = len(publications)
+            notify_shannon(
+                agent_id='hemingway',
+                title=f'Documentation Published: {_doc_title}',
+                text=f'Published {_patch_count} patch(es) for "{_doc_title}"',
+                body_lines=[
+                    f'Doc ID: {body.doc_id}',
+                    f'Type: {_doc_type}',
+                    f'Patches: {_patch_count}',
+                ],
+            )
+        except Exception as e:
+            log.warning('Hemingway publish notification failed (non-fatal): %s', e)
 
         _run_count += 1
         _last_run_at = datetime.now(timezone.utc).isoformat()
@@ -814,6 +851,23 @@ def create_app() -> FastAPI:
             f'{len(relevant_files)} doc-relevant file(s) detected, '
             f'{len(all_generated)} doc(s) generated'
         )
+
+        # --- notify Shannon of PR review completion ---
+        try:
+            _doc_count = len(all_generated)
+            notify_shannon(
+                agent_id='hemingway',
+                title=f'PR Docs Generated: {body.repo}#{body.pr_number}',
+                text=f'{_doc_count} document(s) generated for PR #{body.pr_number}',
+                body_lines=[
+                    f'Repository: {body.repo}',
+                    f'PR: #{body.pr_number}',
+                    f'Documents: {_doc_count}',
+                    f'Branch: {head_branch}',
+                ] + [f'\u2022 {d.get("path", d.get("title", ""))}' for d in (generated_docs or [])[:5]],
+            )
+        except Exception as e:
+            log.warning('Hemingway PR review notification failed (non-fatal): %s', e)
 
         _set_result({
             'ok': True,

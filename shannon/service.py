@@ -18,6 +18,7 @@ import threading
 from typing import Any, Dict, List, Optional
 
 import requests
+from shannon.notification_router import NotificationRouter, send_notification
 
 from agents.rename_registry import agent_display_name, canonical_agent_name
 from shannon.cards import (
@@ -108,6 +109,7 @@ class ShannonService:
                 str(os.getenv('SHANNON_SEND_WELCOME_ON_INSTALL', 'true')).strip().lower() == 'true'
             )
         self.send_welcome_on_install = bool(send_welcome_on_install)
+        self.notification_router = NotificationRouter()
 
     def get_health(self) -> Dict[str, Any]:
         stats = self.state_store.compute_stats()
@@ -1153,9 +1155,24 @@ class ShannonService:
             decision='posted_agent_notification',
             details=post_result,
         )
+
+        # --- DM + email via NotificationRouter ---
+        try:
+            dm_result = send_notification(
+                agent_id=agent_id,
+                title=title,
+                text=text,
+                body_lines=list(body_lines) if body_lines else None,
+            )
+            log.info('NotificationRouter result for %s: %s', agent_id, dm_result.get('ok'))
+        except Exception as e:
+            log.warning('NotificationRouter dispatch failed (non-fatal): %s', e)
+            dm_result = {'error': str(e)}
+
         return {
             'ok': True,
             'agent_id': registration.agent_id,
             'channel_id': ref.channel_id,
             'post_result': post_result,
+            'dm_result': dm_result,
         }
