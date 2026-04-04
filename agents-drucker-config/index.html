@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://jmac-cornelis.github.io/agent-workforce/config-shannon/">
+        <link rel="canonical" href="https://jmac-cornelis.github.io/agent-workforce/agents-drucker-config/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>Config shannon - Agent Workforce</title>
+        <title>Agents drucker config - Agent Workforce</title>
       
     
     
@@ -74,7 +74,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#module-overview" class="md-skip">
+        <a href="#config-design-reference" class="md-skip">
           Skip to content
         </a>
       
@@ -108,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Config shannon
+              Agents drucker config
             
           </span>
         </div>
@@ -1334,6 +1334,230 @@
     
   
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-module-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Module Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-what-changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. What Changed
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. What Changed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#before" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Before
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#after" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        After
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impact
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-component-diagram" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Component Diagram
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-key-flows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Key Flows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Key Flows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flow-1-jira-hygiene-scan-configuration-resolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow 1 — Jira Hygiene Scan Configuration Resolution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flow-2-github-repository-list-resolution-for-scan-jobs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow 2 — GitHub Repository List Resolution for Scan Jobs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flow-3-pr-reminder-configuration-resolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow 3 — PR Reminder Configuration Resolution
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-data-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Data Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Data Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#monitoryaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        monitor.yaml
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pollingyaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        polling.yaml
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pr_remindersyaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        pr_reminders.yaml
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Error Handling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-known-limitations-technical-debt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Known Limitations / Technical Debt
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
 </nav>
                   </div>
                 </div>
@@ -1349,7 +1573,7 @@
 
 
   
-    <a href="https://github.com/jmac-cornelis/agent-workforce/edit/main/docs/config-shannon.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/jmac-cornelis/agent-workforce/edit/main/docs/agents-drucker-config.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1360,153 +1584,306 @@
 <!-- Generated by Documentation Agent — do not edit between markers -->
 
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nn">---</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;As-Built:</span><span class="nv"> </span><span class="s">Shannon</span><span class="nv"> </span><span class="s">—</span><span class="nv"> </span><span class="s">Configuration</span><span class="nv"> </span><span class="s">&amp;</span><span class="nv"> </span><span class="s">Agent</span><span class="nv"> </span><span class="s">Registry&quot;</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;As-Built:</span><span class="nv"> </span><span class="s">Drucker</span><span class="nv"> </span><span class="s">Agent</span><span class="nv"> </span><span class="s">—</span><span class="nv"> </span><span class="s">Config&quot;</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">date</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2026-04-03&quot;</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nt">status</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;draft&quot;</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nn">---</span>
 </span></code></pre></div>
-<h1 id="module-overview">Module Overview<a class="headerlink" href="#module-overview" title="Permanent link">&para;</a></h1>
-<p>Shannon is the single Microsoft Teams bot and command-routing surface for the Cornelis agent workforce. Rather than each agent maintaining its own Teams presence, Shannon acts as a unified gateway: it receives slash-commands from Teams channels, resolves which back-end agent should handle the request, proxies the call to that agent's API, and returns the response. The configuration layer documented here — <code>config/shannon/agent_registry.yaml</code> and <code>config/shannon/teams-app-manifest.template.json</code> — defines the complete roster of agents Shannon knows about, every command those agents expose, and the Teams application identity Shannon uses to operate as a bot.</p>
-<h1 id="what-changed">What Changed<a class="headerlink" href="#what-changed" title="Permanent link">&para;</a></h1>
-<p><strong>Before:</strong> The Drucker agent entry in the registry contained Jira hygiene commands (<code>/issue-check</code>, <code>/intake-report</code>, <code>/hygiene-run</code>, etc.) and core GitHub PR hygiene commands (<code>/pr-hygiene</code>, <code>/pr-stale</code>, <code>/pr-reviews</code>, <code>/pr-list</code>, <code>/naming-compliance</code>, <code>/merge-conflicts</code>, <code>/ci-failures</code>, <code>/stale-branches</code>, <code>/extended-hygiene</code>). There were no Jira ad-hoc query commands, no natural-language query support, and no PR reminder lifecycle commands.</p>
-<p><strong>After:</strong> Two new command groups were added to the <code>drucker</code> agent entry:</p>
-<ol>
-<li><strong>Jira query &amp; reporting commands</strong> — seven new commands: <code>/jira-query</code>, <code>/jira-tickets</code>, <code>/jira-release-status</code>, <code>/jira-ticket-counts</code>, <code>/jira-status-report</code>, and <code>/ask</code> (LLM-powered natural-language query via <code>/v1/nl/query</code>).</li>
-<li><strong>PR reminder commands</strong> — seven new commands: <code>/pr-reminder-scan</code>, <code>/pr-reminder-process</code>, <code>/pr-reminders-active</code>, <code>/pr-reminder-history</code>, <code>/pr-reminder-snooze</code>, <code>/pr-reminder-merge</code>. The last two are the first <code>mutation: true</code> commands in the registry, meaning they alter state (snoozing reminders, merging PRs).</li>
-</ol>
-<p><strong>Impact:</strong> Shannon's command router must now recognize and dispatch 14 additional slash-commands to the Drucker back-end at <code>http://host.containers.internal:8201</code>. Any command-help or auto-complete surface Shannon exposes will show a significantly larger Drucker command set. The introduction of <code>mutation: true</code> commands means Shannon (or its consumers) should enforce confirmation flows before executing <code>/pr-reminder-snooze</code> and <code>/pr-reminder-merge</code>.</p>
-<h1 id="component-diagram">Component Diagram<a class="headerlink" href="#component-diagram" title="Permanent link">&para;</a></h1>
+<h1 id="config-design-reference">Config — Design Reference<a class="headerlink" href="#config-design-reference" title="Permanent link">&para;</a></h1>
+<h2 id="1-module-overview">1. Module Overview<a class="headerlink" href="#1-module-overview" title="Permanent link">&para;</a></h2>
+<p>The <code>agents/drucker/config/</code> directory contains the YAML configuration files that govern the Drucker agent — a project-hygiene automation agent responsible for scanning Jira tickets and GitHub repositories for compliance issues, stale work, and missing metadata. Three configuration files define the agent's behavior: <code>monitor.yaml</code> controls Jira field-validation rules and a machine-learning suggestion subsystem; <code>polling.yaml</code> defines the polling defaults, the canonical list of monitored GitHub repositories, and the discrete scan jobs the agent can execute; and <code>pr_reminders.yaml</code> configures a pull-request reminder system that notifies authors and reviewers of aging PRs via Teams direct messages. Together these files parameterize the Drucker agent without requiring code changes.</p>
+<h2 id="2-what-changed">2. What Changed<a class="headerlink" href="#2-what-changed" title="Permanent link">&para;</a></h2>
+<h3 id="before">Before<a class="headerlink" href="#before" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The <code>github_repos</code> list was specified per-job inside <code>polling.yaml</code> (as empty arrays on the <code>github-hygiene-scan</code> and <code>github-extended-scan</code> jobs).</li>
+<li>No <code>github-pr-reminders</code> job existed.</li>
+<li>No <code>pr_reminders.yaml</code> file existed.</li>
+</ul>
+<h3 id="after">After<a class="headerlink" href="#after" title="Permanent link">&para;</a></h3>
+<ul>
+<li>The <code>github_repos</code> list is now a <strong>top-level default</strong> in <code>polling.yaml</code> (<code>defaults.github_repos</code>), containing 25 repositories. Individual jobs no longer carry their own <code>github_repos</code> overrides.</li>
+<li>A new job <code>github-pr-reminders</code> (scan type <code>github-pr-reminders</code>, disabled by default) was added to <code>polling.yaml</code>.</li>
+<li>A new file <code>pr_reminders.yaml</code> was introduced, defining reminder cadences, notification channels, snooze options, and per-repo overrides for the PR-reminder workflow.</li>
+</ul>
+<h3 id="impact">Impact<a class="headerlink" href="#impact" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>All GitHub scan jobs</strong> (<code>github-hygiene-scan</code>, <code>github-extended-scan</code>, <code>github-pr-reminders</code>) now inherit the same 25-repo list from <code>defaults.github_repos</code>, ensuring consistency and eliminating per-job duplication.</li>
+<li><strong>Downstream consumers</strong> that read <code>polling.yaml</code> must resolve <code>github_repos</code> from <code>defaults</code> rather than from individual job entries.</li>
+<li>The new <code>pr_reminders.yaml</code> introduces a dependency on a Teams DM notification pathway; any runtime code that loads this config must handle the <code>channels: [teams_dm]</code> target.</li>
+</ul>
+<h2 id="3-component-diagram">3. Component Diagram<a class="headerlink" href="#3-component-diagram" title="Permanent link">&para;</a></h2>
 <pre class="mermaid"><code>graph TD
-    subgraph "Microsoft Teams"
-        A[Teams Client / Channel]
+    subgraph "agents/drucker/config"
+        MONITOR["monitor.yaml&lt;br/&gt;(Jira validation &amp; learning)"]
+        POLLING["polling.yaml&lt;br/&gt;(Defaults, repos &amp; jobs)"]
+        PR_REM["pr_reminders.yaml&lt;br/&gt;(PR reminder rules)"]
     end
 
-    subgraph "Shannon — Bot &amp; Router"
-        B[Teams Bot Endpoint]
-        C[Agent Registry&lt;br/&gt;agent_registry.yaml]
-        D[Command Router]
+    subgraph "Polling Jobs"
+        J1["hygiene-scan&lt;br/&gt;(Jira full scan)"]
+        J2["recent-ticket-intake&lt;br/&gt;(Jira recent scan)"]
+        J3["github-hygiene-scan&lt;br/&gt;(GitHub PR hygiene)"]
+        J4["github-extended-scan&lt;br/&gt;(GitHub extended)"]
+        J5["github-pr-reminders&lt;br/&gt;(PR stale reminders)"]
     end
 
-    subgraph "Back-End Agents"
-        E[Drucker&lt;br/&gt;:8201 — Engineering Hygiene]
-        F[Gantt&lt;br/&gt;:8202 — Project Planning]
-    end
+    POLLING -- "defines" --&gt; J1
+    POLLING -- "defines" --&gt; J2
+    POLLING -- "defines" --&gt; J3
+    POLLING -- "defines" --&gt; J4
+    POLLING -- "defines" --&gt; J5
 
-    subgraph "External Services"
-        G[Jira]
-        H[GitHub]
-        I[Power Automate&lt;br/&gt;Notifications Webhook]
-    end
+    PR_REM -- "configures" --&gt; J5
+    MONITOR -- "configures" --&gt; J1
+    MONITOR -- "configures" --&gt; J2
 
-    A --&gt;|slash-command| B
-    B --&gt; D
-    D --&gt;|lookup| C
-    D --&gt;|proxy HTTP| E
-    D --&gt;|proxy HTTP| F
-    E --&gt; G
-    E --&gt; H
-    E --&gt; I
-    F --&gt; G</code></pre>
-<h1 id="key-flows">Key Flows<a class="headerlink" href="#key-flows" title="Permanent link">&para;</a></h1>
-<h2 id="flow-1-slash-command-dispatch-read-only">Flow 1 — Slash-Command Dispatch (Read-Only)<a class="headerlink" href="#flow-1-slash-command-dispatch-read-only" title="Permanent link">&para;</a></h2>
-<p>A user types a command like <code>/jira-tickets</code> in a Teams channel. Shannon resolves the command to the Drucker agent, builds the HTTP request from the registry metadata, proxies it, and returns the result.</p>
+    POLLING -- "defaults.github_repos" --&gt; J3
+    POLLING -- "defaults.github_repos" --&gt; J4
+    POLLING -- "defaults.github_repos" --&gt; J5</code></pre>
+<h2 id="4-key-flows">4. Key Flows<a class="headerlink" href="#4-key-flows" title="Permanent link">&para;</a></h2>
+<h3 id="flow-1-jira-hygiene-scan-configuration-resolution">Flow 1 — Jira Hygiene Scan Configuration Resolution<a class="headerlink" href="#flow-1-jira-hygiene-scan-configuration-resolution" title="Permanent link">&para;</a></h3>
+<p>When the Drucker agent starts a Jira hygiene scan, it loads <code>polling.yaml</code> to obtain job parameters and <code>monitor.yaml</code> to obtain per-issue-type validation rules.</p>
 <pre class="mermaid"><code>sequenceDiagram
-    participant User as Teams User
-    participant Shannon as Shannon Bot
-    participant Registry as agent_registry.yaml
-    participant Drucker as Drucker API (:8201)
+    participant Agent as Drucker Agent
+    participant PY as polling.yaml
+    participant MY as monitor.yaml
+    participant Jira as Jira API
 
-    User-&gt;&gt;Shannon: /jira-tickets project_key=STL statuses=Open
-    Shannon-&gt;&gt;Registry: Lookup command "/jira-tickets"
-    Registry--&gt;&gt;Shannon: agent_id=drucker, POST /v1/jira/tickets, mutation=false
-    Shannon-&gt;&gt;Drucker: POST http://host.containers.internal:8201/v1/jira/tickets&lt;br/&gt;{project_key: "STL", statuses: ["Open"]}
-    Drucker--&gt;&gt;Shannon: 200 OK — ticket list payload
-    Shannon--&gt;&gt;User: Formatted ticket list in Teams</code></pre>
-<p>The registry entry for <code>/jira-tickets</code> specifies <code>mutation: false</code>, so Shannon can dispatch immediately without a confirmation step. Parameters like <code>issue_types</code>, <code>statuses</code>, and <code>date_filter</code> are typed as <code>list</code> or <code>str</code> and are optional unless marked <code>required: true</code>.</p>
-<h2 id="flow-2-mutation-command-with-confirmation-pr-merge">Flow 2 — Mutation Command with Confirmation (PR Merge)<a class="headerlink" href="#flow-2-mutation-command-with-confirmation-pr-merge" title="Permanent link">&para;</a></h2>
-<p>A user requests <code>/pr-reminder-merge</code>. Because the registry marks this command as <code>mutation: true</code>, Shannon should gate execution behind a confirmation step before proxying.</p>
+    Agent-&gt;&gt;PY: Load defaults (project_key, limit, stale_days)
+    Agent-&gt;&gt;PY: Resolve job "hygiene-scan" (recent_only=false)
+    Agent-&gt;&gt;MY: Load validation_rules for Story, Bug, Task, Epic
+    Agent-&gt;&gt;MY: Load learning config (enabled, thresholds)
+    Agent-&gt;&gt;Jira: Query project with limit=200, include_done=false
+    Jira--&gt;&gt;Agent: Issue list
+    Agent-&gt;&gt;Agent: Validate each issue against monitor.yaml rules</code></pre>
+<p><strong>Description:</strong> The agent merges <code>polling.yaml</code> defaults with the <code>hygiene-scan</code> job definition to determine query parameters (<code>limit: 200</code>, <code>include_done: false</code>, <code>stale_days: 30</code>). It then applies <code>monitor.yaml</code> validation rules — for example, a <code>Bug</code> must have <code>assignee</code>, <code>fix_versions</code>, <code>components</code>, and <code>priority</code> (required), while <code>description</code> triggers a warning. The learning subsystem (when <code>enabled: true</code> and at least <code>min_observations: 20</code> samples exist) can auto-fill fields at ≥ 90% confidence, suggest at ≥ 50%, or flag-only below that.</p>
+<h3 id="flow-2-github-repository-list-resolution-for-scan-jobs">Flow 2 — GitHub Repository List Resolution for Scan Jobs<a class="headerlink" href="#flow-2-github-repository-list-resolution-for-scan-jobs" title="Permanent link">&para;</a></h3>
+<p>All three GitHub-oriented jobs resolve their target repository list from the shared <code>defaults.github_repos</code> key.</p>
 <pre class="mermaid"><code>sequenceDiagram
-    participant User as Teams User
-    participant Shannon as Shannon Bot
-    participant Registry as agent_registry.yaml
-    participant Drucker as Drucker API (:8201)
+    participant Agent as Drucker Agent
+    participant PY as polling.yaml
 
-    User-&gt;&gt;Shannon: /pr-reminder-merge repo=cornelis/opa-psm2 pr_number=42
-    Shannon-&gt;&gt;Registry: Lookup command "/pr-reminder-merge"
-    Registry--&gt;&gt;Shannon: agent_id=drucker, POST /v1/github/pr-reminders/merge, mutation=true
-    Shannon--&gt;&gt;User: ⚠️ Confirm merge of PR #42 in cornelis/opa-psm2? (squash)
-    User-&gt;&gt;Shannon: ✅ Confirm
-    Shannon-&gt;&gt;Drucker: POST /v1/github/pr-reminders/merge&lt;br/&gt;{repo: "cornelis/opa-psm2", pr_number: 42, merge_method: "squash"}
-    Drucker--&gt;&gt;Shannon: 200 OK — merge result
-    Shannon--&gt;&gt;User: PR #42 merged (squash)</code></pre>
-<p>The <code>merge_method</code> parameter defaults to <code>squash</code> and accepts <code>merge</code> or <code>rebase</code> as alternatives, per the registry label.</p>
-<h2 id="flow-3-shannon-self-status-query">Flow 3 — Shannon Self-Status Query<a class="headerlink" href="#flow-3-shannon-self-status-query" title="Permanent link">&para;</a></h2>
-<p>Shannon exposes its own operational commands (<code>/stats</code>, <code>/busy</code>, <code>/work-today</code>, <code>/token-status</code>, <code>/decision-tree</code>, <code>/why</code>) that do not proxy to an external agent. These hit Shannon's own <code>/v1/status/*</code> endpoints.</p>
+    Agent-&gt;&gt;PY: Load defaults.github_repos (25 repos)
+    Agent-&gt;&gt;PY: Load defaults.github_stale_days (5)
+    Agent-&gt;&gt;PY: Iterate jobs where scan_type starts with "github"
+    alt github-hygiene-scan
+        Agent-&gt;&gt;Agent: Use github_stale_days=5, repos from defaults
+    else github-extended-scan
+        Agent-&gt;&gt;Agent: Use github_stale_days=5, branch_stale_days=30, repos from defaults
+    else github-pr-reminders
+        Agent-&gt;&gt;Agent: Use repos from defaults, delegate to pr_reminders.yaml
+    end</code></pre>
+<p><strong>Description:</strong> The <code>defaults.github_repos</code> list is the single source of truth for which repositories are scanned. Individual jobs may override <code>github_stale_days</code> or add job-specific keys like <code>branch_stale_days: 30</code> (on <code>github-extended-scan</code>), but the repo list itself is inherited. All three GitHub jobs are currently <code>enabled: false</code>.</p>
+<h3 id="flow-3-pr-reminder-configuration-resolution">Flow 3 — PR Reminder Configuration Resolution<a class="headerlink" href="#flow-3-pr-reminder-configuration-resolution" title="Permanent link">&para;</a></h3>
+<p>The <code>github-pr-reminders</code> job delegates its behavioral configuration to <code>pr_reminders.yaml</code>.</p>
 <pre class="mermaid"><code>sequenceDiagram
-    participant User as Teams User
-    participant Shannon as Shannon Bot
+    participant Agent as Drucker Agent
+    participant PY as polling.yaml
+    participant PR as pr_reminders.yaml
+    participant Teams as Teams DM API
 
-    User-&gt;&gt;Shannon: /stats
-    Shannon-&gt;&gt;Shannon: GET /v1/status/stats (internal)
-    Shannon--&gt;&gt;User: Service status &amp; throughput summary
-
-    User-&gt;&gt;Shannon: /why record_id=abc123
-    Shannon-&gt;&gt;Shannon: GET /v1/status/decisions/abc123 (internal)
-    Shannon--&gt;&gt;User: Decision deep-dive for abc123</code></pre>
-<p>Shannon's <code>api_base_url</code> is set to <code>""</code> (empty string), which signals the router that these commands are handled locally rather than proxied to an external service.</p>
-<h1 id="data-model">Data Model<a class="headerlink" href="#data-model" title="Permanent link">&para;</a></h1>
-<p>The registry is the authoritative data model for this configuration layer. Its structure is:</p>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">agents</span><span class="p">:</span><span class="w">                          </span><span class="c1"># Top-level list</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">agent_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">str</span><span class="w">                </span><span class="c1"># Unique identifier (e.g., &quot;drucker&quot;)</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">display_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">str</span><span class="w">            </span><span class="c1"># Human-readable name</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="nt">role</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">str</span><span class="w">                    </span><span class="c1"># Functional role label</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">str</span><span class="w">             </span><span class="c1"># One-line purpose</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">zone</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">str</span><span class="w">                    </span><span class="c1"># Deployment zone (service_infrastructure, planning_delivery)</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nt">channel_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">str</span><span class="w">            </span><span class="c1"># Teams channel slug</span>
-</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nt">channel_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">str</span><span class="w">              </span><span class="c1"># Teams channel ID (tacv2 format)</span>
-</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nt">team_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">str</span><span class="w">                 </span><span class="c1"># Teams team ID</span>
-</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="nt">api_base_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">str</span><span class="w">            </span><span class="c1"># Base URL for proxied calls (&quot;&quot; = local)</span>
-</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="nt">notifications_webhook_url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">str</span><span class="w">  </span><span class="c1"># Optional Power Automate webhook</span>
-</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="nt">approval_types</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">list</span><span class="w">         </span><span class="c1"># Reserved, currently empty for all agents</span>
-</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="nt">timeout_seconds</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">int</span><span class="w">         </span><span class="c1"># Per-agent HTTP timeout</span>
-</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">    </span><span class="nt">custom_commands</span><span class="p">:</span><span class="w">             </span><span class="c1"># List of routable commands</span>
-</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">str</span><span class="w">             </span><span class="c1"># Slash-command trigger (e.g., &quot;/jira-query&quot;)</span>
-</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">        </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">str</span><span class="w">         </span><span class="c1"># Help text</span>
-</span><span id="__span-1-17"><a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="w">        </span><span class="nt">api_method</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">str</span><span class="w">          </span><span class="c1"># HTTP method (GET | POST)</span>
-</span><span id="__span-1-18"><a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="w">        </span><span class="nt">api_path</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">str</span><span class="w">            </span><span class="c1"># URL path (may contain {placeholders})</span>
-</span><span id="__span-1-19"><a id="__codelineno-1-19" name="__codelineno-1-19" href="#__codelineno-1-19"></a><span class="w">        </span><span class="nt">mutation</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bool</span><span class="w">           </span><span class="c1"># true = state-changing, requires confirmation</span>
-</span><span id="__span-1-20"><a id="__codelineno-1-20" name="__codelineno-1-20" href="#__codelineno-1-20"></a><span class="w">        </span><span class="nt">params</span><span class="p">:</span><span class="w">                  </span><span class="c1"># Optional parameter definitions</span>
-</span><span id="__span-1-21"><a id="__codelineno-1-21" name="__codelineno-1-21" href="#__codelineno-1-21"></a><span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">str</span>
-</span><span id="__span-1-22"><a id="__codelineno-1-22" name="__codelineno-1-22" href="#__codelineno-1-22"></a><span class="w">            </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">str</span><span class="w">            </span><span class="c1"># str | int | list</span>
-</span><span id="__span-1-23"><a id="__codelineno-1-23" name="__codelineno-1-23" href="#__codelineno-1-23"></a><span class="w">            </span><span class="nt">required</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">bool</span>
-</span><span id="__span-1-24"><a id="__codelineno-1-24" name="__codelineno-1-24" href="#__codelineno-1-24"></a><span class="w">            </span><span class="nt">label</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">str</span><span class="w">           </span><span class="c1"># Human-readable description</span>
-</span></code></pre></div>
-<p><strong>Current agent count:</strong> 3 (<code>shannon</code>, <code>drucker</code>, <code>gantt</code>).</p>
-<p><strong>Current command count by agent:</strong></p>
+    Agent-&gt;&gt;PY: Load job "github-pr-reminders" (enabled=false)
+    Agent-&gt;&gt;PR: Load defaults (reminder_days, notify, channels, snooze)
+    Agent-&gt;&gt;PR: Load per-repo overrides
+    Note over Agent,PR: e.g. agent-workforce: reminder_days=[3,5,8,12]
+    Agent-&gt;&gt;Agent: For each repo, merge defaults with overrides
+    Agent-&gt;&gt;Agent: Identify stale PRs exceeding reminder_days thresholds
+    Agent-&gt;&gt;Teams: Send DM to author and reviewers</code></pre>
+<p><strong>Description:</strong> <code>pr_reminders.yaml</code> defines a default reminder cadence of <code>[5, 8, 10, 15]</code> days, notifying both <code>author</code> and <code>reviewers</code> via <code>teams_dm</code>. Per-repo overrides are supported — for example, <code>jmac-cornelis/agent-workforce</code> uses an accelerated cadence of <code>[3, 5, 8, 12]</code> days. Snooze options (<code>[2, 5, 7]</code> days) and allowed merge methods (<code>[squash, merge, rebase]</code>) are also configurable. All 25 repos from <code>polling.yaml</code> are mirrored in the <code>repos</code> list here.</p>
+<h2 id="5-data-model">5. Data Model<a class="headerlink" href="#5-data-model" title="Permanent link">&para;</a></h2>
+<p>The configuration files define the following logical data structures:</p>
+<h3 id="monitoryaml"><code>monitor.yaml</code><a class="headerlink" href="#monitoryaml" title="Permanent link">&para;</a></h3>
 <table>
 <thead>
 <tr>
-<th>Agent</th>
-<th>Commands</th>
+<th>Key Path</th>
+<th>Type</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>shannon</td>
-<td>6</td>
+<td><code>project</code></td>
+<td><code>string</code></td>
+<td>Jira project key (currently empty string)</td>
 </tr>
 <tr>
-<td>drucker</td>
-<td>30</td>
+<td><code>poll_interval_minutes</code></td>
+<td><code>int</code></td>
+<td>Polling interval; <code>5</code> minutes</td>
 </tr>
 <tr>
-<td>gantt</td>
-<td>8</td>
+<td><code>validation_rules.&lt;IssueType&gt;.required</code></td>
+<td><code>list[string]</code></td>
+<td>Fields that must be populated</td>
+</tr>
+<tr>
+<td><code>validation_rules.&lt;IssueType&gt;.warn</code></td>
+<td><code>list[string]</code></td>
+<td>Fields that trigger warnings if absent</td>
+</tr>
+<tr>
+<td><code>learning.enabled</code></td>
+<td><code>bool</code></td>
+<td>Toggle for ML suggestion engine</td>
+</tr>
+<tr>
+<td><code>learning.min_observations</code></td>
+<td><code>int</code></td>
+<td>Minimum samples before predictions activate (<code>20</code>)</td>
+</tr>
+<tr>
+<td><code>learning.confidence_thresholds.auto_fill</code></td>
+<td><code>float</code></td>
+<td>Threshold for automatic field population (<code>0.90</code>)</td>
+</tr>
+<tr>
+<td><code>learning.confidence_thresholds.suggest</code></td>
+<td><code>float</code></td>
+<td>Threshold for user-facing suggestions (<code>0.50</code>)</td>
+</tr>
+<tr>
+<td><code>learning.confidence_thresholds.flag_only</code></td>
+<td><code>float</code></td>
+<td>Floor threshold for flagging (<code>0.0</code>)</td>
 </tr>
 </tbody>
 </table>
-<p>The Teams app manifest (<code>teams-app-manifest.template.json</code>) uses environment-variable placeholders (<code>${SHANNON_TEAMS_APP_ID}</code>, <code>${SHANNON_PUBLIC_DOMAIN}</code>) and defines the bot with <code>team</code> scope, non-notification-only mode, and <code>identity</code> + <code>messageTeamMembers</code> permissions.</p>
-<h1 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h1>
+<h3 id="pollingyaml"><code>polling.yaml</code><a class="headerlink" href="#pollingyaml" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Key Path</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>defaults.project_key</code></td>
+<td><code>string</code></td>
+<td>Jira project key (empty string)</td>
+</tr>
+<tr>
+<td><code>defaults.limit</code></td>
+<td><code>int</code></td>
+<td>Max issues per query (<code>200</code>)</td>
+</tr>
+<tr>
+<td><code>defaults.include_done</code></td>
+<td><code>bool</code></td>
+<td>Whether to include resolved issues (<code>false</code>)</td>
+</tr>
+<tr>
+<td><code>defaults.stale_days</code></td>
+<td><code>int</code></td>
+<td>Days before a Jira issue is considered stale (<code>30</code>)</td>
+</tr>
+<tr>
+<td><code>defaults.label_prefix</code></td>
+<td><code>string</code></td>
+<td>Label prefix applied by Drucker (<code>drucker</code>)</td>
+</tr>
+<tr>
+<td><code>defaults.persist</code></td>
+<td><code>bool</code></td>
+<td>Whether to persist scan state (<code>true</code>)</td>
+</tr>
+<tr>
+<td><code>defaults.notify_shannon</code></td>
+<td><code>bool</code></td>
+<td>Whether to notify the Shannon agent (<code>false</code>)</td>
+</tr>
+<tr>
+<td><code>defaults.github_stale_days</code></td>
+<td><code>int</code></td>
+<td>Days before a PR is considered stale (<code>5</code>)</td>
+</tr>
+<tr>
+<td><code>defaults.github_repos</code></td>
+<td><code>list[string]</code></td>
+<td>Canonical list of 25 GitHub repositories</td>
+</tr>
+<tr>
+<td><code>jobs[].job_id</code></td>
+<td><code>string</code></td>
+<td>Unique job identifier</td>
+</tr>
+<tr>
+<td><code>jobs[].scan_type</code></td>
+<td><code>string</code></td>
+<td>One of <code>jira</code>, <code>github</code>, <code>github-extended</code>, <code>github-pr-reminders</code></td>
+</tr>
+<tr>
+<td><code>jobs[].enabled</code></td>
+<td><code>bool</code></td>
+<td>Job enable flag (absent = enabled)</td>
+</tr>
+<tr>
+<td><code>jobs[].recent_only</code></td>
+<td><code>bool</code></td>
+<td>Jira-specific: use checkpoint state</td>
+</tr>
+<tr>
+<td><code>jobs[].branch_stale_days</code></td>
+<td><code>int</code></td>
+<td>GitHub-extended-specific: stale branch threshold (<code>30</code>)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pr_remindersyaml"><code>pr_reminders.yaml</code><a class="headerlink" href="#pr_remindersyaml" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Key Path</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>defaults.reminder_days</code></td>
+<td><code>list[int]</code></td>
+<td>Days-since-open thresholds for reminders (<code>[5,8,10,15]</code>)</td>
+</tr>
+<tr>
+<td><code>defaults.notify</code></td>
+<td><code>list[string]</code></td>
+<td>Notification targets (<code>[author, reviewers]</code>)</td>
+</tr>
+<tr>
+<td><code>defaults.channels</code></td>
+<td><code>list[string]</code></td>
+<td>Delivery channels (<code>[teams_dm]</code>)</td>
+</tr>
+<tr>
+<td><code>defaults.snooze_options_days</code></td>
+<td><code>list[int]</code></td>
+<td>Snooze durations offered to users (<code>[2,5,7]</code>)</td>
+</tr>
+<tr>
+<td><code>defaults.merge_methods</code></td>
+<td><code>list[string]</code></td>
+<td>Allowed merge strategies (<code>[squash, merge, rebase]</code>)</td>
+</tr>
+<tr>
+<td><code>defaults.enabled</code></td>
+<td><code>bool</code></td>
+<td>Global enable for PR reminders (<code>true</code>)</td>
+</tr>
+<tr>
+<td><code>repos[].repo</code></td>
+<td><code>string</code></td>
+<td>Repository slug</td>
+</tr>
+<tr>
+<td><code>repos[].reminder_days</code></td>
+<td><code>list[int]</code></td>
+<td>Per-repo override of reminder cadence</td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-dependencies">6. Dependencies<a class="headerlink" href="#6-dependencies" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -1517,121 +1894,99 @@
 </thead>
 <tbody>
 <tr>
-<td>Microsoft Teams Bot Framework</td>
-<td>Bot registration, message receive/send</td>
-<td>Manifest v1.19</td>
+<td>Jira API</td>
+<td>Target of hygiene and intake scans configured in <code>polling.yaml</code> and <code>monitor.yaml</code></td>
+<td>N/A (external service)</td>
 </tr>
 <tr>
-<td>Drucker API</td>
-<td>Back-end for all engineering hygiene commands</td>
-<td>Internal <code>:8201</code></td>
+<td>GitHub API</td>
+<td>Target of GitHub scan jobs; repos enumerated in <code>defaults.github_repos</code></td>
+<td>N/A (external service)</td>
 </tr>
 <tr>
-<td>Gantt API</td>
-<td>Back-end for planning and release monitoring commands</td>
-<td>Internal <code>:8202</code></td>
+<td>Microsoft Teams API</td>
+<td>Delivery channel for PR reminder notifications (<code>channels: [teams_dm]</code>)</td>
+<td>N/A (external service)</td>
 </tr>
 <tr>
-<td>Power Automate</td>
-<td>Drucker notification delivery webhook</td>
-<td>SaaS (workflow <code>7346f433…</code>)</td>
+<td>Shannon Agent</td>
+<td>Optional notification target (<code>notify_shannon: false</code> in defaults)</td>
+<td>Internal agent</td>
 </tr>
 <tr>
-<td>Jira (via Drucker/Gantt)</td>
-<td>Ticket data source for hygiene, query, and planning commands</td>
-<td>Transitive</td>
-</tr>
-<tr>
-<td>GitHub (via Drucker)</td>
-<td>PR and branch data source for hygiene and reminder commands</td>
-<td>Transitive</td>
+<td>YAML parser</td>
+<td>Runtime must parse these YAML files (e.g., PyYAML, ruamel.yaml)</td>
+<td>N/A</td>
 </tr>
 </tbody>
 </table>
-<h1 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h1>
+<h2 id="7-configuration">7. Configuration<a class="headerlink" href="#7-configuration" title="Permanent link">&para;</a></h2>
+<p>All configuration for the Drucker agent is contained within these three files. There are no environment variables or feature flags defined in the config files themselves; runtime secrets (Jira credentials, GitHub tokens, Teams webhook URLs) are expected to be provided externally.</p>
 <table>
 <thead>
 <tr>
-<th>Variable / Setting</th>
-<th>Location</th>
-<th>Purpose</th>
+<th>File</th>
+<th>Key Configuration Points</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>${SHANNON_TEAMS_APP_ID}</code></td>
-<td><code>teams-app-manifest.template.json</code></td>
-<td>Azure AD app registration ID for the bot</td>
+<td><code>monitor.yaml</code></td>
+<td><code>project</code> (empty — must be set), <code>poll_interval_minutes</code>, per-issue-type <code>validation_rules</code>, <code>learning</code> subsystem toggles and thresholds</td>
 </tr>
 <tr>
-<td><code>${SHANNON_PUBLIC_DOMAIN}</code></td>
-<td><code>teams-app-manifest.template.json</code></td>
-<td>Public domain for the bot messaging endpoint</td>
+<td><code>polling.yaml</code></td>
+<td><code>defaults.project_key</code> (empty — must be set), <code>defaults.limit</code>, <code>defaults.github_repos</code> (25 repos), five job definitions with <code>enabled</code> flags</td>
 </tr>
 <tr>
-<td><code>notifications_webhook_url</code></td>
-<td><code>agent_registry.yaml</code> (drucker)</td>
-<td>Power Automate webhook URL for Drucker notifications</td>
-</tr>
-<tr>
-<td><code>api_base_url</code></td>
-<td><code>agent_registry.yaml</code> (per agent)</td>
-<td>Base URL for HTTP proxying; empty string means local handling</td>
-</tr>
-<tr>
-<td><code>timeout_seconds</code></td>
-<td><code>agent_registry.yaml</code> (per agent)</td>
-<td>HTTP timeout for proxied calls (Shannon: 15s, Drucker: 30s)</td>
-</tr>
-<tr>
-<td><code>channel_id</code> / <code>team_id</code></td>
-<td><code>agent_registry.yaml</code> (per agent)</td>
-<td>Teams channel and team identifiers for message routing</td>
+<td><code>pr_reminders.yaml</code></td>
+<td><code>defaults.reminder_days</code>, <code>defaults.channels</code>, per-repo overrides</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Note:</strong> The Gantt agent's <code>channel_id</code> is currently set to <code>""</code> (empty string), indicating the channel has not yet been provisioned or linked.</p>
-<h1 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h1>
-<p>Error handling patterns are implicit in the registry design rather than explicitly coded in these configuration files:</p>
+<p><strong>Feature flags (job-level):</strong></p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># polling.yaml — GitHub jobs are disabled by default</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">job_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github-hygiene-scan</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">job_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github-extended-scan</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">job_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github-pr-reminders</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span></code></pre></div>
+<p>The two Jira jobs (<code>hygiene-scan</code>, <code>recent-ticket-intake</code>) have no <code>enabled</code> key, implying they are enabled by default.</p>
+<h2 id="8-error-handling">8. Error Handling<a class="headerlink" href="#8-error-handling" title="Permanent link">&para;</a></h2>
+<p>These are static YAML configuration files and contain no error-handling logic themselves. Error handling is the responsibility of the consuming runtime code. However, the configuration structure implies the following validation expectations:</p>
 <ul>
-<li><strong>Timeout enforcement:</strong> Each agent declares a <code>timeout_seconds</code> value (15 for Shannon, 30 for Drucker). The router is expected to enforce these as HTTP client timeouts when proxying.</li>
-<li><strong>Mutation gating:</strong> Commands marked <code>mutation: true</code> signal the router to require user confirmation before execution, preventing accidental state changes (e.g., merging a PR).</li>
-<li><strong>Required parameter validation:</strong> Parameters with <code>required: true</code> must be validated by Shannon before dispatching. Missing required parameters should produce a user-facing error with the parameter's <code>label</code> text.</li>
-<li><strong>Empty <code>api_base_url</code>:</strong> Shannon's own commands have <code>api_base_url: ""</code>, which the router must interpret as "handle locally" rather than attempting an HTTP proxy to an empty URL.</li>
+<li><strong>Empty <code>project</code> / <code>project_key</code>:</strong> Both <code>monitor.yaml</code> (<code>project: ''</code>) and <code>polling.yaml</code> (<code>defaults.project_key: ''</code>) ship with empty project keys. The runtime must either fail fast or resolve these from an external source.</li>
+<li><strong>Confidence threshold ordering:</strong> The three thresholds in <code>learning.confidence_thresholds</code> form an implicit hierarchy (<code>auto_fill: 0.90</code> &gt; <code>suggest: 0.50</code> &gt; <code>flag_only: 0.0</code>). Consumers should validate this ordering.</li>
+<li><strong>Missing per-repo keys in <code>pr_reminders.yaml</code>:</strong> Most repos in the <code>repos</code> list have no overrides beyond <code>repo</code>. The runtime must fall back to <code>defaults</code> for all missing keys.</li>
 </ul>
-<h1 id="known-limitations-technical-debt">Known Limitations / Technical Debt<a class="headerlink" href="#known-limitations-technical-debt" title="Permanent link">&para;</a></h1>
-<ol>
-<li><strong>Hardcoded webhook URL:</strong> The Drucker agent's <code>notifications_webhook_url</code> contains a full Power Automate URL with an embedded SAS signature (<code>sig=DX5rVpdRL5wpv_H9huN668nWIvrhGTWwe97q6NGpxh4</code>). This is a <strong>hardcoded credential</strong> that should be externalized to a secrets manager or environment variable. If the signature rotates, this YAML must be redeployed.</li>
-</ol>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">notifications_webhook_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;https://default4dbdb7da74ee4b458747ef5ce5ebe6.8a.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/7346f433283a433fb6a530451879227b/triggers/manual/paths/invoke?api-version=1&amp;sp=%2Ftriggers%2Fmanual%2Frun&amp;sv=1.0&amp;sig=DX5rVpdRL5wpv_H9huN668nWIvrhGTWwe97q6NGpxh4&quot;</span>
-</span></code></pre></div>
+<h2 id="9-known-limitations-technical-debt">9. Known Limitations / Technical Debt<a class="headerlink" href="#9-known-limitations-technical-debt" title="Permanent link">&para;</a></h2>
 <ol>
 <li>
-<p><strong>Hardcoded internal URLs:</strong> Agent <code>api_base_url</code> values use <code>http://host.containers.internal:8201</code> and <code>:8202</code>. These are container-runtime-specific DNS names that will break outside of Docker Desktop or Podman environments.</p>
+<p><strong>Empty project keys:</strong> Both <code>monitor.yaml</code> (<code>project: ''</code>) and <code>polling.yaml</code> (<code>defaults.project_key: ''</code>) contain empty strings. These are effectively <strong>hardcoded placeholders</strong> that must be populated at runtime or via an external mechanism. There is no documented contract for how this resolution occurs.</p>
 </li>
 <li>
-<p><strong>Gantt channel_id is empty:</strong> The Gantt agent has <code>channel_id: ""</code>, meaning Shannon cannot post proactive notifications to a Gantt-specific channel. Commands will work if invoked from any channel, but agent-targeted notifications are not routable.</p>
+<p><strong>Duplicated repository lists:</strong> The 25-repository list appears in both <code>polling.yaml</code> (<code>defaults.github_repos</code>) and <code>pr_reminders.yaml</code> (<code>repos</code>). These lists are manually synchronized. Any addition or removal must be applied to both files, creating a maintenance risk. A single canonical source would be preferable.</p>
 </li>
 <li>
-<p><strong>No schema validation:</strong> The registry YAML has no associated JSON Schema or validation tooling referenced in the repository. Typos in <code>api_method</code>, <code>type</code>, or <code>mutation</code> fields would only surface at runtime.</p>
+<p><strong>All GitHub jobs disabled:</strong> The three GitHub scan jobs (<code>github-hygiene-scan</code>, <code>github-extended-scan</code>, <code>github-pr-reminders</code>) are all set to <code>enabled: false</code>. This suggests the GitHub scanning capability is not yet production-ready or is gated behind an external activation step.</p>
 </li>
 <li>
-<p><strong>Drucker command count (30 commands):</strong> The Drucker agent has grown to 30 commands, which may degrade the Teams slash-command discovery experience. Consider grouping commands into sub-agents or introducing a command-category taxonomy.</p>
+<p><strong>No schema validation:</strong> There is no JSON Schema or equivalent validation definition for these YAML files. Typos in key names (e.g., <code>reminder_day</code> instead of <code>reminder_days</code>) would silently produce incorrect behavior.</p>
 </li>
 <li>
-<p><strong><code>approval_types</code> unused:</strong> All three agents declare <code>approval_types: []</code>. The field exists in the schema but has no active implementation, suggesting a planned but unbuilt approval workflow feature.</p>
+<p><strong>Implicit <code>enabled</code> default for Jira jobs:</strong> The Jira jobs (<code>hygiene-scan</code>, <code>recent-ticket-intake</code>) omit the <code>enabled</code> key entirely, relying on the runtime to treat absence as <code>true</code>. This implicit convention is not documented in the config and could lead to confusion.</p>
 </li>
 <li>
-<p><strong>Inconsistent <code>mutation</code> field:</strong> Many Drucker commands explicitly set <code>mutation: false</code>, but some commands (e.g., <code>/pr-reminder-scan</code>, <code>/pr-reminder-process</code>) omit the <code>mutation</code> field entirely. The router must treat missing <code>mutation</code> as <code>false</code> by convention, but this is not documented.</p>
+<p><strong><code>notify_shannon: false</code> with no documentation:</strong> The <code>notify_shannon</code> flag in <code>polling.yaml</code> defaults references an inter-agent communication channel with no further specification of the protocol or payload format in these config files.</p>
 </li>
 <li>
-<p><strong>Gantt registry entry is incomplete:</strong> The last command (<code>/release-survey-reports</code>) in the Gantt agent is missing its <code>api_method</code> and <code>api_path</code> fields — the YAML entry ends abruptly after <code>description</code>:</p>
+<p><strong>Hardcoded label prefix:</strong> <code>defaults.label_prefix: drucker</code> is a hardcoded string that will be applied as Jira labels. Changing the agent's identity would require updating this value.</p>
 </li>
 </ol>
-<div class="language-yaml highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">command</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/release-survey-reports</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">description</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">List stored release surveys</span>
-</span></code></pre></div>
-<p>This will likely cause a parse error or silent routing failure at runtime.</p>
 <!-- End Documentation Agent generated content -->
 
 

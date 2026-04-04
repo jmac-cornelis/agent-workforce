@@ -1,0 +1,2271 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for the Cornelis Networks Agent Workforce">
+      
+      
+      
+        <link rel="canonical" href="https://jmac-cornelis.github.io/agent-workforce/config/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Config - Agent Workforce</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#config-design-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Agent Workforce" class="md-header__button md-logo" aria-label="Agent Workforce" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Agent Workforce
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Config
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/jmac-cornelis/agent-workforce" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jmac-cornelis/agent-workforce
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../user-guide/index.md" class="md-tabs__link">
+          
+  
+  
+    
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../agents/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Agents
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../cli/agent-cli.md" class="md-tabs__link">
+          
+  
+  
+    
+  
+  CLI Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../deployment/index.md" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Deployment
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../architecture/index.md" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Agent Workforce" class="md-nav__button md-logo" aria-label="Agent Workforce" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Agent Workforce
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/jmac-cornelis/agent-workforce" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jmac-cornelis/agent-workforce
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/index.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/installation.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/quickstart.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../agents/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Agents
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/drucker.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Drucker (Engineering Hygiene)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/gantt.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gantt (Project Planning)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/hemingway.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hemingway (Documentation)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/shannon.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shannon (Communications)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/agent-cli.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    agent-cli
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/drucker-agent.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    drucker-agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/gantt-agent.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gantt-agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/hemingway-agent.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    hemingway-agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/github-utils.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    github-utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Deployment
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/index.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/server-setup.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Server Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/containers.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker & Podman
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/cloudflare.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cloudflare Tunnel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/index.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/framework.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Framework
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/shannon.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shannon Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-module-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Module Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-what-changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. What Changed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-component-diagram" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Component Diagram
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-key-flows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Key Flows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Key Flows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flow-1-environment-variable-loading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow 1: Environment Variable Loading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flow-2-jira-credential-profile-resolution" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow 2: Jira Credential Profile Resolution
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flow-3-settings-initialization-and-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow 3: Settings Initialization and Validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-data-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Data Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Data Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#settings-dataclass-in-configsettingspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings (dataclass in config/settings.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#jiracredentialprofile-dataclass-in-configjira_identitypy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        JiraCredentialProfile (dataclass in config/jira_identity.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#jira_actor_identity_policyyaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        jira_actor_identity_policy.yaml
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#identity_mapyaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        identity_map.yaml
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#shannonagent_registryyaml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        shannon/agent_registry.yaml
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables-credential-domain-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Variables (Credential-Domain Files)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature-flags" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Flags
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prompt-templates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prompt Templates
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#shannon-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shannon Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Error Handling
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Error Handling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#settingsvalidate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Settings.validate()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get_jira_credentials_for_actor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        get_jira_credentials_for_actor()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#load_env" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        load_env()
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#resolve_dry_run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        resolve_dry_run()
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-known-limitations-technical-debt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Known Limitations / Technical Debt
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/jmac-cornelis/agent-workforce/edit/main/docs/config.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<!-- Generated by Documentation Agent — do not edit between markers -->
+
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nn">---</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;As-Built:</span><span class="nv"> </span><span class="s">Config&quot;</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">date</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2026-04-03&quot;</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nt">status</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;draft&quot;</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nn">---</span>
+</span></code></pre></div>
+<h1 id="config-design-reference">Config — Design Reference<a class="headerlink" href="#config-design-reference" title="Permanent link">&para;</a></h1>
+<h2 id="1-module-overview">1. Module Overview<a class="headerlink" href="#1-module-overview" title="Permanent link">&para;</a></h2>
+<p>The <code>config</code> module is the centralized configuration backbone for the Cornelis Agent Pipeline. It provides three core capabilities: (1) a multi-strategy environment variable loader (<code>env_loader.py</code>) that supports credential-domain segregated <code>.env</code> files for Docker Compose parity and falls back to a single root <code>.env</code> for local development; (2) a typed application settings dataclass (<code>settings.py</code>) that hydrates from environment variables and covers Jira, LLM providers, MCP, web search, agent tuning, and state persistence; and (3) a Jira actor identity system (<code>jira_identity.py</code>) that resolves credential profiles for three actor modes — <code>requester</code>, <code>service_account</code>, and <code>draft_only</code> — with legacy fallback control. The module also houses YAML policy files governing Jira actor identity selection, a GitHub-to-Teams identity map, an agent registry for the Shannon communications bot, a Teams app manifest template, and a library of Markdown prompt templates that define the system prompts for the agent workforce's specialized sub-agents (research, hardware analysis, scoping, planning, review, and vision).</p>
+<h2 id="2-what-changed">2. What Changed<a class="headerlink" href="#2-what-changed" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Before:</strong> PR reminder DMs from Drucker had no way to resolve a GitHub login to a Microsoft Teams user for direct messaging.</li>
+<li><strong>After:</strong> A new file <code>config/identity_map.yaml</code> provides a declarative GitHub-login-to-Teams-email mapping. Each entry contains a <code>name</code> and <code>teams_email</code> keyed by GitHub login.</li>
+<li><strong>Impact:</strong> The Drucker agent's PR reminder subsystem (commands <code>/pr-reminder-scan</code>, <code>/pr-reminder-process</code>) can now look up the Teams identity for a GitHub PR author and send targeted DMs via the Graph API. Any agent or service that needs cross-platform identity resolution can consume this file. New team members must be added manually.</li>
+</ul>
+<h2 id="3-component-diagram">3. Component Diagram<a class="headerlink" href="#3-component-diagram" title="Permanent link">&para;</a></h2>
+<pre class="mermaid"><code>graph TD
+    A["config/__init__.py&lt;br/&gt;(Public API)"] --&gt; B["config/env_loader.py&lt;br/&gt;(Env Loading &amp; Dry-Run)"]
+    A --&gt; C["config/settings.py&lt;br/&gt;(Settings Dataclass)"]
+    C --&gt; B
+    D["config/jira_identity.py&lt;br/&gt;(Jira Credential Profiles)"] --&gt; B
+    E["config/env/*.env&lt;br/&gt;(Credential-Domain Env Files)"]
+    B --&gt; E
+    F["config/jira_actor_identity_policy.yaml&lt;br/&gt;(Actor Policy Rules)"]
+    G["config/identity_map.yaml&lt;br/&gt;(GitHub→Teams Map)"]
+    H["config/prompts/*.md&lt;br/&gt;(Agent System Prompts)"]
+    I["config/shannon/agent_registry.yaml&lt;br/&gt;(Agent Registry)"]
+    J["config/shannon/teams-app-manifest.template.json&lt;br/&gt;(Teams App Manifest)"]
+    K["config/claude_desktop_config.example.json&lt;br/&gt;(MCP Example Config)"]</code></pre>
+<h2 id="4-key-flows">4. Key Flows<a class="headerlink" href="#4-key-flows" title="Permanent link">&para;</a></h2>
+<h3 id="flow-1-environment-variable-loading">Flow 1: Environment Variable Loading<a class="headerlink" href="#flow-1-environment-variable-loading" title="Permanent link">&para;</a></h3>
+<p>The <code>load_env()</code> function implements a three-tier resolution strategy. An explicit path wins outright; otherwise it searches for the <code>config/env/</code> directory by walking up from CWD (anchored by <code>pyproject.toml</code>), loading domain files in a fixed order; finally it falls back to a root <code>.env</code>.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant Caller
+    participant load_env as load_env()
+    participant _find_env_dir as _find_env_dir()
+    participant dotenv as python-dotenv
+
+    Caller-&gt;&gt;load_env: load_env(env_path=None)
+    load_env-&gt;&gt;_find_env_dir: locate config/env/
+    _find_env_dir--&gt;&gt;load_env: Path or None
+
+    alt config/env/ found
+        loop each file in _ENV_FILE_ORDER
+            load_env-&gt;&gt;dotenv: load_dotenv(filepath)
+        end
+    else fallback
+        load_env-&gt;&gt;dotenv: load_dotenv(root .env)
+    end
+    load_env--&gt;&gt;Caller: list of loaded file paths</code></pre>
+<p>The load order is defined by the constant <code>_ENV_FILE_ORDER</code> in <code>config/env_loader.py</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="n">_ENV_FILE_ORDER</span> <span class="o">=</span> <span class="p">[</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="s1">&#39;shared.env&#39;</span><span class="p">,</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="s1">&#39;jira.env&#39;</span><span class="p">,</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="s1">&#39;llm.env&#39;</span><span class="p">,</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="s1">&#39;github.env&#39;</span><span class="p">,</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="s1">&#39;teams.env&#39;</span><span class="p">,</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="p">]</span>
+</span></code></pre></div>
+<p>This mirrors the Docker Compose <code>env_file</code> stacking: shared defaults load first, then credential-domain files override if there is overlap.</p>
+<h3 id="flow-2-jira-credential-profile-resolution">Flow 2: Jira Credential Profile Resolution<a class="headerlink" href="#flow-2-jira-credential-profile-resolution" title="Permanent link">&para;</a></h3>
+<p><code>get_jira_credential_profile()</code> in <code>config/jira_identity.py</code> resolves credentials for one of three actor modes. The <code>draft_only</code> mode reuses requester credentials but annotates the profile for read-only/preview use.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant Agent
+    participant get_jira_credential_profile as get_jira_credential_profile()
+    participant _resolve_profile as _resolve_profile()
+    participant os as os.getenv()
+
+    Agent-&gt;&gt;get_jira_credential_profile: actor_mode="service_account"
+    get_jira_credential_profile-&gt;&gt;_resolve_profile: (SERVICE_ACCOUNT, JIRA_SERVICE_EMAIL, JIRA_SERVICE_API_TOKEN)
+    _resolve_profile-&gt;&gt;os: getenv(JIRA_SERVICE_EMAIL)
+    _resolve_profile-&gt;&gt;os: getenv(JIRA_SERVICE_API_TOKEN)
+
+    alt explicit vars set
+        _resolve_profile--&gt;&gt;get_jira_credential_profile: JiraCredentialProfile(source=explicit)
+    else legacy fallback enabled
+        _resolve_profile-&gt;&gt;os: getenv(JIRA_EMAIL), getenv(JIRA_API_TOKEN)
+        _resolve_profile--&gt;&gt;get_jira_credential_profile: JiraCredentialProfile(source=legacy)
+    else legacy fallback disabled
+        _resolve_profile--&gt;&gt;get_jira_credential_profile: JiraCredentialProfile(email=None)
+    end
+    get_jira_credential_profile--&gt;&gt;Agent: JiraCredentialProfile</code></pre>
+<p>The legacy fallback is controlled by the <code>JIRA_ENABLE_LEGACY_FALLBACK</code> environment variable, parsed by <code>is_legacy_fallback_enabled()</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">is_legacy_fallback_enabled</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="k">return</span> <span class="n">_env_flag_enabled</span><span class="p">(</span><span class="s1">&#39;JIRA_ENABLE_LEGACY_FALLBACK&#39;</span><span class="p">,</span> <span class="n">default</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="flow-3-settings-initialization-and-validation">Flow 3: Settings Initialization and Validation<a class="headerlink" href="#flow-3-settings-initialization-and-validation" title="Permanent link">&para;</a></h3>
+<p><code>get_settings()</code> is a lazy singleton that creates a <code>Settings</code> instance from environment variables on first access. The <code>Settings.from_env()</code> classmethod calls <code>load_env()</code> at module import time, then reads every setting from <code>os.getenv()</code>.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant Consumer
+    participant get_settings as get_settings()
+    participant Settings as Settings.from_env()
+    participant load_env as load_env()
+    participant validate as Settings.validate()
+
+    Consumer-&gt;&gt;get_settings: get_settings()
+    alt _settings is None
+        get_settings-&gt;&gt;Settings: from_env()
+        Note over Settings: load_env() already called at module level
+        Settings-&gt;&gt;Settings: read os.getenv() for all fields
+        Settings--&gt;&gt;get_settings: Settings instance
+    end
+    get_settings--&gt;&gt;Consumer: Settings
+
+    Consumer-&gt;&gt;validate: settings.validate()
+    alt missing credentials
+        validate--&gt;&gt;Consumer: raise ValueError
+    else valid
+        validate--&gt;&gt;Consumer: True
+    end</code></pre>
+<p>The module-level call in <code>config/settings.py</code> ensures env vars are loaded before any <code>os.getenv()</code> calls:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kn">from</span><span class="w"> </span><span class="nn">config.env_loader</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_env</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">load_env</span><span class="p">()</span>
+</span></code></pre></div>
+<h2 id="5-data-model">5. Data Model<a class="headerlink" href="#5-data-model" title="Permanent link">&para;</a></h2>
+<h3 id="settings-dataclass-in-configsettingspy"><code>Settings</code> (dataclass in <code>config/settings.py</code>)<a class="headerlink" href="#settings-dataclass-in-configsettingspy" title="Permanent link">&para;</a></h3>
+<p>The central configuration object. All fields have defaults; secrets default to <code>None</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Source Env Var</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>jira_url</code></td>
+<td><code>str</code></td>
+<td><code>'https://cornelisnetworks.atlassian.net'</code></td>
+<td><code>JIRA_URL</code></td>
+</tr>
+<tr>
+<td><code>jira_email</code></td>
+<td><code>Optional[str]</code></td>
+<td><code>None</code></td>
+<td><code>JIRA_EMAIL</code></td>
+</tr>
+<tr>
+<td><code>jira_api_token</code></td>
+<td><code>Optional[str]</code></td>
+<td><code>None</code></td>
+<td><code>JIRA_API_TOKEN</code></td>
+</tr>
+<tr>
+<td><code>cornelis_llm_base_url</code></td>
+<td><code>Optional[str]</code></td>
+<td><code>None</code></td>
+<td><code>CORNELIS_LLM_BASE_URL</code></td>
+</tr>
+<tr>
+<td><code>cornelis_llm_api_key</code></td>
+<td><code>Optional[str]</code></td>
+<td><code>None</code></td>
+<td><code>CORNELIS_LLM_API_KEY</code></td>
+</tr>
+<tr>
+<td><code>cornelis_llm_model</code></td>
+<td><code>str</code></td>
+<td><code>'cornelis-default'</code></td>
+<td><code>CORNELIS_LLM_MODEL</code></td>
+</tr>
+<tr>
+<td><code>openai_api_key</code></td>
+<td><code>Optional[str]</code></td>
+<td><code>None</code></td>
+<td><code>OPENAI_API_KEY</code></td>
+</tr>
+<tr>
+<td><code>anthropic_api_key</code></td>
+<td><code>Optional[str]</code></td>
+<td><code>None</code></td>
+<td><code>ANTHROPIC_API_KEY</code></td>
+</tr>
+<tr>
+<td><code>default_llm_provider</code></td>
+<td><code>str</code></td>
+<td><code>'cornelis'</code></td>
+<td><code>DEFAULT_LLM_PROVIDER</code></td>
+</tr>
+<tr>
+<td><code>mcp_url</code></td>
+<td><code>str</code></td>
+<td><code>'http://cn-ai-01.cornelisnetworks.com:50700/mcp'</code></td>
+<td><code>CORNELIS_MCP_URL</code></td>
+</tr>
+<tr>
+<td><code>mcp_enabled</code></td>
+<td><code>bool</code></td>
+<td><code>True</code></td>
+<td><code>CORNELIS_MCP_ENABLED</code></td>
+</tr>
+<tr>
+<td><code>agent_max_iterations</code></td>
+<td><code>int</code></td>
+<td><code>50</code></td>
+<td><code>AGENT_MAX_ITERATIONS</code></td>
+</tr>
+<tr>
+<td><code>agent_timeout_seconds</code></td>
+<td><code>int</code></td>
+<td><code>300</code></td>
+<td><code>AGENT_TIMEOUT_SECONDS</code></td>
+</tr>
+<tr>
+<td><code>state_persistence_enabled</code></td>
+<td><code>bool</code></td>
+<td><code>True</code></td>
+<td><code>STATE_PERSISTENCE_ENABLED</code></td>
+</tr>
+<tr>
+<td><code>state_persistence_path</code></td>
+<td><code>str</code></td>
+<td><code>'./data/sessions'</code></td>
+<td><code>STATE_PERSISTENCE_PATH</code></td>
+</tr>
+<tr>
+<td><code>state_persistence_format</code></td>
+<td><code>str</code></td>
+<td><code>'json'</code></td>
+<td><code>STATE_PERSISTENCE_FORMAT</code></td>
+</tr>
+</tbody>
+</table>
+<p>The <code>to_dict()</code> method masks sensitive fields (<code>jira_api_token</code>, <code>cornelis_llm_api_key</code>, <code>openai_api_key</code>, <code>anthropic_api_key</code>) with <code>'***'</code>.</p>
+<h3 id="jiracredentialprofile-dataclass-in-configjira_identitypy"><code>JiraCredentialProfile</code> (dataclass in <code>config/jira_identity.py</code>)<a class="headerlink" href="#jiracredentialprofile-dataclass-in-configjira_identitypy" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="nd">@dataclass</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">JiraCredentialProfile</span><span class="p">:</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>    <span class="n">actor_mode</span><span class="p">:</span> <span class="nb">str</span>          <span class="c1"># &#39;requester&#39; | &#39;service_account&#39; | &#39;draft_only&#39;</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>    <span class="n">email</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="n">api_token</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>    <span class="n">email_env</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>  <span class="c1"># env var name used for email</span>
+</span><span id="__span-4-7"><a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>    <span class="n">token_env</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>  <span class="c1"># env var name used for token</span>
+</span><span id="__span-4-8"><a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span>               <span class="c1"># human-readable provenance string</span>
+</span></code></pre></div>
+<h3 id="jira_actor_identity_policyyaml"><code>jira_actor_identity_policy.yaml</code><a class="headerlink" href="#jira_actor_identity_policyyaml" title="Permanent link">&para;</a></h3>
+<p>A declarative policy engine with <code>version: 1</code>. Key structures:</p>
+<ul>
+<li><strong><code>actors</code></strong>: Three modes — <code>draft_only</code>, <code>service_account</code>, <code>requester</code> — each with a description.</li>
+<li><strong><code>rules</code></strong>: Six ordered rules matching on <code>trigger</code>, <code>action_class</code>, <code>risk</code>, and <code>approval_required</code> to select an actor mode. Rule IDs: <code>poller_hygiene_scan</code>, <code>deterministic_low_risk_write</code>, <code>approved_system_batch_apply</code>, <code>human_judgment_change</code>, <code>sensitive_workflow_transition</code>, <code>unapproved_nontrivial_write</code>.</li>
+<li><strong><code>agent_defaults</code></strong>: Per-agent overrides for <code>drucker</code>, <code>gantt</code>, <code>hedy</code>, <code>hemingway</code>.</li>
+<li><strong><code>audit_fields.required</code></strong>: <code>actor_mode</code>, <code>requested_by</code>, <code>approved_by</code>, <code>executed_by</code>, <code>policy_rule</code>, <code>correlation_id</code>, <code>timestamp</code>.</li>
+<li><strong><code>comment_voice</code></strong>: Style guidance for machine vs. human comments.</li>
+</ul>
+<h3 id="identity_mapyaml"><code>identity_map.yaml</code><a class="headerlink" href="#identity_mapyaml" title="Permanent link">&para;</a></h3>
+<p>Maps GitHub logins to Teams identities:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="nt">users</span><span class="p">:</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">jmac-cornelis</span><span class="p">:</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">John MacDonald</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">    </span><span class="nt">teams_email</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">john.macdonald@cornelisnetworks.com</span>
+</span></code></pre></div>
+<h3 id="shannonagent_registryyaml"><code>shannon/agent_registry.yaml</code><a class="headerlink" href="#shannonagent_registryyaml" title="Permanent link">&para;</a></h3>
+<p>Defines the full agent fleet with per-agent metadata: <code>agent_id</code>, <code>display_name</code>, <code>role</code>, <code>zone</code>, <code>channel_name</code>, <code>channel_id</code>, <code>team_id</code>, <code>api_base_url</code>, <code>timeout_seconds</code>, and <code>custom_commands</code>. Each command specifies <code>api_method</code>, <code>api_path</code>, <code>mutation</code> flag, and typed <code>params</code>. Currently registers <code>shannon</code>, <code>drucker</code>, and <code>gantt</code>.</p>
+<h2 id="6-dependencies">6. Dependencies<a class="headerlink" href="#6-dependencies" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Dependency</th>
+<th>Purpose</th>
+<th>Version</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>python-dotenv</code></td>
+<td>Loads <code>.env</code> files into <code>os.environ</code> via <code>load_dotenv()</code></td>
+<td>Not pinned in module</td>
+</tr>
+<tr>
+<td><code>logging</code> (stdlib)</td>
+<td>Structured logging throughout all config modules</td>
+<td>Python stdlib</td>
+</tr>
+<tr>
+<td><code>dataclasses</code> (stdlib)</td>
+<td><code>Settings</code> and <code>JiraCredentialProfile</code> dataclasses</td>
+<td>Python 3.7+</td>
+</tr>
+<tr>
+<td><code>pathlib</code> (stdlib)</td>
+<td>File system traversal in <code>_find_env_dir()</code></td>
+<td>Python stdlib</td>
+</tr>
+<tr>
+<td><code>os</code> (stdlib)</td>
+<td>Environment variable access</td>
+<td>Python stdlib</td>
+</tr>
+<tr>
+<td><code>config/env_loader.py</code></td>
+<td>Used by <code>settings.py</code> and <code>jira_identity.py</code> for env loading</td>
+<td>Internal</td>
+</tr>
+<tr>
+<td><code>config/settings.py</code></td>
+<td>Exported via <code>config/__init__.py</code></td>
+<td>Internal</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7-configuration">7. Configuration<a class="headerlink" href="#7-configuration" title="Permanent link">&para;</a></h2>
+<h3 id="environment-variables-credential-domain-files">Environment Variables (Credential-Domain Files)<a class="headerlink" href="#environment-variables-credential-domain-files" title="Permanent link">&para;</a></h3>
+<p>The <code>config/env/</code> directory contains five template files, loaded in this order:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Domain</th>
+<th>Key Variables</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>shared.env</code></td>
+<td>Non-sensitive shared config</td>
+<td><code>DRY_RUN</code>, <code>LOG_LEVEL</code>, <code>JIRA_URL</code></td>
+</tr>
+<tr>
+<td><code>jira.env</code></td>
+<td>Jira credentials</td>
+<td><code>JIRA_SERVICE_EMAIL</code>, <code>JIRA_SERVICE_API_TOKEN</code>, <code>JIRA_REQUESTER_EMAIL</code>, <code>JIRA_REQUESTER_API_TOKEN</code>, <code>JIRA_EMAIL</code>, <code>JIRA_API_TOKEN</code></td>
+</tr>
+<tr>
+<td><code>llm.env</code></td>
+<td>LLM provider keys</td>
+<td><code>CORNELIS_LLM_BASE_URL</code>, <code>CORNELIS_LLM_API_KEY</code>, <code>OPENAI_API_KEY</code>, <code>ANTHROPIC_API_KEY</code></td>
+</tr>
+<tr>
+<td><code>github.env</code></td>
+<td>GitHub credentials</td>
+<td>GitHub PAT and related vars</td>
+</tr>
+<tr>
+<td><code>teams.env</code></td>
+<td>Teams / Azure credentials</td>
+<td>Azure Bot credentials, webhook URLs</td>
+</tr>
+</tbody>
+</table>
+<h3 id="feature-flags">Feature Flags<a class="headerlink" href="#feature-flags" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Flag</th>
+<th>Env Var</th>
+<th>Default</th>
+<th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Legacy Jira fallback</td>
+<td><code>JIRA_ENABLE_LEGACY_FALLBACK</code></td>
+<td><code>true</code></td>
+<td>When <code>false</code>, prevents silent fallback to <code>JIRA_EMAIL</code>/<code>JIRA_API_TOKEN</code></td>
+</tr>
+<tr>
+<td>Dry-run mode</td>
+<td><code>DRY_RUN</code></td>
+<td><code>true</code> (safe default)</td>
+<td>Prevents mutations; resolved by <code>resolve_dry_run()</code></td>
+</tr>
+<tr>
+<td>MCP enabled</td>
+<td><code>CORNELIS_MCP_ENABLED</code></td>
+<td><code>true</code></td>
+<td>Enables/disables MCP server integration</td>
+</tr>
+<tr>
+<td>LLM fallback</td>
+<td><code>FALLBACK_ENABLED</code></td>
+<td><code>true</code></td>
+<td>Enables LLM provider fallback chain</td>
+</tr>
+</tbody>
+</table>
+<h3 id="prompt-templates">Prompt Templates<a class="headerlink" href="#prompt-templates" title="Permanent link">&para;</a></h3>
+<p>Twelve Markdown files in <code>config/prompts/</code> define system prompts for the agent sub-agents:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Agent / Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>orchestrator.md</code></td>
+<td>Release Planning Orchestrator</td>
+</tr>
+<tr>
+<td><code>feature_planning_orchestrator.md</code></td>
+<td>Feature Planning Orchestrator (6-phase workflow)</td>
+</tr>
+<tr>
+<td><code>research_agent.md</code></td>
+<td>Research Agent — web/MCP/knowledge-base gathering</td>
+</tr>
+<tr>
+<td><code>hardware_analyst.md</code></td>
+<td>Hardware Analyst — product architecture mapping</td>
+</tr>
+<tr>
+<td><code>scoping_agent.md</code></td>
+<td>Scoping Agent — SW/FW work item definition</td>
+</tr>
+<tr>
+<td><code>feature_plan_builder.md</code></td>
+<td>Feature Plan Builder — scope-to-Jira conversion</td>
+</tr>
+<tr>
+<td><code>plan_building_instructions.md</code></td>
+<td>Injected instructions for plan building phase</td>
+</tr>
+<tr>
+<td><code>scope_document_parser.md</code></td>
+<td>Structured JSON parser for scope documents</td>
+</tr>
+<tr>
+<td><code>planning_agent.md</code></td>
+<td>Release Planning Agent — roadmap-to-tickets</td>
+</tr>
+<tr>
+<td><code>review_agent.md</code></td>
+<td>Review Agent — human-in-the-loop approval</td>
+</tr>
+<tr>
+<td><code>vision_analyzer.md</code></td>
+<td>Vision Analyzer — roadmap image/slide extraction</td>
+</tr>
+<tr>
+<td><code>vision_roadmap_analysis.md</code></td>
+<td>Short vision analysis prompt</td>
+</tr>
+<tr>
+<td><code>jira_analyst.md</code></td>
+<td>Jira Analyst — project state analysis</td>
+</tr>
+<tr>
+<td><code>cn5000_bugs_clean.md</code></td>
+<td>CN5000 bug ticket CSV formatter</td>
+</tr>
+</tbody>
+</table>
+<h3 id="shannon-configuration">Shannon Configuration<a class="headerlink" href="#shannon-configuration" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>config/shannon/agent_registry.yaml</code> — Full agent fleet registry with commands, API routes, and parameters.</li>
+<li><code>config/shannon/teams-app-manifest.template.json</code> — Teams app manifest with <code>${SHANNON_TEAMS_APP_ID}</code> and <code>${SHANNON_PUBLIC_DOMAIN}</code> placeholders.</li>
+<li><code>config/claude_desktop_config.example.json</code> — Example MCP server configuration for Claude Desktop.</li>
+</ul>
+<h2 id="8-error-handling">8. Error Handling<a class="headerlink" href="#8-error-handling" title="Permanent link">&para;</a></h2>
+<h3 id="settingsvalidate"><code>Settings.validate()</code><a class="headerlink" href="#settingsvalidate" title="Permanent link">&para;</a></h3>
+<p>Accumulates all missing-credential errors into a list and raises a single <code>ValueError</code> with all errors joined. Each error is also logged individually via <code>log.error()</code>:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">if</span> <span class="n">errors</span><span class="p">:</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>    <span class="k">for</span> <span class="n">error</span> <span class="ow">in</span> <span class="n">errors</span><span class="p">:</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>        <span class="n">log</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Configuration error: </span><span class="si">{</span><span class="n">error</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Configuration errors: </span><span class="si">{</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">errors</span><span class="p">)</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+</span></code></pre></div>
+<p>Validation is provider-aware: it only checks <code>CORNELIS_LLM_BASE_URL</code>/<code>CORNELIS_LLM_API_KEY</code> when <code>default_llm_provider == 'cornelis'</code>, etc.</p>
+<h3 id="get_jira_credentials_for_actor"><code>get_jira_credentials_for_actor()</code><a class="headerlink" href="#get_jira_credentials_for_actor" title="Permanent link">&para;</a></h3>
+<p>Raises <code>ValueError</code> with a descriptive message naming the specific env var and actor mode when either email or API token is missing:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">if</span> <span class="ow">not</span> <span class="n">profile</span><span class="o">.</span><span class="n">email</span><span class="p">:</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>        <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">profile</span><span class="o">.</span><span class="n">email_env</span><span class="si">}</span><span class="s1"> environment variable not set for actor &#39;</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>        <span class="sa">f</span><span class="s1">&#39;&quot;</span><span class="si">{</span><span class="n">profile</span><span class="o">.</span><span class="n">actor_mode</span><span class="si">}</span><span class="s1">&quot;&#39;</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>    <span class="p">)</span>
+</span></code></pre></div>
+<h3 id="load_env"><code>load_env()</code><a class="headerlink" href="#load_env" title="Permanent link">&para;</a></h3>
+<p>Does <strong>not</strong> raise on missing files. Logs a warning for an explicit path that doesn't exist, and logs a debug message when no <code>.env</code> files are found at all. Returns an empty list in the worst case, allowing the process environment to serve as the sole source.</p>
+<h3 id="resolve_dry_run"><code>resolve_dry_run()</code><a class="headerlink" href="#resolve_dry_run" title="Permanent link">&para;</a></h3>
+<p>Defaults to <code>True</code> (safe, no mutations) when the env var is absent or unrecognized. This is a deliberate safety-first design:</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">resolve_dry_run</span><span class="p">(</span><span class="n">explicit</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">bool</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="k">if</span> <span class="n">explicit</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>        <span class="k">return</span> <span class="n">explicit</span>
+</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="n">env_val</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;DRY_RUN&#39;</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+</span><span id="__span-8-5"><a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>    <span class="k">if</span> <span class="n">env_val</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;0&#39;</span><span class="p">,</span> <span class="s1">&#39;false&#39;</span><span class="p">,</span> <span class="s1">&#39;no&#39;</span><span class="p">,</span> <span class="s1">&#39;off&#39;</span><span class="p">):</span>
+</span><span id="__span-8-6"><a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>        <span class="k">return</span> <span class="kc">False</span>
+</span><span id="__span-8-7"><a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a>    <span class="k">if</span> <span class="n">env_val</span> <span class="ow">in</span> <span class="p">(</span><span class="s1">&#39;1&#39;</span><span class="p">,</span> <span class="s1">&#39;true&#39;</span><span class="p">,</span> <span class="s1">&#39;yes&#39;</span><span class="p">,</span> <span class="s1">&#39;on&#39;</span><span class="p">):</span>
+</span><span id="__span-8-8"><a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>        <span class="k">return</span> <span class="kc">True</span>
+</span><span id="__span-8-9"><a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>    <span class="k">return</span> <span class="kc">True</span>  <span class="c1"># safe default</span>
+</span></code></pre></div>
+<h2 id="9-known-limitations-technical-debt">9. Known Limitations / Technical Debt<a class="headerlink" href="#9-known-limitations-technical-debt" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p><strong>Hardcoded MCP URL</strong> — The default <code>mcp_url</code> in <code>Settings</code> is hardcoded to <code>'http://cn-ai-01.cornelisnetworks.com:50700/mcp'</code>. This is an internal hostname that will break outside the Cornelis network. It is overridable via <code>CORNELIS_MCP_URL</code> but the default should arguably be <code>None</code> or empty.</p>
+</li>
+<li>
+<p><strong>Hardcoded Jira URL</strong> — The default <code>jira_url</code> is <code>'https://cornelisnetworks.atlassian.net'</code> in both <code>Settings</code> and <code>claude_desktop_config.example.json</code>.</p>
+</li>
+<li>
+<p><strong>Hardcoded webhook URL</strong> — The Drucker agent entry in <code>agent_registry.yaml</code> contains a full Power Automate webhook URL in <code>notifications_webhook_url</code>. While this is a configuration file (not source code), the URL includes a signature parameter (<code>sig=DX5rVpdRL5wpv_H9huN668nWIvrhGTWwe97q6NGpxh4</code>) that functions as a credential.</p>
+</li>
+<li>
+<p><strong><code>Settings.validate()</code> is not called automatically</strong> — <code>get_settings()</code> creates the singleton via <code>from_env()</code> but never calls <code>validate()</code>. Consumers must explicitly call <code>settings.validate()</code> to check for missing credentials. A misconfigured deployment will not fail fast.</p>
+</li>
+<li>
+<p><strong>Module-level side effects in <code>jira_identity.py</code></strong> — The module calls <code>load_env()</code> (or <code>load_dotenv()</code>) at import time, outside any function. This means importing the module has the side effect of loading environment variables, which can cause surprising behavior in tests or when import order matters:</p>
+</li>
+</ol>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">if</span> <span class="n">load_env</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="n">load_env</span><span class="p">()</span>
+</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="k">else</span><span class="p">:</span>
+</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="n">load_dotenv</span><span class="p">(</span><span class="n">override</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</span></code></pre></div>
+<ol>
+<li>
+<p><strong>Module-level side effects in <code>settings.py</code></strong> — Similarly, <code>load_env()</code> is called at module import time in <code>settings.py</code>.</p>
+</li>
+<li>
+<p><strong><code>identity_map.yaml</code> is manually maintained</strong> — There is no automated sync between GitHub org membership and this file. As the team grows, this will drift.</p>
+</li>
+<li>
+<p><strong>No schema validation for YAML policy files</strong> — <code>jira_actor_identity_policy.yaml</code> and <code>agent_registry.yaml</code> are consumed as raw YAML with no schema validation in this module. Malformed entries will surface as runtime errors downstream.</p>
+</li>
+<li>
+<p><strong><code>_find_env_dir()</code> anchors on <code>pyproject.toml</code></strong> — If the repository root lacks <code>pyproject.toml</code> (e.g., in a Docker image that strips it), the credential-domain loading path silently falls through to the root <code>.env</code> fallback.</p>
+</li>
+<li>
+<p><strong><code>Settings.to_dict()</code> omits several fields</strong> — Fields like <code>mcp_url</code>, <code>mcp_enabled</code>, <code>agent_timeout_seconds</code>, <code>brave_search_api_key</code>, <code>tavily_api_key</code>, <code>feature_planning_*</code>, <code>log_file</code>, and <code>log_level</code> are not included in <code>to_dict()</code>, making debug introspection incomplete.</p>
+</li>
+<li>
+<p><strong><code>configure_logging()</code> opens file handler in write mode</strong> — The <code>FileHandler</code> uses <code>mode='w'</code>, which truncates the log file on every call. If <code>configure_logging()</code> is called more than once (e.g., in tests), previous log content is lost.</p>
+</li>
+<li>
+<p><strong>Prompt files have no versioning or checksumming</strong> — The twelve prompt Markdown files are critical to agent behavior but have no version metadata or integrity checks. A silent edit to a prompt file changes agent behavior with no audit trail beyond git history.</p>
+</li>
+</ol>
+<!-- End Documentation Agent generated content -->
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/jmac-cornelis/agent-workforce" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

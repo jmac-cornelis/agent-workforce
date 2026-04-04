@@ -1,0 +1,1976 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for the Cornelis Networks Agent Workforce">
+      
+      
+      
+        <link rel="canonical" href="https://jmac-cornelis.github.io/agent-workforce/shannon/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Shannon - Agent Workforce</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#module-overview" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Agent Workforce" class="md-header__button md-logo" aria-label="Agent Workforce" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Agent Workforce
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Shannon
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/jmac-cornelis/agent-workforce" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jmac-cornelis/agent-workforce
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../user-guide/index.md" class="md-tabs__link">
+          
+  
+  
+    
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../agents/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Agents
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../cli/agent-cli.md" class="md-tabs__link">
+          
+  
+  
+    
+  
+  CLI Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../deployment/index.md" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Deployment
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../architecture/index.md" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Agent Workforce" class="md-nav__button md-logo" aria-label="Agent Workforce" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Agent Workforce
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/jmac-cornelis/agent-workforce" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jmac-cornelis/agent-workforce
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/index.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/installation.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/quickstart.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../agents/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Agents
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/drucker.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Drucker (Engineering Hygiene)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/gantt.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gantt (Project Planning)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/hemingway.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hemingway (Documentation)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/shannon.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shannon (Communications)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/agent-cli.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    agent-cli
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/drucker-agent.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    drucker-agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/gantt-agent.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gantt-agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/hemingway-agent.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    hemingway-agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/github-utils.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    github-utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Deployment
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/index.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/server-setup.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Server Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/containers.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker & Podman
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/cloudflare.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cloudflare Tunnel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/index.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/framework.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Framework
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/shannon.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shannon Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#module-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Module Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Changed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#component-diagram" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Component Diagram
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-flows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Flows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Flows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flow-1-outgoing-webhook-command-routing-fast-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow 1: Outgoing Webhook Command Routing (Fast Path)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flow-2-deferred-slow-command-async-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow 2: Deferred Slow Command (Async Path)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flow-3-agent-notification-push" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow 3: Agent Notification Push
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#agentchannelregistration-shannonmodelspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AgentChannelRegistration (shannon/models.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conversationreference-shannonmodelspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ConversationReference (shannon/models.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#auditrecord-shannonmodelspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        AuditRecord (shannon/models.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#shannonresponse-shannonmodelspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ShannonResponse (shannon/models.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#command-text-normalization" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Command Text Normalization
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Handling
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-limitations-technical-debt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known Limitations / Technical Debt
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/jmac-cornelis/agent-workforce/edit/main/docs/shannon.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+  <h1>Shannon</h1>
+
+<!-- Generated by Documentation Agent — do not edit between markers -->
+
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nn">---</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;As-Built:</span><span class="nv"> </span><span class="s">Shannon</span><span class="nv"> </span><span class="s">—</span><span class="nv"> </span><span class="s">Communications</span><span class="nv"> </span><span class="s">Agent&quot;</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">date</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2026-04-03&quot;</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nt">status</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;draft&quot;</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nn">---</span>
+</span></code></pre></div>
+<h2 id="module-overview">Module Overview<a class="headerlink" href="#module-overview" title="Permanent link">&para;</a></h2>
+<p>Shannon is the single Microsoft Teams bot and routing surface for the Cornelis agent workforce. It receives commands from Teams users — via Bot Framework activities, outgoing webhooks, or direct API calls — normalizes them, resolves the target agent from a YAML-based channel-to-agent registry, proxies the request to that agent's HTTP API, and renders the response as an Adaptive Card posted back to Teams. Shannon also exposes its own introspection commands (<code>/stats</code>, <code>/busy</code>, <code>/work-today</code>, <code>/decision-tree</code>, <code>/why</code>) and a notification endpoint that any agent can call to push alerts into a Teams channel. The module supports three posting backends (in-memory for tests, Workflows incoming webhooks, and full Bot Framework connector), HMAC-authenticated outgoing webhooks, and an asynchronous deferred-execution path for slow commands like natural-language queries.</p>
+<h2 id="what-changed">What Changed<a class="headerlink" href="#what-changed" title="Permanent link">&para;</a></h2>
+<p><strong>Before:</strong> Jira ticket references in Adaptive Card text were rendered as plain strings. The Drucker <code>/stats</code> card showed a minimal four-field layout (<code>total_reports</code>, <code>projects_analyzed</code>, <code>total_findings</code>, <code>proposed_actions</code>). Natural-language <code>/ask</code> commands and several Jira-specific card builders (<code>build_jira_query_card</code>, <code>build_jira_release_status_card</code>, <code>build_jira_ticket_counts_card</code>, <code>build_jira_status_report_card</code>, <code>build_nl_query_card</code>) did not exist. Unknown commands in the Shannon channel had no cross-channel redirect. Outgoing webhook processing was fully synchronous — slow agent calls blocked the Teams response timeout. POST command parameter parsing always used positional key-value pair splitting.</p>
+<p><strong>After:</strong> All card text and fact values are now auto-linkified: any Jira ticket key (e.g. <code>STL-1234</code>) is converted to a clickable Markdown link via <code>_linkify_tickets()</code>. The Drucker <code>/stats</code> card renders a richer breakdown including per-category activity, PR reminder counts, and timestamps. Six new card builders support Jira queries, release status, ticket counts, project status reports, and natural-language query results for both Drucker and Gantt agents. Shannon now redirects commands typed in the wrong channel with a <code>wrong_channel_redirect</code> decision. Slow commands (<code>/ask</code>, <code>/planning-snapshot</code>, <code>/release-monitor</code>, <code>/release-survey</code>, and any non-slash free-text query) are deferred to a background thread with an immediate acknowledgment returned to Teams. POST commands with a single required string parameter now join all trailing arguments into one value instead of requiring key-value pairs.</p>
+<p><strong>Impact:</strong> Teams users see clickable Jira links in every card. Users who type a command in the wrong channel get a helpful redirect instead of "unknown command." Natural-language queries no longer risk a Teams webhook timeout. Agents that expose <code>/v1/nl/query</code> (Drucker, Gantt) are now reachable via free-text input in their respective channels.</p>
+<h2 id="component-diagram">Component Diagram<a class="headerlink" href="#component-diagram" title="Permanent link">&para;</a></h2>
+<pre class="mermaid"><code>graph TD
+    A[Teams Client] --&gt;|Bot Framework / Outgoing Webhook| B[FastAPI App&lt;br&gt;shannon/app.py]
+    B --&gt; C[ShannonService&lt;br&gt;shannon/service.py]
+    C --&gt; D[ShannonAgentRegistry&lt;br&gt;shannon/registry.py]
+    C --&gt; E[ShannonStateStore&lt;br&gt;agents/shannon/state_store.py]
+    C --&gt; F[Poster Layer&lt;br&gt;shannon/poster.py]
+    C --&gt; G[Card Builders&lt;br&gt;shannon/cards.py]
+    C --&gt;|HTTP proxy| H[Agent APIs&lt;br&gt;Drucker / Gantt / Hemingway / etc.]
+    F --&gt; I[MemoryPoster]
+    F --&gt; J[WorkflowsPoster]
+    F --&gt; K[BotFrameworkPoster]
+    B --&gt; L[HMAC Verifier&lt;br&gt;shannon/outgoing_webhook.py]
+    C --&gt; M[Data Models&lt;br&gt;shannon/models.py]</code></pre>
+<h2 id="key-flows">Key Flows<a class="headerlink" href="#key-flows" title="Permanent link">&para;</a></h2>
+<h3 id="flow-1-outgoing-webhook-command-routing-fast-path">Flow 1: Outgoing Webhook Command Routing (Fast Path)<a class="headerlink" href="#flow-1-outgoing-webhook-command-routing-fast-path" title="Permanent link">&para;</a></h3>
+<p>A Teams user @-mentions the Shannon bot in an agent channel. Teams sends an outgoing webhook POST. Shannon verifies the HMAC signature, resolves the channel to an agent, proxies the command to the agent API, builds an Adaptive Card from the response, and returns it synchronously.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant T as Teams
+    participant A as FastAPI /v1/teams/outgoing-webhook
+    participant OW as outgoing_webhook.verify_hmac_signature
+    participant S as ShannonService
+    participant R as ShannonAgentRegistry
+    participant AG as Agent API (e.g. Drucker)
+    participant C as cards.py
+    participant P as Poster
+
+    T-&gt;&gt;A: POST (Authorization: HMAC ...)
+    A-&gt;&gt;OW: verify_hmac_signature(header, secret, body)
+    OW--&gt;&gt;A: True
+    A-&gt;&gt;S: process_outgoing_webhook_activity(activity)
+    S-&gt;&gt;S: _is_slow_command(text) → False
+    S-&gt;&gt;R: resolve_channel(channel_id)
+    R--&gt;&gt;S: AgentChannelRegistration
+    S-&gt;&gt;S: _handle_registered_agent_command(...)
+    S-&gt;&gt;AG: GET/POST agent endpoint
+    AG--&gt;&gt;S: JSON response
+    S-&gt;&gt;C: card_builder(data)
+    C--&gt;&gt;S: Adaptive Card dict
+    S--&gt;&gt;A: ShannonResponse.to_outgoing_webhook_response()
+    A--&gt;&gt;T: 200 JSON (card)</code></pre>
+<h3 id="flow-2-deferred-slow-command-async-path">Flow 2: Deferred Slow Command (Async Path)<a class="headerlink" href="#flow-2-deferred-slow-command-async-path" title="Permanent link">&para;</a></h3>
+<p>When a user issues a slow command (e.g. <code>/ask</code> or free-text natural-language query), Shannon immediately returns an acknowledgment to avoid the Teams webhook timeout, then processes the command in a background thread and posts the result via the configured poster.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant T as Teams
+    participant A as FastAPI
+    participant S as ShannonService
+    participant TH as Background Thread
+    participant AG as Agent API
+    participant P as Poster
+
+    T-&gt;&gt;A: POST outgoing-webhook ("/ask how many bugs?")
+    A-&gt;&gt;S: process_outgoing_webhook_activity(activity)
+    S-&gt;&gt;S: _is_slow_command("/ask ...") → True
+    S-&gt;&gt;TH: threading.Thread(_run_async_and_post)
+    S--&gt;&gt;A: ack "Processing your query..."
+    A--&gt;&gt;T: 200 JSON (ack card)
+    Note over TH: Background execution
+    TH-&gt;&gt;S: _build_command_response(activity)
+    S-&gt;&gt;AG: POST /v1/nl/query
+    AG--&gt;&gt;S: JSON result
+    TH-&gt;&gt;S: _post_response(reference, response)
+    S-&gt;&gt;P: send_to_conversation / reply_to_activity
+    P--&gt;&gt;T: Adaptive Card posted to channel</code></pre>
+<h3 id="flow-3-agent-notification-push">Flow 3: Agent Notification Push<a class="headerlink" href="#flow-3-agent-notification-push" title="Permanent link">&para;</a></h3>
+<p>Any agent in the workforce can POST to <code>/v1/bot/notify</code> to push an alert into a Teams channel. Shannon resolves the target channel from the agent registry, builds a fact card, and posts it via the configured poster.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant AG as Agent (e.g. Drucker)
+    participant A as FastAPI /v1/bot/notify
+    participant S as ShannonService
+    participant R as ShannonAgentRegistry
+    participant C as cards.py
+    participant P as Poster
+    participant T as Teams
+
+    AG-&gt;&gt;A: POST {agent_id, title, text, body_lines}
+    A-&gt;&gt;S: post_notification(...)
+    S-&gt;&gt;R: get_agent(agent_id)
+    R--&gt;&gt;S: AgentChannelRegistration (with channel_id)
+    S-&gt;&gt;C: build_fact_card(title, text, body_lines)
+    C--&gt;&gt;S: Adaptive Card dict
+    S-&gt;&gt;P: send_to_conversation(reference, activity)
+    P-&gt;&gt;T: POST to Teams (webhook or Bot Framework)
+    P--&gt;&gt;S: {ok: True}
+    S--&gt;&gt;A: {ok: True, ...}
+    A--&gt;&gt;AG: 200 JSON</code></pre>
+<h2 id="data-model">Data Model<a class="headerlink" href="#data-model" title="Permanent link">&para;</a></h2>
+<h3 id="agentchannelregistration-shannonmodelspy"><code>AgentChannelRegistration</code> (<code>shannon/models.py</code>)<a class="headerlink" href="#agentchannelregistration-shannonmodelspy" title="Permanent link">&para;</a></h3>
+<p>Maps a Teams channel to an agent. Loaded from <code>config/shannon/agent_registry.yaml</code> by <code>ShannonAgentRegistry</code>.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nd">@dataclass</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">AgentChannelRegistration</span><span class="p">:</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">agent_id</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">display_name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">role</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">description</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="n">zone</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;service_infrastructure&#39;</span>
+</span><span id="__span-1-8"><a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="n">channel_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+</span><span id="__span-1-9"><a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="n">channel_name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+</span><span id="__span-1-10"><a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>    <span class="n">team_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+</span><span id="__span-1-11"><a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>    <span class="n">api_base_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+</span><span id="__span-1-12"><a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a>    <span class="n">icon_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+</span><span id="__span-1-13"><a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>    <span class="n">notifications_webhook_url</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+</span><span id="__span-1-14"><a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>    <span class="n">approval_types</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+</span><span id="__span-1-15"><a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a>    <span class="n">custom_commands</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
+</span><span id="__span-1-16"><a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>    <span class="n">timeout_seconds</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">30</span>
+</span></code></pre></div>
+<h3 id="conversationreference-shannonmodelspy"><code>ConversationReference</code> (<code>shannon/models.py</code>)<a class="headerlink" href="#conversationreference-shannonmodelspy" title="Permanent link">&para;</a></h3>
+<p>Captures the full Teams conversation context from an inbound activity. Used by posters to address replies.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nd">@dataclass</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">ConversationReference</span><span class="p">:</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="n">reference_id</span><span class="p">:</span> <span class="nb">str</span>          <span class="c1"># UUID prefix</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="n">captured_at</span><span class="p">:</span> <span class="nb">str</span>           <span class="c1"># ISO-8601 UTC</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="n">agent_id</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>    <span class="n">service_url</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>    <span class="n">channel_id</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>    <span class="n">channel_name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-2-9"><a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>    <span class="n">team_id</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-2-10"><a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>    <span class="n">tenant_id</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-2-11"><a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>    <span class="n">conversation_id</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-2-12"><a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>    <span class="n">conversation_type</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-2-13"><a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>    <span class="n">reply_to_id</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-2-14"><a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>    <span class="n">user_id</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-2-15"><a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>    <span class="n">user_name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-2-16"><a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>    <span class="n">bot_id</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-2-17"><a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>    <span class="n">bot_name</span><span class="p">:</span> <span class="nb">str</span>
+</span><span id="__span-2-18"><a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>    <span class="n">raw_activity_type</span><span class="p">:</span> <span class="nb">str</span>
+</span></code></pre></div>
+<h3 id="auditrecord-shannonmodelspy"><code>AuditRecord</code> (<code>shannon/models.py</code>)<a class="headerlink" href="#auditrecord-shannonmodelspy" title="Permanent link">&para;</a></h3>
+<p>Every routing decision, notification post, and error is recorded as an <code>AuditRecord</code> and stored in <code>ShannonStateStore</code>. Exposed via <code>/v1/status/decisions</code>.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nd">@dataclass</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">AuditRecord</span><span class="p">:</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="n">record_id</span><span class="p">:</span> <span class="nb">str</span>             <span class="c1"># UUID prefix (8 chars)</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="n">timestamp</span><span class="p">:</span> <span class="nb">str</span>             <span class="c1"># ISO-8601 UTC</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="n">event_type</span><span class="p">:</span> <span class="nb">str</span>            <span class="c1"># &#39;decision&#39;, &#39;notification_posted&#39;, &#39;error&#39;, etc.</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>    <span class="n">status</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;ok&#39;</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>    <span class="n">agent_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;shannon&#39;</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>    <span class="n">channel_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+</span><span id="__span-3-9"><a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>    <span class="n">conversation_id</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+</span><span id="__span-3-10"><a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>    <span class="n">command</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+</span><span id="__span-3-11"><a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>    <span class="n">decision</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
+</span><span id="__span-3-12"><a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>    <span class="n">details</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">dict</span><span class="p">)</span>
+</span></code></pre></div>
+<h3 id="shannonresponse-shannonmodelspy"><code>ShannonResponse</code> (<code>shannon/models.py</code>)<a class="headerlink" href="#shannonresponse-shannonmodelspy" title="Permanent link">&para;</a></h3>
+<p>Internal response object that carries both plain text and an optional Adaptive Card. Provides two serialization methods:</p>
+<ul>
+<li><code>to_message_activity()</code> — Bot Framework activity shape</li>
+<li><code>to_outgoing_webhook_response()</code> — adds <code>contentUrl</code>, <code>name</code>, <code>thumbnailUrl</code> fields required by Teams outgoing webhook responses</li>
+</ul>
+<h3 id="command-text-normalization">Command Text Normalization<a class="headerlink" href="#command-text-normalization" title="Permanent link">&para;</a></h3>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">MENTION_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;&lt;at&gt;.*?&lt;/at&gt;&#39;</span><span class="p">,</span> <span class="n">re</span><span class="o">.</span><span class="n">IGNORECASE</span> <span class="o">|</span> <span class="n">re</span><span class="o">.</span><span class="n">DOTALL</span><span class="p">)</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="n">TAG_RE</span> <span class="o">=</span> <span class="n">re</span><span class="o">.</span><span class="n">compile</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;&lt;[^&gt;]+&gt;&#39;</span><span class="p">)</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="k">def</span><span class="w"> </span><span class="nf">normalize_command_text</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>    <span class="c1"># Strips &lt;at&gt;Bot&lt;/at&gt; markup, HTML tags, &amp;nbsp;, collapses whitespace</span>
+</span></code></pre></div>
+<h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Dependency</th>
+<th>Purpose</th>
+<th>Version</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fastapi</code></td>
+<td>HTTP framework for all Shannon endpoints</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>uvicorn</code></td>
+<td>ASGI server (used by <code>run()</code>)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>pydantic</code></td>
+<td>Request body validation (<code>NotificationRequest</code>)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>requests</code></td>
+<td>HTTP client for agent API proxying and Bot Framework token exchange</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>pyyaml</code></td>
+<td>Agent registry YAML loading</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>python-dotenv</code></td>
+<td><code>.env</code> file loading at import time</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>agents.rename_registry</code></td>
+<td><code>canonical_agent_name()</code>, <code>agent_display_name()</code> for agent ID normalization</td>
+<td>Internal</td>
+</tr>
+<tr>
+<td><code>config.env_loader</code></td>
+<td><code>resolve_dry_run()</code> for dry-run mode resolution</td>
+<td>Internal</td>
+</tr>
+<tr>
+<td><code>agents.shannon.state_store</code></td>
+<td><code>ShannonStateStore</code> for audit records and statistics</td>
+<td>Internal</td>
+</tr>
+</tbody>
+</table>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Purpose</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SHANNON_HOST</code></td>
+<td>Bind address for uvicorn</td>
+<td><code>0.0.0.0</code></td>
+</tr>
+<tr>
+<td><code>SHANNON_PORT</code></td>
+<td>Bind port for uvicorn</td>
+<td><code>8200</code></td>
+</tr>
+<tr>
+<td><code>SHANNON_TEAMS_BOT_NAME</code></td>
+<td>Display name used in responses</td>
+<td><code>Shannon</code></td>
+</tr>
+<tr>
+<td><code>SHANNON_TEAMS_POST_MODE</code></td>
+<td>Poster backend: <code>memory</code>, <code>workflows</code>, or <code>botframework</code></td>
+<td><code>memory</code></td>
+</tr>
+<tr>
+<td><code>SHANNON_TEAMS_WORKFLOWS_WEBHOOK_URL</code></td>
+<td>Workflows incoming webhook URL (when mode=<code>workflows</code>)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>SHANNON_TEAMS_APP_ID</code></td>
+<td>Azure Bot registration app ID (when mode=<code>botframework</code>)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>SHANNON_TEAMS_APP_PASSWORD</code></td>
+<td>Azure Bot registration app secret (when mode=<code>botframework</code>)</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>SHANNON_TEAMS_OUTGOING_WEBHOOK_SECRET</code></td>
+<td>Base64-encoded HMAC secret for outgoing webhook verification</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>SHANNON_AGENT_REGISTRY_PATH</code></td>
+<td>Path to agent registry YAML</td>
+<td><code>config/shannon/agent_registry.yaml</code></td>
+</tr>
+<tr>
+<td><code>SHANNON_SEND_WELCOME_ON_INSTALL</code></td>
+<td>Send welcome card on <code>installationUpdate</code> activity</td>
+<td><code>true</code></td>
+</tr>
+<tr>
+<td><code>{AGENT_ID}_API_URL</code></td>
+<td>Per-agent API base URL override (e.g. <code>DRUCKER_API_URL</code>)</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
+<p><strong>HMAC Verification:</strong> The outgoing webhook endpoint (<code>/v1/teams/outgoing-webhook</code>) returns HTTP 401 if <code>verify_hmac_signature()</code> fails. The function uses <code>hmac.compare_digest()</code> for timing-safe comparison.</p>
+<div class="language-python highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">if</span> <span class="ow">not</span> <span class="n">verify_hmac_signature</span><span class="p">(</span><span class="n">authorization</span><span class="p">,</span> <span class="n">secret</span><span class="p">,</span> <span class="n">body_bytes</span><span class="p">):</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>    <span class="k">raise</span> <span class="n">HTTPException</span><span class="p">(</span><span class="n">status_code</span><span class="o">=</span><span class="mi">401</span><span class="p">,</span> <span class="n">detail</span><span class="o">=</span><span class="s1">&#39;Invalid outgoing webhook signature&#39;</span><span class="p">)</span>
+</span></code></pre></div>
+<p><strong>Agent API Proxy Errors:</strong> <code>_call_agent_api()</code> in <code>shannon/service.py</code> wraps all <code>requests</code> calls. On failure, the response is converted to a <code>ShannonResponse</code> with <code>decision='agent_call_error'</code> and the error text is surfaced to the user as a card. HTTP exceptions from agent APIs are caught and logged.</p>
+<p><strong>Activity Processing:</strong> Both <code>/api/messages</code> and <code>/v1/teams/outgoing-webhook</code> catch broad <code>Exception</code> at the endpoint level, log the traceback, and return HTTP 500 with the exception message.</p>
+<p><strong>Notification Validation:</strong> <code>POST /v1/bot/notify</code> catches <code>ValueError</code> (e.g. unknown agent_id) and returns HTTP 400.</p>
+<p><strong>Decision Not Found:</strong> <code>GET /v1/status/decisions/{record_id}</code> returns HTTP 404 when the audit record does not exist.</p>
+<p><strong>Bot Framework Token:</strong> <code>BotFrameworkPoster._get_access_token()</code> raises <code>RuntimeError</code> if the OAuth token response lacks an <code>access_token</code> field.</p>
+<h2 id="known-limitations-technical-debt">Known Limitations / Technical Debt<a class="headerlink" href="#known-limitations-technical-debt" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p><strong>Bot Framework token caching is naive.</strong> <code>BotFrameworkPoster._access_token</code> is cached indefinitely after the first fetch — there is no expiry check or refresh logic. If the token expires (typically after 1 hour), all Bot Framework posts will fail until the service restarts.</p>
+</li>
+<li>
+<p><strong>Hardcoded Jira base URL.</strong> The ticket linkification in <code>shannon/cards.py</code> uses a hardcoded Atlassian URL:
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">_JIRA_BASE</span> <span class="o">=</span> <span class="s1">&#39;https://cornelisnetworks.atlassian.net/browse&#39;</span>
+</span></code></pre></div>
+   This should be configurable via environment variable for portability.</p>
+</li>
+<li>
+<p><strong>Hardcoded project key in NL fallback.</strong> When an unrecognized command falls through to the natural-language query path, the project key is hardcoded:
+   <div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="n">json_body</span><span class="o">=</span><span class="p">{</span><span class="s1">&#39;query&#39;</span><span class="p">:</span> <span class="n">command_text</span><span class="p">,</span> <span class="s1">&#39;project_key&#39;</span><span class="p">:</span> <span class="s1">&#39;STL&#39;</span><span class="p">},</span>
+</span></code></pre></div></p>
+</li>
+<li>
+<p><strong>Thread-per-request for slow commands.</strong> <code>_run_async_and_post()</code> spawns a raw <code>threading.Thread</code> for each deferred command. There is no thread pool, no concurrency limit, and no timeout. Under load, this could exhaust system threads.</p>
+</li>
+<li>
+<p><strong><code>service.py</code> is a large module.</strong> <code>ShannonService</code> contains all command routing, agent API proxying, card builder dispatch, status introspection, and posting logic in a single class. The file imports over 20 card builders and contains multiple dispatch tables (<code>STANDARD_COMMAND_ROUTES</code>, <code>MUTATION_COMMANDS</code>, per-agent card builder maps). This is approaching god-class territory and is a candidate for decomposition into a router module and per-agent handler modules.</p>
+</li>
+<li>
+<p><strong>Missing error handling on <code>_run_async_and_post</code>.</strong> While the method has a top-level <code>try/except</code>, failures are only logged — there is no mechanism to notify the user that their deferred query failed.</p>
+</li>
+<li>
+<p><strong><code>cards.py</code> source is truncated in the provided files.</strong> Several card builders referenced by <code>service.py</code> (e.g. <code>build_ci_failures_card</code>, <code>build_stale_branches_card</code>, <code>build_hemingway_doc_card</code>, <code>build_pr_list_card</code>, <code>build_pr_reviews_card</code>, <code>build_merge_conflicts_card</code>, <code>build_naming_compliance_card</code>, <code>build_hemingway_confluence_publish_card</code>, <code>build_dry_run_preview_card</code>) are imported but their implementations were not included in the source files provided for this document. Their existence is confirmed by the import statements in <code>service.py</code>.</p>
+</li>
+<li>
+<p><strong>Duplicate NL query card builders.</strong> <code>build_gantt_nl_query_card</code> and <code>build_nl_query_card</code> have nearly identical logic (same field extraction, same ticket list rendering) but produce different titles ("Gantt Query Result" vs. "Drucker Query Result"). These should be consolidated with a parameterized title.</p>
+</li>
+</ol>
+<!-- End Documentation Agent generated content -->
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/jmac-cornelis/agent-workforce" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
