@@ -112,6 +112,111 @@ agents:
             type: str
             required: false
             label: Jira project key (default STL)
+      # --- Jira query & reporting commands ---
+      - command: /jira-query
+        description: Run an ad-hoc JQL query against Jira
+        api_method: POST
+        api_path: /v1/jira/query
+        mutation: false
+        params:
+          - name: project_key
+            type: str
+            required: false
+            label: Jira project key (default STL)
+          - name: jql
+            type: str
+            required: true
+            label: JQL query string
+          - name: limit
+            type: int
+            required: false
+            label: Max tickets (default 100)
+      - command: /jira-tickets
+        description: Query tickets with structured filters (type, status, date)
+        api_method: POST
+        api_path: /v1/jira/tickets
+        mutation: false
+        params:
+          - name: project_key
+            type: str
+            required: false
+            label: Jira project key (default STL)
+          - name: issue_types
+            type: list
+            required: false
+            label: Issue types (comma-separated)
+          - name: statuses
+            type: list
+            required: false
+            label: Status filter (comma-separated)
+          - name: date_filter
+            type: str
+            required: false
+            label: Date range (today, week, month, year)
+          - name: limit
+            type: int
+            required: false
+            label: Max tickets (default 100)
+      - command: /jira-release-status
+        description: Status breakdown by release version
+        api_method: POST
+        api_path: /v1/jira/release-status
+        mutation: false
+        params:
+          - name: project_key
+            type: str
+            required: false
+            label: Jira project key (default STL)
+          - name: releases
+            type: list
+            required: true
+            label: Release versions (comma-separated)
+          - name: limit
+            type: int
+            required: false
+            label: Max tickets per release (default 500)
+      - command: /jira-ticket-counts
+        description: Fast ticket count (no data fetched)
+        api_method: POST
+        api_path: /v1/jira/ticket-counts
+        mutation: false
+        params:
+          - name: project_key
+            type: str
+            required: false
+            label: Jira project key (default STL)
+          - name: issue_types
+            type: list
+            required: false
+            label: Issue types (comma-separated)
+          - name: statuses
+            type: list
+            required: false
+            label: Status filter (comma-separated)
+      - command: /jira-status-report
+        description: Full project status dashboard with bugs, activity, and breakdowns
+        api_method: POST
+        api_path: /v1/jira/status-report
+        mutation: false
+        params:
+          - name: project_key
+            type: str
+            required: false
+            label: Jira project key (default STL)
+          - name: recent_days
+            type: int
+            required: false
+            label: Days for recent activity (default 7)
+      - command: /ask
+        description: Ask Drucker a question in plain English (LLM-powered)
+        api_method: POST
+        api_path: /v1/nl/query
+        mutation: false
+        params:
+          - name: query
+            type: str
+            required: true
+            label: Question
       # --- GitHub PR hygiene commands ---
       - command: /pr-hygiene
         description: Full PR hygiene scan — stale PRs and missing reviews
@@ -218,6 +323,61 @@ agents:
             type: int
             required: false
             label: Branch stale days (default 30)
+      # --- PR reminder commands ---
+      - command: /pr-reminder-scan
+        description: Scan repos for stale PRs and update reminder state
+        api_method: POST
+        api_path: /v1/github/pr-reminders/scan
+        mutation: false
+      - command: /pr-reminder-process
+        description: Send due PR reminders via Teams DM
+        api_method: POST
+        api_path: /v1/github/pr-reminders/process
+        mutation: false
+      - command: /pr-reminders-active
+        description: List active PR reminders
+        api_method: GET
+        api_path: /v1/github/pr-reminders/active
+      - command: /pr-reminder-history
+        description: View reminder history for a PR
+        api_method: GET
+        api_path: /v1/github/pr-reminders/history
+      - command: /pr-reminder-snooze
+        description: Snooze a PR reminder for N days
+        api_method: POST
+        api_path: /v1/github/pr-reminders/snooze
+        mutation: true
+        params:
+          - name: repo
+            type: str
+            required: true
+            label: GitHub repo (owner/name)
+          - name: pr_number
+            type: int
+            required: true
+            label: PR number
+          - name: snooze_days
+            type: int
+            required: true
+            label: Days to snooze
+      - command: /pr-reminder-merge
+        description: Merge a PR on behalf of the user
+        api_method: POST
+        api_path: /v1/github/pr-reminders/merge
+        mutation: true
+        params:
+          - name: repo
+            type: str
+            required: true
+            label: GitHub repo (owner/name)
+          - name: pr_number
+            type: int
+            required: true
+            label: PR number
+          - name: merge_method
+            type: str
+            required: false
+            label: "Merge method: squash, merge, rebase (default squash)"
     timeout_seconds: 30
 
   - agent_id: gantt

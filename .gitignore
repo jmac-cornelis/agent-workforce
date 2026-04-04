@@ -118,3 +118,4 @@ data/hypatia_docs/
 go.sh
 jenkins_bug_report.sh
 __pycache__/
+deploy/env/*.env

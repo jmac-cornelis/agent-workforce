@@ -147,7 +147,7 @@ def test_process_gantt_message_posts_snapshot_reply(tmp_path, monkeypatch):
 
     activity = _agent_message_activity(
         'agent-gantt',
-        '<at>Shannon</at> /planning-snapshot project_key STL',
+        '<at>Shannon</at> /planning-snapshot STL',
     )
     activity['channelData']['team']['id'] = gantt_registration.team_id
 
@@ -172,11 +172,7 @@ def test_process_gantt_release_survey_posts_reply(tmp_path, monkeypatch):
         assert method == 'POST'
         assert path == '/v1/release-survey/run'
         assert params is None
-        assert json_body == {
-            'project_key': 'STL',
-            'releases': '12.2.0.x',
-            'scope_label': 'CN6000',
-        }
+        assert json_body == {'project_key': 'STL'}
         return {
             'ok': True,
             'data': {
@@ -206,7 +202,7 @@ def test_process_gantt_release_survey_posts_reply(tmp_path, monkeypatch):
 
     activity = _agent_message_activity(
         'agent-gantt',
-        '<at>Shannon</at> /release-survey project_key STL releases 12.2.0.x scope_label CN6000',
+        '<at>Shannon</at> /release-survey STL',
     )
     activity['channelData']['team']['id'] = gantt_registration.team_id
 
@@ -290,7 +286,7 @@ def test_process_drucker_intake_report_posts_reply(tmp_path, monkeypatch):
         assert method == 'POST'
         assert path == '/v1/hygiene/intake'
         assert params is None
-        assert json_body == {'project_key': 'STL', 'since': '2026-03-24'}
+        assert json_body == {'project_key': 'STL'}
         return {
             'ok': True,
             'data': {
@@ -321,7 +317,7 @@ def test_process_drucker_intake_report_posts_reply(tmp_path, monkeypatch):
 
     activity = _agent_message_activity(
         'agent-drucker',
-        '<at>Shannon</at> /intake-report project_key STL since 2026-03-24',
+        '<at>Shannon</at> /intake-report STL',
     )
     activity['channelData']['team']['id'] = drucker_registration.team_id
 

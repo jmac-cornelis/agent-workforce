@@ -593,6 +593,43 @@ class DruckerCoordinatorAgent(BaseAgent):
                         errors.append(f'{job_id}:{repo}: {exc}')
                 continue
 
+            # ── GitHub PR reminder scan ─────────────────────────────
+            elif scan_type == 'github-pr-reminders':
+                github_repos = job_spec.get('github_repos') or []
+                if isinstance(github_repos, str):
+                    github_repos = [github_repos]
+
+                try:
+                    from pr_reminders import PRReminderEngine
+                    engine = PRReminderEngine()
+                    engine.scan_repos(repos=github_repos or None)
+                    result = engine.process_due_reminders()
+                    tasks.append({
+                        'ok': True,
+                        'task_type': 'github_pr_reminders',
+                        'job_id': job_id,
+                        'result': result,
+                    })
+                    if notify_enabled:
+                        sent = result.get('sent', 0)
+                        due = result.get('due', 0)
+                        notifications.append(
+                            notify_shannon(
+                                agent_id='drucker',
+                                shannon_base_url=shannon_base_url,
+                                title='PR Reminder Scan',
+                                text=f'{sent}/{due} reminder(s) sent',
+                                body_lines=[
+                                    f'Due reminders: {due}',
+                                    f'Sent: {sent}',
+                                    f'Errors: {result.get("errors", 0)}',
+                                ],
+                            )
+                        )
+                except Exception as exc:
+                    errors.append(f'{job_id}: {exc}')
+                continue
+
             # ── Jira hygiene scan (default) ─────────────────────────
             project_key = str(
                 job_spec.get('project_key') or self.project_key or ''

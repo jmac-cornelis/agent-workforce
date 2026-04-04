@@ -1,0 +1,36 @@
+defaults:
+  reminder_days: [5, 8, 10, 15]
+  notify: [author, reviewers]
+  channels: [teams_dm]
+  snooze_options_days: [2, 5, 7]
+  merge_methods: [squash, merge, rebase]
+  enabled: true
+
+repos:
+  - repo: jmac-cornelis/agent-workforce
+    reminder_days: [3, 5, 8, 12]
+  - repo: cornelisnetworks/ifs-all
+  - repo: cornelisnetworks/opa400-port-manager
+  - repo: cornelisnetworks/opa400-meta-cornelis
+  - repo: cornelisnetworks/opa400-cli
+  - repo: cornelisnetworks/opa400-FirmwareTools
+  - repo: cornelisnetworks/emb-dev-tools
+  - repo: cornelisnetworks/libfabric-internal
+  - repo: cornelisnetworks/openbmc-linux
+  - repo: cornelisnetworks/wfr-linux-devel
+  - repo: cornelisnetworks/scm-jenkins-shared-library
+  - repo: cornelisnetworks/swvl
+  - repo: cornelisnetworks/hfisvc_client
+  - repo: cornelisnetworks/libfabric-devel
+  - repo: cornelisnetworks/wfr-pcie-gen3
+  - repo: cornelisnetworks/bmc-all
+  - repo: cornelisnetworks/brandy
+  - repo: cornelisnetworks/opa-distro-drivers-internal
+  - repo: cornelisnetworks/scm-tools
+  - repo: cornelisnetworks/opa400-MFG
+  - repo: cornelisnetworks/wfr-driver
+  - repo: cornelisnetworks/cn-fabric-k8s
+
+  - repo: cornelisnetworks/rdma-core-internal
+  - repo: cornelisnetworks/opa-psm2
+  - repo: cornelisnetworks/opa-psm3

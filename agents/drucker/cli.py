@@ -578,6 +578,180 @@ def cmd_github_hygiene(args: argparse.Namespace) -> None:
     sys.exit(0)
 
 
+def cmd_pr_reminder_scan(args: argparse.Namespace) -> None:
+    _load_env(args)
+
+    from pr_reminders import PRReminderEngine
+
+    quiet = getattr(args, 'quiet', False)
+
+    if not quiet:
+        print('')
+        print('=' * 60)
+        print('Drucker: PR reminder scan')
+        print('=' * 60)
+        print('')
+        if args.repos:
+            print(f'Repos: {", ".join(args.repos)}')
+        else:
+            print('Repos: all configured')
+        print('')
+        print('Scanning for stale PRs...')
+
+    engine = PRReminderEngine()
+    result = engine.scan_repos(repos=args.repos or None)
+
+    if getattr(args, 'json', False):
+        _print_json(result)
+        sys.exit(0)
+
+    if not quiet:
+        print(f'  Scanned: {result.get("scanned", 0)} PR(s)')
+        print(f'  New reminders: {result.get("new", 0)}')
+        print(f'  Updated: {result.get("updated", 0)}')
+        print(f'  Closed: {result.get("closed", 0)}')
+
+    sys.exit(0)
+
+
+def cmd_pr_reminder_process(args: argparse.Namespace) -> None:
+    _load_env(args)
+
+    from pr_reminders import PRReminderEngine
+
+    quiet = getattr(args, 'quiet', False)
+
+    if not quiet:
+        print('')
+        print('=' * 60)
+        print('Drucker: process due PR reminders')
+        print('=' * 60)
+        print('')
+        print('Processing due reminders...')
+
+    engine = PRReminderEngine()
+    result = engine.process_due_reminders()
+
+    if getattr(args, 'json', False):
+        _print_json(result)
+        sys.exit(0)
+
+    if not quiet:
+        print(f'  Due: {result.get("due", 0)}')
+        print(f'  Sent: {result.get("sent", 0)}')
+        print(f'  Errors: {result.get("errors", 0)}')
+
+    sys.exit(0)
+
+
+def cmd_pr_reminder_active(args: argparse.Namespace) -> None:
+    _load_env(args)
+
+    from agents.drucker.state.pr_reminder_state import PRReminderState
+
+    quiet = getattr(args, 'quiet', False)
+
+    if not quiet:
+        print('')
+        print('=' * 60)
+        print('Drucker: active PR reminders')
+        print('=' * 60)
+        print('')
+
+    state = PRReminderState()
+    active = state.list_active(repo=args.repo, limit=args.limit)
+
+    if getattr(args, 'json', False):
+        _print_json({'active': active, 'count': len(active)})
+        sys.exit(0)
+
+    if not active:
+        if not quiet:
+            print('  No active PR reminders.')
+    else:
+        for pr in active:
+            print(
+                f'  {pr["repo"]}#{pr["pr_number"]} '
+                f'| {pr.get("pr_title", "")[:50]} '
+                f'| next: {pr.get("next_reminder_at", "n/a")} '
+                f'| sent: {pr.get("reminder_count", 0)}'
+            )
+
+    sys.exit(0)
+
+
+def cmd_pr_reminder_snooze(args: argparse.Namespace) -> None:
+    _load_env(args)
+
+    from pr_reminders import PRReminderEngine
+
+    quiet = getattr(args, 'quiet', False)
+
+    if not quiet:
+        print(f'Snoozing {args.repo}#{args.pr_number} for {args.snooze_days} days...')
+
+    engine = PRReminderEngine()
+    result = engine.handle_snooze(
+        repo=args.repo,
+        pr_number=args.pr_number,
+        snooze_days=args.snooze_days,
+        snoozed_by=args.snoozed_by or '',
+    )
+
+    if getattr(args, 'json', False):
+        _print_json(result)
+        sys.exit(0)
+
+    if not quiet:
+        if result.get('ok'):
+            print(f'  Snoozed until {result.get("snooze_until", "?")}')
+        else:
+            print(f'  Failed: {result.get("error", "unknown")}')
+
+    sys.exit(0 if result.get('ok') else 1)
+
+
+def cmd_pr_reminder_merge(args: argparse.Namespace) -> None:
+    _load_env(args)
+
+    from config.env_loader import resolve_dry_run
+    from pr_reminders import PRReminderEngine
+
+    quiet = getattr(args, 'quiet', False)
+    is_dry_run = resolve_dry_run(args.dry_run if hasattr(args, 'dry_run') else None)
+
+    if not quiet:
+        mode_label = 'DRY RUN' if is_dry_run else 'EXECUTE'
+        print(
+            f'Merging {args.repo}#{args.pr_number} '
+            f'via {args.merge_method} [{mode_label}]...'
+        )
+
+    engine = PRReminderEngine()
+    result = engine.handle_merge_request(
+        repo=args.repo,
+        pr_number=args.pr_number,
+        merge_method=args.merge_method,
+        requested_by=args.requested_by or '',
+        dry_run=is_dry_run,
+    )
+
+    if getattr(args, 'json', False):
+        _print_json(result)
+        sys.exit(0)
+
+    if not quiet:
+        if result.get('ok'):
+            if is_dry_run:
+                print(f'  Dry run OK — would merge via {args.merge_method}')
+            else:
+                print(f'  Merged: {result.get("sha", "")}')
+        else:
+            print(f'  Failed: {result.get("error", "unknown")}')
+
+    sys.exit(0 if result.get('ok') else 1)
+
+
 # ------------------------------------------------------------------
 # poll — scheduled hygiene polling loop
 # ------------------------------------------------------------------
@@ -685,6 +859,296 @@ def cmd_poll(args: argparse.Namespace) -> None:
                       f'{report.get("missing_review_count", 0)} missing reviews')
 
     sys.exit(0 if result.get('ok', False) else 1)
+
+
+# ------------------------------------------------------------------
+# jira-query — ad-hoc JQL query
+# ------------------------------------------------------------------
+
+def cmd_jira_query(args: argparse.Namespace) -> None:
+    _load_env(args)
+
+    from agents.drucker.jira_reporting import query_jql
+
+    result = query_jql(
+        jql=args.jql,
+        project_key=args.project,
+        limit=args.limit,
+    )
+
+    if getattr(args, 'json', False):
+        _print_json(result)
+        sys.exit(0)
+
+    print(f'Project: {result["project_key"]}')
+    print(f'JQL: {result["jql"]}')
+    print(f'Total: {result["total"]}')
+    print()
+    if result.get('by_status'):
+        print('By Status:')
+        for status, count in sorted(result['by_status'].items(), key=lambda x: -x[1]):
+            print(f'  {status}: {count}')
+    if result.get('by_type'):
+        print('By Type:')
+        for itype, count in sorted(result['by_type'].items(), key=lambda x: -x[1]):
+            print(f'  {itype}: {count}')
+    print()
+    for t in result.get('tickets', [])[:20]:
+        assignee = t.get('assignee') or 'Unassigned'
+        print(f'  {t["key"]}  [{t["status"]}]  {t["summary"]}  ({assignee})')
+    remaining = result['total'] - min(20, len(result.get('tickets', [])))
+    if remaining > 0:
+        print(f'  ...and {remaining} more')
+
+    sys.exit(0)
+
+
+# ------------------------------------------------------------------
+# jira-tickets — query tickets by type, status, date
+# ------------------------------------------------------------------
+
+def cmd_jira_tickets(args: argparse.Namespace) -> None:
+    _load_env(args)
+
+    from agents.drucker.jira_reporting import query_tickets
+
+    issue_types = (
+        [x.strip() for x in args.issue_types.split(',') if x.strip()]
+        if args.issue_types else None
+    )
+    statuses = (
+        [x.strip() for x in args.statuses.split(',') if x.strip()]
+        if args.statuses else None
+    )
+    exclude_statuses = (
+        [x.strip() for x in args.exclude_statuses.split(',') if x.strip()]
+        if getattr(args, 'exclude_statuses', None) else None
+    )
+
+    result = query_tickets(
+        project_key=args.project,
+        issue_types=issue_types,
+        statuses=statuses,
+        exclude_statuses=exclude_statuses,
+        date_filter=getattr(args, 'date_filter', None),
+        limit=args.limit,
+    )
+
+    if getattr(args, 'json', False):
+        _print_json(result)
+        sys.exit(0)
+
+    print(f'Project: {result["project_key"]}')
+    print(f'JQL: {result["jql"]}')
+    print(f'Total: {result["total"]}')
+    print()
+    if result.get('by_status'):
+        print('By Status:')
+        for status, count in sorted(result['by_status'].items(), key=lambda x: -x[1]):
+            print(f'  {status}: {count}')
+    if result.get('by_type'):
+        print('By Type:')
+        for itype, count in sorted(result['by_type'].items(), key=lambda x: -x[1]):
+            print(f'  {itype}: {count}')
+    print()
+    for t in result.get('tickets', [])[:20]:
+        assignee = t.get('assignee') or 'Unassigned'
+        print(f'  {t["key"]}  [{t["status"]}]  {t["summary"]}  ({assignee})')
+    remaining = result['total'] - min(20, len(result.get('tickets', [])))
+    if remaining > 0:
+        print(f'  ...and {remaining} more')
+
+    sys.exit(0)
+
+
+# ------------------------------------------------------------------
+# jira-release-status — status breakdown by release version
+# ------------------------------------------------------------------
+
+def cmd_jira_release_status(args: argparse.Namespace) -> None:
+    _load_env(args)
+
+    from agents.drucker.jira_reporting import query_release_status
+
+    releases = [x.strip() for x in args.releases.split(',') if x.strip()]
+
+    result = query_release_status(
+        project_key=args.project,
+        releases=releases,
+        limit=args.limit,
+    )
+
+    if getattr(args, 'json', False):
+        _print_json(result)
+        sys.exit(0)
+
+    print(f'Project: {result.get("project_key", args.project)}')
+    print()
+    for rel in result.get('releases', []):
+        total = rel.get('total', 0)
+        print(f'Release: {rel["release"]} ({total} tickets)')
+        if rel.get('by_status'):
+            print('  By Status:')
+            for status, count in sorted(rel['by_status'].items(), key=lambda x: -x[1]):
+                print(f'    {status}: {count}')
+        if rel.get('by_type'):
+            print('  By Type:')
+            for itype, count in sorted(rel['by_type'].items(), key=lambda x: -x[1]):
+                print(f'    {itype}: {count}')
+        print()
+
+    sys.exit(0)
+
+
+# ------------------------------------------------------------------
+# jira-ticket-counts — fast ticket count
+# ------------------------------------------------------------------
+
+def cmd_jira_ticket_counts(args: argparse.Namespace) -> None:
+    _load_env(args)
+
+    from agents.drucker.jira_reporting import get_ticket_counts
+
+    issue_types = (
+        [x.strip() for x in args.issue_types.split(',') if x.strip()]
+        if getattr(args, 'issue_types', None) else None
+    )
+    statuses = (
+        [x.strip() for x in args.statuses.split(',') if x.strip()]
+        if getattr(args, 'statuses', None) else None
+    )
+
+    result = get_ticket_counts(
+        project_key=args.project,
+        issue_types=issue_types,
+        statuses=statuses,
+        date_filter=getattr(args, 'date_filter', None),
+    )
+
+    if getattr(args, 'json', False):
+        _print_json(result)
+        sys.exit(0)
+
+    print(f'Project: {result.get("project_key", args.project)}')
+    print(f'Count: {result.get("count", 0)}')
+    if result.get('jql'):
+        print(f'JQL: {result["jql"]}')
+
+    sys.exit(0)
+
+
+# ------------------------------------------------------------------
+# jira-status-report — full project status dashboard
+# ------------------------------------------------------------------
+
+def cmd_jira_status_report(args: argparse.Namespace) -> None:
+    _load_env(args)
+
+    from agents.drucker.jira_reporting import get_status_report
+
+    include_bugs = not getattr(args, 'no_bugs', False)
+    include_activity = not getattr(args, 'no_activity', False)
+    recent_days = getattr(args, 'recent_days', 7)
+
+    result = get_status_report(
+        project_key=args.project,
+        include_bugs=include_bugs,
+        include_activity=include_activity,
+        recent_days=recent_days,
+    )
+
+    if getattr(args, 'json', False):
+        _print_json(result)
+        sys.exit(0)
+
+    print(f'Project Status: {result.get("project_key", args.project)}')
+    if result.get('generated'):
+        print(f'Generated: {result["generated"]}')
+    print(f'Total Open: {result.get("total_open", 0)}')
+    if result.get('no_fix_version') is not None:
+        print(f'No Fix Version: {result["no_fix_version"]}')
+    print()
+
+    if result.get('by_status'):
+        print('By Status:')
+        for status, count in sorted(result['by_status'].items(), key=lambda x: -x[1]):
+            print(f'  {status}: {count}')
+        print()
+
+    if result.get('by_type'):
+        print('By Type:')
+        for itype, count in sorted(result['by_type'].items(), key=lambda x: -x[1]):
+            print(f'  {itype}: {count}')
+        print()
+
+    bugs = result.get('bugs')
+    if bugs and include_bugs:
+        print('Bugs:')
+        print(f'  Total Open: {bugs.get("total_open", 0)}')
+        if bugs.get('by_priority'):
+            print('  By Priority:')
+            for priority, count in sorted(
+                bugs['by_priority'].items(), key=lambda x: -x[1]
+            ):
+                print(f'    {priority}: {count}')
+        print()
+
+    activity = result.get('recent_activity')
+    if activity and include_activity:
+        print(f'Recent Activity ({recent_days} days):')
+        print(f'  {activity.get("updated_count", 0)} tickets updated')
+        for t in activity.get('tickets', [])[:20]:
+            assignee = t.get('assignee') or 'Unassigned'
+            print(f'  {t["key"]}  [{t["status"]}]  {t["summary"]}  ({assignee})')
+        remaining = activity.get('updated_count', 0) - min(
+            20, len(activity.get('tickets', []))
+        )
+        if remaining > 0:
+            print(f'  ...and {remaining} more')
+        print()
+
+    sys.exit(0)
+
+
+def cmd_nl_query(args):
+    _load_env(args)
+    from agents.drucker.nl_query import run_nl_query
+
+    query = ' '.join(args.query)
+    project_key = args.project_key
+
+    result = run_nl_query(query=query, project_key=project_key)
+
+    if args.json:
+        _print_json(result)
+        return
+
+    if not result.get('ok'):
+        print(f'Error: {result.get("error", "Unknown error")}')
+        return
+
+    tool_used = result.get('tool_used', '')
+    tool_args = result.get('tool_args', {})
+    summary = result.get('summary', '')
+    data = result.get('result', {})
+
+    print(f'Tool: {tool_used}')
+    if tool_args.get('jql'):
+        print(f'JQL: {tool_args["jql"]}')
+
+    total = data.get('total') or data.get('grand_total') or data.get('count') or data.get('total_open')
+    if total is not None:
+        print(f'Total: {total}')
+
+    if summary:
+        print(f'\n{summary}')
+
+    if not args.quiet:
+        tickets = data.get('tickets', [])
+        if tickets:
+            print(f'\nShowing first {min(10, len(tickets))} tickets:')
+            for t in tickets[:10]:
+                print(f'  {t.get("key", "")} [{t.get("status", "")}] {t.get("summary", "")}')
 
 
 # ------------------------------------------------------------------
@@ -807,6 +1271,101 @@ def register_subcommands(subparsers) -> None:
                    help='GitHub PR stale threshold in days (default: 5)')
     _add_common_args(p)
     p.set_defaults(func=cmd_poll)
+
+    p = subparsers.add_parser('pr-reminder-scan',
+                              help='Scan repos for stale PRs and update reminder state')
+    p.add_argument('--repos', nargs='*', default=None, metavar='REPO',
+                   help='GitHub repos to scan (default: all configured)')
+    _add_common_args(p)
+    p.set_defaults(func=cmd_pr_reminder_scan)
+
+    p = subparsers.add_parser('pr-reminder-process',
+                              help='Send due PR reminders via Teams DM')
+    _add_common_args(p)
+    p.set_defaults(func=cmd_pr_reminder_process)
+
+    p = subparsers.add_parser('pr-reminder-active',
+                              help='List active PR reminders')
+    p.add_argument('--repo', default=None, metavar='REPO',
+                   help='Filter by repository')
+    p.add_argument('--limit', type=int, default=50, metavar='N',
+                   help='Max results (default: 50)')
+    _add_common_args(p)
+    p.set_defaults(func=cmd_pr_reminder_active)
+
+    p = subparsers.add_parser('pr-reminder-snooze',
+                              help='Snooze a PR reminder for N days')
+    p.add_argument('repo', help='GitHub repository (owner/name)')
+    p.add_argument('pr_number', type=int, help='PR number')
+    p.add_argument('snooze_days', type=int, help='Days to snooze')
+    p.add_argument('--snoozed-by', default=None, dest='snoozed_by',
+                   help='Who requested the snooze')
+    _add_common_args(p)
+    p.set_defaults(func=cmd_pr_reminder_snooze)
+
+    p = subparsers.add_parser('pr-reminder-merge',
+                              help='Merge a PR on behalf of the user')
+    p.add_argument('repo', help='GitHub repository (owner/name)')
+    p.add_argument('pr_number', type=int, help='PR number')
+    p.add_argument('--merge-method', default='squash', dest='merge_method',
+                   choices=['squash', 'merge', 'rebase'],
+                   help='Merge method (default: squash)')
+    p.add_argument('--requested-by', default=None, dest='requested_by',
+                   help='Who requested the merge')
+    p.add_argument('--dry-run', action='store_true', default=None, dest='dry_run',
+                   help='Preview merge without executing')
+    p.add_argument('--execute', action='store_false', dest='dry_run',
+                   help='Execute the merge (override DRY_RUN env)')
+    _add_common_args(p)
+    p.set_defaults(func=cmd_pr_reminder_merge)
+
+    # --- Jira query & reporting commands ---
+    sp_jql = subparsers.add_parser('jira-query', help='Run an ad-hoc JQL query')
+    sp_jql.add_argument('--project', default='STL', help='Jira project key')
+    sp_jql.add_argument('--jql', required=True, help='JQL query string')
+    sp_jql.add_argument('--limit', type=int, default=100, help='Max tickets')
+    _add_common_args(sp_jql)
+    sp_jql.set_defaults(func=cmd_jira_query)
+
+    sp_jt = subparsers.add_parser('jira-tickets', help='Query tickets by type, status, date')
+    sp_jt.add_argument('--project', default='STL', help='Jira project key')
+    sp_jt.add_argument('--issue-types', default=None, help='Comma-separated issue types')
+    sp_jt.add_argument('--statuses', default=None, help='Comma-separated statuses')
+    sp_jt.add_argument('--exclude-statuses', default=None, help='Comma-separated statuses to exclude')
+    sp_jt.add_argument('--date-filter', default=None, help='Date range: today, week, month, year')
+    sp_jt.add_argument('--limit', type=int, default=100, help='Max tickets')
+    _add_common_args(sp_jt)
+    sp_jt.set_defaults(func=cmd_jira_tickets)
+
+    sp_rs = subparsers.add_parser('jira-release-status', help='Status breakdown by release version')
+    sp_rs.add_argument('--project', default='STL', help='Jira project key')
+    sp_rs.add_argument('--releases', required=True, help='Comma-separated release versions')
+    sp_rs.add_argument('--limit', type=int, default=500, help='Max tickets per release')
+    _add_common_args(sp_rs)
+    sp_rs.set_defaults(func=cmd_jira_release_status)
+
+    sp_tc = subparsers.add_parser('jira-ticket-counts', help='Fast ticket count')
+    sp_tc.add_argument('--project', default='STL', help='Jira project key')
+    sp_tc.add_argument('--issue-types', default=None, help='Comma-separated issue types')
+    sp_tc.add_argument('--statuses', default=None, help='Comma-separated statuses')
+    sp_tc.add_argument('--date-filter', default=None, help='Date range: today, week, month, year')
+    _add_common_args(sp_tc)
+    sp_tc.set_defaults(func=cmd_jira_ticket_counts)
+
+    sp_sr = subparsers.add_parser('jira-status-report', help='Full project status dashboard')
+    sp_sr.add_argument('--project', default='STL', help='Jira project key')
+    sp_sr.add_argument('--no-bugs', action='store_true', help='Exclude bug breakdown')
+    sp_sr.add_argument('--no-activity', action='store_true', help='Exclude recent activity')
+    sp_sr.add_argument('--recent-days', type=int, default=7, help='Days for recent activity')
+    _add_common_args(sp_sr)
+    sp_sr.set_defaults(func=cmd_jira_status_report)
+
+    p_nl = subparsers.add_parser('nl-query', help='Ask Drucker a question in plain English')
+    p_nl.add_argument('query', nargs='+', help='Natural language query')
+    p_nl.add_argument('--project-key', default='STL', help='Jira project key')
+    p_nl.add_argument('--json', action='store_true', help='Output raw JSON')
+    p_nl.add_argument('--quiet', '-q', action='store_true', help='Minimal output')
+    p_nl.set_defaults(func=cmd_nl_query)
 
 
 def build_parser() -> argparse.ArgumentParser:
