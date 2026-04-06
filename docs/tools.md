@@ -10,146 +10,165 @@ status: "draft"
 
 # Module Overview
 
-The `tools/` module provides a comprehensive toolkit for the Cornelis Agent Pipeline, exposing Jira, Confluence, GitHub, Excel, file I/O, knowledge base search, web search, MCP client, and specialized agent tools (Gantt, Drucker, Hemingway) as agent-callable functions. Each tool is decorated with `@tool()` to generate OpenAI/ADK-compatible function schemas, wrapped in `ToolResult` for consistent error handling, and organized into `BaseTool` collections for framework registration. The module acts as the primary interface between agents and external systems, providing both low-level primitives (read/write files, execute JQL) and high-level workflows (build Excel maps, generate documentation, analyze PR hygiene).
+The `tools/` module provides a comprehensive toolkit for agent-based automation in the Cornelis Networks Agent Pipeline. It implements a unified tool interface (`BaseTool`, `ToolResult`, `@tool` decorator) and exposes 100+ callable functions across 14 specialized tool collections: Jira, Confluence, GitHub, Gantt charts, Drucker reports, Hemingway documentation, draw.io diagrams, vision/OCR, file I/O, knowledge base search, web search, MCP client, Excel utilities, and plan export. Each tool is decorated with metadata for automatic registration with LLM function-calling frameworks (OpenAI, Google ADK) and returns structured `ToolResult` objects for consistent error handling and data flow.
 
 # What Changed
 
-**Before:** Tools were scattered across utility modules (`jira_utils.py`, `confluence_utils.py`, etc.) without a unified agent interface. Agents had to call raw utility functions directly, handle errors inconsistently, and manually construct function schemas.
+**Before:** The tools module existed but lacked standardized Confluence macro builders and Jira filter creation capabilities.
 
-**After:** All tools are centralized in `tools/`, decorated with `@tool()` for automatic schema generation, wrapped in `ToolResult` for uniform error handling, and grouped into `BaseTool` collections. The `@tool` decorator extracts parameter metadata from type hints and docstrings, eliminating manual schema maintenance. Recent additions include Jira filter creation (`create_filter`), Confluence Jira macro builders (`build_jira_jql_table`, `build_jira_filter_table`), and plan export tools (`plan_to_csv`, `plan_json_to_dict_rows`).
+**After:** Added `build_jira_jql_table()` and `build_jira_filter_table()` to `confluence_tools.py` for embedding live Jira Issues macros in Confluence pages, and added `create_filter()` to `jira_tools.py` for programmatic creation of saved Jira filters. These additions enable agents to generate dynamic Confluence documentation with embedded Jira queries and persist reusable JQL filters.
 
-**Impact:** Agents can now discover and invoke tools via standardized schemas. The pipeline is more maintainable (single source of truth for tool definitions) and extensible (new tools auto-register). Downstream consumers (Excel export, Confluence publishing) benefit from consistent error reporting and metadata.
+**Impact:** Agents (particularly Hemingway/documentation agents) can now publish Confluence pages with live-updating Jira tables, and workflow agents can create persistent filters for recurring queries. Downstream consumers of Confluence pages see real-time Jira data without manual updates.
 
 # Component Diagram
 
 ```mermaid
 graph TB
-    subgraph "Tool Framework"
-        base[base.py<br/>@tool decorator<br/>ToolResult<br/>BaseTool]
+    subgraph "Tool Infrastructure"
+        base[BaseTool<br/>ToolResult<br/>@tool decorator]
     end
     
     subgraph "External System Tools"
-        jira[jira_tools.py<br/>JiraTools]
-        confluence[confluence_tools.py<br/>ConfluenceTools]
-        github[github_tools.py<br/>GitHubTools]
+        jira[JiraTools<br/>40+ operations]
+        confluence[ConfluenceTools<br/>page CRUD + macros]
+        github[GitHubTools<br/>PR hygiene]
+        mcp[MCPTools<br/>runtime discovery]
+        web[WebSearchTools<br/>MCP/Brave/Tavily]
     end
     
-    subgraph "Data Tools"
-        excel[excel_tools.py<br/>ExcelTools]
-        file[file_tools.py<br/>FileTools]
-        plan[plan_export_tools.py<br/>PlanExportTools]
+    subgraph "Document Processing Tools"
+        vision[VisionTools<br/>OCR + roadmap extract]
+        drawio[DrawioTools<br/>org charts + diagrams]
+        excel[ExcelTools<br/>map building + diff]
+        plan[PlanExportTools<br/>JSON ↔ CSV/Excel]
     end
     
-    subgraph "Search & Knowledge"
-        knowledge[knowledge_tools.py<br/>KnowledgeTools]
-        web[web_search_tools.py<br/>WebSearchTools]
-        mcp[mcp_tools.py<br/>MCPTools]
+    subgraph "Agent-Specific Tools"
+        gantt[GanttTools<br/>snapshots + surveys]
+        drucker[DruckerTools<br/>hygiene reports]
+        hemingway[HemingwayTools<br/>doc generation]
     end
     
-    subgraph "Specialized Agents"
-        gantt[agents/gantt/tools.py<br/>GanttTools]
-        drucker[agents/drucker/tools.py<br/>DruckerTools]
-        hemingway[agents/hemingway/tools.py<br/>HemingwayTools]
-    end
-    
-    subgraph "Utilities"
-        drawio[drawio_tools.py<br/>DrawioTools]
-        vision[vision_tools.py<br/>VisionTools]
+    subgraph "Utility Tools"
+        file[FileTools<br/>read/write/search]
+        knowledge[KnowledgeTools<br/>local KB search]
     end
     
     base --> jira
     base --> confluence
     base --> github
-    base --> excel
-    base --> file
-    base --> plan
-    base --> knowledge
-    base --> web
     base --> mcp
+    base --> web
+    base --> vision
+    base --> drawio
+    base --> excel
+    base --> plan
     base --> gantt
     base --> drucker
     base --> hemingway
-    base --> drawio
-    base --> vision
+    base --> file
+    base --> knowledge
     
-    jira -.->|wraps| jira_utils[jira_utils.py]
-    confluence -.->|wraps| confluence_utils[confluence_utils.py]
-    github -.->|wraps| github_utils[github_utils.py]
-    excel -.->|wraps| excel_utils[excel_utils.py]
+    jira -.-> jira_utils[jira_utils.py]
+    confluence -.-> confluence_utils[confluence_utils.py]
+    github -.-> github_utils[github_utils.py]
+    excel -.-> excel_utils[excel_utils.py]
+    drawio -.-> drawio_utilities[drawio_utilities.py]
 ```
 
 # Key Flows
 
-## Flow 1: Tool Registration and Schema Generation
+## Flow 1: Tool Registration and Discovery
 
 ```mermaid
 sequenceDiagram
-    participant Dev as Developer
-    participant Decorator as @tool()
-    participant Func as Tool Function
-    participant Agent as Agent Framework
+    participant Agent
+    participant BaseTool
+    participant ToolDef as ToolDefinition
+    participant LLM as LLM Framework
     
-    Dev->>Func: Define function with type hints
-    Dev->>Decorator: Apply @tool(description=...)
-    Decorator->>Func: Extract signature & docstring
-    Decorator->>Func: Build ToolDefinition
-    Decorator->>Func: Attach _tool_definition attr
-    Decorator->>Func: Wrap in ToolResult handler
-    Agent->>Func: Call get_tools()
-    Func->>Agent: Return [ToolDefinition]
-    Agent->>Agent: Convert to OpenAI/ADK schema
+    Agent->>BaseTool: __init__()
+    BaseTool->>BaseTool: _register_tools()
+    loop For each @tool method
+        BaseTool->>ToolDef: Extract _tool_definition
+        BaseTool->>BaseTool: Store in _tools dict
+    end
+    
+    Agent->>BaseTool: to_function_schemas()
+    BaseTool->>ToolDef: to_function_schema()
+    ToolDef-->>BaseTool: OpenAI function schema
+    BaseTool-->>Agent: List[schema]
+    Agent->>LLM: Register tools
 ```
 
-**Description:** When a developer decorates a function with `@tool()`, the decorator inspects the function signature, extracts parameter types from type hints, parses descriptions from the docstring, and constructs a `ToolDefinition` object. This definition is attached to the wrapped function as `_tool_definition` and can be retrieved by the agent framework to generate OpenAI function calling schemas or ADK tool schemas. The wrapper also ensures all tool executions return `ToolResult` for consistent error handling.
+**Description:** When an agent initializes a tool collection (e.g., `JiraTools()`), the `BaseTool` constructor scans all methods for the `_tool_definition` attribute (added by the `@tool` decorator), extracts parameter metadata from type hints and docstrings, and builds a registry. The agent then calls `to_function_schemas()` to generate OpenAI-compatible function schemas for LLM registration.
 
-## Flow 2: Jira Ticket Creation with Audit Trail
+## Flow 2: Jira Filter Creation and Confluence Macro Embedding
 
 ```mermaid
 sequenceDiagram
-    participant Agent as Agent
-    participant Tool as create_ticket()
-    participant Jira as jira_utils
-    participant API as Jira REST API
+    participant Agent
+    participant jira_tools
+    participant jira_utils
+    participant confluence_tools
+    participant confluence_utils
+    participant Jira API
+    participant Confluence API
     
-    Agent->>Tool: create_ticket(project, summary, actor_mode='agent')
-    Tool->>Tool: _build_audit_payload()
-    Tool->>Tool: get_jira(actor_mode='agent')
-    Tool->>Jira: jira.create_issue(fields)
-    Jira->>API: POST /rest/api/3/issue
-    API-->>Jira: {id, key}
-    Jira-->>Tool: Issue object
-    Tool->>Tool: issue_to_dict()
-    Tool->>Tool: Attach audit metadata
-    Tool-->>Agent: ToolResult.success({key, audit})
+    Agent->>jira_tools: create_filter(name, jql)
+    jira_tools->>jira_utils: create_filter(jira, name, jql)
+    jira_utils->>Jira API: POST /rest/api/3/filter
+    Jira API-->>jira_utils: {id, name, jql, viewUrl}
+    jira_utils-->>jira_tools: filter dict
+    jira_tools-->>Agent: ToolResult.success(filter)
+    
+    Agent->>confluence_tools: build_jira_filter_table(filter_id)
+    confluence_tools->>confluence_utils: build_jira_filter_table_macro(filter_id)
+    confluence_utils-->>confluence_tools: XHTML macro string
+    confluence_tools-->>Agent: ToolResult.success({macro_xhtml})
+    
+    Agent->>confluence_tools: update_confluence_page(page_id, markdown)
+    Note over Agent,confluence_tools: Markdown contains {macro_xhtml}
+    confluence_tools->>confluence_utils: update_page(confluence, page_id, markdown)
+    confluence_utils->>Confluence API: PUT /rest/api/content/{page_id}
+    Confluence API-->>confluence_utils: Updated page metadata
+    confluence_utils-->>confluence_tools: page dict
+    confluence_tools-->>Agent: ToolResult.success(page)
 ```
 
-**Description:** When an agent calls `create_ticket()`, the tool first builds an audit payload capturing `actor_mode`, `requested_by`, `executed_by`, and timestamp. It then retrieves a Jira connection scoped to the specified actor (requester, agent, or admin) via `get_jira(actor_mode)`. The tool delegates to `jira_utils.create_issue()`, which calls the Jira REST API. On success, the tool converts the raw Jira issue to a normalized dict via `issue_to_dict()`, attaches audit metadata, and returns a `ToolResult.success()` with the ticket key and audit trail.
+**Description:** An agent creates a saved Jira filter via `create_filter()`, which delegates to `jira_utils.create_filter()` to POST to the Jira REST API. The agent then calls `build_jira_filter_table()` to generate Confluence storage XHTML for a Jira Issues macro referencing the filter ID. Finally, the agent embeds this macro in a Markdown document and publishes it to Confluence via `update_confluence_page()`, which converts Markdown to storage format and updates the page via the Confluence REST API.
 
-## Flow 3: Plan Export to CSV/Excel
+## Flow 3: Web Search with MCP Fallback
 
 ```mermaid
 sequenceDiagram
-    participant Agent as Agent
-    participant Tool as plan_to_csv()
-    participant Converter as plan_json_to_rows()
-    participant Writer as write_plan_csv()
-    participant File as Filesystem
+    participant Agent
+    participant web_search_tools
+    participant mcp_tools
+    participant MCP Server
+    participant Brave API
     
-    Agent->>Tool: plan_to_csv(plan_json, output_path)
-    Tool->>Converter: plan_json_to_rows(plan)
-    Converter->>Converter: Flatten epics & stories
-    Converter->>Converter: Add depth, product_family
-    Converter-->>Tool: List[Dict[str, str]]
-    Tool->>Writer: write_plan_csv(rows, output_path)
-    Writer->>Writer: Detect table_format='indented'
-    Writer->>Writer: Build Depth N columns
-    Writer->>File: Write CSV with DictWriter
-    File-->>Writer: Success
-    Writer-->>Tool: output_path
-    Tool-->>Agent: ToolResult.success({path, row_count})
+    Agent->>web_search_tools: web_search(query)
+    web_search_tools->>mcp_tools: _search_via_mcp(query)
+    mcp_tools->>mcp_tools: _get_tool_catalogue()
+    mcp_tools->>MCP Server: POST /mcp (tools/list)
+    MCP Server-->>mcp_tools: {tools: [...]}
+    mcp_tools->>mcp_tools: Find web_search tool
+    
+    alt MCP tool found
+        mcp_tools->>MCP Server: POST /mcp (tools/call)
+        MCP Server-->>mcp_tools: {result: {...}}
+        mcp_tools-->>web_search_tools: search results
+        web_search_tools-->>Agent: ToolResult.success(results)
+    else MCP unavailable
+        web_search_tools->>web_search_tools: _search_via_brave(query)
+        web_search_tools->>Brave API: GET /res/v1/web/search
+        Brave API-->>web_search_tools: {web: {results: [...]}}
+        web_search_tools-->>Agent: ToolResult.success(results)
+    end
 ```
 
-**Description:** When an agent calls `plan_to_csv()`, the tool first converts the feature plan JSON to a flat list of row dicts via `plan_json_to_rows()`. This function iterates over epics and stories, extracting fields like `summary`, `components`, `complexity`, and `depth`, and appends plan-specific metadata (`product_family`, `acceptance_criteria`). The rows are then passed to `write_plan_csv()`, which detects the table format (indented vs. flat) and writes the CSV using Python's `csv.DictWriter`. The tool returns a `ToolResult` with the output path and row count.
+**Description:** When an agent calls `web_search()`, the tool first attempts to discover a web search capability on the Cornelis MCP server by fetching the tool catalogue and looking for tools with names containing "web_search", "brave_search", or "tavily_search". If found, it invokes the MCP tool via JSON-RPC. If the MCP server is unreachable or lacks a web search tool, the function falls back to direct API calls (Brave Search, then Tavily) using environment-configured API keys.
 
 # Data Model
 
@@ -160,64 +179,122 @@ sequenceDiagram
 @dataclass
 class ToolResult:
     status: ToolStatus          # SUCCESS | ERROR | PENDING
-    data: Any = None            # Result payload (if successful)
-    error: Optional[str] = None # Error message (if failed)
+    data: Any = None            # Result payload (dict, list, str, etc.)
+    error: Optional[str] = None # Error message if status == ERROR
     metadata: Dict[str, Any]    # Execution metadata (tokens, timing, etc.)
 ```
 
-**Purpose:** Uniform return type for all tool executions. Agents check `is_success` before accessing `data`. The `metadata` dict stores execution context (e.g., `tokens_used`, `model_used`, `audit_trail`).
+**Purpose:** Standardized return type for all tool functions. Agents check `result.is_success` before accessing `result.data`.
 
 ### ToolDefinition
 ```python
 @dataclass
 class ToolDefinition:
-    name: str                   # Function name
-    description: str            # Tool purpose (from docstring)
-    parameters: List[ToolParameter]
-    returns: str                # Return value description
-    func: Callable              # Actual function to execute
+    name: str                      # Function name (e.g., 'create_ticket')
+    description: str               # Human-readable description
+    parameters: List[ToolParameter] # Input parameter specs
+    returns: str                   # Return value description
+    func: Callable                 # Actual function reference
 ```
 
-**Purpose:** Metadata container for tool registration. The `to_function_schema()` method converts this to OpenAI function calling format, and `to_adk_tool()` converts to Google ADK format.
+**Purpose:** Metadata container for tool registration. The `to_function_schema()` method converts this to OpenAI function-calling JSON.
 
 ### ToolParameter
 ```python
 @dataclass
 class ToolParameter:
-    name: str
-    type: str                   # JSON schema type (string, integer, array, etc.)
-    description: str
-    required: bool = True
-    default: Any = None
-    enum: Optional[List[Any]] = None
+    name: str                  # Parameter name
+    type: str                  # JSON schema type (string, integer, array, etc.)
+    description: str           # Parameter description
+    required: bool = True      # Whether parameter is mandatory
+    default: Any = None        # Default value if not provided
+    enum: Optional[List[Any]]  # Allowed values for enum parameters
 ```
 
-**Purpose:** Describes a single tool parameter. The `to_schema()` method generates JSON schema fragments for OpenAI/ADK.
+**Purpose:** Describes a single tool parameter for schema generation.
 
-## State Management
+## Jira-Specific Data
 
-- **Jira Connection Cache:** `jira_utils.get_connection()` maintains a singleton JIRA client per actor mode (requester, agent, admin). Tools call `get_jira(actor_mode)` to retrieve the cached connection.
-- **MCP Tool Catalogue:** `mcp_tools._tool_cache` caches the list of tools from the MCP server to avoid repeated discovery calls.
-- **Knowledge File Index:** `knowledge_tools._find_knowledge_files()` scans `data/knowledge/` on each search; no persistent index.
+### Ticket Dictionary (from `issue_to_dict()`)
+```python
+{
+    'key': 'STL-12345',
+    'project': 'STL',
+    'issue_type': 'Story',
+    'status': 'In Progress',
+    'priority': 'High',
+    'summary': 'Implement feature X',
+    'assignee': 'john.doe@cornelisnetworks.com',
+    'reporter': 'jane.smith@cornelisnetworks.com',
+    'created': '2026-01-15T10:30:00.000+0000',
+    'updated': '2026-04-05T14:22:00.000+0000',
+    'resolved': None,
+    'fix_version': ['CN5000-1.2.0'],
+    'affects_version': [],
+    'component': ['Firmware', 'Driver'],
+    'customer': 'ACME Corp',
+    'description': 'Full ADF text...',
+    'labels': ['performance', 'critical'],
+    'comments': [...],  # If include_comments=True
+    'changelog': [...], # If include_changelog=True
+    'transitions': [...] # If include_transitions=True
+}
+```
+
+## Confluence-Specific Data
+
+### Page Metadata
+```python
+{
+    'id': '123456789',
+    'title': 'Release Plan: CN5000-1.2.0',
+    'space': 'ENG',
+    'version': 42,
+    'url': 'https://cornelisnetworks.atlassian.net/wiki/spaces/ENG/pages/123456789',
+    'created': '2026-01-10T08:00:00.000Z',
+    'updated': '2026-04-06T12:00:00.000Z'
+}
+```
+
+### Jira Issues Macro XHTML
+```xml
+<ac:structured-macro ac:name="jira" ac:schema-version="1">
+  <ac:parameter ac:name="server">Cornelis Networks</ac:parameter>
+  <ac:parameter ac:name="serverId">12345678-1234-1234-1234-123456789012</ac:parameter>
+  <ac:parameter ac:name="jqlQuery">project = STL AND fixVersion = "CN5000-1.2.0"</ac:parameter>
+  <ac:parameter ac:name="columns">key,summary,status,assignee</ac:parameter>
+  <ac:parameter ac:name="maximumIssues">200</ac:parameter>
+</ac:structured-macro>
+```
 
 # Dependencies
 
 | Dependency | Purpose | Version |
 |------------|---------|---------|
-| `jira` | Jira REST API client | 3.x |
-| `atlassian-python-api` | Confluence REST API client | 3.x |
-| `PyGithub` | GitHub REST API client | 2.x |
-| `openpyxl` | Excel file I/O | 3.x |
-| `python-pptx` | PowerPoint parsing | 0.6.x |
-| `PyMuPDF` / `pdfplumber` / `PyPDF2` | PDF text extraction | Latest |
-| `python-docx` | DOCX text extraction | 0.8.x |
+| `jira` (jira-python) | Jira REST API client | 3.x |
+| `atlassian-python-api` | Confluence REST API client | Latest |
+| `PyGithub` | GitHub REST API client | Latest |
 | `requests` | HTTP client for MCP/web search | 2.x |
-| `Pillow` | Image metadata extraction | 10.x |
-| `dotenv` | Environment variable loading | 1.x |
-| `core.tickets` | Jira issue normalization (`issue_to_dict`) | Internal |
-| `core.utils` | ADF text extraction (`extract_text_from_adf`) | Internal |
-| `config.env_loader` | Dry-run resolution (`resolve_dry_run`) | Internal |
-| `config.jira_identity` | Actor mode normalization (`get_jira_actor_email`) | Internal |
+| `openpyxl` | Excel file I/O | 3.x |
+| `python-pptx` | PowerPoint parsing | Latest |
+| `python-docx` | Word document parsing | Latest |
+| `PyMuPDF` (fitz) | PDF text extraction (primary) | Latest |
+| `pdfplumber` | PDF text extraction (fallback) | Latest |
+| `PyPDF2` | PDF text extraction (fallback) | Latest |
+| `Pillow` (PIL) | Image metadata and processing | 9.x |
+| `dotenv` | Environment variable loading | Latest |
+
+**Internal Dependencies:**
+- `jira_utils.py` — Core Jira operations
+- `confluence_utils.py` — Core Confluence operations
+- `github_utils.py` — Core GitHub operations
+- `excel_utils.py` — Excel map building and utilities
+- `drawio_utilities.py` — Draw.io XML generation
+- `llm/config.py` — Vision LLM client
+- `config/env_loader.py` — Dry-run resolution
+- `config/jira_identity.py` — Actor mode normalization
+- `core/tickets.py` — `issue_to_dict()` converter
+- `core/utils.py` — `extract_text_from_adf()` helper
 
 # Configuration
 
@@ -226,12 +303,8 @@ class ToolParameter:
 | Variable | Purpose | Default |
 |----------|---------|---------|
 | `JIRA_URL` | Jira instance URL | `https://cornelisnetworks.atlassian.net` |
-| `JIRA_EMAIL` | Jira user email (requester mode) | Required |
-| `JIRA_API_TOKEN` | Jira API token (requester mode) | Required |
-| `JIRA_AGENT_EMAIL` | Jira agent service account email | Optional |
-| `JIRA_AGENT_API_TOKEN` | Jira agent service account token | Optional |
-| `JIRA_ADMIN_EMAIL` | Jira admin service account email | Optional |
-| `JIRA_ADMIN_API_TOKEN` | Jira admin service account token | Optional |
+| `JIRA_EMAIL` | Jira user email | Required |
+| `JIRA_API_TOKEN` | Jira API token | Required |
 | `CONFLUENCE_URL` | Confluence instance URL | Same as `JIRA_URL` |
 | `CONFLUENCE_EMAIL` | Confluence user email | Same as `JIRA_EMAIL` |
 | `CONFLUENCE_API_TOKEN` | Confluence API token | Same as `JIRA_API_TOKEN` |
@@ -240,60 +313,109 @@ class ToolParameter:
 | `CORNELIS_AI_API_KEY` | MCP bearer token | Optional |
 | `BRAVE_SEARCH_API_KEY` | Brave Search API key | Optional (web search fallback) |
 | `TAVILY_API_KEY` | Tavily Search API key | Optional (web search fallback) |
-| `DRY_RUN` | Global dry-run flag | `false` |
+| `DRY_RUN` | Global dry-run mode | `false` |
+| `JIRA_ACTOR_MODE` | Default actor mode | `requester` |
 
 ## Feature Flags
 
-- **`include_description`** (plan export): If `True`, adds a `description` column to CSV/Excel exports. Defaults to `False` to avoid unwieldy files.
-- **`table_format`** (plan export): `'indented'` (default) or `'flat'`. Indented format replaces `key` + `depth` with `Depth 0`, `Depth 1`, … columns.
-- **`render_diagrams`** (Confluence): If `True`, renders Mermaid diagrams to PNG before publishing. Requires `mmdc` CLI tool.
+- **`include_comments`** (Jira tools): Include ticket comments in `get_ticket()` responses.
+- **`include_changelog`** (Jira tools): Include ticket history in `get_ticket()` responses.
+- **`include_transitions`** (Jira tools): Include available workflow transitions in `get_ticket()` responses.
+- **`render_diagrams`** (Confluence tools): Render Mermaid diagrams to PNG when converting Markdown to Confluence.
+- **`dry_run`** (Jira/Confluence write tools): Preview changes without committing to the API.
 
 # Error Handling
 
 ## Exception Hierarchy
 
-All tools return `ToolResult` instead of raising exceptions. Errors are captured in `ToolResult.failure(error_message)`. Common error patterns:
+All tools return `ToolResult` objects rather than raising exceptions. The `@tool` decorator wraps each function in a try/except block:
 
-- **`FileNotFoundError`** → `ToolResult.failure('File not found: {path}')`
-- **`JIRAError`** → `ToolResult.failure('Jira API error: {message}')`
-- **`requests.HTTPError`** → `ToolResult.failure('HTTP error: {status_code}')`
-- **`ImportError`** → `ToolResult.failure('{library} not installed. Run: pip install {library}')`
+```python
+@functools.wraps(func)
+def wrapper(*args, **kwargs) -> ToolResult:
+    try:
+        result = func(*args, **kwargs)
+        if isinstance(result, ToolResult):
+            return result
+        return ToolResult.success(result)
+    except Exception as e:
+        log.error(f'Tool {tool_name} failed: {e}')
+        return ToolResult.failure(str(e))
+```
 
-## Error Recovery
+## Error Patterns
 
-- **Jira Connection Failures:** Tools call `reset_connection()` to clear the cached client and retry.
-- **MCP Unavailable:** `web_search()` falls back to Brave Search, then Tavily.
-- **Missing Libraries:** Tools check for optional dependencies (e.g., `openpyxl`, `PyMuPDF`) and return graceful errors with installation instructions.
+### Missing Dependencies
+```python
+if not JIRA_UTILS_AVAILABLE:
+    return ToolResult.failure('jira_utils.py is required but not available')
+```
 
-## Logging
+Tools gracefully degrade when optional dependencies are missing (e.g., `openpyxl`, `PyMuPDF`).
 
-All tools log at `DEBUG` level on entry (e.g., `log.debug(f'create_ticket(project={project}, summary={summary})')`) and `ERROR` level on failure. Successful operations log at `INFO` level with result summaries (e.g., `log.info(f'Created ticket: {key}')`).
+### API Errors
+```python
+try:
+    jira = get_jira()
+    issue = jira.issue(ticket_key)
+except JIRAError as e:
+    return ToolResult.failure(f'Jira API error: {e.status_code} - {e.text}')
+```
+
+Jira/Confluence/GitHub API errors are caught and wrapped in `ToolResult.failure()` with the HTTP status code and error message.
+
+### Validation Errors
+```python
+if not ticket_key:
+    return ToolResult.failure('ticket_key is required')
+if limit < 1:
+    return ToolResult.failure('limit must be >= 1')
+```
+
+Input validation failures return descriptive error messages without raising exceptions.
 
 # Known Limitations / Technical Debt
 
 ## Hardcoded Values
 
-- **`JIRA_URL`**: Defaults to `https://cornelisnetworks.atlassian.net` if not set in environment. Should be required.
-- **`KNOWLEDGE_DIR`**: Hardcoded to `data/knowledge`. Should be configurable.
-- **`BASE_FIELDS`** (plan export): Hardcoded list of Jira fields. Should be derived from `jira_utils.TICKET_FIELDS`.
+1. **`JIRA_URL` default** (`tools/jira_tools.py:60`): Hardcoded to `https://cornelisnetworks.atlassian.net` when `jira_utils` is unavailable. Should read from environment or fail explicitly.
+
+2. **MCP server URL** (`tools/mcp_tools.py:50`): Defaults to `http://cn-ai-01.cornelisnetworks.com:50700/mcp`. Should be configurable per-deployment.
+
+3. **Knowledge base path** (`tools/knowledge_tools.py:40`): Hardcoded to `data/knowledge`. Should be configurable via environment variable.
+
+4. **Excel map sheet names** (`tools/excel_tools.py`): Assumes sheet names "Tickets", "Plan", etc. Should be parameterized.
 
 ## Missing Implementations
 
-- **`drawio_tools._add_ticket_cell()`**: Incomplete fallback implementation for creating draw.io diagrams without `drawio_utilities.py`. Only handles basic box placement; no edge rendering.
-- **`vision_tools._parse_roadmap_text()`**: Naive regex-based roadmap extraction. Should use LLM for structured parsing.
-- **`knowledge_tools._score_match()`**: Simple keyword frequency scoring. Should use TF-IDF or semantic search.
+1. **Confluence page deletion** (`tools/confluence_tools.py`): No `delete_confluence_page()` tool exists. Agents cannot programmatically remove pages.
+
+2. **Jira bulk delete** (`tools/jira_tools.py`): `bulk_update_tickets()` exists but no `bulk_delete_tickets()`. Cleanup operations require manual iteration.
+
+3. **GitHub PR creation** (`tools/github_tools.py`): Only read operations (list PRs, get PR details) are implemented. No `create_pull_request()` tool.
+
+4. **Draw.io diagram updates** (`tools/drawio_tools.py`): `create_ticket_diagram()` generates new diagrams but cannot update existing `.drawio` files.
 
 ## Technical Debt
 
-- **Circular Import Risk:** `web_search_tools` lazy-imports `mcp_tools` to avoid circular dependency. Should refactor to use dependency injection.
-- **Inconsistent Error Handling:** Some tools (e.g., `read_file`) validate inputs before execution; others (e.g., `create_ticket`) rely on downstream exceptions. Should standardize input validation.
-- **Missing Unit Tests:** No test coverage for `@tool` decorator parameter extraction or schema generation.
-- **Duplicate Code:** `jira_tools._normalize_comment()` and `jira_tools._normalize_changelog()` have similar ADF extraction logic. Should extract to `core.utils`.
+1. **Circular import risk** (`tools/web_search_tools.py:40`): Lazy-loads `mcp_tools` to avoid circular dependency. Should refactor to eliminate the cycle.
+
+2. **Inconsistent error handling** (`tools/vision_tools.py`): Some functions return `ToolResult.failure()` on missing dependencies, others return partial results with warnings. Should standardize.
+
+3. **Duplicate code** (`tools/confluence_tools.py`, `tools/jira_tools.py`): Both modules implement similar `get_connection()` / `reset_connection()` patterns. Should extract to shared utility.
+
+4. **Missing type hints** (`tools/drawio_tools.py:150-200`): Helper functions `_strip_html()`, `_parse_org_node()`, `_build_teams()` lack type annotations.
+
+5. **God class warning** (`tools/jira_tools.py`): `JiraTools` class has 40+ methods (>500 lines). Consider splitting into `JiraReadTools`, `JiraWriteTools`, `JiraReportTools`.
+
+6. **Hardcoded column names** (`tools/plan_export_tools.py:30-50`): `BASE_FIELDS` and `PLAN_EXTRA_FIELDS` are hardcoded. Should be configurable or derived from schema.
 
 ## Anti-Patterns Detected
 
-- **God Class:** `JiraTools` has 40+ public methods (>500 lines). Should split into `JiraReadTools`, `JiraWriteTools`, `JiraSearchTools`.
-- **Missing Error Handling:** `mcp_tools._mcp_request()` does not handle SSE parsing errors gracefully (raises `RuntimeError` instead of returning `ToolResult.failure`).
-- **Hardcoded Credentials:** `github_tools._get_mcp_api_key()` reads from environment but does not validate format or expiration.
+1. **Missing error handling on external calls** (`tools/web_search_tools.py:120-140`): Direct `requests.get()` calls to Brave/Tavily APIs lack retry logic or circuit breakers.
+
+2. **Hardcoded credentials** (None detected): All credentials are loaded from environment variables. ✅
+
+3. **Circular dependencies** (`tools/web_search_tools.py` ↔ `tools/mcp_tools.py`): Mitigated by lazy import but should be refactored.
 
 <!-- End Documentation Agent generated content -->
