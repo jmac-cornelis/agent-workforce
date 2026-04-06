@@ -10,51 +10,54 @@ status: "draft"
 
 ## Module Overview
 
-The Gantt Agent system prompt defines the behavior, capabilities, and output formats for an AI-powered project planning agent that analyzes Jira work state and produces planning intelligence for Cornelis Networks engineering teams. The prompt establishes strict rules for roadmap analysis, release monitoring, Jira ticket structure, and documentation generation while grounding all outputs in observable project data rather than speculation.
+The Gantt Agent system prompt defines the behavior, capabilities, and output formats for an AI-powered project planning agent that analyzes Jira work state and produces planning intelligence for Cornelis Networks engineering teams. The prompt establishes strict rules for Jira ticket hierarchy, roadmap analysis, release monitoring, and documentation generation while grounding all recommendations in observable project data rather than speculation.
 
 ## What Changed
 
-**Before:** The agent could generate roadmap and release health pages but lacked explicit guidance on separating bug tracking from development work, and had no standardized page structure for Confluence publication.
+**Before:** The prompt supported roadmap and release health page generation but did not explicitly separate bug tracking from development ticket analysis, leading to potential confusion when generating release readiness views.
 
-**After:** The prompt now includes a comprehensive "Roadmap & Release Health Page Generation" section (lines 321-445) that:
-- Mandates strict separation of bug tickets from development tickets in all analysis
-- Defines a standardized 5-section page structure (Health, Timeline, Summary, Features, Bug Tracking)
-- Specifies how to render Initiative-level features with live JQL tables
-- Provides explicit rules for Confluence publication including Mermaid diagram rendering
-- Clarifies that roadmap pages exclude bugs entirely while release readiness pages include both
+**After:** Added a comprehensive "Roadmap & Release Health Page Generation" section (lines 321-445) that:
+- Establishes a fundamental rule to always separate bug tickets from development tickets in all analysis
+- Defines distinct page structures for roadmap views (dev tickets only) vs. release readiness views (both dev and bugs)
+- Specifies a 5-section page template: Health, Timeline, Summary, Features, and Bug Tracking
+- Provides detailed guidance on live JQL table generation, Mermaid diagram rendering, and Confluence publication
 
 **Impact:** 
-- Users requesting roadmap or release health pages will receive consistently structured output
-- Confluence pages will use live JQL filter tables that stay current after publication
-- Bug analysis and feature development progress are now clearly separated in all reports
-- The agent will no longer mix bug counts with development ticket counts in completion metrics
+- Users of the Gantt agent will receive clearer, more structured roadmap and release health pages
+- Bug analysis is now explicitly separated from feature delivery tracking
+- Confluence publication workflows gain specific technical guidance on diagram rendering and live table embedding
+- The agent's output becomes more consistent and actionable for engineering leadership
 
 ## Component Diagram
 
 ```mermaid
 graph TB
     SystemPrompt[System Prompt]
-    CoreRules[Core Rules & Principles]
-    OrgKnowledge[Org Structure & Component Ownership]
-    RoadmapMode[Roadmap Analysis Mode]
-    ReleaseMode[Release Monitor Mode]
-    PageGen[Page Generation Engine]
-    JiraRules[Jira Planning Rules]
-    OutputFormats[Output Format Specs]
+    CoreRules[Core Rules Engine]
+    SnapshotGen[Snapshot Generator]
+    RoadmapAnalyzer[Roadmap Analyzer]
+    ReleaseMonitor[Release Monitor]
+    PageGenerator[Page Generator]
+    OrgKnowledge[Org Knowledge Interface]
+    JiraTools[Jira Tool Interface]
     
     SystemPrompt --> CoreRules
-    SystemPrompt --> OrgKnowledge
-    SystemPrompt --> RoadmapMode
-    SystemPrompt --> ReleaseMode
-    SystemPrompt --> PageGen
+    SystemPrompt --> SnapshotGen
+    SystemPrompt --> RoadmapAnalyzer
+    SystemPrompt --> ReleaseMonitor
+    SystemPrompt --> PageGenerator
     
-    RoadmapMode --> JiraRules
-    RoadmapMode --> OutputFormats
-    PageGen --> OutputFormats
-    ReleaseMode --> OutputFormats
+    SnapshotGen --> OrgKnowledge
+    SnapshotGen --> JiraTools
+    RoadmapAnalyzer --> OrgKnowledge
+    RoadmapAnalyzer --> JiraTools
+    ReleaseMonitor --> JiraTools
+    PageGenerator --> JiraTools
     
-    OrgKnowledge -.->|informs| RoadmapMode
-    OrgKnowledge -.->|informs| ReleaseMode
+    OrgKnowledge -.->|search_knowledge| SystemPrompt
+    OrgKnowledge -.->|read_knowledge_file| SystemPrompt
+    JiraTools -.->|get_ticket| SystemPrompt
+    JiraTools -.->|search_tickets| SystemPrompt
 ```
 
 ## Key Flows
@@ -64,206 +67,243 @@ graph TB
 ```mermaid
 sequenceDiagram
     participant User
-    participant Gantt
-    participant Knowledge
-    participant Jira
-    participant Output
+    participant Gantt as Gantt Agent
+    participant Jira as Jira API
+    participant Org as Org Knowledge
     
     User->>Gantt: Request roadmap analysis
-    Gantt->>Knowledge: read_knowledge_file("heqing_org.json")
-    Knowledge-->>Gantt: Team structure & ownership
-    Gantt->>Jira: search_tickets(JQL for dev tickets)
-    Jira-->>Gantt: Initiatives, Epics, Stories
-    Note over Gantt: Filter out Bug tickets
+    Gantt->>Jira: search_tickets(roadmap scope)
+    Jira-->>Gantt: Return ticket hierarchy
     Gantt->>Gantt: Analyze structural completeness
     Gantt->>Gantt: Check cross-cutting concerns
     Gantt->>Gantt: Validate dependency coverage
-    Gantt->>Gantt: Assess release readiness
-    Gantt->>Output: Generate JSON gap proposals
-    Output-->>User: proposed_gaps + analysis_notes
+    Gantt->>Org: read_knowledge_file("heqing_org.json")
+    Org-->>Gantt: Return team structure
+    Gantt->>Gantt: Map gaps to component owners
+    Gantt->>User: Return JSON gap proposals
 ```
 
-**Description:** When performing roadmap analysis, the agent loads organizational knowledge to understand component ownership, queries Jira for development tickets only (excluding bugs), evaluates coverage across four dimensions (structural completeness, cross-cutting concerns, dependencies, release readiness), and outputs a structured JSON document proposing missing work items with suggested components, priorities, and acceptance criteria.
+**Description:** When performing roadmap analysis, the agent loads the ticket hierarchy from Jira, evaluates it against four dimensions (structural completeness, cross-cutting concerns, dependency coverage, release readiness), consults the org knowledge base to identify component owners, and outputs a structured JSON document proposing missing Epics and Stories with suggested assignments.
 
-### Flow 2: Release Health Page Generation
+### Flow 2: Release Health Monitoring
 
 ```mermaid
 sequenceDiagram
     participant User
-    participant Gantt
-    participant Jira
-    participant Confluence
-    participant Renderer
+    participant Gantt as Gantt Agent
+    participant Jira as Jira API
     
-    User->>Gantt: Generate release health page
-    Gantt->>Jira: Query dev tickets (Initiatives/Epics/Stories)
-    Gantt->>Jira: Query bug tickets separately
-    Jira-->>Gantt: Dev ticket data
-    Jira-->>Gantt: Bug ticket data
-    Gantt->>Gantt: Calculate dev completion %
-    Gantt->>Gantt: Calculate bug closure %
-    Gantt->>Gantt: Assess health (Green/Yellow/Red)
-    Gantt->>Gantt: Build timeline (dev features only)
-    Gantt->>Gantt: Generate per-Initiative sections
-    Gantt->>Gantt: Generate bug tracking section
-    Gantt->>Renderer: Render Mermaid diagrams to PNG
-    Renderer-->>Gantt: PNG attachments
+    User->>Gantt: create_release_monitor(release_version)
+    Gantt->>Jira: search_tickets(fixVersion = release_version, issuetype = Bug)
+    Jira-->>Gantt: Return bug tickets
+    Gantt->>Gantt: Calculate bug status distribution
+    Gantt->>Gantt: Compute velocity metrics
+    Gantt->>Gantt: Identify stale tickets
+    Gantt->>Gantt: Flag priority escalations
+    Gantt->>User: Return health report with alerts
+```
+
+**Description:** Release monitoring focuses exclusively on bug tickets for a given release. The agent queries Jira for all bugs in the target `fixVersion`, computes status distributions (Open/In Progress/Verify/Closed), calculates daily velocity (open rate, close rate, net burn), identifies stale tickets, and surfaces alerts for new P0/P1 bugs or priority escalations.
+
+### Flow 3: Page Generation with Bug/Dev Separation
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Gantt as Gantt Agent
+    participant Jira as Jira API
+    participant Confluence as Confluence API
+    
+    User->>Gantt: Generate release readiness page
+    Gantt->>Jira: search_tickets(dev tickets only)
+    Jira-->>Gantt: Return Initiatives/Epics/Stories
+    Gantt->>Jira: search_tickets(bugs only)
+    Jira-->>Gantt: Return bug tickets
+    Gantt->>Gantt: Build health indicator (dev + bug)
+    Gantt->>Gantt: Generate timeline (dev only)
+    Gantt->>Gantt: Create feature sections (dev only)
+    Gantt->>Gantt: Create bug tracking section (bugs only)
+    Gantt->>Gantt: Render Mermaid diagrams to PNG
     Gantt->>Confluence: Publish page with live JQL tables
-    Confluence-->>User: Published page URL
+    Confluence-->>User: Page URL
 ```
 
-**Description:** Release health page generation queries development tickets and bug tickets as separate populations, calculates independent completion metrics, assesses overall health based on both populations, generates a timeline showing only dev features, creates per-Initiative sections with live JQL filter tables (excluding the Initiative ticket itself from the table), adds a dedicated bug tracking section with P0/P1 tables and component risk heatmaps, renders Mermaid diagrams to PNG for Confluence compatibility, and publishes the page with live tables that stay current.
-
-### Flow 3: Jira Ticket Structure Enforcement
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Gantt
-    participant Rules
-    participant Output
-    
-    User->>Gantt: Propose Jira plan
-    Gantt->>Rules: Apply 2-level hierarchy rule
-    Note over Rules: Initiative -> Epic -> Story only
-    Gantt->>Rules: Validate Epic is feature-based
-    Note over Rules: Not work-type buckets
-    Gantt->>Rules: Validate Story = 1 branch
-    Note over Rules: No umbrella Stories
-    Gantt->>Rules: Check for anti-patterns
-    Note over Rules: No Tasks, Sub-tasks, or<br/>standalone validation Stories
-    Gantt->>Rules: Apply naming convention
-    Note over Rules: [TAG] prefix from Epic
-    Gantt->>Output: Generate CSV with depth columns
-    Output-->>User: Indented planning table
-```
-
-**Description:** When proposing Jira structures, the agent enforces a strict 2-level execution hierarchy (Initiative -> Epic -> Story), validates that Epics are feature-based vertical slices rather than work-type buckets, ensures each Story maps to a single development branch, rejects Tasks and Sub-tasks for software planning, applies bracketed tag prefixes inherited from parent Epics, and outputs an indented planning table with separate depth columns where each row shows only its own title in the appropriate depth column.
+**Description:** When generating a release readiness page, the agent makes two separate Jira queries—one for development tickets (Initiatives/Epics/Stories) and one for bugs. It builds the health assessment from both populations, generates a timeline showing only dev features, creates per-Initiative feature sections with live JQL tables excluding bugs, adds a dedicated bug tracking section, renders Mermaid diagrams to PNG attachments, and publishes the complete page to Confluence with live-updating JQL filter tables.
 
 ## Data Model
 
-### Core Data Structures
+### Gap Proposal Schema
 
-**Gap Proposal Schema** (lines 269-288):
+The roadmap analyzer outputs a JSON structure conforming to this schema:
+
 ```json
 {
   "proposed_gaps": [
     {
-      "section": "string",
-      "issue_type": "Epic | Story",
-      "depth": "integer",
-      "summary": "string",
+      "section": "string",           // Section title this gap belongs in
+      "issue_type": "Epic | Story",  // Never Initiative, Task, or Sub-task
+      "depth": 1,                     // Hierarchy depth (1 for Epic, 2 for Story)
+      "summary": "string",            // Jira ticket summary with [TAG] prefix
       "priority": "P0 | P1 | P2 | P3",
-      "suggested_component": "string",
-      "acceptance_criteria": "string",
-      "dependencies": "string (semicolon-separated keys)",
+      "suggested_component": "string", // Must be real Jira component
+      "acceptance_criteria": "string", // Measurable definition of done
+      "dependencies": "string",        // Semicolon-separated STL-XXXXX keys
       "suggested_fix_version": "string",
       "labels": "string",
-      "parent_summary": "string (optional)"
+      "parent_summary": "string"       // Parent Epic summary if this is a Story
     }
   ],
-  "analysis_notes": "string (markdown)"
+  "analysis_notes": "string"          // Markdown summary of findings
 }
 ```
 
-**Priority Levels** (lines 290-295):
-- `P0` — Critical path, release cannot ship without this
-- `P1` — Required for release, must be completed
-- `P2` — Important, should be in release but can be deferred
-- `P3` — Nice to have, improves quality but not blocking
+### Ticket Hierarchy Rules
 
-**Ticket Naming Tags** (lines 213-256): A controlled vocabulary of bracketed prefixes that identify feature areas and flow from Epic to child Stories. Examples include `[CYR Cport]`, `[RoCE Driver]`, `[SR-IOV MW]`, `[GPU SOL]`, `[Build Pipeline]`, etc.
+The prompt enforces a strict 2-level execution hierarchy:
 
-**Spreadsheet Depth Columns** (lines 187-211):
-- `Depth 0 (Initiative)` — Initiative title only
-- `Depth 1 (Epic)` — Epic title only  
-- `Depth 2 (Story)` — Story title only
-- Each row contains title in its own depth column, not full parent path
+- **Initiative** → **Epic** → **Story**
+- Tasks and Sub-tasks are prohibited for software planning
+- Epics must be feature-based vertical slices, not work-type buckets
+- Stories map 1-to-1 with development branches/pull requests
 
-**Health Indicator States** (lines 331-337):
-- **Green** — On track, no P0/P1 blockers, positive velocity
-- **Yellow** — At risk, warning signals present but manageable
-- **Red** — Off track, critical blockers or negative velocity
+### Ticket Naming Convention
+
+All Epics and Stories use bracketed tags:
+
+```
+[TAG] Descriptive summary text
+```
+
+Examples from the codebase:
+- `[CYR RoCE] Implement RoCE driver support`
+- `[SR-IOV Driver] Develop SR-IOV ethernet driver`
+- `[GPU OPX] Enable GPU over OPX`
+
+### Page Structure Model
+
+Release readiness and roadmap pages follow this 5-section structure:
+
+1. **Health** — Green/Yellow/Red indicator with risk factors
+2. **Timeline** — Mermaid gantt diagram showing dev features only
+3. **Summary** — 8-12 line text overview with dev completion % and bug closure % reported separately
+4. **Features** — Per-Initiative subsections with live JQL tables (dev tickets only, Initiative ticket excluded from table)
+5. **Bug Tracking** — P0/P1 tables, component heatmap, stale ticket list (release readiness only)
 
 ## Dependencies
 
 | Dependency | Purpose | Version |
 |------------|---------|---------|
-| Jira API | Query tickets, create filters, read project metadata | Cloud REST API |
-| Knowledge Base | Read org structure (`heqing_org.json`), component ownership | Internal JSON files |
-| Confluence API | Publish pages with live JQL tables and attachments | Cloud REST API |
-| Mermaid | Generate timeline and component diagrams | Embedded in output |
-| `confluence_utils.py` | Render Mermaid diagrams to PNG for Confluence | Internal module |
+| Jira API | Ticket queries, field metadata, release info | Cloud REST API |
+| Knowledge Base | Org structure, component ownership, repo mapping | Internal JSON files |
+| Confluence API | Page publication, diagram rendering, live JQL tables | Cloud REST API |
+| Mermaid | Diagram generation for timelines and component views | Embedded in Confluence |
 
 ## Configuration
 
-**Knowledge Base Files** (lines 42-44):
-- `data/knowledge/heqing_org.json` — Primary org reference with 44 SW engineers, component ownership, and GitHub repo mapping
+### Environment Variables
 
-**Available Tools** (lines 59-68):
-- `get_project_info` — Retrieve Jira project metadata
-- `search_tickets` — Execute JQL queries
-- `get_ticket` — Fetch individual ticket details
-- `get_project_fields` — List available custom fields
-- `get_releases` — Query fix versions and release dates
-- `search_knowledge` — Keyword search in knowledge base
-- `list_knowledge_files` — Enumerate knowledge base files
-- `read_knowledge_file` — Load specific knowledge file
-- `create_release_monitor` — Generate release health report
-- `create_filter` — Create named Jira filter from JQL
+The prompt references these tools which require configuration:
 
-**Output Modes**:
-- Roadmap Analysis Mode (lines 70-316) — Gap identification, no timeline planning
-- Release Monitor Mode (lines 318-319) — Bug trends, velocity, readiness tracking
-- Page Generation Mode (lines 321-445) — Structured Markdown/Confluence output
+- `search_knowledge` — Requires knowledge base path configuration
+- `read_knowledge_file` — Requires access to `data/knowledge/heqing_org.json`
+- `create_filter` — Requires Jira API credentials and project context
+- Confluence publication tools — Require Confluence space ID and credentials
+
+### Feature Flags
+
+The prompt operates in distinct modes triggered by tool invocation:
+
+- **Snapshot Mode** — Triggered by general planning requests
+- **Roadmap Analysis Mode** — Triggered by `create_roadmap_snapshot`
+- **Release Monitor Mode** — Triggered by `create_release_monitor`
+- **Page Generation Mode** — Triggered by requests to generate roadmap or release health pages
+
+### Org Knowledge Reference
+
+Primary org reference file: `data/knowledge/heqing_org.json`
+
+Contains:
+- Team structure (44 people in Heqing Zhu's SW engineering org)
+- Per-person Jira component assignments with issue counts
+- GitHub repo contribution mapping
 
 ## Error Handling
 
-The prompt uses declarative constraints rather than exception handling:
+### Evidence Gap Handling
 
-**Anti-patterns to Flag** (lines 153-166):
+The prompt explicitly requires the agent to:
+
+> Highlight evidence gaps explicitly instead of guessing.
+
+When data is missing:
+- Flag confidence limits in snapshot outputs
+- Note missing build, test, release, or meeting evidence
+- Identify unassigned or unscheduled work
+- Surface blocked and stale tickets
+
+### Validation Rules
+
+The prompt enforces strict validation on gap proposals:
+
+```python
+# From lines 267-283
+# Field Rules
+- issue_type — "Epic" or "Story" only. Never "Initiative" or "Bug".
+- priority — One of "P0", "P1", "P2", "P3"
+- suggested_component — Must be a real Jira component from the project.
+- acceptance_criteria — Measurable and testable.
+- dependencies — Semicolon-separated list of existing STL- ticket keys.
+                 Must reference real keys. Set to "" if no dependencies.
+```
+
+### Anti-Pattern Detection
+
+The roadmap analyzer must flag these structural issues:
+
 - Orphan Epics (no parent Initiative)
 - Orphan Stories (no parent Epic)
-- Epics organized by work-type instead of feature
-- Stories acting as umbrellas for multiple branches
-- Stories that should be promoted from sub-task decomposition
+- Epics organized by work-type instead of feature deliverable
+- Stories acting as umbrellas for multiple branch-sized threads
+- Stories that should be promoted out of sub-task style decomposition
 
-**Validation Rules**:
-- Every Initiative MUST have at least one Epic (line 154)
-- Every Epic MUST have implementation Stories (line 155)
-- `issue_type` must be `"Epic"` or `"Story"` only (line 290)
-- `priority` must be one of `"P0"`, `"P1"`, `"P2"`, `"P3"` (line 291)
-- `suggested_component` must be a real Jira component (line 296)
-- `dependencies` must reference real `STL-` keys or be empty string (line 299)
+### Bug/Dev Ticket Separation
 
-**Evidence Gaps** (line 18):
-- Highlight missing build, test, release, or meeting evidence explicitly instead of guessing
+The prompt enforces strict separation (lines 330-343):
 
-**Capacity Constraints** (lines 52-56):
-- Flag when component owner has heavy workload
-- Identify unowned work outside team's component scope
-- Surface cross-team coordination needs
+> **Always** separate bug tickets (`issuetype = Bug`) from development tickets
+> (Initiatives, Epics, Stories) in all analysis and page output.
+
+Violation of this rule results in:
+- Incorrect completion percentages
+- Mixed populations in tables
+- Misleading health assessments
 
 ## Known Limitations / Technical Debt
 
-1. **Hardcoded Project Prefix**: The prompt assumes all ticket keys use the `STL-` prefix (line 299). Multi-project environments would require parameterization.
+### Hardcoded Values
 
-2. **Static Tag Vocabulary**: The ticket naming tags (lines 213-256) are hardcoded examples from one project. The prompt instructs the agent to "create a new one following the same style" but provides no validation mechanism for tag uniqueness or consistency.
+- **Priority levels** — Hardcoded to `P0`, `P1`, `P2`, `P3` (lines 270-274). No support for custom priority schemes.
+- **Stale ticket threshold** — Hardcoded to 30 days (line 408). Not configurable per project.
+- **Org knowledge file path** — Hardcoded to `data/knowledge/heqing_org.json` (line 48). Single org structure assumed.
+- **Ticket key prefix** — Hardcoded to `STL-` (lines 281, 407). Not adaptable to other Jira projects.
 
-3. **Missing Diagram Rendering Implementation**: The prompt references `render_diagrams()` and `_render_mermaid()` from `confluence_utils.py` (lines 442-444) but does not include the implementation or error handling for diagram rendering failures.
+### Missing Implementations
 
-4. **No Cycle Detection**: While the prompt instructs the agent to "surface circular or missing dependency chains" (line 201), it provides no algorithm or tool for detecting cycles in the dependency graph.
+- **Velocity calculation details** — The prompt mentions "daily open rate, close rate, net burn rate" (line 313) but does not specify the calculation window or smoothing algorithm.
+- **Component risk heatmap algorithm** — Referenced in line 407 but no threshold or scoring logic is defined.
+- **Mermaid rendering fallback** — Lines 442-444 reference `render_diagrams()` and `_render_mermaid()` but do not specify error handling if rendering fails.
+- **JQL query validation** — The prompt requires JQL queries to be returned (line 418) but does not specify syntax validation or error recovery.
 
-5. **Ambiguous "Stale" Definition**: The prompt mentions "stale tickets" multiple times (lines 28, 317, 411) but only defines the threshold once as "30+ days" (line 411) in the bug tracking context. The definition for dev tickets is implicit.
+### Circular Dependencies
 
-6. **Incomplete Cross-Cutting Concern List**: The cross-cutting concerns checklist (lines 168-185) is specific to one product domain (RDMA/networking). The prompt does not explain how to adapt this list for other engineering domains.
+- The prompt references tools (`search_knowledge`, `create_filter`, `build_jira_jql_table_macro`) that are not defined within the prompt itself, creating a dependency on external tool implementations.
+- The "Page Generation Rules" section (lines 417-444) assumes the existence of `confluence_utils.py` functions without specifying their interface contracts.
 
-7. **No Validation of JQL Syntax**: The prompt instructs the agent to generate JQL queries (lines 85-92, 415-416) but provides no mechanism to validate JQL syntax before execution or publication.
+### Technical Debt
 
-8. **Confluence Macro Dependency**: The prompt assumes `build_jira_jql_table_macro` exists (line 385) but does not define its interface or error behavior when the macro is unavailable.
-
-9. **Org Knowledge Staleness**: The prompt treats `heqing_org.json` as authoritative (line 42) but provides no guidance on how to detect or handle stale org data (e.g., engineers who have left, components that have been deprecated).
-
-10. **Missing Acceptance Criteria Examples**: While the prompt mandates "measurable and testable" acceptance criteria (lines 297-299), it provides no examples of good vs. bad criteria, leaving interpretation to the agent.
+- **Spreadsheet format specification** — Lines 145-165 define a CSV/Excel export format but do not specify how the agent should generate the actual file (tool call, direct output, etc.).
+- **Tag inheritance enforcement** — Lines 166-238 define ticket naming conventions with tag inheritance but do not specify how the agent should handle tag conflicts or missing parent tags.
+- **Cross-cutting concern detection** — Lines 199-217 list cross-cutting concerns to check but do not provide a detection algorithm or heuristic for identifying when they are missing.
+- **Confluence macro syntax** — Line 387 references `build_jira_jql_table_macro` but does not specify the macro syntax or parameters, creating a dependency on undocumented Confluence integration code.
 
 <!-- End Documentation Agent generated content -->
