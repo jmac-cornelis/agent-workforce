@@ -1,617 +1,651 @@
 agents:
-  - agent_id: shannon
-    display_name: Shannon
-    role: Communications
-    description: Single Teams bot and routing surface for the Cornelis agent workforce.
-    zone: service_infrastructure
-    channel_name: agent-shannon
-    channel_id: "19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2"
-    team_id: "19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2"
-    api_base_url: ""
-    approval_types: []
-    custom_commands:
-      - command: /stats
-        description: Shannon service status and throughput
-        api_method: GET
-        api_path: /v1/status/stats
-      - command: /busy
-        description: Current Shannon load summary
-        api_method: GET
-        api_path: /v1/status/load
-      - command: /work-today
-        description: Today's work summary for Shannon
-        api_method: GET
-        api_path: /v1/status/work-summary
-      - command: /token-status
-        description: Deterministic/token execution summary
-        api_method: GET
-        api_path: /v1/status/tokens
-      - command: /decision-tree
-        description: Recent routing and posting decisions
-        api_method: GET
-        api_path: /v1/status/decisions
-      - command: /why
-        description: Deep dive into a specific decision
-        api_method: GET
-        api_path: /v1/status/decisions/{record_id}
-    timeout_seconds: 15
-
-  - agent_id: drucker
-    display_name: Drucker
-    role: Engineering Hygiene
-    description: Deterministic engineering hygiene analysis — Jira ticket quality and GitHub PR lifecycle
-    zone: service_infrastructure
-    channel_name: agent-drucker
-    channel_id: "19:966aaabccc2a4ecd879d427edc83aaf0@thread.tacv2"
-    team_id: "19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2"
-    api_base_url: http://host.containers.internal:8201
-    notifications_webhook_url: "https://default4dbdb7da74ee4b458747ef5ce5ebe6.8a.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/7346f433283a433fb6a530451879227b/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=DX5rVpdRL5wpv_H9huN668nWIvrhGTWwe97q6NGpxh4"
-    approval_types: []
-    custom_commands:
-      # --- Jira hygiene commands ---
-      - command: /issue-check
-        description: Run intake validation for one Jira ticket
-        api_method: POST
-        api_path: /v1/hygiene/issue
-        mutation: false
-        params:
-          - name: project_key
-            type: str
-            required: true
-            label: Jira project key
-          - name: ticket_key
-            type: str
-            required: true
-            label: Jira ticket key
-          - name: stale_days
-            type: int
-            required: false
-            label: Days threshold (default 30)
-      - command: /intake-report
-        description: Run a recent-ticket intake report
-        api_method: POST
-        api_path: /v1/hygiene/intake
-        mutation: false
-        params:
-          - name: project_key
-            type: str
-            required: true
-            label: Jira project key
-          - name: stale_days
-            type: int
-            required: false
-            label: Days threshold (default 30)
-      - command: /hygiene-run
-        description: Run hygiene analysis
-        api_method: POST
-        api_path: /v1/hygiene/run
-        mutation: false
-        params:
-          - name: project_key
-            type: str
-            required: true
-            label: Jira project key
-          - name: stale_days
-            type: int
-            required: false
-            label: Days threshold (default 30)
-      - command: /hygiene-report
-        description: Get a stored report
-        api_method: GET
-        api_path: /v1/hygiene/report
-      - command: /hygiene-list
-        description: List stored reports
-        api_method: GET
-        api_path: /v1/hygiene/reports
-      - command: /bug-activity
-        description: Bug ticket activity today (opened, status changes, comments)
-        api_method: POST
-        api_path: /v1/activity/bugs
-        params:
-          - name: project_key
-            type: str
-            required: false
-            label: Jira project key (default STL)
-      # --- Jira query & reporting commands ---
-      - command: /jira-query
-        description: Run an ad-hoc JQL query against Jira
-        api_method: POST
-        api_path: /v1/jira/query
-        mutation: false
-        params:
-          - name: project_key
-            type: str
-            required: false
-            label: Jira project key (default STL)
-          - name: jql
-            type: str
-            required: true
-            label: JQL query string
-          - name: limit
-            type: int
-            required: false
-            label: Max tickets (default 100)
-      - command: /jira-tickets
-        description: Query tickets with structured filters (type, status, date)
-        api_method: POST
-        api_path: /v1/jira/tickets
-        mutation: false
-        params:
-          - name: project_key
-            type: str
-            required: false
-            label: Jira project key (default STL)
-          - name: issue_types
-            type: list
-            required: false
-            label: Issue types (comma-separated)
-          - name: statuses
-            type: list
-            required: false
-            label: Status filter (comma-separated)
-          - name: date_filter
-            type: str
-            required: false
-            label: Date range (today, week, month, year)
-          - name: limit
-            type: int
-            required: false
-            label: Max tickets (default 100)
-      - command: /jira-release-status
-        description: Status breakdown by release version
-        api_method: POST
-        api_path: /v1/jira/release-status
-        mutation: false
-        params:
-          - name: project_key
-            type: str
-            required: false
-            label: Jira project key (default STL)
-          - name: releases
-            type: list
-            required: true
-            label: Release versions (comma-separated)
-          - name: limit
-            type: int
-            required: false
-            label: Max tickets per release (default 500)
-      - command: /jira-ticket-counts
-        description: Fast ticket count (no data fetched)
-        api_method: POST
-        api_path: /v1/jira/ticket-counts
-        mutation: false
-        params:
-          - name: project_key
-            type: str
-            required: false
-            label: Jira project key (default STL)
-          - name: issue_types
-            type: list
-            required: false
-            label: Issue types (comma-separated)
-          - name: statuses
-            type: list
-            required: false
-            label: Status filter (comma-separated)
-      - command: /jira-status-report
-        description: Full project status dashboard with bugs, activity, and breakdowns
-        api_method: POST
-        api_path: /v1/jira/status-report
-        mutation: false
-        params:
-          - name: project_key
-            type: str
-            required: false
-            label: Jira project key (default STL)
-          - name: recent_days
-            type: int
-            required: false
-            label: Days for recent activity (default 7)
-      - command: /ask
-        description: Ask Drucker a question in plain English (LLM-powered)
-        api_method: POST
-        api_path: /v1/nl/query
-        mutation: false
-        params:
-          - name: query
-            type: str
-            required: true
-            label: Question
-      # --- GitHub PR hygiene commands ---
-      - command: /pr-hygiene
-        description: Full PR hygiene scan — stale PRs and missing reviews
-        api_method: POST
-        api_path: /v1/github/pr-hygiene
-        mutation: false
-        params:
-          - name: repo
-            type: str
-            required: true
-            label: GitHub repo (owner/name)
-          - name: stale_days
-            type: int
-            required: false
-            label: Days threshold (default 5)
-      - command: /pr-stale
-        description: Find stale PRs with no activity
-        api_method: POST
-        api_path: /v1/github/pr-stale
-        mutation: false
-        params:
-          - name: repo
-            type: str
-            required: true
-            label: GitHub repo (owner/name)
-          - name: stale_days
-            type: int
-            required: false
-            label: Days threshold (default 5)
-      - command: /pr-reviews
-        description: Find PRs missing code review
-        api_method: POST
-        api_path: /v1/github/pr-reviews
-        mutation: false
-        params:
-          - name: repo
-            type: str
-            required: true
-            label: GitHub repo (owner/name)
-      - command: /pr-list
-        description: List open PRs for a repository
-        api_method: GET
-        api_path: /v1/github/prs
-      # --- GitHub extended hygiene commands ---
-      - command: /naming-compliance
-        description: Check branch/PR naming compliance against Jira conventions
-        api_method: POST
-        api_path: /v1/github/naming-compliance
-        mutation: false
-        params:
-          - name: repo
-            type: str
-            required: true
-            label: GitHub repo (owner/name)
-      - command: /merge-conflicts
-        description: Find open PRs with merge conflicts
-        api_method: POST
-        api_path: /v1/github/merge-conflicts
-        mutation: false
-        params:
-          - name: repo
-            type: str
-            required: true
-            label: GitHub repo (owner/name)
-      - command: /ci-failures
-        description: Find open PRs with failing CI checks
-        api_method: POST
-        api_path: /v1/github/ci-failures
-        mutation: false
-        params:
-          - name: repo
-            type: str
-            required: true
-            label: GitHub repo (owner/name)
-      - command: /stale-branches
-        description: Find stale branches with no activity and no open PRs
-        api_method: POST
-        api_path: /v1/github/stale-branches
-        mutation: false
-        params:
-          - name: repo
-            type: str
-            required: true
-            label: GitHub repo (owner/name)
-          - name: stale_days
-            type: int
-            required: false
-            label: Days threshold (default 30)
-      - command: /extended-hygiene
-        description: Run comprehensive extended hygiene analysis (all scan types)
-        api_method: POST
-        api_path: /v1/github/extended-hygiene
-        mutation: false
-        params:
-          - name: repo
-            type: str
-            required: true
-            label: GitHub repo (owner/name)
-          - name: stale_days
-            type: int
-            required: false
-            label: PR stale days (default 5)
-          - name: branch_stale_days
-            type: int
-            required: false
-            label: Branch stale days (default 30)
-      # --- PR reminder commands ---
-      - command: /pr-reminder-scan
-        description: Scan repos for stale PRs and update reminder state
-        api_method: POST
-        api_path: /v1/github/pr-reminders/scan
-        mutation: false
-      - command: /pr-reminder-process
-        description: Send due PR reminders via Teams DM
-        api_method: POST
-        api_path: /v1/github/pr-reminders/process
-        mutation: false
-      - command: /pr-reminders-active
-        description: List active PR reminders
-        api_method: GET
-        api_path: /v1/github/pr-reminders/active
-      - command: /pr-reminder-history
-        description: View reminder history for a PR
-        api_method: GET
-        api_path: /v1/github/pr-reminders/history
-      - command: /pr-reminder-snooze
-        description: Snooze a PR reminder for N days
-        api_method: POST
-        api_path: /v1/github/pr-reminders/snooze
-        mutation: true
-        params:
-          - name: repo
-            type: str
-            required: true
-            label: GitHub repo (owner/name)
-          - name: pr_number
-            type: int
-            required: true
-            label: PR number
-          - name: snooze_days
-            type: int
-            required: true
-            label: Days to snooze
-      - command: /pr-reminder-merge
-        description: Merge a PR on behalf of the user
-        api_method: POST
-        api_path: /v1/github/pr-reminders/merge
-        mutation: true
-        params:
-          - name: repo
-            type: str
-            required: true
-            label: GitHub repo (owner/name)
-          - name: pr_number
-            type: int
-            required: true
-            label: PR number
-          - name: merge_method
-            type: str
-            required: false
-            label: "Merge method: squash, merge, rebase (default squash)"
-    timeout_seconds: 30
-
-  - agent_id: gantt
-    display_name: Gantt
-    role: Project Planning
-    description: Planning snapshots and release-health monitoring for Jira-backed delivery work.
-    zone: planning_delivery
-    channel_name: agent-gantt
-    channel_id: ""
-    team_id: "19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2"
-    api_base_url: http://host.containers.internal:8202
-    approval_types: []
-    custom_commands:
-      - command: /planning-snapshot
-        description: Create a planning snapshot
-        api_method: POST
-        api_path: /v1/planning/snapshot
-        mutation: false
-        params:
-          - name: project_key
-            type: str
-            required: true
-            label: Jira project key
-      - command: /planning-snapshots
-        description: List stored planning snapshots
-        api_method: GET
-        api_path: /v1/planning/snapshots
-      - command: /release-monitor
-        description: Create a release monitor report
-        api_method: POST
-        api_path: /v1/release-monitor/run
-        mutation: false
-        params:
-          - name: project_key
-            type: str
-            required: true
-            label: Jira project key
-      - command: /release-survey
-        description: Create a release execution survey
-        api_method: POST
-        api_path: /v1/release-survey/run
-        mutation: false
-        params:
-          - name: project_key
-            type: str
-            required: true
-            label: Jira project key
-      - command: /release-report
-        description: Get a stored release monitor report
-        api_method: GET
-        api_path: /v1/release-monitor/report
-      - command: /release-reports
-        description: List stored release monitor reports
-        api_method: GET
-        api_path: /v1/release-monitor/reports
-      - command: /release-survey-report
-        description: Get a stored release survey
-        api_method: GET
-        api_path: /v1/release-survey/report
-      - command: /release-survey-reports
-        description: List stored release surveys
-        api_method: GET
-        api_path: /v1/release-survey/reports
-    timeout_seconds: 30
-
-  - agent_id: hemingway
-    display_name: Hemingway
-    role: Documentation
-    description: Source-grounded documentation generation, impact analysis, and review-gated publication
-    zone: intelligence_knowledge
-    channel_name: agent-hemingway
-    channel_id: "19:7210321d1f45408c94a82b089b543206@thread.tacv2"
-    team_id: "19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2"
-    api_base_url: http://host.containers.internal:8203
-    approval_types: []
-    custom_commands:
-      - command: /generate-doc
-        description: Generate a documentation record from source files
-        api_method: POST
-        api_path: /v1/docs/generate
-        mutation: true
-        params:
-          - name: doc_title
-            type: str
-            required: true
-            label: Document title
-          - name: doc_type
-            type: str
-            required: false
-            label: "Type: as_built, engineering_reference, how_to, user_guide, release_note_support (default engineering_reference)"
-          - name: project_key
-            type: str
-            required: false
-            label: Jira project key
-          - name: doc_summary
-            type: str
-            required: false
-            label: Brief summary of document
-          - name: source_paths
-            type: list
-            required: false
-            label: Source files (comma-separated)
-          - name: source_refs
-            type: list
-            required: false
-            label: Source references (comma-separated)
-          - name: evidence_paths
-            type: list
-            required: false
-            label: Evidence files (comma-separated)
-          - name: target_file
-            type: str
-            required: false
-            label: Output file path
-          - name: confluence_space
-            type: str
-            required: false
-            label: Confluence space ID
-          - name: confluence_parent_id
-            type: str
-            required: false
-            label: Confluence parent page ID
-      - command: /impact-detect
-        description: Analyze documentation impact of changes
-        api_method: POST
-        api_path: /v1/docs/impact
-        mutation: false
-        params:
-          - name: doc_title
-            type: str
-            required: true
-            label: Document title
-          - name: doc_type
-            type: str
-            required: false
-            label: Document type (default engineering_reference)
-          - name: source_paths
-            type: list
-            required: false
-            label: Source files (comma-separated)
-      - command: /doc-records
-        description: List stored documentation records
-        api_method: GET
-        api_path: /v1/docs/records
-      - command: /doc-record
-        description: Get a specific documentation record
-        api_method: GET
-        api_path: /v1/docs/record
-      - command: /publish-doc
-        description: Publish an approved documentation record
-        api_method: POST
-        api_path: /v1/docs/publish
-        mutation: true
-        params:
-          - name: doc_id
-            type: str
-            required: true
-            label: Documentation record ID to publish
-          - name: project_key
-            type: str
-            required: false
-            label: Jira project key
-      - command: /search-docs
-        description: Search Hemingway documentation records by query, project, type, or source
-        api_method: POST
-        api_path: /v1/docs/search
-        mutation: false
-        params:
-          - name: query
-            type: str
-            required: false
-            label: Search query text
-          - name: project_key
-            type: str
-            required: false
-            label: Filter by project key
-          - name: doc_type
-            type: str
-            required: false
-            label: Filter by doc type
-          - name: source_ref
-            type: str
-            required: false
-            label: Filter by source reference
-      - command: /pr-review
-        description: Analyze a PR and generate documentation
-        api_method: POST
-        api_path: /v1/docs/pr-review
-        mutation: true
-        params:
-          - name: repo
-            type: str
-            required: true
-            label: "Repository (owner/repo)"
-          - name: pr_number
-            type: int
-            required: true
-            label: "PR number"
-          - name: target_dir
-            type: str
-            required: false
-            label: "Target docs directory"
-      - command: /confluence-publish
-        description: Publish a markdown file to Confluence with diagram rendering
-        api_method: POST
-        api_path: /v1/docs/confluence/publish-page
-        mutation: true
-        params:
-          - name: title
-            type: str
-            required: true
-            label: Confluence page title
-          - name: input_file
-            type: str
-            required: true
-            label: Path to markdown file
-          - name: space
-            type: str
-            required: false
-            label: Confluence space ID
-          - name: parent_id
-            type: str
-            required: false
-            label: Parent page ID
-          - name: parent_url
-            type: str
-            required: false
-            label: Confluence parent page URL (alternative to space + parent_id)
-          - name: operation
-            type: str
-            required: false
-            label: "Operation: create, update, append, update_section (default create)"
-          - name: page_id_or_title
-            type: str
-            required: false
-            label: Existing page ID/title (for update/append)
-    timeout_seconds: 60
+- agent_id: shannon
+  display_name: Shannon
+  role: Communications
+  description: Single Teams bot and routing surface for the Cornelis agent workforce.
+  zone: service_infrastructure
+  channel_name: agent-shannon
+  channel_id: 19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2
+  team_id: 19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2
+  api_base_url: ''
+  approval_types: []
+  custom_commands:
+  - command: /stats
+    description: Shannon service status and throughput
+    api_method: GET
+    api_path: /v1/status/stats
+  - command: /busy
+    description: Current Shannon load summary
+    api_method: GET
+    api_path: /v1/status/load
+  - command: /work-today
+    description: Today's work summary for Shannon
+    api_method: GET
+    api_path: /v1/status/work-summary
+  - command: /token-status
+    description: Deterministic/token execution summary
+    api_method: GET
+    api_path: /v1/status/tokens
+  - command: /decision-tree
+    description: Recent routing and posting decisions
+    api_method: GET
+    api_path: /v1/status/decisions
+  - command: /why
+    description: Deep dive into a specific decision
+    api_method: GET
+    api_path: /v1/status/decisions/{record_id}
+  timeout_seconds: 15
+- agent_id: drucker
+  display_name: Drucker
+  role: Engineering Hygiene
+  description: "Deterministic engineering hygiene analysis \u2014 Jira ticket quality and GitHub PR lifecycle"
+  zone: service_infrastructure
+  channel_name: agent-drucker
+  channel_id: 19:966aaabccc2a4ecd879d427edc83aaf0@thread.tacv2
+  team_id: 19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2
+  api_base_url: http://host.containers.internal:8201
+  notifications_webhook_url: https://default4dbdb7da74ee4b458747ef5ce5ebe6.8a.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/7346f433283a433fb6a530451879227b/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=DX5rVpdRL5wpv_H9huN668nWIvrhGTWwe97q6NGpxh4
+  approval_types: []
+  custom_commands:
+  - command: /issue-check
+    description: Run intake validation for one Jira ticket
+    api_method: POST
+    api_path: /v1/hygiene/issue
+    mutation: false
+    params:
+    - name: project_key
+      type: str
+      required: true
+      label: Jira project key
+    - name: ticket_key
+      type: str
+      required: true
+      label: Jira ticket key
+    - name: stale_days
+      type: int
+      required: false
+      label: Days threshold (default 30)
+  - command: /intake-report
+    description: Run a recent-ticket intake report
+    api_method: POST
+    api_path: /v1/hygiene/intake
+    mutation: false
+    params:
+    - name: project_key
+      type: str
+      required: true
+      label: Jira project key
+    - name: stale_days
+      type: int
+      required: false
+      label: Days threshold (default 30)
+  - command: /hygiene-run
+    description: Run hygiene analysis
+    api_method: POST
+    api_path: /v1/hygiene/run
+    mutation: false
+    params:
+    - name: project_key
+      type: str
+      required: true
+      label: Jira project key
+    - name: stale_days
+      type: int
+      required: false
+      label: Days threshold (default 30)
+  - command: /hygiene-report
+    description: Get a stored report
+    api_method: GET
+    api_path: /v1/hygiene/report
+  - command: /hygiene-list
+    description: List stored reports
+    api_method: GET
+    api_path: /v1/hygiene/reports
+  - command: /bug-activity
+    description: Bug ticket activity today (opened, status changes, comments)
+    api_method: POST
+    api_path: /v1/activity/bugs
+    params:
+    - name: project_key
+      type: str
+      required: false
+      label: Jira project key (default STL)
+  - command: /jira-query
+    description: Run an ad-hoc JQL query against Jira
+    api_method: POST
+    api_path: /v1/jira/query
+    mutation: false
+    params:
+    - name: project_key
+      type: str
+      required: false
+      label: Jira project key (default STL)
+    - name: jql
+      type: str
+      required: true
+      label: JQL query string
+    - name: limit
+      type: int
+      required: false
+      label: Max tickets (default 100)
+  - command: /jira-tickets
+    description: Query tickets with structured filters (type, status, date)
+    api_method: POST
+    api_path: /v1/jira/tickets
+    mutation: false
+    params:
+    - name: project_key
+      type: str
+      required: false
+      label: Jira project key (default STL)
+    - name: issue_types
+      type: list
+      required: false
+      label: Issue types (comma-separated)
+    - name: statuses
+      type: list
+      required: false
+      label: Status filter (comma-separated)
+    - name: date_filter
+      type: str
+      required: false
+      label: Date range (today, week, month, year)
+    - name: limit
+      type: int
+      required: false
+      label: Max tickets (default 100)
+  - command: /jira-release-status
+    description: Status breakdown by release version
+    api_method: POST
+    api_path: /v1/jira/release-status
+    mutation: false
+    params:
+    - name: project_key
+      type: str
+      required: false
+      label: Jira project key (default STL)
+    - name: releases
+      type: list
+      required: true
+      label: Release versions (comma-separated)
+    - name: limit
+      type: int
+      required: false
+      label: Max tickets per release (default 500)
+  - command: /jira-ticket-counts
+    description: Fast ticket count (no data fetched)
+    api_method: POST
+    api_path: /v1/jira/ticket-counts
+    mutation: false
+    params:
+    - name: project_key
+      type: str
+      required: false
+      label: Jira project key (default STL)
+    - name: issue_types
+      type: list
+      required: false
+      label: Issue types (comma-separated)
+    - name: statuses
+      type: list
+      required: false
+      label: Status filter (comma-separated)
+  - command: /jira-status-report
+    description: Full project status dashboard with bugs, activity, and breakdowns
+    api_method: POST
+    api_path: /v1/jira/status-report
+    mutation: false
+    params:
+    - name: project_key
+      type: str
+      required: false
+      label: Jira project key (default STL)
+    - name: recent_days
+      type: int
+      required: false
+      label: Days for recent activity (default 7)
+  - command: /ask
+    description: Ask Drucker a question in plain English (LLM-powered)
+    api_method: POST
+    api_path: /v1/nl/query
+    mutation: false
+    params:
+    - name: query
+      type: str
+      required: true
+      label: Question
+  - command: /pr-hygiene
+    description: "Full PR hygiene scan \u2014 stale PRs and missing reviews"
+    api_method: POST
+    api_path: /v1/github/pr-hygiene
+    mutation: false
+    params:
+    - name: repo
+      type: str
+      required: true
+      label: GitHub repo (owner/name)
+    - name: stale_days
+      type: int
+      required: false
+      label: Days threshold (default 5)
+  - command: /pr-stale
+    description: Find stale PRs with no activity
+    api_method: POST
+    api_path: /v1/github/pr-stale
+    mutation: false
+    params:
+    - name: repo
+      type: str
+      required: true
+      label: GitHub repo (owner/name)
+    - name: stale_days
+      type: int
+      required: false
+      label: Days threshold (default 5)
+  - command: /pr-reviews
+    description: Find PRs missing code review
+    api_method: POST
+    api_path: /v1/github/pr-reviews
+    mutation: false
+    params:
+    - name: repo
+      type: str
+      required: true
+      label: GitHub repo (owner/name)
+  - command: /pr-list
+    description: List open PRs for a repository
+    api_method: GET
+    api_path: /v1/github/prs
+  - command: /naming-compliance
+    description: Check branch/PR naming compliance against Jira conventions
+    api_method: POST
+    api_path: /v1/github/naming-compliance
+    mutation: false
+    params:
+    - name: repo
+      type: str
+      required: true
+      label: GitHub repo (owner/name)
+  - command: /merge-conflicts
+    description: Find open PRs with merge conflicts
+    api_method: POST
+    api_path: /v1/github/merge-conflicts
+    mutation: false
+    params:
+    - name: repo
+      type: str
+      required: true
+      label: GitHub repo (owner/name)
+  - command: /ci-failures
+    description: Find open PRs with failing CI checks
+    api_method: POST
+    api_path: /v1/github/ci-failures
+    mutation: false
+    params:
+    - name: repo
+      type: str
+      required: true
+      label: GitHub repo (owner/name)
+  - command: /stale-branches
+    description: Find stale branches with no activity and no open PRs
+    api_method: POST
+    api_path: /v1/github/stale-branches
+    mutation: false
+    params:
+    - name: repo
+      type: str
+      required: true
+      label: GitHub repo (owner/name)
+    - name: stale_days
+      type: int
+      required: false
+      label: Days threshold (default 30)
+  - command: /extended-hygiene
+    description: Run comprehensive extended hygiene analysis (all scan types)
+    api_method: POST
+    api_path: /v1/github/extended-hygiene
+    mutation: false
+    params:
+    - name: repo
+      type: str
+      required: true
+      label: GitHub repo (owner/name)
+    - name: stale_days
+      type: int
+      required: false
+      label: PR stale days (default 5)
+    - name: branch_stale_days
+      type: int
+      required: false
+      label: Branch stale days (default 30)
+  - command: /pr-reminder-scan
+    description: Scan repos for stale PRs and update reminder state
+    api_method: POST
+    api_path: /v1/github/pr-reminders/scan
+    mutation: false
+  - command: /pr-reminder-process
+    description: Send due PR reminders via Teams DM
+    api_method: POST
+    api_path: /v1/github/pr-reminders/process
+    mutation: false
+  - command: /pr-reminders-active
+    description: List active PR reminders
+    api_method: GET
+    api_path: /v1/github/pr-reminders/active
+  - command: /pr-reminder-history
+    description: View reminder history for a PR
+    api_method: GET
+    api_path: /v1/github/pr-reminders/history
+  - command: /pr-reminder-snooze
+    description: Snooze a PR reminder for N days
+    api_method: POST
+    api_path: /v1/github/pr-reminders/snooze
+    mutation: true
+    params:
+    - name: repo
+      type: str
+      required: true
+      label: GitHub repo (owner/name)
+    - name: pr_number
+      type: int
+      required: true
+      label: PR number
+    - name: snooze_days
+      type: int
+      required: true
+      label: Days to snooze
+  - command: /pr-reminder-merge
+    description: Merge a PR on behalf of the user
+    api_method: POST
+    api_path: /v1/github/pr-reminders/merge
+    mutation: true
+    params:
+    - name: repo
+      type: str
+      required: true
+      label: GitHub repo (owner/name)
+    - name: pr_number
+      type: int
+      required: true
+      label: PR number
+    - name: merge_method
+      type: str
+      required: false
+      label: 'Merge method: squash, merge, rebase (default squash)'
+  timeout_seconds: 30
+- agent_id: gantt
+  display_name: Gantt
+  role: Project Planning
+  description: Planning snapshots and release-health monitoring for Jira-backed delivery work.
+  zone: planning_delivery
+  channel_name: agent-gantt
+  channel_id: ''
+  team_id: 19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2
+  api_base_url: http://host.containers.internal:8202
+  approval_types: []
+  custom_commands:
+  - command: /planning-snapshot
+    description: Create a planning snapshot
+    api_method: POST
+    api_path: /v1/planning/snapshot
+    mutation: false
+    params:
+    - name: project_key
+      type: str
+      required: true
+      label: Jira project key
+  - command: /planning-snapshots
+    description: List stored planning snapshots
+    api_method: GET
+    api_path: /v1/planning/snapshots
+  - command: /release-monitor
+    description: Create a release monitor report
+    api_method: POST
+    api_path: /v1/release-monitor/run
+    mutation: false
+    params:
+    - name: project_key
+      type: str
+      required: true
+      label: Jira project key
+  - command: /release-survey
+    description: Create a release execution survey
+    api_method: POST
+    api_path: /v1/release-survey/run
+    mutation: false
+    params:
+    - name: project_key
+      type: str
+      required: true
+      label: Jira project key
+  - command: /release-report
+    description: Get a stored release monitor report
+    api_method: GET
+    api_path: /v1/release-monitor/report
+  - command: /release-reports
+    description: List stored release monitor reports
+    api_method: GET
+    api_path: /v1/release-monitor/reports
+  - command: /release-survey-report
+    description: Get a stored release survey
+    api_method: GET
+    api_path: /v1/release-survey/report
+  - command: /release-survey-reports
+    description: List stored release surveys
+    api_method: GET
+    api_path: /v1/release-survey/reports
+  timeout_seconds: 30
+- agent_id: hemingway
+  display_name: Hemingway
+  role: Documentation
+  description: Source-grounded documentation generation, impact analysis, and review-gated publication
+  zone: intelligence_knowledge
+  channel_name: agent-hemingway
+  channel_id: 19:7210321d1f45408c94a82b089b543206@thread.tacv2
+  team_id: 19:z9bBTJk_jgiLI4kxvTIRgTuqqfBRZGvjCz7jCbUle481@thread.tacv2
+  api_base_url: http://host.containers.internal:8203
+  approval_types: []
+  custom_commands:
+  - command: /generate-doc
+    description: Generate a documentation record from source files
+    api_method: POST
+    api_path: /v1/docs/generate
+    mutation: true
+    params:
+    - name: doc_title
+      type: str
+      required: true
+      label: Document title
+    - name: doc_type
+      type: str
+      required: false
+      label: 'Type: as_built, engineering_reference, how_to, user_guide, release_note_support (default engineering_reference)'
+    - name: project_key
+      type: str
+      required: false
+      label: Jira project key
+    - name: doc_summary
+      type: str
+      required: false
+      label: Brief summary of document
+    - name: source_paths
+      type: list
+      required: false
+      label: Source files (comma-separated)
+    - name: source_refs
+      type: list
+      required: false
+      label: Source references (comma-separated)
+    - name: evidence_paths
+      type: list
+      required: false
+      label: Evidence files (comma-separated)
+    - name: target_file
+      type: str
+      required: false
+      label: Output file path
+    - name: confluence_space
+      type: str
+      required: false
+      label: Confluence space ID
+    - name: confluence_parent_id
+      type: str
+      required: false
+      label: Confluence parent page ID
+  - command: /impact-detect
+    description: Analyze documentation impact of changes
+    api_method: POST
+    api_path: /v1/docs/impact
+    mutation: false
+    params:
+    - name: doc_title
+      type: str
+      required: true
+      label: Document title
+    - name: doc_type
+      type: str
+      required: false
+      label: Document type (default engineering_reference)
+    - name: source_paths
+      type: list
+      required: false
+      label: Source files (comma-separated)
+  - command: /doc-records
+    description: List stored documentation records
+    api_method: GET
+    api_path: /v1/docs/records
+  - command: /doc-record
+    description: Get a specific documentation record
+    api_method: GET
+    api_path: /v1/docs/record
+  - command: /publish-doc
+    description: Publish an approved documentation record
+    api_method: POST
+    api_path: /v1/docs/publish
+    mutation: true
+    params:
+    - name: doc_id
+      type: str
+      required: true
+      label: Documentation record ID to publish
+    - name: project_key
+      type: str
+      required: false
+      label: Jira project key
+  - command: /search-docs
+    description: Search Hemingway documentation records by query, project, type, or source
+    api_method: POST
+    api_path: /v1/docs/search
+    mutation: false
+    params:
+    - name: query
+      type: str
+      required: false
+      label: Search query text
+    - name: project_key
+      type: str
+      required: false
+      label: Filter by project key
+    - name: doc_type
+      type: str
+      required: false
+      label: Filter by doc type
+    - name: source_ref
+      type: str
+      required: false
+      label: Filter by source reference
+  - command: /find
+    description: Search documentation -- text, user, PR number, or doc type
+    api_method: POST
+    api_path: /v1/docs/find
+    mutation: false
+    params:
+    - name: text
+      type: str
+      required: true
+      label: Search text
+  - command: /pr-review
+    description: Analyze a PR and generate documentation
+    api_method: POST
+    api_path: /v1/docs/pr-review
+    mutation: true
+    params:
+    - name: repo
+      type: str
+      required: true
+      label: Repository (owner/repo)
+    - name: pr_number
+      type: int
+      required: true
+      label: PR number
+    - name: target_dir
+      type: str
+      required: false
+      label: Target docs directory
+  - command: /confluence-publish
+    description: Publish a markdown file to Confluence with diagram rendering
+    api_method: POST
+    api_path: /v1/docs/confluence/publish-page
+    mutation: true
+    params:
+    - name: title
+      type: str
+      required: true
+      label: Confluence page title
+    - name: input_file
+      type: str
+      required: true
+      label: Path to markdown file
+    - name: space
+      type: str
+      required: false
+      label: Confluence space ID
+    - name: parent_id
+      type: str
+      required: false
+      label: Parent page ID
+    - name: parent_url
+      type: str
+      required: false
+      label: Confluence parent page URL (alternative to space + parent_id)
+    - name: operation
+      type: str
+      required: false
+      label: 'Operation: create, update, append, update_section (default create)'
+    - name: page_id_or_title
+      type: str
+      required: false
+      label: Existing page ID/title (for update/append)
+  - command: /reindex
+    description: Re-index existing docs from a GitHub repo
+    api_method: POST
+    api_path: /v1/docs/reindex
+    mutation: true
+    params:
+    - name: repo
+      type: str
+      required: true
+      label: GitHub repo (owner/name)
+    - name: docs_dir
+      type: str
+      required: false
+      label: Docs directory (default docs)
+    - name: branch
+      type: str
+      required: false
+      label: Branch (default main)
+  - command: /voice-config
+    description: View or change documentation voice/tone settings
+    api_method: GET
+    api_path: /v1/config/voice
+  - command: /ask
+    description: "Natural language query \u2014 search docs, generate docs, check impact"
+    api_method: POST
+    api_path: /v1/nl/query
+    params:
+    - name: query
+      type: str
+      required: true
+      label: Natural language query
+  timeout_seconds: 60
+  notifications_webhook_url: https://default4dbdb7da74ee4b458747ef5ce5ebe6.8a.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/051941a064934a7983337addd4bd8a2c/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=CzuSh58kSVUiAU6V0j8y2NDNClUln2XSUP_O2UTfv0M

@@ -19,7 +19,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from shannon.models import AuditRecord, ConversationReference
+from shannon.models import AuditRecord, ConversationReference, ConversationState
 
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
@@ -183,6 +183,36 @@ class ShannonStateStore:
             'last_activity_at': last_activity_at,
             'event_counts': dict(event_counter),
         }
+
+    # ── Conversation state (ephemeral, in-memory) ──────────────────────────
+
+    _conversation_states: Dict[str, ConversationState] = {}
+
+    def save_conversation_state(self, state: ConversationState) -> None:
+        """Store a pending conversation by user_id + agent_id composite key."""
+        key = f"{state.user_id}:{state.agent_id}"
+        ShannonStateStore._conversation_states[key] = state
+        log.debug(f"Saved conversation state: {key} command={state.command}")
+
+    def get_conversation_state(self, user_id: str, agent_id: str) -> Optional[ConversationState]:
+        """Retrieve a pending conversation if one exists for this user+agent."""
+        key = f"{user_id}:{agent_id}"
+        return ShannonStateStore._conversation_states.get(key)
+
+    def clear_conversation_state(self, user_id: str, agent_id: str) -> None:
+        """Remove conversation state (command completed or cancelled)."""
+        key = f"{user_id}:{agent_id}"
+        removed = ShannonStateStore._conversation_states.pop(key, None)
+        if removed:
+            log.debug(f"Cleared conversation state: {key}")
+
+    def clear_all_conversation_states_for_user(self, user_id: str) -> None:
+        """Clear all pending conversations for a user (e.g. when they switch commands)."""
+        to_remove = [k for k in ShannonStateStore._conversation_states if k.startswith(f"{user_id}:")]
+        for k in to_remove:
+            del ShannonStateStore._conversation_states[k]
+        if to_remove:
+            log.debug(f"Cleared {len(to_remove)} conversation states for user {user_id}")
 
     def _load_references(self) -> Dict[str, Dict[str, Any]]:
         if not self.references_path.exists():

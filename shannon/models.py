@@ -203,3 +203,22 @@ def normalize_command_text(text: str) -> str:
     clean = clean.replace('&nbsp;', ' ')
     clean = re.sub(r'\s+', ' ', clean).strip()
     return clean
+
+
+@dataclass
+class ConversationState:
+    """
+    Tracks an in-progress Q&A conversation for a command with missing parameters.
+    Ephemeral — stored in-memory only.
+    """
+    state_id: str                          # unique ID
+    user_id: str                           # Teams user ID (aadObjectId or from.id)
+    agent_id: str                          # hemingway, drucker, etc.
+    command: str                           # /generate-doc, /pr-review, etc.
+    collected_params: Dict[str, Any]       # params already provided
+    remaining_params: List[Dict[str, Any]] # param defs still needed
+    created_at: str                        # ISO timestamp
+    channel_id: str = ""                   # Teams channel context
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
