@@ -549,6 +549,54 @@ def build_pr_list_card(data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
+def build_todays_prs_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for today's PRs result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    prs = data.get('prs', [])
+    state = data.get('state', 'all')
+    target_date = data.get('target_date', 'today')
+
+    # Group by state for the summary
+    opened = [p for p in prs if p.get('state') == 'open']
+    merged = [p for p in prs if p.get('merged_at')]
+    closed = [p for p in prs if p.get('state') == 'closed' and not p.get('merged_at')]
+
+    facts = {
+        'Repository': repo,
+        'Filter': state,
+        'Date': str(target_date),
+        'Total': len(prs),
+    }
+    if state == 'all':
+        facts['Opened'] = len(opened)
+        facts['Merged'] = len(merged)
+        facts['Closed'] = len(closed)
+
+    body_lines: list[str] = []
+    for pr in prs[:12]:
+        draft = ' [DRAFT]' if pr.get('draft', False) else ''
+        merged_tag = ' ✓merged' if pr.get('merged_at') else ''
+        closed_tag = ' ✗closed' if pr.get('state') == 'closed' and not pr.get('merged_at') else ''
+        body_lines.append(
+            f'• #{pr.get("number", "")} '
+            f'{pr.get("title", "")}{draft}{merged_tag}{closed_tag} '
+            f'({pr.get("author", "")})'
+        )
+    if len(prs) > 12:
+        body_lines.append(f'  ...and {len(prs) - 12} more')
+
+    if not body_lines:
+        body_lines.append(f'No PRs found for {state} on {target_date}.')
+
+    return build_fact_card(
+        title=f"Today's PRs — {repo}",
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
 def build_naming_compliance_card(data: Dict[str, Any]) -> Dict[str, Any]:
     '''
     Build an Adaptive Card for a naming compliance scan result.

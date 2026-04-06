@@ -56,6 +56,7 @@ from shannon.cards import (
     build_pr_reviews_card,
     build_pr_stale_card,
     build_stale_branches_card,
+    build_todays_prs_card,
 )
 from shannon.models import AuditRecord, ConversationReference, ConversationState, ShannonResponse, normalize_command_text
 from shannon.poster import BasePoster, WorkflowsPoster, build_poster_from_env
@@ -490,6 +491,7 @@ class ShannonService:
             '/ci-failures': build_ci_failures_card,
             '/stale-branches': build_stale_branches_card,
             '/extended-hygiene': build_pr_hygiene_card,
+            '/todays-prs': build_todays_prs_card,
             '/jira-query': build_jira_query_card,
             '/jira-tickets': build_jira_query_card,
             '/jira-release-status': build_jira_release_status_card,

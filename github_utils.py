@@ -981,6 +981,80 @@ def list_pull_requests(repo_name, state='open', sort='created', direction='desc'
         raise GitHubPRError(f'Failed to list PRs for {repo_name}: {e}')
 
 
+def list_todays_prs(repo_name, state='all', date_field='created', target_date=None):
+    '''
+    List pull requests matching a date filter.
+
+    Fetches PRs and filters to those where the specified date field matches the
+    target date. Useful for "show me PRs opened/updated/merged/closed today".
+
+    Input:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        state: PR state — 'opened', 'updated', 'merged', 'closed', or 'all'.
+                'opened' maps to GitHub API state='all' with date_field='created'.
+                'merged' maps to state='closed' with date_field='merged'.
+                'closed' maps to state='closed' with date_field='closed'.
+                'updated' maps to state='all' with date_field='updated'.
+                'all' returns all PRs matching the target date on any date field.
+        date_field: Which timestamp to filter on — 'created', 'updated',
+                    'merged', or 'closed'. Overridden when state implies a
+                    specific date field (e.g. state='merged' forces date_field='merged').
+        target_date: ISO date string (YYYY-MM-DD) or None for today (UTC).
+
+    Output:
+        List of normalized PR dicts matching the filter.
+
+    Raises:
+        GitHubRepoError: If the repository cannot be found.
+    '''
+    log.debug(f'Entering list_todays_prs(repo_name={repo_name}, state={state}, '
+              f'date_field={date_field}, target_date={target_date})')
+
+    # Resolve target date
+    if target_date:
+        target = datetime.fromisoformat(target_date).date()
+    else:
+        target = datetime.now(timezone.utc).date()
+
+    # Map user-friendly state to GitHub API state + date_field
+    state_map = {
+        'opened': ('all', 'created'),
+        'updated': ('all', 'updated'),
+        'merged': ('closed', 'merged'),
+        'closed': ('closed', 'closed'),
+        'all': ('all', date_field),
+    }
+    api_state, effective_date_field = state_map.get(state, ('all', date_field))
+
+    # Fetch PRs sorted by the effective date field (or 'updated' as fallback)
+    sort_field = effective_date_field if effective_date_field in ('created', 'updated') else 'updated'
+    prs = list_pull_requests(
+        repo_name,
+        state=api_state,
+        sort=sort_field,
+        direction='desc',
+        limit=500,
+    )
+
+    # Post-filter by date
+    date_key = f'{effective_date_field}_at'
+    filtered = []
+    for pr in prs:
+        date_value = pr.get(date_key)
+        if not date_value:
+            continue
+        try:
+            pr_date = datetime.fromisoformat(date_value.replace('Z', '+00:00')).date()
+        except (ValueError, AttributeError):
+            continue
+        if pr_date == target:
+            filtered.append(pr)
+
+    log.info(f'list_todays_prs: {len(filtered)} PRs for {repo_name} '
+             f'(state={state}, date_field={effective_date_field}, date={target})')
+    return filtered
+
+
 def get_pull_request(repo_name, pr_number):
     '''
     Get a single pull request with full detail.

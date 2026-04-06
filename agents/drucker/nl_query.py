@@ -113,6 +113,32 @@ TOOL_SCHEMAS = [
             },
         },
     },
+    {
+        'type': 'function',
+        'function': {
+            'name': 'github_prs',
+            'description': 'Query GitHub pull requests. Use when the user asks about PRs, pull requests, code reviews, or merges. Supports filtering by state (opened/updated/merged/closed) and date.',
+            'parameters': {
+                'type': 'object',
+                'properties': {
+                    'repo': {
+                        'type': 'string',
+                        'description': 'Full repository name (owner/repo). If user says just a repo name, prepend "cornelisnetworks/". Example: "cornelisnetworks/opa-psm2"',
+                    },
+                    'state': {
+                        'type': 'string',
+                        'enum': ['opened', 'updated', 'merged', 'closed', 'all'],
+                        'description': 'PR activity filter. "opened"=created, "updated"=any activity, "merged"=merged, "closed"=closed without merge, "all"=any state. Default: "all"',
+                    },
+                    'target_date': {
+                        'type': 'string',
+                        'description': 'ISO date (YYYY-MM-DD) to filter on. Use current date for "today". Omit for no date filter (returns all matching PRs).',
+                    },
+                },
+                'required': ['repo'],
+            },
+        },
+    },
 ]
 
 
@@ -120,10 +146,10 @@ TOOL_SCHEMAS = [
 # System prompt for the LLM query translator
 # ---------------------------------------------------------------------------
 
-NL_SYSTEM_PROMPT = '''You are a Drucker query assistant for Cornelis Networks Jira projects.
-You translate plain English questions into structured tool calls.
+NL_SYSTEM_PROMPT = '''You are a Drucker query assistant for Cornelis Networks.
+You translate plain English questions into structured tool calls for both Jira and GitHub.
 
-CONVENTIONS:
+JIRA CONVENTIONS:
 - Default project: STL
 - Jira fix versions use format: "12.2.0.x", "12.3.0.x", "14.0.0.x"
   - User says "12.2" → use "12.2.0.x"
@@ -134,11 +160,18 @@ CONVENTIONS:
 - JQL date functions: updated >= -24h, created >= -7d, updated >= startOfWeek()
 - JQL ORDER BY: updated DESC, created DESC, priority ASC
 
+GITHUB CONVENTIONS:
+- Default org: cornelisnetworks
+- If user says a repo name without org, prepend "cornelisnetworks/"
+- Common repos: ifs-all, opa-psm2, opa-fm, libfabric, opa-ff, cn-ai-tools
+- PR states: opened (=created), updated (=any activity), merged, closed, all
+- For "today" questions, use current date in YYYY-MM-DD format as target_date
+- For "this week" questions, use the Monday of the current week as target_date
+
 TOOL SELECTION:
-- Specific time windows (last 24h, since Monday) with type/status filters → jira_query with JQL
-- Structured filters without custom time → jira_tickets
-- Release/version breakdown → jira_release_status
-- "How many" / count questions → jira_ticket_counts
+- Jira ticket questions → jira_query, jira_tickets, jira_release_status, jira_ticket_counts, jira_status_report
+- GitHub PR questions → github_prs
+- "PRs created today", "merged PRs", "show me pull requests" → github_prs
 - "Status report" / "how is the project" → jira_status_report
 
 Always call exactly one tool per query.'''
@@ -200,12 +233,58 @@ def _exec_jira_status_report(args: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
+def _exec_github_prs(args: Dict[str, Any]) -> Dict[str, Any]:
+    '''Execute a GitHub PR query using github_utils.'''
+    import github_utils
+
+    repo = args['repo']
+    state = args.get('state', 'all')
+    target_date = args.get('target_date')
+
+    if target_date:
+        # Date-filtered query
+        prs = github_utils.list_todays_prs(
+            repo,
+            state=state,
+            target_date=target_date,
+        )
+    else:
+        # No date filter — map state to GitHub API state
+        api_state_map = {
+            'opened': 'open',
+            'updated': 'all',
+            'merged': 'closed',
+            'closed': 'closed',
+            'all': 'all',
+        }
+        api_state = api_state_map.get(state, 'all')
+        prs = github_utils.list_pull_requests(
+            repo,
+            state=api_state,
+            limit=100,
+        )
+        # Post-filter merged if needed
+        if state == 'merged':
+            prs = [p for p in prs if p.get('merged_at')]
+        elif state == 'closed':
+            prs = [p for p in prs if not p.get('merged_at')]
+
+    return {
+        'repo': repo,
+        'state': state,
+        'target_date': target_date or 'no date filter',
+        'prs': prs,
+        'total': len(prs),
+    }
+
+
 TOOL_EXECUTORS = {
     'jira_query': _exec_jira_query,
     'jira_tickets': _exec_jira_tickets,
     'jira_release_status': _exec_jira_release_status,
     'jira_ticket_counts': _exec_jira_ticket_counts,
     'jira_status_report': _exec_jira_status_report,
+    'github_prs': _exec_github_prs,
 }
 
 

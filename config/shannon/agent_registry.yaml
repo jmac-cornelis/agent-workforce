@@ -318,6 +318,24 @@ agents:
       type: int
       required: false
       label: Branch stale days (default 30)
+  - command: /todays-prs
+    description: List PRs opened, updated, merged, or closed today
+    api_method: POST
+    api_path: /v1/github/todays-prs
+    mutation: false
+    params:
+    - name: repo
+      type: str
+      required: true
+      label: GitHub repo (owner/name)
+    - name: state
+      type: str
+      required: false
+      label: Filter (opened, updated, merged, closed, all) default all
+    - name: target_date
+      type: str
+      required: false
+      label: Date (YYYY-MM-DD, default today)
   - command: /pr-reminder-scan
     description: Scan repos for stale PRs and update reminder state
     api_method: POST

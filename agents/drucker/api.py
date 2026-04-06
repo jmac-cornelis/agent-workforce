@@ -105,6 +105,12 @@ class StaleBranchesRequest(BaseModel):
     stale_days: int = 30
 
 
+class TodaysPRsRequest(BaseModel):
+    repo: str
+    state: str = 'all'
+    target_date: Optional[str] = None
+
+
 class ExtendedHygieneRequest(BaseModel):
     repo: str
     stale_days: int = 5
@@ -225,6 +231,7 @@ def create_app() -> FastAPI:
                 {'method': 'POST', 'path': '/v1/github/ci-failures', 'description': 'Find PRs with failing CI'},
                 {'method': 'POST', 'path': '/v1/github/stale-branches', 'description': 'Find stale branches'},
                 {'method': 'POST', 'path': '/v1/github/extended-hygiene', 'description': 'Comprehensive hygiene scan'},
+                {'method': 'POST', 'path': '/v1/github/todays-prs', 'description': 'List PRs by date (opened/updated/merged/closed today)'},
                 {'method': 'POST', 'path': '/v1/poller/tick', 'description': 'Scheduled poller entrypoint'},
                 {'method': 'POST', 'path': '/v1/github/pr-reminders/scan', 'description': 'Scan repos and track open PRs'},
                 {'method': 'POST', 'path': '/v1/github/pr-reminders/process', 'description': 'Send due PR reminder DMs'},
@@ -255,6 +262,7 @@ def create_app() -> FastAPI:
                 {'command': '/ci-failures', 'description': 'Find PRs with failing CI checks'},
                 {'command': '/stale-branches', 'description': 'Find stale branches'},
                 {'command': '/extended-hygiene', 'description': 'Run comprehensive extended hygiene analysis'},
+                {'command': '/todays-prs', 'description': 'List PRs opened/updated/merged/closed today'},
                 {'command': '/pr-reminder-scan', 'description': 'Scan repos and schedule PR reminders'},
                 {'command': '/pr-reminder-process', 'description': 'Send due PR reminder DMs'},
                 {'command': '/pr-reminder-active', 'description': 'List active PR reminders'},
@@ -692,6 +700,31 @@ def create_app() -> FastAPI:
             return {'ok': True, 'data': report}
         except Exception as e:
             log.error(f'GitHub extended hygiene scan failed: {e}')
+            activity.record('github', is_error=True)
+            return {'ok': False, 'error': str(e)}
+
+    @app.post('/v1/github/todays-prs')
+    def github_todays_prs(body: TodaysPRsRequest) -> Dict[str, Any]:
+        try:
+            import github_utils
+            prs = github_utils.list_todays_prs(
+                body.repo,
+                state=body.state,
+                target_date=body.target_date,
+            )
+            activity.record('github')
+            return {
+                'ok': True,
+                'data': {
+                    'repo': body.repo,
+                    'state': body.state,
+                    'target_date': body.target_date or 'today',
+                    'prs': prs,
+                    'total': len(prs),
+                },
+            }
+        except Exception as e:
+            log.error(f'GitHub todays PRs failed: {e}')
             activity.record('github', is_error=True)
             return {'ok': False, 'error': str(e)}
 
