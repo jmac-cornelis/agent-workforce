@@ -2,358 +2,367 @@
 
 ```yaml
 ---
-title: "As-Built: Config"
-date: "2026-04-03"
+title: "As-Built: Config Module"
+date: "2026-04-06"
 status: "draft"
 ---
 ```
 
-# Config — Design Reference
+## Module Overview
 
-## 1. Module Overview
+The `config` module provides centralized configuration management for the Cornelis Agent Pipeline. It handles environment variable loading from credential-domain segregated files, application settings management, Jira actor identity resolution, and cross-platform identity mapping for notification routing. The module implements a least-privilege credential model where each agent container mounts only the environment files it needs, and supports both Docker Compose deployments and local development workflows.
 
-The `config` module is the centralized configuration backbone for the Cornelis Agent Pipeline. It provides three core capabilities: (1) a multi-strategy environment variable loader (`env_loader.py`) that supports credential-domain segregated `.env` files for Docker Compose parity and falls back to a single root `.env` for local development; (2) a typed application settings dataclass (`settings.py`) that hydrates from environment variables and covers Jira, LLM providers, MCP, web search, agent tuning, and state persistence; and (3) a Jira actor identity system (`jira_identity.py`) that resolves credential profiles for three actor modes — `requester`, `service_account`, and `draft_only` — with legacy fallback control. The module also houses YAML policy files governing Jira actor identity selection, a GitHub-to-Teams identity map, an agent registry for the Shannon communications bot, a Teams app manifest template, and a library of Markdown prompt templates that define the system prompts for the agent workforce's specialized sub-agents (research, hardware analysis, scoping, planning, review, and vision).
+## What Changed
 
-## 2. What Changed
+**Before:** The module used a single monolithic `.env` file for all credentials, with basic environment loading via `python-dotenv`.
 
-- **Before:** PR reminder DMs from Drucker had no way to resolve a GitHub login to a Microsoft Teams user for direct messaging.
-- **After:** A new file `config/identity_map.yaml` provides a declarative GitHub-login-to-Teams-email mapping. Each entry contains a `name` and `teams_email` keyed by GitHub login.
-- **Impact:** The Drucker agent's PR reminder subsystem (commands `/pr-reminder-scan`, `/pr-reminder-process`) can now look up the Teams identity for a GitHub PR author and send targeted DMs via the Graph API. Any agent or service that needs cross-platform identity resolution can consume this file. New team members must be added manually.
+**After:** The module now implements credential-domain segregation with separate `.env` files (`shared.env`, `jira.env`, `llm.env`, `github.env`, `teams.env`) that are selectively mounted per agent. It includes sophisticated Jira actor identity resolution supporting three modes (`requester`, `service_account`, `draft_only`) with legacy fallback controls, and a cross-platform identity map that unifies GitHub, Jira, Teams, and email identities for notification routing.
 
-## 3. Component Diagram
+**Impact:** All agents now consume credentials via domain-specific env files. The `jira_utils` module and all Jira-interacting agents must use `get_jira_credential_profile()` to resolve actor-specific credentials. The notification system (Shannon, Drucker PR reminders) uses `identity_map.yaml` to route messages across platforms.
 
-```mermaid
-graph TD
-    A["config/__init__.py<br/>(Public API)"] --> B["config/env_loader.py<br/>(Env Loading & Dry-Run)"]
-    A --> C["config/settings.py<br/>(Settings Dataclass)"]
-    C --> B
-    D["config/jira_identity.py<br/>(Jira Credential Profiles)"] --> B
-    E["config/env/*.env<br/>(Credential-Domain Env Files)"]
-    B --> E
-    F["config/jira_actor_identity_policy.yaml<br/>(Actor Policy Rules)"]
-    G["config/identity_map.yaml<br/>(GitHub→Teams Map)"]
-    H["config/prompts/*.md<br/>(Agent System Prompts)"]
-    I["config/shannon/agent_registry.yaml<br/>(Agent Registry)"]
-    J["config/shannon/teams-app-manifest.template.json<br/>(Teams App Manifest)"]
-    K["config/claude_desktop_config.example.json<br/>(MCP Example Config)"]
-```
-
-## 4. Key Flows
-
-### Flow 1: Environment Variable Loading
-
-The `load_env()` function implements a three-tier resolution strategy. An explicit path wins outright; otherwise it searches for the `config/env/` directory by walking up from CWD (anchored by `pyproject.toml`), loading domain files in a fixed order; finally it falls back to a root `.env`.
+## Component Diagram
 
 ```mermaid
-sequenceDiagram
-    participant Caller
-    participant load_env as load_env()
-    participant _find_env_dir as _find_env_dir()
-    participant dotenv as python-dotenv
-
-    Caller->>load_env: load_env(env_path=None)
-    load_env->>_find_env_dir: locate config/env/
-    _find_env_dir-->>load_env: Path or None
-
-    alt config/env/ found
-        loop each file in _ENV_FILE_ORDER
-            load_env->>dotenv: load_dotenv(filepath)
-        end
-    else fallback
-        load_env->>dotenv: load_dotenv(root .env)
+graph TB
+    subgraph "Config Module"
+        EnvLoader[env_loader.py]
+        Settings[settings.py]
+        JiraIdentity[jira_identity.py]
+        IdentityMap[identity_map.yaml]
+        JiraActorPolicy[jira_actor_identity_policy.yaml]
+        EnvFiles[config/env/*.env]
     end
-    load_env-->>Caller: list of loaded file paths
+    
+    EnvLoader -->|loads| EnvFiles
+    Settings -->|uses| EnvLoader
+    JiraIdentity -->|uses| EnvLoader
+    JiraIdentity -->|enforces| JiraActorPolicy
+    
+    Agents[Agent Containers] -->|mount| EnvFiles
+    Agents -->|import| Settings
+    Agents -->|import| JiraIdentity
+    NotificationRouter[NotificationRouter] -->|reads| IdentityMap
 ```
 
-The load order is defined by the constant `_ENV_FILE_ORDER` in `config/env_loader.py`:
+## Key Flows
 
-```python
-_ENV_FILE_ORDER = [
-    'shared.env',
-    'jira.env',
-    'llm.env',
-    'github.env',
-    'teams.env',
-]
-```
-
-This mirrors the Docker Compose `env_file` stacking: shared defaults load first, then credential-domain files override if there is overlap.
-
-### Flow 2: Jira Credential Profile Resolution
-
-`get_jira_credential_profile()` in `config/jira_identity.py` resolves credentials for one of three actor modes. The `draft_only` mode reuses requester credentials but annotates the profile for read-only/preview use.
+### Flow 1: Environment Loading (Credential-Domain Segregation)
 
 ```mermaid
 sequenceDiagram
     participant Agent
-    participant get_jira_credential_profile as get_jira_credential_profile()
-    participant _resolve_profile as _resolve_profile()
-    participant os as os.getenv()
-
-    Agent->>get_jira_credential_profile: actor_mode="service_account"
-    get_jira_credential_profile->>_resolve_profile: (SERVICE_ACCOUNT, JIRA_SERVICE_EMAIL, JIRA_SERVICE_API_TOKEN)
-    _resolve_profile->>os: getenv(JIRA_SERVICE_EMAIL)
-    _resolve_profile->>os: getenv(JIRA_SERVICE_API_TOKEN)
-
-    alt explicit vars set
-        _resolve_profile-->>get_jira_credential_profile: JiraCredentialProfile(source=explicit)
-    else legacy fallback enabled
-        _resolve_profile->>os: getenv(JIRA_EMAIL), getenv(JIRA_API_TOKEN)
-        _resolve_profile-->>get_jira_credential_profile: JiraCredentialProfile(source=legacy)
-    else legacy fallback disabled
-        _resolve_profile-->>get_jira_credential_profile: JiraCredentialProfile(email=None)
+    participant EnvLoader
+    participant FileSystem
+    participant ProcessEnv
+    
+    Agent->>EnvLoader: load_env()
+    EnvLoader->>FileSystem: _find_env_dir()
+    FileSystem-->>EnvLoader: config/env/
+    
+    loop For each domain file
+        EnvLoader->>FileSystem: load shared.env
+        EnvLoader->>FileSystem: load jira.env
+        EnvLoader->>FileSystem: load llm.env
+        EnvLoader->>FileSystem: load github.env
+        EnvLoader->>FileSystem: load teams.env
     end
-    get_jira_credential_profile-->>Agent: JiraCredentialProfile
+    
+    EnvLoader->>ProcessEnv: load_dotenv(override=False)
+    ProcessEnv-->>EnvLoader: vars loaded
+    EnvLoader-->>Agent: List[loaded_files]
 ```
 
-The legacy fallback is controlled by the `JIRA_ENABLE_LEGACY_FALLBACK` environment variable, parsed by `is_legacy_fallback_enabled()`:
+The `load_env()` function walks up from the current working directory to find `config/env/`, then loads domain-specific `.env` files in canonical order (`shared.env` first, then credential domains). If no domain files are found, it falls back to a single `.env` at the repository root. Process environment variables always win unless `override=True` is passed.
 
-```python
-def is_legacy_fallback_enabled() -> bool:
-    return _env_flag_enabled('JIRA_ENABLE_LEGACY_FALLBACK', default=True)
-```
-
-### Flow 3: Settings Initialization and Validation
-
-`get_settings()` is a lazy singleton that creates a `Settings` instance from environment variables on first access. The `Settings.from_env()` classmethod calls `load_env()` at module import time, then reads every setting from `os.getenv()`.
+### Flow 2: Jira Actor Identity Resolution
 
 ```mermaid
 sequenceDiagram
-    participant Consumer
-    participant get_settings as get_settings()
-    participant Settings as Settings.from_env()
-    participant load_env as load_env()
-    participant validate as Settings.validate()
-
-    Consumer->>get_settings: get_settings()
-    alt _settings is None
-        get_settings->>Settings: from_env()
-        Note over Settings: load_env() already called at module level
-        Settings->>Settings: read os.getenv() for all fields
-        Settings-->>get_settings: Settings instance
+    participant Agent
+    participant JiraIdentity
+    participant EnvVars
+    participant JiraUtils
+    
+    Agent->>JiraIdentity: get_jira_credential_profile(actor_mode="service_account")
+    JiraIdentity->>JiraIdentity: normalize_actor_mode()
+    
+    alt Service Account
+        JiraIdentity->>EnvVars: JIRA_SERVICE_EMAIL
+        JiraIdentity->>EnvVars: JIRA_SERVICE_API_TOKEN
+    else Requester
+        JiraIdentity->>EnvVars: JIRA_REQUESTER_EMAIL
+        JiraIdentity->>EnvVars: JIRA_REQUESTER_API_TOKEN
+    else Draft Only
+        JiraIdentity->>EnvVars: JIRA_REQUESTER_EMAIL (read-only)
+        JiraIdentity->>EnvVars: JIRA_REQUESTER_API_TOKEN (read-only)
     end
-    get_settings-->>Consumer: Settings
+    
+    alt Explicit credentials found
+        JiraIdentity-->>Agent: JiraCredentialProfile(email, token, source)
+    else Legacy fallback enabled
+        JiraIdentity->>EnvVars: JIRA_EMAIL
+        JiraIdentity->>EnvVars: JIRA_API_TOKEN
+        JiraIdentity-->>Agent: JiraCredentialProfile(legacy)
+    else Legacy fallback disabled
+        JiraIdentity-->>Agent: JiraCredentialProfile(None, None)
+    end
+    
+    Agent->>JiraUtils: create_jira_client(profile.email, profile.api_token)
+```
 
-    Consumer->>validate: settings.validate()
-    alt missing credentials
-        validate-->>Consumer: raise ValueError
-    else valid
-        validate-->>Consumer: True
+The `get_jira_credential_profile()` function resolves Jira credentials based on the actor mode. It first attempts to load explicit credentials (`JIRA_SERVICE_EMAIL`/`JIRA_SERVICE_API_TOKEN` for service account, `JIRA_REQUESTER_EMAIL`/`JIRA_REQUESTER_API_TOKEN` for requester). If those are not set and `JIRA_ENABLE_LEGACY_FALLBACK=true`, it falls back to `JIRA_EMAIL`/`JIRA_API_TOKEN`. The `draft_only` mode uses requester credentials but marks the profile as read-only.
+
+### Flow 3: Cross-Platform Identity Resolution
+
+```mermaid
+sequenceDiagram
+    participant NotificationRouter
+    participant IdentityMap
+    participant TeamsAPI
+    participant EmailAPI
+    
+    NotificationRouter->>IdentityMap: load identity_map.yaml
+    IdentityMap-->>NotificationRouter: user mappings
+    
+    NotificationRouter->>NotificationRouter: resolve_identity(github_login="jmac-cornelis")
+    
+    alt User found
+        NotificationRouter->>NotificationRouter: get notify_via channels
+        
+        loop For each channel
+            alt teams_dm
+                NotificationRouter->>TeamsAPI: send_dm(teams_email)
+            else email
+                NotificationRouter->>EmailAPI: send_email(email)
+            else channel
+                NotificationRouter->>TeamsAPI: post_to_channel(channel_id)
+            end
+        end
+    else User not found
+        NotificationRouter->>NotificationRouter: use defaults
     end
 ```
 
-The module-level call in `config/settings.py` ensures env vars are loaded before any `os.getenv()` calls:
+The `identity_map.yaml` file maps GitHub logins to Jira, Teams, and email identities. The `NotificationRouter` (used by Shannon and Drucker PR reminders) loads this file and resolves the target user's notification channels (`teams_dm`, `email`, `channel`). Each user entry specifies which channels are enabled via the `notify_via` list.
 
-```python
-from config.env_loader import load_env
-load_env()
-```
+## Data Model
 
-## 5. Data Model
-
-### `Settings` (dataclass in `config/settings.py`)
-
-The central configuration object. All fields have defaults; secrets default to `None`.
-
-| Field | Type | Default | Source Env Var |
-|---|---|---|---|
-| `jira_url` | `str` | `'https://cornelisnetworks.atlassian.net'` | `JIRA_URL` |
-| `jira_email` | `Optional[str]` | `None` | `JIRA_EMAIL` |
-| `jira_api_token` | `Optional[str]` | `None` | `JIRA_API_TOKEN` |
-| `cornelis_llm_base_url` | `Optional[str]` | `None` | `CORNELIS_LLM_BASE_URL` |
-| `cornelis_llm_api_key` | `Optional[str]` | `None` | `CORNELIS_LLM_API_KEY` |
-| `cornelis_llm_model` | `str` | `'cornelis-default'` | `CORNELIS_LLM_MODEL` |
-| `openai_api_key` | `Optional[str]` | `None` | `OPENAI_API_KEY` |
-| `anthropic_api_key` | `Optional[str]` | `None` | `ANTHROPIC_API_KEY` |
-| `default_llm_provider` | `str` | `'cornelis'` | `DEFAULT_LLM_PROVIDER` |
-| `mcp_url` | `str` | `'http://cn-ai-01.cornelisnetworks.com:50700/mcp'` | `CORNELIS_MCP_URL` |
-| `mcp_enabled` | `bool` | `True` | `CORNELIS_MCP_ENABLED` |
-| `agent_max_iterations` | `int` | `50` | `AGENT_MAX_ITERATIONS` |
-| `agent_timeout_seconds` | `int` | `300` | `AGENT_TIMEOUT_SECONDS` |
-| `state_persistence_enabled` | `bool` | `True` | `STATE_PERSISTENCE_ENABLED` |
-| `state_persistence_path` | `str` | `'./data/sessions'` | `STATE_PERSISTENCE_PATH` |
-| `state_persistence_format` | `str` | `'json'` | `STATE_PERSISTENCE_FORMAT` |
-
-The `to_dict()` method masks sensitive fields (`jira_api_token`, `cornelis_llm_api_key`, `openai_api_key`, `anthropic_api_key`) with `'***'`.
-
-### `JiraCredentialProfile` (dataclass in `config/jira_identity.py`)
+### JiraCredentialProfile
 
 ```python
 @dataclass
 class JiraCredentialProfile:
-    actor_mode: str          # 'requester' | 'service_account' | 'draft_only'
-    email: Optional[str]
-    api_token: Optional[str]
-    email_env: Optional[str]  # env var name used for email
-    token_env: Optional[str]  # env var name used for token
-    source: str               # human-readable provenance string
+    actor_mode: str              # "requester" | "service_account" | "draft_only"
+    email: Optional[str]         # Jira email address
+    api_token: Optional[str]     # Jira API token
+    email_env: Optional[str]     # Env var name for email
+    token_env: Optional[str]     # Env var name for token
+    source: str                  # Description of credential source
 ```
 
-### `jira_actor_identity_policy.yaml`
+### Settings
 
-A declarative policy engine with `version: 1`. Key structures:
+```python
+@dataclass
+class Settings:
+    # Jira
+    jira_url: str
+    jira_email: Optional[str]
+    jira_api_token: Optional[str]
+    
+    # Cornelis LLM
+    cornelis_llm_base_url: Optional[str]
+    cornelis_llm_api_key: Optional[str]
+    cornelis_llm_model: str
+    
+    # External LLM
+    openai_api_key: Optional[str]
+    anthropic_api_key: Optional[str]
+    
+    # LLM configuration
+    default_llm_provider: str
+    vision_llm_provider: str
+    fallback_enabled: bool
+    
+    # Agent configuration
+    agent_log_level: str
+    agent_max_iterations: int
+    agent_timeout_seconds: int
+    
+    # Cornelis MCP
+    mcp_url: str
+    mcp_api_key_env: str
+    mcp_timeout: int
+    mcp_enabled: bool
+    
+    # Web search (fallback)
+    brave_search_api_key: Optional[str]
+    tavily_api_key: Optional[str]
+    
+    # Feature planning
+    feature_planning_max_research_queries: int
+    feature_planning_confidence_threshold: str
+    
+    # State persistence
+    state_persistence_enabled: bool
+    state_persistence_path: str
+    state_persistence_format: str
+    
+    # Logging
+    log_file: str
+    log_level: str
+```
 
-- **`actors`**: Three modes — `draft_only`, `service_account`, `requester` — each with a description.
-- **`rules`**: Six ordered rules matching on `trigger`, `action_class`, `risk`, and `approval_required` to select an actor mode. Rule IDs: `poller_hygiene_scan`, `deterministic_low_risk_write`, `approved_system_batch_apply`, `human_judgment_change`, `sensitive_workflow_transition`, `unapproved_nontrivial_write`.
-- **`agent_defaults`**: Per-agent overrides for `drucker`, `gantt`, `hedy`, `hemingway`.
-- **`audit_fields.required`**: `actor_mode`, `requested_by`, `approved_by`, `executed_by`, `policy_rule`, `correlation_id`, `timestamp`.
-- **`comment_voice`**: Style guidance for machine vs. human comments.
-
-### `identity_map.yaml`
-
-Maps GitHub logins to Teams identities:
+### Identity Map Schema (YAML)
 
 ```yaml
+defaults:
+  notify_via: [teams_dm, email]
+  email_from: john.macdonald@cornelisnetworks.com
+
 users:
-  jmac-cornelis:
-    name: John MacDonald
-    teams_email: john.macdonald@cornelisnetworks.com
+  github-login:
+    name: Display Name
+    email: first.last@cornelisnetworks.com
+    teams_email: first.last@cornelisnetworks.com
+    jira_display_name: "Last, First"
+    jira_account_id: "712020:..."
+    github_login: github-login
+    notify_via: [teams_dm, email]
 ```
 
-### `shannon/agent_registry.yaml`
-
-Defines the full agent fleet with per-agent metadata: `agent_id`, `display_name`, `role`, `zone`, `channel_name`, `channel_id`, `team_id`, `api_base_url`, `timeout_seconds`, and `custom_commands`. Each command specifies `api_method`, `api_path`, `mutation` flag, and typed `params`. Currently registers `shannon`, `drucker`, and `gantt`.
-
-## 6. Dependencies
+## Dependencies
 
 | Dependency | Purpose | Version |
-|---|---|---|
-| `python-dotenv` | Loads `.env` files into `os.environ` via `load_dotenv()` | Not pinned in module |
-| `logging` (stdlib) | Structured logging throughout all config modules | Python stdlib |
-| `dataclasses` (stdlib) | `Settings` and `JiraCredentialProfile` dataclasses | Python 3.7+ |
-| `pathlib` (stdlib) | File system traversal in `_find_env_dir()` | Python stdlib |
-| `os` (stdlib) | Environment variable access | Python stdlib |
-| `config/env_loader.py` | Used by `settings.py` and `jira_identity.py` for env loading | Internal |
-| `config/settings.py` | Exported via `config/__init__.py` | Internal |
+|------------|---------|---------|
+| `python-dotenv` | Load environment variables from `.env` files | (from requirements.txt) |
+| `logging` | Standard library logging | stdlib |
+| `os` | Environment variable access | stdlib |
+| `sys` | Command-line argument access | stdlib |
+| `pathlib` | File path manipulation | stdlib |
+| `dataclasses` | Data class definitions | stdlib |
+| `typing` | Type hints | stdlib |
 
-## 7. Configuration
+## Configuration
 
-### Environment Variables (Credential-Domain Files)
+### Environment Variables (Credential Domains)
 
-The `config/env/` directory contains five template files, loaded in this order:
+**Shared (`shared.env`)**
+- `DRY_RUN` — Default dry-run mode (`true`/`false`, default `true`)
+- `JIRA_URL` — Jira instance URL (default `https://cornelisnetworks.atlassian.net`)
+- `JIRA_ENABLE_LEGACY_FALLBACK` — Allow fallback to `JIRA_EMAIL`/`JIRA_API_TOKEN` (`true`/`false`, default `true`)
 
-| File | Domain | Key Variables |
-|---|---|---|
-| `shared.env` | Non-sensitive shared config | `DRY_RUN`, `LOG_LEVEL`, `JIRA_URL` |
-| `jira.env` | Jira credentials | `JIRA_SERVICE_EMAIL`, `JIRA_SERVICE_API_TOKEN`, `JIRA_REQUESTER_EMAIL`, `JIRA_REQUESTER_API_TOKEN`, `JIRA_EMAIL`, `JIRA_API_TOKEN` |
-| `llm.env` | LLM provider keys | `CORNELIS_LLM_BASE_URL`, `CORNELIS_LLM_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY` |
-| `github.env` | GitHub credentials | GitHub PAT and related vars |
-| `teams.env` | Teams / Azure credentials | Azure Bot credentials, webhook URLs |
+**Jira (`jira.env`)**
+- `JIRA_SERVICE_EMAIL` — Service account email for deterministic system writes
+- `JIRA_SERVICE_API_TOKEN` — Service account API token
+- `JIRA_REQUESTER_EMAIL` — Human requester email for judgment-bearing actions
+- `JIRA_REQUESTER_API_TOKEN` — Human requester API token
+- `JIRA_EMAIL` — Legacy single-profile email (fallback only)
+- `JIRA_API_TOKEN` — Legacy single-profile token (fallback only)
 
-### Feature Flags
+**LLM (`llm.env`)**
+- `CORNELIS_LLM_BASE_URL` — Cornelis LLM API base URL
+- `CORNELIS_LLM_API_KEY` — Cornelis LLM API key
+- `CORNELIS_LLM_MODEL` — Default model name (default `cornelis-default`)
+- `OPENAI_API_KEY` — OpenAI API key (fallback)
+- `ANTHROPIC_API_KEY` — Anthropic API key (fallback)
+- `DEFAULT_LLM_PROVIDER` — Default provider (`cornelis`/`openai`/`anthropic`, default `cornelis`)
+- `VISION_LLM_PROVIDER` — Vision provider (default `cornelis`)
+- `FALLBACK_ENABLED` — Enable LLM fallback (`true`/`false`, default `true`)
 
-| Flag | Env Var | Default | Effect |
-|---|---|---|---|
-| Legacy Jira fallback | `JIRA_ENABLE_LEGACY_FALLBACK` | `true` | When `false`, prevents silent fallback to `JIRA_EMAIL`/`JIRA_API_TOKEN` |
-| Dry-run mode | `DRY_RUN` | `true` (safe default) | Prevents mutations; resolved by `resolve_dry_run()` |
-| MCP enabled | `CORNELIS_MCP_ENABLED` | `true` | Enables/disables MCP server integration |
-| LLM fallback | `FALLBACK_ENABLED` | `true` | Enables LLM provider fallback chain |
+**GitHub (`github.env`)**
+- `GITHUB_TOKEN` — GitHub personal access token
+- `GITHUB_API_URL` — GitHub API base URL (default `https://api.github.com`)
 
-### Prompt Templates
+**Teams (`teams.env`)**
+- `TEAMS_TENANT_ID` — Azure AD tenant ID
+- `TEAMS_CLIENT_ID` — Azure AD app client ID
+- `TEAMS_CLIENT_SECRET` — Azure AD app client secret
+- `TEAMS_BOT_ID` — Teams bot app ID
+- `TEAMS_BOT_PASSWORD` — Teams bot password
 
-Twelve Markdown files in `config/prompts/` define system prompts for the agent sub-agents:
+### Agent Configuration
 
-| File | Agent / Purpose |
-|---|---|
-| `orchestrator.md` | Release Planning Orchestrator |
-| `feature_planning_orchestrator.md` | Feature Planning Orchestrator (6-phase workflow) |
-| `research_agent.md` | Research Agent — web/MCP/knowledge-base gathering |
-| `hardware_analyst.md` | Hardware Analyst — product architecture mapping |
-| `scoping_agent.md` | Scoping Agent — SW/FW work item definition |
-| `feature_plan_builder.md` | Feature Plan Builder — scope-to-Jira conversion |
-| `plan_building_instructions.md` | Injected instructions for plan building phase |
-| `scope_document_parser.md` | Structured JSON parser for scope documents |
-| `planning_agent.md` | Release Planning Agent — roadmap-to-tickets |
-| `review_agent.md` | Review Agent — human-in-the-loop approval |
-| `vision_analyzer.md` | Vision Analyzer — roadmap image/slide extraction |
-| `vision_roadmap_analysis.md` | Short vision analysis prompt |
-| `jira_analyst.md` | Jira Analyst — project state analysis |
-| `cn5000_bugs_clean.md` | CN5000 bug ticket CSV formatter |
+- `AGENT_LOG_LEVEL` — Agent console log level (`DEBUG`/`INFO`/`WARNING`/`ERROR`, default `INFO`)
+- `AGENT_MAX_ITERATIONS` — Max agent loop iterations (default `50`)
+- `AGENT_TIMEOUT_SECONDS` — Agent execution timeout (default `300`)
 
-### Shannon Configuration
+### MCP Configuration
 
-- `config/shannon/agent_registry.yaml` — Full agent fleet registry with commands, API routes, and parameters.
-- `config/shannon/teams-app-manifest.template.json` — Teams app manifest with `${SHANNON_TEAMS_APP_ID}` and `${SHANNON_PUBLIC_DOMAIN}` placeholders.
-- `config/claude_desktop_config.example.json` — Example MCP server configuration for Claude Desktop.
+- `CORNELIS_MCP_URL` — MCP server URL (default `http://cn-ai-01.cornelisnetworks.com:50700/mcp`)
+- `CORNELIS_MCP_API_KEY_ENV` — Env var name for MCP API key (default `CORNELIS_AI_API_KEY`)
+- `CORNELIS_MCP_TIMEOUT` — MCP request timeout in seconds (default `60`)
+- `CORNELIS_MCP_ENABLED` — Enable MCP integration (`true`/`false`, default `true`)
 
-## 8. Error Handling
+### Feature Planning
 
-### `Settings.validate()`
+- `FEATURE_PLANNING_MAX_RESEARCH_QUERIES` — Max web search queries (default `20`)
+- `FEATURE_PLANNING_CONFIDENCE_THRESHOLD` — Minimum confidence level (`high`/`medium`/`low`, default `medium`)
 
-Accumulates all missing-credential errors into a list and raises a single `ValueError` with all errors joined. Each error is also logged individually via `log.error()`:
+### State Persistence
 
-```python
-if errors:
-    for error in errors:
-        log.error(f'Configuration error: {error}')
-    raise ValueError(f'Configuration errors: {", ".join(errors)}')
-```
+- `STATE_PERSISTENCE_ENABLED` — Enable session state persistence (`true`/`false`, default `true`)
+- `STATE_PERSISTENCE_PATH` — State storage directory (default `./data/sessions`)
+- `STATE_PERSISTENCE_FORMAT` — Storage format (`json`/`sqlite`/`both`, default `json`)
 
-Validation is provider-aware: it only checks `CORNELIS_LLM_BASE_URL`/`CORNELIS_LLM_API_KEY` when `default_llm_provider == 'cornelis'`, etc.
+### Logging
 
-### `get_jira_credentials_for_actor()`
+- `LOG_FILE` — Log file path (default `cornelis_agent.log`)
+- `LOG_LEVEL` — File log level (`DEBUG`/`INFO`/`WARNING`/`ERROR`, default `DEBUG`)
 
-Raises `ValueError` with a descriptive message naming the specific env var and actor mode when either email or API token is missing:
+## Error Handling
 
-```python
-if not profile.email:
-    raise ValueError(
-        f'{profile.email_env} environment variable not set for actor '
-        f'"{profile.actor_mode}"'
-    )
-```
+### Environment Loading Errors
 
-### `load_env()`
+- **Missing env files** — `load_env()` logs a debug message and continues (process env is still available)
+- **Invalid env file syntax** — `python-dotenv` silently skips malformed lines
+- **Missing required credentials** — `Settings.validate()` raises `ValueError` with a list of missing variables
 
-Does **not** raise on missing files. Logs a warning for an explicit path that doesn't exist, and logs a debug message when no `.env` files are found at all. Returns an empty list in the worst case, allowing the process environment to serve as the sole source.
+### Jira Identity Resolution Errors
 
-### `resolve_dry_run()`
+- **Missing actor credentials** — `get_jira_credentials_for_actor()` raises `ValueError` with the missing env var name
+- **Invalid actor mode** — `normalize_actor_mode()` defaults to `"requester"` and logs a warning
+- **Legacy fallback disabled** — Returns a profile with `None` credentials when explicit vars are missing
 
-Defaults to `True` (safe, no mutations) when the env var is absent or unrecognized. This is a deliberate safety-first design:
+### Settings Validation Errors
 
 ```python
-def resolve_dry_run(explicit: Optional[bool] = None) -> bool:
-    if explicit is not None:
-        return explicit
-    env_val = os.environ.get('DRY_RUN', '').strip().lower()
-    if env_val in ('0', 'false', 'no', 'off'):
-        return False
-    if env_val in ('1', 'true', 'yes', 'on'):
-        return True
-    return True  # safe default
+try:
+    settings = get_settings()
+    settings.validate()
+except ValueError as e:
+    log.error(f'Configuration error: {e}')
+    sys.exit(1)
 ```
 
-## 9. Known Limitations / Technical Debt
+The `Settings.validate()` method checks for required credentials based on the configured LLM provider and raises `ValueError` if any are missing.
 
-1. **Hardcoded MCP URL** — The default `mcp_url` in `Settings` is hardcoded to `'http://cn-ai-01.cornelisnetworks.com:50700/mcp'`. This is an internal hostname that will break outside the Cornelis network. It is overridable via `CORNELIS_MCP_URL` but the default should arguably be `None` or empty.
+## Known Limitations / Technical Debt
 
-2. **Hardcoded Jira URL** — The default `jira_url` is `'https://cornelisnetworks.atlassian.net'` in both `Settings` and `claude_desktop_config.example.json`.
+### Hardcoded Values
 
-3. **Hardcoded webhook URL** — The Drucker agent entry in `agent_registry.yaml` contains a full Power Automate webhook URL in `notifications_webhook_url`. While this is a configuration file (not source code), the URL includes a signature parameter (`sig=DX5rVpdRL5wpv_H9huN668nWIvrhGTWwe97q6NGpxh4`) that functions as a credential.
+- **Jira URL default** — `https://cornelisnetworks.atlassian.net` is hardcoded in `Settings` (should be required env var)
+- **MCP URL default** — `http://cn-ai-01.cornelisnetworks.com:50700/mcp` is hardcoded (should be required env var)
+- **Env file load order** — `_ENV_FILE_ORDER` in `env_loader.py` is hardcoded (should be configurable)
 
-4. **`Settings.validate()` is not called automatically** — `get_settings()` creates the singleton via `from_env()` but never calls `validate()`. Consumers must explicitly call `settings.validate()` to check for missing credentials. A misconfigured deployment will not fail fast.
+### Missing Implementations
 
-5. **Module-level side effects in `jira_identity.py`** — The module calls `load_env()` (or `load_dotenv()`) at import time, outside any function. This means importing the module has the side effect of loading environment variables, which can cause surprising behavior in tests or when import order matters:
+- **Env file validation** — No schema validation for `.env` files (malformed values are silently ignored)
+- **Identity map validation** — `identity_map.yaml` is not validated against a schema (missing fields cause runtime errors)
+- **Credential rotation** — No support for credential rotation or expiration (tokens are assumed to be long-lived)
+- **Secrets management** — No integration with Docker secrets or vault systems (credentials are plain text in env files)
 
-   ```python
-   if load_env is not None:
-       load_env()
-   else:
-       load_dotenv(override=False)
-   ```
+### Anti-Patterns Detected
 
-6. **Module-level side effects in `settings.py`** — Similarly, `load_env()` is called at module import time in `settings.py`.
+- **Global mutable state** — `_settings` in `settings.py` is a module-level singleton (not thread-safe)
+- **Implicit env var precedence** — `load_dotenv(override=False)` means process env always wins, but this is not documented in the env file templates
+- **Legacy fallback complexity** — The `JIRA_ENABLE_LEGACY_FALLBACK` flag adds significant branching logic to `get_jira_credential_profile()` (consider deprecating legacy mode)
 
-7. **`identity_map.yaml` is manually maintained** — There is no automated sync between GitHub org membership and this file. As the team grows, this will drift.
+### Technical Debt
 
-8. **No schema validation for YAML policy files** — `jira_actor_identity_policy.yaml` and `agent_registry.yaml` are consumed as raw YAML with no schema validation in this module. Malformed entries will surface as runtime errors downstream.
-
-9. **`_find_env_dir()` anchors on `pyproject.toml`** — If the repository root lacks `pyproject.toml` (e.g., in a Docker image that strips it), the credential-domain loading path silently falls through to the root `.env` fallback.
-
-10. **`Settings.to_dict()` omits several fields** — Fields like `mcp_url`, `mcp_enabled`, `agent_timeout_seconds`, `brave_search_api_key`, `tavily_api_key`, `feature_planning_*`, `log_file`, and `log_level` are not included in `to_dict()`, making debug introspection incomplete.
-
-11. **`configure_logging()` opens file handler in write mode** — The `FileHandler` uses `mode='w'`, which truncates the log file on every call. If `configure_logging()` is called more than once (e.g., in tests), previous log content is lost.
-
-12. **Prompt files have no versioning or checksumming** — The twelve prompt Markdown files are critical to agent behavior but have no version metadata or integrity checks. A silent edit to a prompt file changes agent behavior with no audit trail beyond git history.
+- **Env file discovery** — `_find_env_dir()` walks up to the repo root by checking for `pyproject.toml`, but this assumes the repo structure never changes (fragile)
+- **Identity map format** — `identity_map.yaml` is manually maintained (should be auto-generated from HR/IT systems or synced from Azure AD)
+- **Jira actor policy** — `jira_actor_identity_policy.yaml` is not enforced by code (it is documentation only)
+- **Settings.to_dict()** — Masks sensitive values with `'***'`, but this is not a secure redaction (values are still in memory)
 
 <!-- End Documentation Agent generated content -->

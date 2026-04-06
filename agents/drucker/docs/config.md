@@ -2,248 +2,244 @@
 
 ```yaml
 ---
-title: "As-Built: Drucker Agent — Config"
-date: "2026-04-03"
+title: "As-Built: Drucker Agent Configuration"
+date: "2026-04-06"
 status: "draft"
 ---
 ```
 
-# Config — Design Reference
+## Module Overview
 
-## 1. Module Overview
+The Drucker agent configuration module defines three YAML configuration files that control the behavior of a project management hygiene monitoring system. The module configures validation rules for Jira issue types (`monitor.yaml`), polling job schedules and parameters (`polling.yaml`), and GitHub pull request reminder settings (`pr_reminders.yaml`). These configurations enable automated scanning of Jira tickets and GitHub repositories across the Cornelis Networks organization, with support for notifications, learning-based field prediction, and stale work detection.
 
-The `agents/drucker/config/` directory contains the YAML configuration files that govern the Drucker agent — a project-hygiene automation agent responsible for scanning Jira tickets and GitHub repositories for compliance issues, stale work, and missing metadata. Three configuration files define the agent's behavior: `monitor.yaml` controls Jira field-validation rules and a machine-learning suggestion subsystem; `polling.yaml` defines the polling defaults, the canonical list of monitored GitHub repositories, and the discrete scan jobs the agent can execute; and `pr_reminders.yaml` configures a pull-request reminder system that notifies authors and reviewers of aging PRs via Teams direct messages. Together these files parameterize the Drucker agent without requiring code changes.
+## What Changed
 
-## 2. What Changed
+**Before:** The `polling.yaml` configuration had `notify_shannon: false` as the default, and the `github-pr-reminders` job was disabled. The job definitions lacked explicit `notify_shannon` overrides and the PR reminders job had no repository or schedule configuration.
 
-### Before
+**After:** The default `notify_shannon` is now `true`, and all five job definitions explicitly set `notify_shannon: true`. The `github-pr-reminders` job is now enabled with a specific repository (`jmac-cornelis/agent-workforce`) and a reminder schedule of `[3, 7, 14]` days.
 
-- The `github_repos` list was specified per-job inside `polling.yaml` (as empty arrays on the `github-hygiene-scan` and `github-extended-scan` jobs).
-- No `github-pr-reminders` job existed.
-- No `pr_reminders.yaml` file existed.
+**Impact:** Shannon (presumably a notification channel or user) will now receive notifications for all polling jobs by default. The PR reminder system is active and will send reminders for the agent-workforce repository at 3, 7, and 14 days after PR creation. Teams using the Drucker agent will receive more proactive notifications about stale work.
 
-### After
-
-- The `github_repos` list is now a **top-level default** in `polling.yaml` (`defaults.github_repos`), containing 25 repositories. Individual jobs no longer carry their own `github_repos` overrides.
-- A new job `github-pr-reminders` (scan type `github-pr-reminders`, disabled by default) was added to `polling.yaml`.
-- A new file `pr_reminders.yaml` was introduced, defining reminder cadences, notification channels, snooze options, and per-repo overrides for the PR-reminder workflow.
-
-### Impact
-
-- **All GitHub scan jobs** (`github-hygiene-scan`, `github-extended-scan`, `github-pr-reminders`) now inherit the same 25-repo list from `defaults.github_repos`, ensuring consistency and eliminating per-job duplication.
-- **Downstream consumers** that read `polling.yaml` must resolve `github_repos` from `defaults` rather than from individual job entries.
-- The new `pr_reminders.yaml` introduces a dependency on a Teams DM notification pathway; any runtime code that loads this config must handle the `channels: [teams_dm]` target.
-
-## 3. Component Diagram
+## Component Diagram
 
 ```mermaid
-graph TD
-    subgraph "agents/drucker/config"
-        MONITOR["monitor.yaml<br/>(Jira validation & learning)"]
-        POLLING["polling.yaml<br/>(Defaults, repos & jobs)"]
-        PR_REM["pr_reminders.yaml<br/>(PR reminder rules)"]
-    end
-
-    subgraph "Polling Jobs"
-        J1["hygiene-scan<br/>(Jira full scan)"]
-        J2["recent-ticket-intake<br/>(Jira recent scan)"]
-        J3["github-hygiene-scan<br/>(GitHub PR hygiene)"]
-        J4["github-extended-scan<br/>(GitHub extended)"]
-        J5["github-pr-reminders<br/>(PR stale reminders)"]
-    end
-
-    POLLING -- "defines" --> J1
-    POLLING -- "defines" --> J2
-    POLLING -- "defines" --> J3
-    POLLING -- "defines" --> J4
-    POLLING -- "defines" --> J5
-
-    PR_REM -- "configures" --> J5
-    MONITOR -- "configures" --> J1
-    MONITOR -- "configures" --> J2
-
-    POLLING -- "defaults.github_repos" --> J3
-    POLLING -- "defaults.github_repos" --> J4
-    POLLING -- "defaults.github_repos" --> J5
+graph TB
+    Monitor[monitor.yaml<br/>Validation Rules]
+    Polling[polling.yaml<br/>Job Scheduler]
+    PRReminders[pr_reminders.yaml<br/>PR Reminder Config]
+    
+    Monitor -->|Defines rules for| JiraValidation[Jira Issue Validation]
+    Monitor -->|Configures| Learning[Learning System]
+    
+    Polling -->|Schedules| JiraJobs[Jira Scan Jobs]
+    Polling -->|Schedules| GitHubJobs[GitHub Scan Jobs]
+    Polling -->|References| RepoList[Repository List]
+    
+    PRReminders -->|Configures| ReminderEngine[PR Reminder Engine]
+    PRReminders -->|Targets| RepoList
+    
+    JiraJobs -->|Uses rules from| Monitor
+    GitHubJobs -->|Uses repos from| RepoList
+    ReminderEngine -->|Uses repos from| RepoList
 ```
 
-## 4. Key Flows
+## Key Flows
 
-### Flow 1 — Jira Hygiene Scan Configuration Resolution
-
-When the Drucker agent starts a Jira hygiene scan, it loads `polling.yaml` to obtain job parameters and `monitor.yaml` to obtain per-issue-type validation rules.
+### Flow 1: Jira Issue Validation
 
 ```mermaid
 sequenceDiagram
     participant Agent as Drucker Agent
-    participant PY as polling.yaml
-    participant MY as monitor.yaml
+    participant Config as monitor.yaml
     participant Jira as Jira API
-
-    Agent->>PY: Load defaults (project_key, limit, stale_days)
-    Agent->>PY: Resolve job "hygiene-scan" (recent_only=false)
-    Agent->>MY: Load validation_rules for Story, Bug, Task, Epic
-    Agent->>MY: Load learning config (enabled, thresholds)
-    Agent->>Jira: Query project with limit=200, include_done=false
-    Jira-->>Agent: Issue list
-    Agent->>Agent: Validate each issue against monitor.yaml rules
-```
-
-**Description:** The agent merges `polling.yaml` defaults with the `hygiene-scan` job definition to determine query parameters (`limit: 200`, `include_done: false`, `stale_days: 30`). It then applies `monitor.yaml` validation rules — for example, a `Bug` must have `assignee`, `fix_versions`, `components`, and `priority` (required), while `description` triggers a warning. The learning subsystem (when `enabled: true` and at least `min_observations: 20` samples exist) can auto-fill fields at ≥ 90% confidence, suggest at ≥ 50%, or flag-only below that.
-
-### Flow 2 — GitHub Repository List Resolution for Scan Jobs
-
-All three GitHub-oriented jobs resolve their target repository list from the shared `defaults.github_repos` key.
-
-```mermaid
-sequenceDiagram
-    participant Agent as Drucker Agent
-    participant PY as polling.yaml
-
-    Agent->>PY: Load defaults.github_repos (25 repos)
-    Agent->>PY: Load defaults.github_stale_days (5)
-    Agent->>PY: Iterate jobs where scan_type starts with "github"
-    alt github-hygiene-scan
-        Agent->>Agent: Use github_stale_days=5, repos from defaults
-    else github-extended-scan
-        Agent->>Agent: Use github_stale_days=5, branch_stale_days=30, repos from defaults
-    else github-pr-reminders
-        Agent->>Agent: Use repos from defaults, delegate to pr_reminders.yaml
+    participant Notifier as Shannon Notifier
+    
+    Agent->>Config: Load validation rules
+    Config-->>Agent: Return rules by issue type
+    Agent->>Jira: Fetch issues
+    Jira-->>Agent: Return issue list
+    loop For each issue
+        Agent->>Agent: Check required fields
+        Agent->>Agent: Check warn fields
+        alt Validation fails
+            Agent->>Notifier: Send hygiene alert
+        end
     end
 ```
 
-**Description:** The `defaults.github_repos` list is the single source of truth for which repositories are scanned. Individual jobs may override `github_stale_days` or add job-specific keys like `branch_stale_days: 30` (on `github-extended-scan`), but the repo list itself is inherited. All three GitHub jobs are currently `enabled: false`.
+The agent loads validation rules from `monitor.yaml`, which defines required and warning-level fields for each Jira issue type (Story, Bug, Task, Epic). When scanning issues, the agent checks for missing required fields (assignee, fix_versions, components) and warns about missing optional fields (description). Validation failures trigger notifications to Shannon.
 
-### Flow 3 — PR Reminder Configuration Resolution
-
-The `github-pr-reminders` job delegates its behavioral configuration to `pr_reminders.yaml`.
+### Flow 2: Polling Job Execution
 
 ```mermaid
 sequenceDiagram
-    participant Agent as Drucker Agent
-    participant PY as polling.yaml
-    participant PR as pr_reminders.yaml
-    participant Teams as Teams DM API
-
-    Agent->>PY: Load job "github-pr-reminders" (enabled=false)
-    Agent->>PR: Load defaults (reminder_days, notify, channels, snooze)
-    Agent->>PR: Load per-repo overrides
-    Note over Agent,PR: e.g. agent-workforce: reminder_days=[3,5,8,12]
-    Agent->>Agent: For each repo, merge defaults with overrides
-    Agent->>Agent: Identify stale PRs exceeding reminder_days thresholds
-    Agent->>Teams: Send DM to author and reviewers
+    participant Scheduler as Job Scheduler
+    participant Config as polling.yaml
+    participant JiraScanner as Jira Scanner
+    participant GitHubScanner as GitHub Scanner
+    participant Notifier as Shannon Notifier
+    
+    Scheduler->>Config: Load job definitions
+    Config-->>Scheduler: Return 5 jobs with schedules
+    loop Every poll_interval_minutes
+        Scheduler->>JiraScanner: Execute hygiene-scan
+        JiraScanner->>Notifier: Send results (notify_shannon=true)
+        Scheduler->>JiraScanner: Execute recent-ticket-intake
+        JiraScanner->>Notifier: Send results
+        alt github-pr-reminders enabled
+            Scheduler->>GitHubScanner: Execute PR reminder scan
+            GitHubScanner->>Notifier: Send reminders
+        end
+    end
 ```
 
-**Description:** `pr_reminders.yaml` defines a default reminder cadence of `[5, 8, 10, 15]` days, notifying both `author` and `reviewers` via `teams_dm`. Per-repo overrides are supported — for example, `jmac-cornelis/agent-workforce` uses an accelerated cadence of `[3, 5, 8, 12]` days. Snooze options (`[2, 5, 7]` days) and allowed merge methods (`[squash, merge, rebase]`) are also configurable. All 25 repos from `polling.yaml` are mirrored in the `repos` list here.
+The polling configuration defines five jobs: two Jira scans (full hygiene and recent intake), two GitHub scans (currently disabled), and one PR reminder job (now enabled). Each job runs on a schedule defined by `poll_interval_minutes` (5 minutes from `monitor.yaml`) and sends results to Shannon when `notify_shannon: true`.
 
-## 5. Data Model
+### Flow 3: GitHub PR Reminder Delivery
 
-The configuration files define the following logical data structures:
+```mermaid
+sequenceDiagram
+    participant Scanner as PR Reminder Scanner
+    participant Config as pr_reminders.yaml
+    participant GitHub as GitHub API
+    participant Teams as Teams DM API
+    
+    Scanner->>Config: Load reminder configuration
+    Config-->>Scanner: Return repos and schedules
+    Scanner->>GitHub: Fetch open PRs for repos
+    GitHub-->>Scanner: Return PR list with ages
+    loop For each PR
+        Scanner->>Scanner: Calculate PR age
+        alt Age matches reminder_days [3,5,8,12]
+            Scanner->>Teams: Send DM to author
+            Scanner->>Teams: Send DM to reviewers
+        end
+    end
+```
 
-### `monitor.yaml`
+The PR reminder system uses `pr_reminders.yaml` to determine which repositories to monitor and when to send reminders. For the `jmac-cornelis/agent-workforce` repo, reminders are sent at 3, 5, 8, and 12 days. Other repos use the default schedule of `[5, 8, 10, 15]` days. Reminders are delivered via Teams direct messages to both authors and reviewers.
 
-| Key Path | Type | Description |
-|---|---|---|
-| `project` | `string` | Jira project key (currently empty string) |
-| `poll_interval_minutes` | `int` | Polling interval; `5` minutes |
-| `validation_rules.<IssueType>.required` | `list[string]` | Fields that must be populated |
-| `validation_rules.<IssueType>.warn` | `list[string]` | Fields that trigger warnings if absent |
-| `learning.enabled` | `bool` | Toggle for ML suggestion engine |
-| `learning.min_observations` | `int` | Minimum samples before predictions activate (`20`) |
-| `learning.confidence_thresholds.auto_fill` | `float` | Threshold for automatic field population (`0.90`) |
-| `learning.confidence_thresholds.suggest` | `float` | Threshold for user-facing suggestions (`0.50`) |
-| `learning.confidence_thresholds.flag_only` | `float` | Floor threshold for flagging (`0.0`) |
+## Data Model
 
-### `polling.yaml`
-
-| Key Path | Type | Description |
-|---|---|---|
-| `defaults.project_key` | `string` | Jira project key (empty string) |
-| `defaults.limit` | `int` | Max issues per query (`200`) |
-| `defaults.include_done` | `bool` | Whether to include resolved issues (`false`) |
-| `defaults.stale_days` | `int` | Days before a Jira issue is considered stale (`30`) |
-| `defaults.label_prefix` | `string` | Label prefix applied by Drucker (`drucker`) |
-| `defaults.persist` | `bool` | Whether to persist scan state (`true`) |
-| `defaults.notify_shannon` | `bool` | Whether to notify the Shannon agent (`false`) |
-| `defaults.github_stale_days` | `int` | Days before a PR is considered stale (`5`) |
-| `defaults.github_repos` | `list[string]` | Canonical list of 25 GitHub repositories |
-| `jobs[].job_id` | `string` | Unique job identifier |
-| `jobs[].scan_type` | `string` | One of `jira`, `github`, `github-extended`, `github-pr-reminders` |
-| `jobs[].enabled` | `bool` | Job enable flag (absent = enabled) |
-| `jobs[].recent_only` | `bool` | Jira-specific: use checkpoint state |
-| `jobs[].branch_stale_days` | `int` | GitHub-extended-specific: stale branch threshold (`30`) |
-
-### `pr_reminders.yaml`
-
-| Key Path | Type | Description |
-|---|---|---|
-| `defaults.reminder_days` | `list[int]` | Days-since-open thresholds for reminders (`[5,8,10,15]`) |
-| `defaults.notify` | `list[string]` | Notification targets (`[author, reviewers]`) |
-| `defaults.channels` | `list[string]` | Delivery channels (`[teams_dm]`) |
-| `defaults.snooze_options_days` | `list[int]` | Snooze durations offered to users (`[2,5,7]`) |
-| `defaults.merge_methods` | `list[string]` | Allowed merge strategies (`[squash, merge, rebase]`) |
-| `defaults.enabled` | `bool` | Global enable for PR reminders (`true`) |
-| `repos[].repo` | `string` | Repository slug |
-| `repos[].reminder_days` | `list[int]` | Per-repo override of reminder cadence |
-
-## 6. Dependencies
-
-| Dependency | Purpose | Version |
-|---|---|---|
-| Jira API | Target of hygiene and intake scans configured in `polling.yaml` and `monitor.yaml` | N/A (external service) |
-| GitHub API | Target of GitHub scan jobs; repos enumerated in `defaults.github_repos` | N/A (external service) |
-| Microsoft Teams API | Delivery channel for PR reminder notifications (`channels: [teams_dm]`) | N/A (external service) |
-| Shannon Agent | Optional notification target (`notify_shannon: false` in defaults) | Internal agent |
-| YAML parser | Runtime must parse these YAML files (e.g., PyYAML, ruamel.yaml) | N/A |
-
-## 7. Configuration
-
-All configuration for the Drucker agent is contained within these three files. There are no environment variables or feature flags defined in the config files themselves; runtime secrets (Jira credentials, GitHub tokens, Teams webhook URLs) are expected to be provided externally.
-
-| File | Key Configuration Points |
-|---|---|
-| `monitor.yaml` | `project` (empty — must be set), `poll_interval_minutes`, per-issue-type `validation_rules`, `learning` subsystem toggles and thresholds |
-| `polling.yaml` | `defaults.project_key` (empty — must be set), `defaults.limit`, `defaults.github_repos` (25 repos), five job definitions with `enabled` flags |
-| `pr_reminders.yaml` | `defaults.reminder_days`, `defaults.channels`, per-repo overrides |
-
-**Feature flags (job-level):**
+### monitor.yaml Schema
 
 ```yaml
-# polling.yaml — GitHub jobs are disabled by default
-- job_id: github-hygiene-scan
-  enabled: false
+project: string                    # Jira project key (empty = all projects)
+poll_interval_minutes: integer     # Polling frequency
 
-- job_id: github-extended-scan
-  enabled: false
+validation_rules:
+  <IssueType>:                     # Story, Bug, Task, Epic
+    required: [string]             # Fields that must be present
+    warn: [string]                 # Fields that should be present
 
-- job_id: github-pr-reminders
-  enabled: false
+learning:
+  enabled: boolean                 # Enable ML-based field prediction
+  min_observations: integer        # Minimum data points for learning
+  confidence_thresholds:
+    auto_fill: float              # Threshold for automatic field population
+    suggest: float                # Threshold for suggesting values
+    flag_only: float              # Threshold for flagging anomalies
 ```
 
-The two Jira jobs (`hygiene-scan`, `recent-ticket-intake`) have no `enabled` key, implying they are enabled by default.
+### polling.yaml Schema
 
-## 8. Error Handling
+```yaml
+defaults:
+  project_key: string              # Jira project key
+  limit: integer                   # Max issues per scan
+  include_done: boolean            # Include completed issues
+  stale_days: integer              # Days before marking stale
+  label_prefix: string             # Label prefix for tagging
+  persist: boolean                 # Persist scan state
+  notify_shannon: boolean          # Send notifications
+  github_stale_days: integer       # Days before PR is stale
+  github_repos: [string]           # List of org/repo names
 
-These are static YAML configuration files and contain no error-handling logic themselves. Error handling is the responsibility of the consuming runtime code. However, the configuration structure implies the following validation expectations:
+jobs:
+  - job_id: string                 # Unique job identifier
+    description: string            # Human-readable description
+    scan_type: string              # jira | github | github-extended | github-pr-reminders
+    recent_only: boolean           # Scan only recent changes
+    enabled: boolean               # Job active flag
+    notify_shannon: boolean        # Override default notification
+    repos: [string]                # Job-specific repo list
+    reminder_schedule: [integer]   # Days for PR reminders
+```
 
-- **Empty `project` / `project_key`:** Both `monitor.yaml` (`project: ''`) and `polling.yaml` (`defaults.project_key: ''`) ship with empty project keys. The runtime must either fail fast or resolve these from an external source.
-- **Confidence threshold ordering:** The three thresholds in `learning.confidence_thresholds` form an implicit hierarchy (`auto_fill: 0.90` > `suggest: 0.50` > `flag_only: 0.0`). Consumers should validate this ordering.
-- **Missing per-repo keys in `pr_reminders.yaml`:** Most repos in the `repos` list have no overrides beyond `repo`. The runtime must fall back to `defaults` for all missing keys.
+### pr_reminders.yaml Schema
 
-## 9. Known Limitations / Technical Debt
+```yaml
+defaults:
+  reminder_days: [integer]         # Days after PR creation to remind
+  notify: [string]                 # author | reviewers
+  channels: [string]               # teams_dm | email
+  snooze_options_days: [integer]   # Snooze duration options
+  merge_methods: [string]          # squash | merge | rebase
+  enabled: boolean                 # Global enable flag
 
-1. **Empty project keys:** Both `monitor.yaml` (`project: ''`) and `polling.yaml` (`defaults.project_key: ''`) contain empty strings. These are effectively **hardcoded placeholders** that must be populated at runtime or via an external mechanism. There is no documented contract for how this resolution occurs.
+repos:
+  - repo: string                   # org/repo name
+    reminder_days: [integer]       # Override default schedule
+```
 
-2. **Duplicated repository lists:** The 25-repository list appears in both `polling.yaml` (`defaults.github_repos`) and `pr_reminders.yaml` (`repos`). These lists are manually synchronized. Any addition or removal must be applied to both files, creating a maintenance risk. A single canonical source would be preferable.
+## Dependencies
 
-3. **All GitHub jobs disabled:** The three GitHub scan jobs (`github-hygiene-scan`, `github-extended-scan`, `github-pr-reminders`) are all set to `enabled: false`. This suggests the GitHub scanning capability is not yet production-ready or is gated behind an external activation step.
+| Dependency | Purpose | Version |
+|------------|---------|---------|
+| PyYAML | YAML parsing and validation | Not specified |
+| Jira API | Issue fetching and validation | Not specified |
+| GitHub API | PR and repository scanning | Not specified |
+| Microsoft Teams API | Direct message notifications | Not specified |
 
-4. **No schema validation:** There is no JSON Schema or equivalent validation definition for these YAML files. Typos in key names (e.g., `reminder_day` instead of `reminder_days`) would silently produce incorrect behavior.
+## Configuration
 
-5. **Implicit `enabled` default for Jira jobs:** The Jira jobs (`hygiene-scan`, `recent-ticket-intake`) omit the `enabled` key entirely, relying on the runtime to treat absence as `true`. This implicit convention is not documented in the config and could lead to confusion.
+### Environment Variables
 
-6. **`notify_shannon: false` with no documentation:** The `notify_shannon` flag in `polling.yaml` defaults references an inter-agent communication channel with no further specification of the protocol or payload format in these config files.
+The configuration files themselves do not reference environment variables, but the Drucker agent likely requires:
 
-7. **Hardcoded label prefix:** `defaults.label_prefix: drucker` is a hardcoded string that will be applied as Jira labels. Changing the agent's identity would require updating this value.
+- `JIRA_API_TOKEN` — Authentication for Jira API access
+- `GITHUB_TOKEN` — Authentication for GitHub API access
+- `TEAMS_WEBHOOK_URL` or `TEAMS_BOT_TOKEN` — Teams notification delivery
+- `DRUCKER_CONFIG_PATH` — Path to configuration directory (defaults to `agents/drucker/config/`)
+
+### Configuration Files
+
+- **`monitor.yaml`** — Validation rules and learning system configuration
+- **`polling.yaml`** — Job definitions, schedules, and repository lists
+- **`pr_reminders.yaml`** — PR reminder schedules and notification preferences
+
+### Feature Flags
+
+- `learning.enabled` (monitor.yaml) — Enables ML-based field prediction (currently `true`)
+- `jobs[].enabled` (polling.yaml) — Per-job enable/disable flag
+  - `github-hygiene-scan`: `false`
+  - `github-extended-scan`: `false`
+  - `github-pr-reminders`: `true`
+- `defaults.enabled` (pr_reminders.yaml) — Global PR reminder enable flag (currently `true`)
+
+## Error Handling
+
+The configuration files are declarative YAML and do not contain error handling logic. Error handling is expected to occur in the Drucker agent code that consumes these configurations:
+
+- **Missing required fields**: The agent should validate that all required configuration keys are present before starting jobs.
+- **Invalid YAML syntax**: The YAML parser will raise exceptions that should be caught and logged with clear error messages.
+- **Invalid job references**: Jobs referencing non-existent scan types or repositories should fail gracefully with descriptive errors.
+- **API failures**: The agent should implement retry logic and exponential backoff for Jira, GitHub, and Teams API calls.
+
+## Known Limitations / Technical Debt
+
+1. **Empty project key**: The `project` field in `monitor.yaml` is an empty string, which likely means "all projects" but this is not documented. This implicit behavior should be made explicit.
+
+2. **Hardcoded repository list**: The `github_repos` list in `polling.yaml` contains 26 hardcoded repositories. This list is duplicated in `pr_reminders.yaml` (with slight variations). This violates DRY principles and creates maintenance burden. Consider externalizing to a shared repository registry.
+
+3. **Inconsistent reminder schedules**: The `polling.yaml` defines `reminder_schedule: [3, 7, 14]` for the PR reminders job, while `pr_reminders.yaml` defines `reminder_days: [3, 5, 8, 12]` for the same repository. This configuration conflict is unclear — which takes precedence?
+
+4. **No schema validation**: The YAML files lack schema definitions or validation rules. Invalid configurations will only be detected at runtime. Consider adding JSON Schema or Pydantic models for validation.
+
+5. **Magic numbers**: Confidence thresholds (`0.90`, `0.50`, `0.0`) and stale day counts (`30`, `5`) are hardcoded without explanation. These should be documented or made more discoverable.
+
+6. **Disabled jobs**: Two of five polling jobs are disabled (`github-hygiene-scan`, `github-extended-scan`). If these are permanently unused, they should be removed to reduce configuration complexity.
+
+7. **Notification coupling**: The `notify_shannon` flag appears throughout the configuration, tightly coupling the system to a specific notification target. This should be generalized to support multiple notification channels or recipients.
 
 <!-- End Documentation Agent generated content -->
