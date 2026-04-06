@@ -199,7 +199,7 @@ def test_get_children_hierarchy_recurses_with_pagination_and_dump(
     child_b = issue_factory(key='STL-3', summary='Child B')
 
     issues_by_key = {'STL-1': root, 'STL-2': child_a, 'STL-3': child_b}
-    mock_jira.issue.side_effect = lambda key: SimpleNamespace(raw=issues_by_key[key])
+    mock_jira.issue.side_effect = lambda key, fields=None: SimpleNamespace(raw=issues_by_key[key])
 
     responses = [
         DummyResponse(status_code=429, headers={'Retry-After': '0'}),
