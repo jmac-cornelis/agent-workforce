@@ -14,7 +14,10 @@ from __future__ import annotations
 import logging
 import os
 import sys
+import re as re_mod
 import threading
+import uuid
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 import requests
@@ -36,7 +39,9 @@ from shannon.cards import (
     build_hemingway_pr_review_card,
     build_hemingway_impact_card,
     build_hemingway_publication_card,
+    build_hemingway_find_card,
     build_hemingway_records_card,
+    build_hemingway_nl_query_card,
     build_hemingway_search_card,
     build_jira_query_card,
     build_jira_release_status_card,
@@ -51,7 +56,7 @@ from shannon.cards import (
     build_pr_stale_card,
     build_stale_branches_card,
 )
-from shannon.models import AuditRecord, ConversationReference, ShannonResponse, normalize_command_text
+from shannon.models import AuditRecord, ConversationReference, ConversationState, ShannonResponse, normalize_command_text
 from shannon.poster import BasePoster, WorkflowsPoster, build_poster_from_env
 from shannon.registry import ShannonAgentRegistry
 from agents.shannon.state_store import ShannonStateStore
@@ -84,6 +89,12 @@ def _coerce_params(raw: Dict[str, str], param_defs: List[Dict[str, Any]]) -> Dic
         else:
             result[key] = value
     return result
+
+
+# Regex for GitHub blob URLs - used by /generate-doc URL support
+GITHUB_URL_RE = re_mod.compile(
+    r"https?://github\.com/([^/]+/[^/]+)/blob/([^/]+)/(.+)"
+)
 
 
 class ShannonService:
@@ -499,8 +510,10 @@ class ShannonService:
             '/doc-record': build_hemingway_records_card,
             '/publish-doc': build_hemingway_publication_card,
             '/search-docs': build_hemingway_search_card,
+            '/find': build_hemingway_find_card,
             '/confluence-publish': build_hemingway_confluence_publish_card,
             '/pr-review': build_hemingway_pr_review_card,
+            '/ask': build_hemingway_nl_query_card,
         },
     }
 
@@ -568,6 +581,21 @@ class ShannonService:
                 )
 
             if canonical_agent_id == 'gantt' and command == '/ask':
+                card = card_builder(data)
+                summary_text = data.get('summary', '')
+                total = (
+                    data.get('result', {}).get('total')
+                    or data.get('result', {}).get('count')
+                    or ''
+                )
+                prefix = f'{total} results — ' if total else ''
+                return ShannonResponse(
+                    text=f'{prefix}{summary_text[:300]}',
+                    card=card,
+                    command=command,
+                    decision='agent_call_success',
+                )
+            if canonical_agent_id == 'hemingway' and command == '/ask':
                 card = card_builder(data)
                 summary_text = data.get('summary', '')
                 total = (
@@ -725,8 +753,23 @@ class ShannonService:
         self,
         agent_id: str,
         command_text: str,
+        activity: Optional[Dict[str, Any]] = None,
     ) -> ShannonResponse:
         canonical_agent_id = canonical_agent_name(agent_id) or str(agent_id or '').strip().lower()
+
+        # -- Conversation mode: check for pending Q&A state --
+        user_id = self._get_user_id(activity) if activity else 'unknown'
+        normalized_check = normalize_command_text(command_text)
+        pending = self.state_store.get_conversation_state(user_id, canonical_agent_id)
+        if pending:
+            if normalized_check.startswith('/'):
+                # New slash command -- abandon conversation and process normally
+                self.state_store.clear_conversation_state(user_id, canonical_agent_id)
+                log.info(f'Conversation abandoned by {user_id}: new command {normalized_check}')
+            else:
+                # Not a slash command -- treat as conversation response
+                return self._handle_conversation_response(pending, command_text, user_id)
+
         registration = self.registry.get_agent(canonical_agent_id)
         if not registration or not getattr(registration, 'api_base_url', ''):
             return ShannonResponse(
@@ -802,6 +845,33 @@ class ShannonService:
                 if method.upper() == 'POST':
                     cc_params = cc.get('params') or []
                     required_params = [p for p in cc_params if p.get('required')]
+
+                    # -- URL support for /generate-doc --
+                    if command == '/generate-doc' and args:
+                        url_match = GITHUB_URL_RE.match(args[0])
+                        if url_match:
+                            repo, branch, filepath = url_match.groups()
+                            json_body = _coerce_params({
+                                'doc_title': filepath.rsplit('/', 1)[-1].replace('.md', '').replace('-', ' ').title(),
+                                'source_paths': filepath,
+                                'repo_name': repo,
+                                'doc_type': 'engineering_reference',
+                            }, cc_params)
+                            result = self._call_agent_api(
+                                registration, method, path, json_body=json_body,
+                            )
+                            return self._agent_response_to_shannon(canonical_agent_id, command, result)
+
+                    # -- Conversation mode: start Q&A if required params missing --
+                    if required_params and not args and activity:
+                        return self._start_conversation(
+                            user_id=user_id,
+                            agent_id=canonical_agent_id,
+                            command=command,
+                            params=cc_params,
+                            cc=cc,
+                        )
+
                     if (
                         len(required_params) == 1
                         and required_params[0].get('type', 'str') == 'str'
@@ -853,6 +923,141 @@ class ShannonService:
             decision='unknown_agent_command',
         )
 
+    # -- Conversation mode helpers ------------------------------------------------
+
+    @staticmethod
+    def _get_user_id(activity):
+        """Extract a stable user ID from a Teams activity."""
+        if not activity:
+            return 'unknown'
+        from_obj = activity.get('from') or {}
+        return (
+            str(from_obj.get('aadObjectId') or '').strip()
+            or str(from_obj.get('id') or '').strip()
+            or 'unknown'
+        )
+
+    def _start_conversation(
+        self,
+        user_id,
+        agent_id,
+        command,
+        params,
+        cc=None,
+    ):
+        """Start a Q&A flow for a command with missing required parameters."""
+        remaining = [p for p in params if p.get('required')]
+        state = ConversationState(
+            state_id=str(uuid.uuid4())[:8],
+            user_id=user_id,
+            agent_id=agent_id,
+            command=command,
+            collected_params={},
+            remaining_params=remaining,
+            created_at=datetime.now(timezone.utc).isoformat(),
+        )
+        self.state_store.save_conversation_state(state)
+
+        first = remaining[0]
+        label = first.get('label', first['name'])
+        hint = first.get('description', '')
+        prompt = f"**{command}** -- I need a few details.\n\n**{label}**?"
+        if hint:
+            prompt += f"\n_{hint}_"
+        prompt += "\n\n_Type **cancel** to abort._"
+
+        log.info(f'Conversation started: user={user_id} agent={agent_id} command={command}')
+        return ShannonResponse(
+            text=prompt,
+            command=command,
+            decision='conversation_started',
+        )
+
+    def _handle_conversation_response(self, state, response_text, user_id):
+        """Process a user answer in an active Q&A conversation."""
+        text = normalize_command_text(response_text).strip()
+
+        # Handle cancel
+        if text.lower() in ('cancel', '/cancel', 'stop', 'quit'):
+            self.state_store.clear_conversation_state(user_id, state.agent_id)
+            log.info(f'Conversation cancelled: user={user_id} command={state.command}')
+            return ShannonResponse(
+                text='Cancelled.',
+                command=state.command,
+                decision='conversation_cancelled',
+            )
+
+        # Collect the current param
+        current_param = state.remaining_params[0]
+        state.collected_params[current_param['name']] = text
+        state.remaining_params = state.remaining_params[1:]
+
+        if state.remaining_params:
+            # More params needed -- ask for the next one
+            self.state_store.save_conversation_state(state)
+            next_param = state.remaining_params[0]
+            label = next_param.get('label', next_param['name'])
+            hint = next_param.get('description', '')
+            collected_summary = ', '.join(
+                f"**{k}**: {v}" for k, v in state.collected_params.items()
+            )
+            prompt = f"Got it. ({collected_summary})\n\n**{label}**?"
+            if hint:
+                prompt += f"\n_{hint}_"
+            return ShannonResponse(
+                text=prompt,
+                command=state.command,
+                decision='conversation_collecting',
+            )
+
+        # All params collected -- execute the command
+        self.state_store.clear_conversation_state(user_id, state.agent_id)
+        log.info(
+            f'Conversation complete: user={user_id} command={state.command} '
+            f'params={state.collected_params}'
+        )
+
+        # Look up the registration and command config to call the API
+        registration = self.registry.get_agent(state.agent_id)
+        if not registration or not getattr(registration, 'api_base_url', ''):
+            return ShannonResponse(
+                text=f'{state.agent_id} has no API endpoint configured.',
+                command=state.command,
+                decision='conversation_no_api',
+            )
+
+        custom_commands = getattr(registration, 'custom_commands', []) or []
+        cc = None
+        for candidate in custom_commands:
+            if candidate.get('command', '').lower() == state.command:
+                cc = candidate
+                break
+
+        if not cc:
+            return ShannonResponse(
+                text=f'Could not find command config for {state.command}.',
+                command=state.command,
+                decision='conversation_command_not_found',
+            )
+
+        method = cc.get('api_method', 'POST')
+        api_path = cc.get('api_path', '')
+        cc_params = cc.get('params') or []
+        json_body = _coerce_params(state.collected_params, cc_params)
+
+        # Respect mutation/dry_run semantics
+        is_mutation = (
+            state.command in self.MUTATION_COMMANDS
+            or cc.get('mutation', False)
+        )
+        if is_mutation:
+            json_body['dry_run'] = True
+
+        result = self._call_agent_api(
+            registration, method, api_path, json_body=json_body,
+        )
+        return self._agent_response_to_shannon(state.agent_id, state.command, result)
+
     def _resolve_activity_agent(self, activity: Dict[str, Any]) -> str:
         channel_data = activity.get('channelData') or {}
         channel = channel_data.get('channel') or {}
@@ -878,7 +1083,7 @@ class ShannonService:
         if agent_id == 'shannon':
             response = self._handle_shannon_command(command_text)
         else:
-            response = self._handle_registered_agent_command(agent_id, command_text)
+            response = self._handle_registered_agent_command(agent_id, command_text, activity=activity)
 
         return reference, response
 

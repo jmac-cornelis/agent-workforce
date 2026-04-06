@@ -971,8 +971,16 @@ def build_hemingway_impact_card(data: Dict[str, Any]) -> Dict[str, Any]:
 def build_hemingway_records_card(data: Dict[str, Any]) -> Dict[str, Any]:
     '''
     Build an Adaptive Card for a Hemingway /doc-records or /doc-record response.
+
+    Uses the human-friendly 'records' list when available, falling back to
+    raw 'data' for backward compatibility.
     '''
+    # Prefer the new human-friendly records list; fall back to raw data
     records = data.get('records', [])
+    if not records:
+        records = data.get('data', [])
+        if isinstance(records, dict):
+            records = []
     total = data.get('total', len(records))
 
     facts = {
@@ -981,20 +989,32 @@ def build_hemingway_records_card(data: Dict[str, Any]) -> Dict[str, Any]:
 
     body_lines: list[str] = []
     for record in records[:10]:
-        doc_id = record.get('doc_id', '')
         title = record.get('title', '')
-        doc_type = record.get('doc_type', '')
-        created_at = record.get('created_at', '')
-        body_lines.append(f'• **{doc_id}** {title} [{doc_type}] ({created_at})')
+        doc_type_display = record.get('doc_type_display', record.get('doc_type', ''))
+        author = record.get('author', 'Hemingway')
+        link = record.get('link', '')
+        source = record.get('source', '')
+
+        # Build a clean one-liner per record
+        line = f'\u2022 **{title}**'
+        if doc_type_display:
+            line += f' [{doc_type_display}]'
+        if author:
+            line += f' by {author}'
+        if source:
+            line += f' ({source})'
+        if link:
+            line += f' \u2014 [View]({link})'
+        body_lines.append(line)
 
     if len(records) > 10:
-        body_lines.append(f'  ...and {len(records) - 10} more')
+        body_lines.append(f'...and {len(records) - 10} more')
 
     if not body_lines:
         body_lines.append('No documentation records found.')
 
     return build_fact_card(
-        title='Hemingway Documentation Records',
+        title='Documentation Records',
         facts=facts,
         body_lines=body_lines,
     )
@@ -1057,6 +1077,64 @@ def build_hemingway_search_card(data: Dict[str, Any]) -> Dict[str, Any]:
         body_lines=body_lines,
     )
 
+
+
+def build_hemingway_find_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Build an Adaptive Card for a Hemingway /find response.
+
+    Similar to the search card but uses the human-friendly records list
+    and shows the interpreted-as hint when the query was auto-classified.
+    """
+    # Prefer the new human-friendly records list
+    records = data.get('records', [])
+    if not records:
+        inner = data.get('data', {})
+        records = inner.get('results', []) if isinstance(inner, dict) else []
+    total = data.get('total', len(records))
+
+    inner_data = data.get('data', {}) if isinstance(data.get('data'), dict) else {}
+    query_text = inner_data.get('query', '')
+    interpreted_as = inner_data.get('interpreted_as', '')
+
+    facts: Dict[str, Any] = {
+        'Results': total,
+    }
+    if query_text:
+        facts['Search'] = query_text
+    if interpreted_as:
+        facts['Interpreted As'] = interpreted_as
+
+    body_lines: list[str] = []
+    for record in records[:10]:
+        title = record.get('title', '')
+        doc_type_display = record.get('doc_type_display', record.get('doc_type', ''))
+        author = record.get('author', 'Hemingway')
+        link = record.get('link', '')
+        source = record.get('source', '')
+
+        line = f'\u2022 **{title}**'
+        if doc_type_display:
+            line += f' [{doc_type_display}]'
+        if author:
+            line += f' by {author}'
+        if source:
+            line += f' ({source})'
+        if link:
+            line += f' \u2014 [View]({link})'
+        body_lines.append(line)
+
+    if len(records) > 10:
+        body_lines.append(f'...and {len(records) - 10} more')
+
+    if not body_lines:
+        body_lines.append('No matching documentation found.')
+
+    return build_fact_card(
+        title='Documentation Search',
+        facts=facts,
+        body_lines=body_lines,
+    )
 
 def build_hemingway_publication_card(data: Dict[str, Any]) -> Dict[str, Any]:
     '''
@@ -1386,4 +1464,255 @@ def build_nl_query_card(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         subtitle=f'Tool: {tool_used}',
         facts=facts,
         body_lines=body_lines,
+    )
+
+
+def build_hemingway_voice_config_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    """Adaptive Card for Hemingway voice configuration display."""
+    active = data.get('active_profile', 'default')
+    config = data.get('active_config', {})
+    available = data.get('available_profiles', [])
+
+    facts: Dict[str, Any] = {'Active Profile': active}
+    if config:
+        if config.get('tone'):
+            facts['Tone'] = config['tone']
+        if config.get('audience'):
+            facts['Audience'] = config['audience']
+        if config.get('purpose'):
+            facts['Purpose'] = config['purpose']
+
+    body_lines: list[str] = []
+    style = config.get('style_notes', '')
+    if style:
+        body_lines.append(str(style)[:300])
+    if available:
+        profiles_str = ', '.join(available)
+        body_lines.append(f'**Available profiles**: {profiles_str}')
+
+    profile_name = config.get('name', active)
+    return build_fact_card(
+        title='Voice Configuration',
+        subtitle=f'Profile: {profile_name}',
+        facts=facts,
+        body_lines=body_lines or None,
+    )
+
+
+
+def _classify_doc_category(rec: Dict[str, Any]) -> str:
+    source = str(rec.get('source', ''))
+    source_type = str(rec.get('source_type', ''))
+    doc_type = str(rec.get('doc_type', ''))
+
+    if source_type == 'pr_review' or source.startswith('PR'):
+        return 'As-Built (PR)'
+    if 'confluence' in source.lower() or 'confluence' in source_type:
+        return 'Confluence'
+    if doc_type == 'how_to':
+        return 'How-To Guide'
+    if doc_type == 'user_guide':
+        return 'User Guide'
+    if doc_type == 'release_note_support':
+        return 'Release Notes'
+    if doc_type == 'engineering_reference':
+        return 'Engineering Reference'
+    if source == 'Repository' or source_type == 'reindex':
+        return 'Repository'
+    if source == 'Local':
+        return 'Local'
+    return 'Other'
+
+
+def _get_doc_link(rec: Dict[str, Any]) -> str:
+    return str(
+        rec.get('file_url')
+        or rec.get('pr_url')
+        or rec.get('metadata', {}).get('file_url')
+        or rec.get('metadata', {}).get('pr_url')
+        or rec.get('request', {}).get('file_url')
+        or ''
+    )
+
+
+def build_hemingway_nl_query_card(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not data or not data.get('ok'):
+        error = data.get('error', 'Query failed') if data else 'No data'
+        return build_fact_card(title='Query Failed', subtitle=str(error))
+
+    query = data.get('query', '')
+    tool_used = data.get('tool_used', 'unknown')
+    summary = data.get('summary', '')
+    result = data.get('result') or {}
+
+    raw_data = result.get('data', result.get('results', []))
+    if isinstance(raw_data, dict):
+        records = raw_data.get('results', [])
+    elif isinstance(raw_data, list):
+        records = raw_data
+    else:
+        records = []
+    if not isinstance(records, list):
+        records = []
+
+    total = (
+        (raw_data.get('count') if isinstance(raw_data, dict) else None)
+        or result.get('total')
+        or len(records)
+    )
+
+    card_body: list = [
+        {
+            'type': 'TextBlock',
+            'size': 'Large',
+            'weight': 'Bolder',
+            'text': 'Hemingway Query Result',
+            'wrap': True,
+        },
+        {
+            'type': 'TextBlock',
+            'text': f'{total} document(s) found',
+            'wrap': True,
+            'spacing': 'Small',
+            'isSubtle': True,
+        },
+        {
+            'type': 'FactSet',
+            'facts': [
+                {'title': 'Query', 'value': query},
+                {'title': 'Results', 'value': str(total)},
+            ],
+        },
+    ]
+
+    if records:
+        categories: Dict[str, list] = {}
+        for rec in records[:20]:
+            cat = _classify_doc_category(rec)
+            categories.setdefault(cat, []).append(rec)
+
+        for cat in sorted(categories.keys()):
+            card_body.append({
+                'type': 'TextBlock',
+                'text': f'**{cat}**',
+                'wrap': True,
+                'spacing': 'Medium',
+                'weight': 'Bolder',
+            })
+
+            for rec in categories[cat]:
+                title = rec.get('title', rec.get('doc_title', 'Untitled'))
+                link = _get_doc_link(rec)
+                source = str(rec.get('source', ''))
+
+                columns = []
+                if link:
+                    columns.append({
+                        'type': 'Column',
+                        'width': 'stretch',
+                        'items': [{
+                            'type': 'TextBlock',
+                            'text': f'\u2022 [{title}]({link})',
+                            'wrap': True,
+                        }],
+                        'selectAction': {
+                            'type': 'Action.OpenUrl',
+                            'url': link,
+                        },
+                    })
+                else:
+                    columns.append({
+                        'type': 'Column',
+                        'width': 'stretch',
+                        'items': [{
+                            'type': 'TextBlock',
+                            'text': f'\u2022 {title}',
+                            'wrap': True,
+                        }],
+                    })
+
+                if source and source != cat:
+                    columns.append({
+                        'type': 'Column',
+                        'width': 'auto',
+                        'items': [{
+                            'type': 'TextBlock',
+                            'text': source,
+                            'isSubtle': True,
+                            'size': 'Small',
+                        }],
+                    })
+
+                card_body.append({
+                    'type': 'ColumnSet',
+                    'columns': columns,
+                    'spacing': 'Small',
+                })
+
+        if total and int(total) > 20:
+            card_body.append({
+                'type': 'TextBlock',
+                'text': f'*...and {int(total) - 20} more*',
+                'wrap': True,
+                'isSubtle': True,
+            })
+    elif summary:
+        card_body.append({
+            'type': 'TextBlock',
+            'text': summary,
+            'wrap': True,
+        })
+
+    if not records and summary:
+        pass
+
+    return {
+        '$schema': 'http://adaptivecards.io/schemas/adaptive-card.json',
+        'type': 'AdaptiveCard',
+        'version': '1.5',
+        'body': card_body,
+    }
+
+
+def build_hemingway_reindex_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Build an Adaptive Card for a Hemingway /reindex response.
+    Shows how many docs were indexed vs skipped from a GitHub repo.
+    """
+    if not data or not data.get("ok"):
+        error = data.get("error", "Reindex failed") if data else "No data"
+        return build_fact_card(
+            title="Reindex Failed",
+            subtitle=str(error),
+        )
+
+    result = data.get("data", {})
+    repo = result.get("repo", "unknown")
+    branch = result.get("branch", "main")
+    docs_dir = result.get("docs_dir", "docs")
+    files_found = result.get("files_found", 0)
+    indexed = result.get("indexed", 0)
+    skipped = result.get("skipped", 0)
+    errors = result.get("errors", [])
+
+    facts = {
+        "Repository": repo,
+        "Branch": branch,
+        "Docs Dir": docs_dir,
+        "Files Found": str(files_found),
+        "Indexed": str(indexed),
+        "Skipped (already indexed)": str(skipped),
+    }
+
+    body_lines: List[str] = []
+    if errors:
+        facts["Errors"] = str(len(errors))
+        for err in errors[:5]:
+            body_lines.append(f"⚠️ {err}")
+
+    return build_fact_card(
+        title="📚 Docs Re-indexed",
+        subtitle=f"{repo} ({branch}:{docs_dir}/)",
+        facts=facts,
+        body_lines=body_lines if body_lines else None,
     )

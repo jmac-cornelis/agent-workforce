@@ -695,8 +695,33 @@ class HemingwayDocumentationAgent(BaseAgent):
 
         context_payload = '\n'.join(context_parts)
 
+        # Inject voice configuration into the system prompt if available.
+        # Voice config is read fresh on each generation so changes take
+        # effect immediately without restarting the agent.
+        try:
+            from agents.hemingway.api import get_active_voice_profile
+            voice_profile = get_active_voice_profile()
+        except Exception:
+            voice_profile = {}
+
+        voice_instruction = ''
+        if voice_profile:
+            tone = voice_profile.get('tone', 'professional')
+            audience = voice_profile.get('audience', 'engineers')
+            purpose = voice_profile.get('purpose', 'technical documentation')
+            style = voice_profile.get('style_notes', '')
+            voice_instruction = (
+                '\\n\\nVOICE & STYLE:\\n'
+                f'- Tone: {tone}\\n'
+                f'- Audience: {audience}\\n'
+                f'- Purpose: {purpose}\\n'
+                f'- Style: {style}\\n'
+            )
+
+        system_prompt = doc_type_prompt + voice_instruction
+
         messages = [
-            Message.system(doc_type_prompt),
+            Message.system(system_prompt),
             Message.user(context_payload),
         ]
         response = self.llm.chat(messages=messages)

@@ -39,6 +39,9 @@ from agents.hemingway.models import (
 from agents.hemingway.state.record_store import HemingwayRecordStore
 
 import re
+from pathlib import Path
+
+import yaml
 
 log = logging.getLogger(os.path.basename(sys.argv[0]))
 
@@ -57,6 +60,70 @@ def _parse_confluence_url(url: str) -> Dict[str, str]:
     return {}
 
 record_store = HemingwayRecordStore()
+
+
+# ---------------------------------------------------------------------------
+# Human-friendly record formatting helpers
+# ---------------------------------------------------------------------------
+
+_DOC_TYPE_DISPLAY = {
+    'as_built': 'As-Built Reference',
+    'engineering_reference': 'Engineering Reference',
+    'how_to': 'How-To Guide',
+    'user_guide': 'User Guide',
+    'release_note_support': 'Release Notes',
+}
+
+
+def _classify_source(record: Dict[str, Any]) -> str:
+    """Classify the origin of a documentation record for display."""
+    req = record.get('request', {})
+    if isinstance(req, dict):
+        if req.get('pr_number'):
+            return f"PR #{req['pr_number']}"
+        if req.get('confluence_title') or req.get('confluence_page'):
+            return 'Confluence'
+        if req.get('target_file'):
+            return 'Repository'
+    return 'One-off'
+
+
+def _build_record_link(record: Dict[str, Any]) -> str:
+    """Build a live link to the documentation artifact."""
+    req = record.get('request', {})
+    if not isinstance(req, dict):
+        doc_id = record.get('doc_id', '')
+        return f'https://hemingway.cn-agents.com/v1/docs/record/{doc_id}'
+    repo = req.get('repo_name', '')
+    target = req.get('target_file', '')
+    branch = req.get('branch', 'main')
+    if repo and target:
+        return f'https://github.com/{repo}/blob/{branch}/{target}'
+    pr = req.get('pr_number')
+    if repo and pr:
+        return f'https://github.com/{repo}/pull/{pr}'
+    confluence_page = req.get('confluence_page')
+    if confluence_page:
+        return str(confluence_page)
+    doc_id = record.get('doc_id', '')
+    return f'https://hemingway.cn-agents.com/v1/docs/record/{doc_id}'
+
+
+def _format_record_for_humans(record: Dict[str, Any]) -> Dict[str, Any]:
+    """Transform a raw record summary into a human-friendly representation."""
+    return {
+        'title': record.get('title', ''),
+        'author': 'Hemingway',
+        'doc_type': record.get('doc_type', ''),
+        'doc_type_display': _DOC_TYPE_DISPLAY.get(
+            record.get('doc_type', ''), record.get('doc_type', ''),
+        ),
+        'source': _classify_source(record),
+        'link': _build_record_link(record),
+        'created_at': record.get('created_at', ''),
+        'doc_id': record.get('doc_id', ''),
+        'project_key': record.get('project_key', ''),
+    }
 
 _run_count = 0
 _total_docs_generated = 0
@@ -110,6 +177,12 @@ class SearchDocsRequest(BaseModel):
     limit: Optional[int] = None
 
 
+class FindRequest(BaseModel):
+    '''Request body for POST /v1/docs/find -- free-text search.'''
+    text: str
+    limit: int = 10
+
+
 class PublishRequest(BaseModel):
     '''Request body for POST /v1/docs/publish.'''
     doc_id: str
@@ -143,9 +216,37 @@ class ConfluencePublishPageRequest(BaseModel):
     dry_run: Optional[bool] = None
 
 
+class VoiceConfigRequest(BaseModel):
+    '''Request body for POST /v1/config/voice.'''
+    profile_name: Optional[str] = None
+    tone: Optional[str] = None
+    audience: Optional[str] = None
+    purpose: Optional[str] = None
+    style_notes: Optional[str] = None
+
+
+class VoiceConfigFromFileRequest(BaseModel):
+    '''Request body for POST /v1/config/voice/from-file.'''
+    file_url: Optional[str] = None
+    file_path: Optional[str] = None
+    profile_name: str = 'custom'
+
+
 # ---------------------------------------------------------------------------
 # Application factory
 # ---------------------------------------------------------------------------
+
+class NLQueryRequest(BaseModel):
+    query: str
+
+
+class ReindexRequest(BaseModel):
+    """Request body for POST /v1/docs/reindex."""
+    repo: str
+    docs_dir: str = 'docs'
+    branch: str = 'main'
+    project_key: Optional[str] = None
+
 
 def create_app() -> FastAPI:
     '''Build and return the Hemingway FastAPI application.'''
@@ -158,6 +259,53 @@ def create_app() -> FastAPI:
     @app.get('/v1/health')
     def health() -> Dict[str, Any]:
         return {'service': 'hemingway', 'ok': True}
+
+    @app.get('/v1/info')
+    def info() -> Dict[str, Any]:
+        return {
+            'agent_id': 'hemingway',
+            'name': 'Hemingway Documentation Agent',
+            'version': '1.1.0',
+            'description': (
+                'Source-grounded documentation generation, impact analysis, '
+                'and review-gated publication. Supports voice/tone configuration.'
+            ),
+            'capabilities': [
+                'Documentation generation from source files (as_built, engineering_reference, how_to, user_guide, release_note_support)',
+                'Documentation impact analysis for source changes',
+                'Record storage, search, and retrieval',
+                'Review-gated publication to repo Markdown and Confluence',
+                'PR-driven documentation generation with auto-commit',
+                'Voice/tone configuration for documentation style control',
+            ],
+            'endpoints': [
+                {'method': 'GET', 'path': '/v1/health', 'description': 'Service liveness check'},
+                {'method': 'GET', 'path': '/v1/info', 'description': 'Agent identity and capabilities'},
+                {'method': 'GET', 'path': '/v1/status/stats', 'description': 'Record counts and doc types'},
+                {'method': 'GET', 'path': '/v1/status/load', 'description': 'Current load state'},
+                {'method': 'GET', 'path': '/v1/status/work-summary', 'description': 'Docs generated today'},
+                {'method': 'GET', 'path': '/v1/status/tokens', 'description': 'Token usage summary'},
+                {'method': 'GET', 'path': '/v1/status/decisions', 'description': 'Recent documentation records'},
+                {'method': 'GET', 'path': '/v1/status/decisions/{record_id}', 'description': 'Detail for one record'},
+                {'method': 'POST', 'path': '/v1/docs/generate', 'description': 'Generate documentation from source files'},
+                {'method': 'GET', 'path': '/v1/docs/records', 'description': 'List stored documentation records'},
+                {'method': 'GET', 'path': '/v1/docs/record/{doc_id}', 'description': 'Get a specific record'},
+                {'method': 'POST', 'path': '/v1/docs/search', 'description': 'Search documentation records'},
+                {'method': 'POST', 'path': '/v1/docs/impact', 'description': 'Detect documentation impact'},
+                {'method': 'POST', 'path': '/v1/docs/publish', 'description': 'Publish approved documentation'},
+                {'method': 'POST', 'path': '/v1/docs/pr-review', 'description': 'PR documentation review (async)'},
+                {'method': 'GET', 'path': '/v1/docs/pr-review/{job_id}', 'description': 'Poll PR review job status'},
+                {'method': 'POST', 'path': '/v1/docs/confluence/publish-page', 'description': 'Publish markdown to Confluence'},
+                {'method': 'GET', 'path': '/v1/config/voice', 'description': 'Get current voice configuration'},
+                {'method': 'POST', 'path': '/v1/config/voice', 'description': 'Update voice configuration'},
+                {'method': 'POST', 'path': '/v1/config/voice/from-file', 'description': 'Load voice personality from file/URL'},
+            ],
+            'shannon_commands': [
+                '/generate-doc', '/impact-detect', '/doc-records', '/doc-record',
+                '/publish-doc', '/search-docs', '/pr-review', '/confluence-publish',
+                '/voice-config',
+            ],
+        }
 
     @app.get('/v1/status/stats')
     def status_stats() -> Dict[str, Any]:
@@ -256,6 +404,128 @@ def create_app() -> FastAPI:
             },
         }
 
+
+    _VOICE_CONFIG_PATH = Path(os.getenv('CONFIG_DIR', 'config')) / 'hemingway' / 'voice_config.yaml'
+
+    def _load_voice_config() -> dict:
+        try:
+            with open(_VOICE_CONFIG_PATH, 'r', encoding='utf-8') as f:
+                return yaml.safe_load(f) or {}
+        except FileNotFoundError:
+            return {
+                'active_profile': 'default',
+                'profiles': {
+                    'default': {
+                        'name': 'Default Engineering Voice',
+                        'tone': 'professional',
+                        'audience': 'engineers',
+                        'purpose': 'internal engineering documentation',
+                        'style_notes': 'Write clear, precise technical documentation.',
+                        'personality_file': None,
+                    }
+                }
+            }
+
+    def _save_voice_config(config: dict) -> None:
+        _VOICE_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        with open(_VOICE_CONFIG_PATH, 'w', encoding='utf-8') as f:
+            yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+
+    def get_active_voice_profile() -> dict:
+        config = _load_voice_config()
+        active = config.get('active_profile', 'default')
+        return config.get('profiles', {}).get(active, {})
+
+
+
+    # ------------------------------------------------------------------
+    # Voice configuration endpoints
+    # ------------------------------------------------------------------
+
+    @app.get('/v1/config/voice')
+    def get_voice_config() -> Dict[str, Any]:
+        '''Get current voice configuration and available profiles.'''
+        config = _load_voice_config()
+        active = config.get('active_profile', 'default')
+        profiles = config.get('profiles', {})
+        return {
+            'ok': True,
+            'data': {
+                'active_profile': active,
+                'active_config': profiles.get(active, {}),
+                'available_profiles': list(profiles.keys()),
+            },
+        }
+
+    @app.post('/v1/config/voice')
+    def set_voice_config(body: VoiceConfigRequest) -> Dict[str, Any]:
+        '''Update voice configuration — switch profile or modify active profile fields.'''
+        config = _load_voice_config()
+
+        if body.profile_name:
+            if body.profile_name not in config.get('profiles', {}):
+                return {'ok': False, 'error': f'Profile not found: {body.profile_name}'}
+            config['active_profile'] = body.profile_name
+
+        active = config.get('active_profile', 'default')
+        profile = config.setdefault('profiles', {}).setdefault(active, {})
+
+        if body.tone is not None:
+            profile['tone'] = body.tone
+        if body.audience is not None:
+            profile['audience'] = body.audience
+        if body.purpose is not None:
+            profile['purpose'] = body.purpose
+        if body.style_notes is not None:
+            profile['style_notes'] = body.style_notes
+
+        _save_voice_config(config)
+        return {'ok': True, 'data': {'active_profile': active, 'config': profile}}
+
+    @app.post('/v1/config/voice/from-file')
+    def load_voice_from_file(body: VoiceConfigFromFileRequest) -> Dict[str, Any]:
+        '''Load voice personality from a file URL or local path into a new profile.'''
+        content_text = ''
+        source_ref = ''
+        if body.file_url:
+            import requests as _requests
+            try:
+                resp = _requests.get(body.file_url, timeout=15)
+                resp.raise_for_status()
+                content_text = resp.text
+                source_ref = body.file_url
+            except Exception as exc:
+                return {'ok': False, 'error': f'Failed to fetch URL: {exc}'}
+        elif body.file_path:
+            try:
+                with open(body.file_path, 'r', encoding='utf-8') as fh:
+                    content_text = fh.read()
+                source_ref = body.file_path
+            except Exception as exc:
+                return {'ok': False, 'error': f'Failed to read file: {exc}'}
+        else:
+            return {'ok': False, 'error': 'Provide file_url or file_path'}
+
+        config = _load_voice_config()
+        config.setdefault('profiles', {})[body.profile_name] = {
+            'name': f'Custom: {body.profile_name}',
+            'tone': 'custom',
+            'audience': 'as specified in personality file',
+            'purpose': 'as specified in personality file',
+            'style_notes': content_text,
+            'personality_file': source_ref,
+        }
+        config['active_profile'] = body.profile_name
+        _save_voice_config(config)
+        return {
+            'ok': True,
+            'data': {
+                'profile': body.profile_name,
+                'content_length': len(content_text),
+                'source': source_ref,
+            },
+        }
+
     # ------------------------------------------------------------------
     # Domain endpoints
     # ------------------------------------------------------------------
@@ -334,9 +604,14 @@ def create_app() -> FastAPI:
         doc_type: Optional[str] = Query(default=None),
         limit: int = Query(default=20, ge=1, le=100),
     ) -> Dict[str, Any]:
-        '''List stored documentation records.'''
+        '''List stored documentation records with human-friendly formatting.'''
         records = record_store.list_records(doc_type=doc_type, limit=limit)
-        return {'ok': True, 'data': records}
+        return {
+            'ok': True,
+            'data': records,
+            'records': [_format_record_for_humans(r) for r in records],
+            'total': len(records),
+        }
 
     @app.get('/v1/docs/record/{doc_id}')
     def docs_record_detail(doc_id: str) -> Dict[str, Any]:
@@ -368,6 +643,89 @@ def create_app() -> FastAPI:
                 'count': len(results),
                 'query': body.query or '',
             },
+        }
+
+
+    @app.post('/v1/docs/find')
+    def docs_find(body: FindRequest) -> Dict[str, Any]:
+        """
+        Free-form search. Text can be a query, PR number, or doc type.
+
+        Convenience wrapper around the search infrastructure that interprets
+        a single text string and routes to the appropriate filter.
+        """
+        text = body.text.strip()
+
+        # Detect PR reference (e.g. "#42" or "42")
+        pr_match = re.match(r'#?(\d+)$', text)
+        if pr_match:
+            pr_num = pr_match.group(1)
+            # Search all records for PR number in request metadata
+            all_records = record_store.list_records(limit=200)
+            matched = []
+            for r in all_records:
+                req = r.get('request', {})
+                if isinstance(req, dict) and str(req.get('pr_number', '')) == pr_num:
+                    matched.append(r)
+            matched = matched[:body.limit]
+            return {
+                'ok': True,
+                'data': {
+                    'results': matched,
+                    'count': len(matched),
+                    'query': text,
+                    'interpreted_as': f'PR #{pr_num}',
+                },
+                'records': [_format_record_for_humans(r) for r in matched],
+                'total': len(matched),
+            }
+
+        # Detect doc type keyword
+        doc_type_aliases = {
+            'as_built': 'as_built',
+            'as-built': 'as_built',
+            'engineering_reference': 'engineering_reference',
+            'engineering-reference': 'engineering_reference',
+            'how_to': 'how_to',
+            'how-to': 'how_to',
+            'user_guide': 'user_guide',
+            'user-guide': 'user_guide',
+            'release_note_support': 'release_note_support',
+            'release-notes': 'release_note_support',
+        }
+        text_lower = text.lower().replace(' ', '_')
+        if text_lower in doc_type_aliases:
+            doc_type_val = doc_type_aliases[text_lower]
+            results = record_store.search_records(
+                doc_type=doc_type_val,
+                limit=body.limit,
+            )
+            return {
+                'ok': True,
+                'data': {
+                    'results': results,
+                    'count': len(results),
+                    'query': text,
+                    'interpreted_as': f'doc_type={doc_type_val}',
+                },
+                'records': [_format_record_for_humans(r) for r in results],
+                'total': len(results),
+            }
+
+        # Default: free-text search across title, content, summary
+        results = record_store.search_records(
+            query=text,
+            limit=body.limit,
+        )
+        return {
+            'ok': True,
+            'data': {
+                'results': results,
+                'count': len(results),
+                'query': text,
+            },
+            'records': [_format_record_for_humans(r) for r in results],
+            'total': len(results),
         }
 
     @app.post('/v1/docs/impact')
@@ -797,13 +1155,49 @@ def create_app() -> FastAPI:
                 except Exception as exc:
                     log.warning(f'Failed to set commit status: {exc}')
 
+        # --- Persist lightweight metadata records post-commit ---
+        # Update existing records with commit destination metadata so they
+        # are discoverable by PR URL, file URL, and commit SHA.
+        if commit_sha and files_committed:
+            pr_url = f'https://github.com/{body.repo}/pull/{body.pr_number}'
+            for doc in generated_docs:
+                rec_id = doc.get('record_id', '')
+                doc_path = doc.get('path', '')
+                if rec_id:
+                    try:
+                        stored = record_store.get_record(rec_id)
+                        if stored and stored.get('record'):
+                            rec_data = stored['record']
+                            # Enrich metadata with destination info
+                            meta = dict(rec_data.get('metadata', {}) or {})
+                            meta['source_type'] = 'pr_review'
+                            meta['pr_url'] = pr_url
+                            meta['file_url'] = f'https://github.com/{body.repo}/blob/{head_branch}/{doc_path}'
+                            meta['commit_sha'] = commit_sha
+                            meta['generated_at'] = datetime.now(timezone.utc).isoformat()
+                            rec_data['metadata'] = meta
+                            # Tag the request with source origin
+                            req = dict(rec_data.get('request', {}) or {})
+                            req['source'] = f'PR #{body.pr_number}'
+                            req['pr_number'] = body.pr_number
+                            req['repo_name'] = body.repo
+                            req['branch'] = head_branch
+                            req['target_file'] = doc_path
+                            rec_data['request'] = req
+                            # Clear full content — doc lives in git now
+                            rec_data['content_markdown'] = ''
+                            record_store.save_record(rec_data, summary_markdown=stored.get('summary_markdown', ''))
+                            log.info(f'Updated record {rec_id} with commit metadata (sha={commit_sha[:8]})')
+                    except Exception as exc:
+                        log.warning(f'Failed to update record {rec_id} with commit metadata: {exc}')
+
         for doc in generated_docs:
             rec_id = doc.get('record_id', '')
             if rec_id:
                 try:
                     rec = record_store.get_record(rec_id)
                     if rec:
-                        doc['content'] = rec.content_markdown
+                        doc['content'] = rec.get('record', {}).get('content_markdown', '')
                 except Exception:
                     pass
 
@@ -1004,6 +1398,169 @@ def create_app() -> FastAPI:
                     os.unlink(temp_path)
                 except OSError:
                     pass
+
+
+    # ------------------------------------------------------------------
+    # Natural language query endpoint
+    # ------------------------------------------------------------------
+
+    @app.post("/v1/nl/query")
+    def nl_query(body: NLQueryRequest) -> Dict[str, Any]:
+        try:
+            from agents.hemingway.nl_query import run_nl_query
+            result = run_nl_query(query=body.query)
+            return result
+        except Exception as e:
+            log.error(f"NL query failed: {e}")
+            return {"ok": False, "error": str(e)}
+
+    # ------------------------------------------------------------------
+    # Re-index existing docs from a GitHub repo
+    # ------------------------------------------------------------------
+
+    @app.post('/v1/docs/reindex')
+    def docs_reindex(body: ReindexRequest) -> Dict[str, Any]:
+        """
+        Scan a GitHub repo's docs/ folder and create lightweight metadata
+        records for each .md file.  Skips files already indexed (matched by
+        target_file path in the request field).
+
+        Does NOT store full content — only metadata for discovery.
+        """
+        import requests as http_requests
+
+        gh_token = os.getenv('GITHUB_TOKEN', '')
+        if not gh_token:
+            # Fallback: try github_utils credential loader (same as PR review)
+            try:
+                import github_utils
+                gh_token = github_utils.get_github_credentials()
+            except Exception:
+                pass
+        # Token is optional — public repos work without auth
+
+        if '/' not in body.repo:
+            raise HTTPException(status_code=400, detail='repo must be in "owner/repo" format.')
+
+        headers = {'Accept': 'application/vnd.github.v3+json'}
+        if gh_token:
+            headers['Authorization'] = f'token {gh_token}'
+
+        # --- List files in docs_dir via GitHub Contents API ---
+        api_url = f'https://api.github.com/repos/{body.repo}/contents/{body.docs_dir}'
+        params = {'ref': body.branch}
+        try:
+            resp = http_requests.get(api_url, headers=headers, params=params, timeout=30)
+            resp.raise_for_status()
+        except Exception as exc:
+            return {'ok': False, 'error': f'GitHub API error listing {body.docs_dir}/: {exc}'}
+
+        entries = resp.json()
+        if not isinstance(entries, list):
+            return {'ok': False, 'error': f'{body.docs_dir}/ is not a directory or is empty.'}
+
+        md_files = [e for e in entries if isinstance(e, dict) and str(e.get('name', '')).endswith('.md')]
+
+        # --- Check which files are already indexed ---
+        existing_records = record_store.search_records(limit=500)
+        indexed_paths: set = set()
+        for rec in existing_records:
+            stored = record_store.get_record(rec.get('doc_id', ''))
+            if stored and stored.get('record'):
+                req = stored['record'].get('request', {})
+                tf = req.get('target_file', '')
+                if tf:
+                    indexed_paths.add(tf)
+
+        indexed_count = 0
+        skipped_count = 0
+        errors: List[str] = []
+
+        for entry in md_files:
+            file_path = entry.get('path', '')
+            file_name = entry.get('name', '')
+            download_url = entry.get('download_url', '')
+
+            # Skip if already indexed
+            if file_path in indexed_paths:
+                skipped_count += 1
+                continue
+
+            # Fetch first 2KB to extract H1 title
+            title = file_name.replace('.md', '').replace('-', ' ').replace('_', ' ').title()
+            summary_text = ''
+            if download_url:
+                try:
+                    dl_resp = http_requests.get(download_url, headers=headers, timeout=15)
+                    dl_resp.raise_for_status()
+                    raw_text = dl_resp.text[:2048]
+                    # Extract H1 title
+                    h1_match = re.match(r'^#\s+(.+)', raw_text, re.MULTILINE)
+                    if h1_match:
+                        title = h1_match.group(1).strip()
+                    # Extract first paragraph as summary
+                    lines = raw_text.split('\n')
+                    para_lines = []
+                    started = False
+                    for line in lines:
+                        stripped = line.strip()
+                        if not started and stripped and not stripped.startswith('#'):
+                            started = True
+                        if started:
+                            if not stripped:
+                                break
+                            para_lines.append(stripped)
+                    summary_text = ' '.join(para_lines)[:300]
+                except Exception:
+                    pass
+
+            file_url = f'https://github.com/{body.repo}/blob/{body.branch}/{file_path}'
+
+            record = DocumentationRecord(
+                doc_id=str(uuid.uuid4())[:8],
+                title=title,
+                doc_type='as_built',
+                project_key=body.project_key or '',
+                created_at=datetime.now(timezone.utc).isoformat(),
+                request={
+                    'repo_name': body.repo,
+                    'branch': body.branch,
+                    'target_file': file_path,
+                    'source': 'Repository',
+                },
+                impact={},
+                source_refs=[],
+                evidence_summary={},
+                content_markdown='',
+                summary_markdown=summary_text,
+                patches=[],
+                validation={},
+                warnings=[],
+                confidence='high',
+                metadata={
+                    'source_type': 'reindex',
+                    'file_url': file_url,
+                    'indexed_at': datetime.now(timezone.utc).isoformat(),
+                },
+            )
+            try:
+                record_store.save_record(record)
+                indexed_count += 1
+            except Exception as exc:
+                errors.append(f'{file_path}: {exc}')
+
+        return {
+            'ok': True,
+            'data': {
+                'repo': body.repo,
+                'branch': body.branch,
+                'docs_dir': body.docs_dir,
+                'files_found': len(md_files),
+                'indexed': indexed_count,
+                'skipped': skipped_count,
+                'errors': errors,
+            },
+        }
 
     return app
 

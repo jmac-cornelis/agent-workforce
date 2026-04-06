@@ -209,11 +209,19 @@ class HemingwayRecordStore:
                 title_text = str(record_data.get('title') or '')
                 content_text = str(record_data.get('content_markdown') or '')
                 summary_text = str(record_data.get('summary_markdown') or '')
-                combined = f'{title_text} {content_text} {summary_text}'
-                if q_lower not in combined.lower():
+                # Also search request metadata (source, repo, PR#, target_file)
+                req = record_data.get('request') or {}
+                meta = record_data.get('metadata') or {}
+                request_text = ' '.join(str(v) for v in req.values() if v)
+                metadata_text = ' '.join(str(v) for v in meta.values() if v)
+                combined = f'{title_text} {content_text} {summary_text} {request_text} {metadata_text}'
+                combined_lower = combined.lower()
+                q_words = q_lower.split()
+                if not any(w in combined_lower for w in q_words):
                     continue
-                for field_text in (title_text, content_text, summary_text):
-                    if q_lower in field_text.lower():
+                for field_text in (title_text, summary_text, request_text, content_text, metadata_text):
+                    ft_lower = field_text.lower()
+                    if any(w in ft_lower for w in q_words):
                         match_context = field_text[:200]
                         break
 
@@ -271,6 +279,9 @@ class HemingwayRecordStore:
         patches = record_data.get('patches') or []
         publications = record_data.get('publication_records') or []
 
+        req = record_data.get('request') or {}
+        meta = record_data.get('metadata') or {}
+
         return {
             'doc_id': str(record_data.get('doc_id') or ''),
             'title': str(record_data.get('title') or ''),
@@ -284,6 +295,11 @@ class HemingwayRecordStore:
                 1 for publication in publications
                 if str(publication.get('status') or '') == 'published'
             ),
+            'source': str(req.get('source') or ''),
+            'source_type': str(meta.get('source_type') or ''),
+            'file_url': str(meta.get('file_url') or ''),
+            'pr_url': str(meta.get('pr_url') or ''),
+            'repo_name': str(req.get('repo_name') or ''),
             'storage_dir': str(json_path.parent),
             'json_path': str(json_path),
             'markdown_path': str(markdown_path),

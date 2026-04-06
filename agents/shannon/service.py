@@ -36,6 +36,8 @@ from shannon.cards import (
     build_hemingway_publication_card,
     build_hemingway_records_card,
     build_hemingway_search_card,
+    build_hemingway_reindex_card,
+    build_hemingway_voice_config_card,
     build_jira_query_card,
     build_jira_release_status_card,
     build_jira_status_report_card,
@@ -483,6 +485,8 @@ class ShannonService:
             '/search-docs': build_hemingway_search_card,
             '/confluence-publish': build_hemingway_confluence_publish_card,
             '/pr-review': build_hemingway_pr_review_card,
+            '/reindex': build_hemingway_reindex_card,
+            '/voice-config': build_hemingway_voice_config_card,
         },
     }
 

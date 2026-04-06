@@ -255,11 +255,10 @@ def test_hemingway_records_card_multiple():
 
     texts = _body_texts(card)
     body = '\n'.join(texts)
-    assert '**[DOC-001](https://cornelisnetworks.atlassian.net/browse/DOC-001)**' in body
     assert 'Architecture Guide' in body
+    assert 'API Reference' in body
+    assert 'Release Notes' in body
     assert '[architecture]' in body
-    assert '**[DOC-002](https://cornelisnetworks.atlassian.net/browse/DOC-002)**' in body
-    assert '**[DOC-003](https://cornelisnetworks.atlassian.net/browse/DOC-003)**' in body
 
 
 def test_hemingway_records_card_empty():
@@ -297,9 +296,9 @@ def test_hemingway_records_card_truncates_at_ten():
 
     # First 10 should appear
     for i in range(1, 11):
-        assert f'DOC-{i:03d}' in body
+        assert f'Doc {i}' in body
     # 11th and beyond should not
-    assert 'DOC-011' not in body
+    assert 'Doc 11' not in body
     assert '...and 4 more' in body
 
 

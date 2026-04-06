@@ -1,0 +1,38 @@
+# Hemingway voice configuration — controls documentation tone and style.
+# Can be overridden per-user or per-request via /voice-config command.
+
+active_profile: default
+
+profiles:
+  default:
+    name: Default Engineering Voice
+    tone: professional
+    audience: engineers
+    purpose: internal engineering documentation
+    style_notes: >
+      Write clear, precise technical documentation. Use active voice.
+      Be concise. Include code examples where relevant.
+      Assume the reader is a competent engineer.
+    personality_file: null
+
+  formal:
+    name: Formal Technical Writing
+    tone: formal
+    audience: external stakeholders
+    purpose: customer-facing documentation
+    style_notes: >
+      Use formal technical language. Define all acronyms on first use.
+      Include section numbers. Follow IEEE documentation standards.
+      No colloquialisms.
+    personality_file: null
+
+  concise:
+    name: Concise Reference
+    tone: terse
+    audience: experienced engineers
+    purpose: quick reference
+    style_notes: >
+      Extremely concise. Bullet points over paragraphs.
+      Code-first explanations. No introductions or conclusions.
+      Just the facts.
+    personality_file: null
