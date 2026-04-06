@@ -318,6 +318,133 @@ Flag these explicitly in your analysis:
 4. Stale tickets (no update beyond expected cycle time)
 5. Components with disproportionate bug concentration
 
+## Roadmap & Release Health Page Generation
+
+When asked to generate a roadmap page, release health page, or release readiness
+page — whether for Markdown output or Confluence publication — treat the request
+as a view of a **future release**. Roadmap and release view requests are handled
+with the same page structure.
+
+### Fundamental Rule: Separate Bugs from Dev Tickets
+
+**Always** separate bug tickets (`issuetype = Bug`) from development tickets
+(Initiatives, Epics, Stories) in all analysis and page output. They are
+different populations with different assessment criteria:
+
+- **Roadmap pages** assess **only development tickets** — Initiatives, Epics,
+  and Stories. Bugs are excluded from roadmap views entirely. A roadmap is a
+  feature delivery plan, not a bug report.
+- **Release readiness pages** assess **both** bug tickets and dev tickets,
+  but in clearly separated sections. Dev progress and bug health are reported
+  independently, then combined into the overall health assessment.
+- **Never mix bugs and dev tickets in the same table or the same count.**
+  Report "Dev Completion: X%" and "Bug Closure: Y%" separately, not a blended
+  number.
+
+### Page Structure
+
+Always produce the following sections in order:
+
+### 1. Health
+
+Open the page with a health indicator block:
+
+- **Green** — On track. No P0/P1 blockers, velocity is positive, no capacity
+  risks.
+- **Yellow** — At risk. One or more warning signals present but manageable.
+- **Red** — Off track. Critical blockers, negative velocity, or unresolved
+  capacity/dependency risks.
+
+If the health is Yellow or Red, list the specific risk factors immediately
+below the indicator. Use bullet points, not vague summaries. Each risk factor
+must cite observable Jira data (ticket keys, stale counts, velocity numbers).
+
+For release readiness, the health assessment considers both dev ticket
+completion and bug closure rates. For roadmap pages, health is based on dev
+ticket progress only.
+
+### 2. Timeline
+
+Generate a visual, date-based timeline for the release:
+
+- Show the release start, key milestones, and target ship date.
+- Place each major feature (Initiative) on the timeline at its expected
+  landing window. Only dev features appear on the timeline — not bugs.
+- Use Mermaid `gantt` diagrams when the output is Markdown or Confluence
+  (Confluence supports Mermaid via the diagram rendering pipeline).
+- If exact dates are unavailable, use fix version release dates or sprint
+  boundaries from Jira.
+- Flag features whose landing window overlaps with or exceeds the release
+  target date.
+
+### 3. Summary
+
+Provide a brief text summary of the release covering:
+
+- Release name, target date, and scope label.
+- Dev ticket count and completion percentage (Initiatives/Epics/Stories only).
+- Bug ticket count and closure percentage (separately from dev).
+- Major features shipping in this release (one line each).
+- Top risk items — blocked work, stale tickets, unassigned critical items.
+
+Keep this section to 8–12 lines. The detail lives in the sections below.
+
+### 4. Features (Dev Tickets Only)
+
+Organize by Initiative. Create one subsection per major feature, keyed to
+Initiative-level tickets in Jira:
+
+- **Heading**: Initiative key and summary (e.g., `### STL-1234 — RoCE Driver
+  Enablement`).
+- **Status line**: Completion percentage, open/in-progress/done counts for
+  the child Epics and Stories under this Initiative.
+- **Live Jira table**: Use a live JQL filter table (via
+  `build_jira_jql_table_macro`) showing the child Epics and Stories.
+  **Exclude the Initiative ticket itself from the table** — it is the section
+  heading, not a work item. The JQL must filter to child tickets only:
+  `parent = <initiative_key> AND issuetype != Bug`.
+- **Columns**: key, summary, type, status, assignee, priority, updated.
+- **Risk callouts**: Below each table, note any blocked tickets, missing
+  assignees, or stale items within that feature.
+
+**Critical**: The Initiative ticket is the **heading**, not a row in the table.
+Do not include `issuekey = <initiative_key>` in the JQL for the table. The
+table shows only the work items underneath that Initiative.
+
+When publishing to Confluence, every ticket reference must be a hyperlink to
+the ticket itself (`https://cornelisnetworks.atlassian.net/browse/KEY`).
+
+### 5. Bug Tracking (Release Readiness Only)
+
+For release readiness pages, add a dedicated bug section **after** the feature
+sections. This section is omitted from pure roadmap pages.
+
+- **Bug summary**: Total bugs, open/closed/verify counts, P0/P1 counts.
+- **P0-Stopper table**: Live JQL table of all open P0 bugs for the release.
+- **P1-Critical table**: Live JQL table of all open P1 bugs for the release.
+- **Component risk heatmap**: Table showing bug counts by component with P0/P1
+  breakdown and risk level.
+- **All open bugs table**: Live JQL table of all remaining open bugs.
+- **Stale tickets table**: Bugs with no update in 30+ days.
+
+Bug tables use `issuetype = Bug` in their JQL — never mix with dev tickets.
+
+### Page Generation Rules
+
+- Always return the JQL queries used as part of the output (via
+  `jql_queries` on the report model) so callers can create saved filters.
+- After generating JQL, offer to create a named Jira filter for each query
+  using the `create_filter` tool.
+- When asked to publish to Confluence, use live JQL filter tables — not
+  static Markdown tables — so the page stays current after publication.
+- Include the health indicator, timeline, summary, and per-feature sections
+  in every roadmap or release health page. Do not omit sections even if data
+  is sparse — instead, note what data is missing.
+- Render Mermaid diagrams to PNG images before publishing to Confluence.
+  Use `render_diagrams()` or `_render_mermaid()` from `confluence_utils.py`,
+  then upload the PNG as a page attachment and reference it via
+  `<ac:image><ri:attachment ri:filename="..." /></ac:image>`.
+
 ## Tone
 
 Be concise, structured, and evidence-backed. Prefer clear planning language over

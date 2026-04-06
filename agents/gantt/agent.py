@@ -84,6 +84,11 @@ from tools.jira_tools import (
 )
 from tools.knowledge_tools import search_knowledge, list_knowledge_files, read_knowledge_file
 
+try:
+    from confluence_utils import build_jira_jql_table_macro
+except ImportError:
+    build_jira_jql_table_macro = None  # type: ignore[assignment]
+
 # Logging config - follows jira_utils.py pattern
 log = logging.getLogger(os.path.basename(sys.argv[0]))
 
@@ -608,6 +613,8 @@ class GanttProjectPlannerAgent(BaseAgent):
             risks,
         )
 
+        backlog_jql = request.backlog_jql or BacklogInterpreter.build_backlog_jql(request)
+
         snapshot = PlanningSnapshot(
             project_key=request.project_key,
             planning_horizon_days=request.planning_horizon_days,
@@ -619,6 +626,7 @@ class GanttProjectPlannerAgent(BaseAgent):
             issues=issues,
             evidence_summary=evidence_bundle.to_summary(),
             evidence_gaps=evidence_gaps,
+            jql_queries=[backlog_jql],
         )
         snapshot.summary_markdown = self._format_snapshot(snapshot)
         return snapshot
@@ -1909,8 +1917,10 @@ class GanttProjectPlannerAgent(BaseAgent):
         bug_summaries: List[BugSummary] = []
         current_snapshots: Dict[str, ReleaseSnapshot] = {}
         current_cycle_time_samples: List[Dict[str, Any]] = []
+        collected_jql: List[str] = []
 
         for release in release_names:
+            collected_jql.append(self._build_release_ticket_jql(release, request.scope_label))
             tickets = self._query_release_tickets(release, request.scope_label)
             all_tickets_by_release[release] = tickets
 
@@ -2126,6 +2136,7 @@ class GanttProjectPlannerAgent(BaseAgent):
             },
             cycle_time_samples=cycle_time_samples,
             cycle_time_stats=cycle_time_stats,
+            jql_queries=collected_jql,
         )
 
         # Generate markdown summary
@@ -2176,7 +2187,9 @@ class GanttProjectPlannerAgent(BaseAgent):
                 release_names = []
 
         release_summaries: List[ReleaseSurveyReleaseSummary] = []
+        collected_survey_jql: List[str] = []
         for release in release_names:
+            collected_survey_jql.append(self._build_release_ticket_jql(release, request.scope_label))
             tickets = self._query_release_tickets(release, request.scope_label)
             tickets = [
                 ticket
@@ -2278,6 +2291,7 @@ class GanttProjectPlannerAgent(BaseAgent):
             survey_mode=survey_mode,
             releases_surveyed=release_names,
             release_summaries=release_summaries,
+            jql_queries=collected_survey_jql,
         )
         report.summary_markdown = self._format_release_survey_summary(report)
 
@@ -2868,16 +2882,13 @@ class GanttProjectPlannerAgent(BaseAgent):
             ),
         )
 
-    def _query_release_tickets(
+    def _build_release_ticket_jql(
         self,
         release: str,
         scope_label: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+    ) -> str:
         '''
-        Query Jira for all tickets in a given release.
-
-        Builds JQL with fixVersion filter and optional scope_label keyword.
-        Returns a list of normalized ticket dicts.
+        Build JQL for querying release tickets without executing the query.
         '''
         jql_parts = [
             f'project = {self.project_key or "STL"}',
@@ -2891,7 +2902,20 @@ class GanttProjectPlannerAgent(BaseAgent):
                     scope_clauses.append(f'labels = "{scope_value}"')
                     scope_clauses.append(f'"product family" = "{scope_value}"')
                 jql_parts.append(f'({" OR ".join(scope_clauses)})')
-        jql = ' AND '.join(jql_parts) + ' ORDER BY priority ASC, updated DESC'
+        return ' AND '.join(jql_parts) + ' ORDER BY priority ASC, updated DESC'
+
+    def _query_release_tickets(
+        self,
+        release: str,
+        scope_label: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        '''
+        Query Jira for all tickets in a given release.
+
+        Builds JQL with fixVersion filter and optional scope_label keyword.
+        Returns a list of normalized ticket dicts.
+        '''
+        jql = self._build_release_ticket_jql(release, scope_label)
 
         log.debug(f'Release ticket query JQL: {jql}')
 
@@ -3858,25 +3882,29 @@ class GanttProjectPlannerAgent(BaseAgent):
     ) -> str:
         '''
         Build a Confluence Jira Issues macro block for one live section.
+
+        Delegates to the shared confluence_utils builder.
         '''
-        macro_columns = columns or [
-            'key',
-            'summary',
-            'type',
-            'status',
-            'assignee',
-            'priority',
-            'updated',
+        default_columns = [
+            'key', 'summary', 'type', 'status',
+            'assignee', 'priority', 'updated',
         ]
-        macro_column_ids = column_ids or [
-            'issuekey',
-            'summary',
-            'issuetype',
-            'status',
-            'assignee',
-            'priority',
-            'updated',
+        default_column_ids = [
+            'issuekey', 'summary', 'issuetype', 'status',
+            'assignee', 'priority', 'updated',
         ]
+
+        if build_jira_jql_table_macro is not None:
+            return build_jira_jql_table_macro(
+                jql=jql,
+                columns=columns or default_columns,
+                column_ids=column_ids or default_column_ids,
+                maximum_issues=maximum_issues,
+            )
+
+        # Fallback: inline XHTML if confluence_utils is unavailable
+        macro_columns = columns or default_columns
+        macro_column_ids = column_ids or default_column_ids
         column_csv = ','.join(macro_columns)
         column_id_csv = ','.join(macro_column_ids)
         escaped_jql = escape(jql)

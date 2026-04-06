@@ -5066,6 +5066,104 @@ def run_filter(jira, filter_id, limit=None, dump_file=None, dump_format='csv'):
         raise
 
 
+def create_filter(jira, name, jql, description=None, favourite=False,
+                  share_permissions=None, dry_run=None):
+    '''
+    Create a new saved Jira filter.
+
+    Uses POST /rest/api/3/filter to create a persisted filter that can be
+    referenced by ID in dashboards, Confluence macros, and automation rules.
+
+    Input:
+        jira: JIRA object with active connection.
+        name: Display name for the filter.
+        jql: JQL query string that defines the filter.
+        description: Optional description text.
+        favourite: If True, star the filter for the authenticated user.
+        share_permissions: List of permission dicts, e.g. [{'type': 'global'}].
+                           Defaults to private (empty list).
+        dry_run: If True, validate and return a preview without creating.
+                 Resolved via resolve_dry_run() when None.
+
+    Output:
+        dict: The created filter JSON from the API (or preview dict when dry-run).
+
+    Side Effects:
+        Logs creation details and prints filter summary to stdout.
+    '''
+    from config.env_loader import resolve_dry_run as _resolve_dry_run
+    effective_dry_run = _resolve_dry_run(dry_run)
+
+    log.debug(f'Entering create_filter(name={name}, jql={jql[:80]}, dry_run={effective_dry_run})')
+
+    payload = {
+        'name': name,
+        'jql': jql,
+        'favourite': bool(favourite),
+    }
+    if description:
+        payload['description'] = description
+    if share_permissions:
+        payload['sharePermissions'] = share_permissions
+
+    if effective_dry_run:
+        output('')
+        output('=' * 100)
+        output('[DRY RUN] Would create Jira filter:')
+        output('=' * 100)
+        output(f'  Name:        {name}')
+        output(f'  JQL:         {jql}')
+        output(f'  Description: {description or "(none)"}')
+        output(f'  Favourite:   {"Yes" if favourite else "No"}')
+        if share_permissions:
+            output(f'  Shared with: {share_permissions}')
+        output('=' * 100)
+        output('')
+        return {
+            'dry_run': True,
+            'name': name,
+            'jql': jql,
+            'description': description or '',
+            'favourite': bool(favourite),
+        }
+
+    try:
+        email, api_token = get_jira_credentials()
+
+        response = requests.post(
+            f'{JIRA_URL}/rest/api/3/filter',
+            auth=(email, api_token),
+            headers={
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            json=payload,
+        )
+
+        if response.status_code not in (200, 201):
+            log.error(f'Create filter failed: {response.status_code} - {response.text}')
+            raise Exception(f'Jira API error: {response.status_code} - {response.text}')
+
+        f = response.json()
+
+        output('')
+        output('=' * 100)
+        output('Filter Created Successfully')
+        output('=' * 100)
+        output(f'  ID:       {f.get("id", "N/A")}')
+        output(f'  Name:     {f.get("name", "N/A")}')
+        output(f'  JQL:      {f.get("jql", "N/A")}')
+        output(f'  View URL: {f.get("viewUrl", "N/A")}')
+        output('=' * 100)
+        output('')
+
+        return f
+
+    except Exception as e:
+        log.error(f'Failed to create filter: {e}')
+        raise
+
+
 # ****************************************************************************************
 # Dashboard Management Functions
 # ****************************************************************************************

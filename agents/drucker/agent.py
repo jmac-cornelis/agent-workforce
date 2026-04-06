@@ -765,6 +765,7 @@ class DruckerCoordinatorAgent(BaseAgent):
             proposed_actions=actions,
             tickets=tickets,
         )
+        report.jql_queries.append(self._build_jql(request))
         report.summary_markdown = self._format_report(report)
         return report
 
@@ -808,6 +809,8 @@ class DruckerCoordinatorAgent(BaseAgent):
             tickets=tickets,
             monitor_scope='recent_ticket_intake',
         )
+        report.jql_queries.append(self._build_recent_jql(request, since_value))
+        report.summary_markdown = self._format_report(report)
         report.request['since'] = since_value
 
         findings_by_ticket: Dict[str, List[DruckerFinding]] = defaultdict(list)
@@ -1713,6 +1716,15 @@ class DruckerCoordinatorAgent(BaseAgent):
             ])
             for error in report.errors:
                 lines.append(f'- {error}')
+
+        if report.jql_queries:
+            lines.extend([
+                '',
+                '## JQL Queries Used',
+                '',
+            ])
+            for i, jql in enumerate(report.jql_queries, 1):
+                lines.append(f'{i}. `{jql}`')
 
         return '\n'.join(lines)
 

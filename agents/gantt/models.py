@@ -215,6 +215,7 @@ class PlanningSnapshot:
     issues: List[Dict[str, Any]] = field(default_factory=list)
     evidence_summary: Dict[str, Any] = field(default_factory=dict)
     evidence_gaps: List[str] = field(default_factory=list)
+    jql_queries: List[str] = field(default_factory=list)
     summary_markdown: str = ''
 
     def to_dict(self) -> Dict[str, Any]:
@@ -231,6 +232,7 @@ class PlanningSnapshot:
             'issues': self.issues,
             'evidence_summary': self.evidence_summary,
             'evidence_gaps': self.evidence_gaps,
+            'jql_queries': self.jql_queries,
             'summary_markdown': self.summary_markdown,
         }
 
@@ -570,6 +572,8 @@ class ReleaseMonitorReport:
     # Human-readable summary
     summary_markdown: str = ""
 
+    jql_queries: List[str] = field(default_factory=list)
+
     # Output file path
     output_file: str = ""
 
@@ -601,6 +605,7 @@ class ReleaseMonitorReport:
             "cycle_time_samples": self.cycle_time_samples,
             "cycle_time_stats": self.cycle_time_stats,
             "summary_markdown": self.summary_markdown,
+            "jql_queries": self.jql_queries,
             "output_file": self.output_file,
             "total_bugs": self.total_bugs,
             "total_p0": self.total_p0,
@@ -703,6 +708,7 @@ class ReleaseSurveyReport:
     releases_surveyed: List[str] = field(default_factory=list)
     release_summaries: List[ReleaseSurveyReleaseSummary] = field(default_factory=list)
     summary_markdown: str = ''
+    jql_queries: List[str] = field(default_factory=list)
     output_file: str = ''
 
     @property
@@ -749,6 +755,7 @@ class ReleaseSurveyReport:
             'releases_surveyed': self.releases_surveyed,
             'release_summaries': [item.to_dict() for item in self.release_summaries],
             'summary_markdown': self.summary_markdown,
+            'jql_queries': self.jql_queries,
             'output_file': self.output_file,
             'total_tickets': self.total_tickets,
             'done_count': self.done_count,

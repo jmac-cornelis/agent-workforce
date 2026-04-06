@@ -42,6 +42,8 @@ try:
         export_page_to_markdown as _cu_export_page_to_markdown,
         convert_markdown_to_confluence as _cu_convert_markdown,
         render_diagrams as _cu_render_diagrams,
+        build_jira_jql_table_macro as _cu_build_jira_jql_table_macro,
+        build_jira_filter_table_macro as _cu_build_jira_filter_table_macro,
     )
 
     CONFLUENCE_UTILS_AVAILABLE = True
@@ -455,6 +457,80 @@ def convert_markdown_to_confluence(
         return ToolResult.failure(f'Markdown to Confluence conversion failed: {e}')
 
 
+@tool(
+    description='Build a live Jira Issues table macro from a JQL query for embedding in Confluence pages'
+)
+def build_jira_jql_table(
+    jql: str,
+    columns: Optional[str] = None,
+    column_ids: Optional[str] = None,
+    maximum_issues: int = 200,
+) -> ToolResult:
+    '''
+    Build Confluence Jira Issues macro XHTML from a JQL query.
+
+    Args:
+        jql:             JQL query string.
+        columns:         Comma-separated display column names (or None for defaults).
+        column_ids:      Comma-separated Jira field IDs (or None for defaults).
+        maximum_issues:  Max rows to render.
+
+    Returns:
+        ToolResult with ``macro_xhtml`` key containing the storage XHTML.
+    '''
+    log.debug(f'build_jira_jql_table(jql={jql[:80]}...)')
+    try:
+        col_list = [c.strip() for c in columns.split(',')] if columns else None
+        cid_list = [c.strip() for c in column_ids.split(',')] if column_ids else None
+        result = _cu_build_jira_jql_table_macro(
+            jql,
+            columns=col_list,
+            column_ids=cid_list,
+            maximum_issues=maximum_issues,
+        )
+        return ToolResult.success({'macro_xhtml': result})
+    except Exception as e:
+        log.error(f'Failed to build Jira JQL table macro: {e}')
+        return ToolResult.failure(f'Jira JQL table macro build failed: {e}')
+
+
+@tool(
+    description='Build a live Jira Issues table macro from a saved filter ID for embedding in Confluence pages'
+)
+def build_jira_filter_table(
+    filter_id: str,
+    columns: Optional[str] = None,
+    column_ids: Optional[str] = None,
+    maximum_issues: int = 200,
+) -> ToolResult:
+    '''
+    Build Confluence Jira Issues macro XHTML from a saved Jira filter ID.
+
+    Args:
+        filter_id:       Saved Jira filter ID.
+        columns:         Comma-separated display column names (or None for defaults).
+        column_ids:      Comma-separated Jira field IDs (or None for defaults).
+        maximum_issues:  Max rows to render.
+
+    Returns:
+        ToolResult with ``macro_xhtml`` key containing the storage XHTML.
+    '''
+    log.debug(f'build_jira_filter_table(filter_id={filter_id})')
+    try:
+        col_list = [c.strip() for c in columns.split(',')] if columns else None
+        cid_list = [c.strip() for c in column_ids.split(',')] if column_ids else None
+        result = _cu_build_jira_filter_table_macro(
+            filter_id,
+            columns=col_list,
+            column_ids=cid_list,
+            maximum_issues=maximum_issues,
+        )
+        return ToolResult.success({'macro_xhtml': result})
+    except Exception as e:
+        log.error(f'Failed to build Jira filter table macro: {e}')
+        return ToolResult.failure(f'Jira filter table macro build failed: {e}')
+
+
 class ConfluenceTools(BaseTool):
     '''
     Collection of Confluence tools for agent use.
@@ -568,3 +644,11 @@ class ConfluenceTools(BaseTool):
         render_diagrams: bool = True,
     ) -> ToolResult:
         return convert_markdown_to_confluence(markdown_text, render_diagrams)
+
+    @tool(description='Build a live Jira Issues table macro from a JQL query')
+    def build_jira_jql_table(self, jql: str, columns: Optional[str] = None, column_ids: Optional[str] = None, maximum_issues: int = 200) -> ToolResult:
+        return build_jira_jql_table(jql, columns, column_ids, maximum_issues)
+
+    @tool(description='Build a live Jira Issues table macro from a saved filter ID')
+    def build_jira_filter_table(self, filter_id: str, columns: Optional[str] = None, column_ids: Optional[str] = None, maximum_issues: int = 200) -> ToolResult:
+        return build_jira_filter_table(filter_id, columns, column_ids, maximum_issues)
