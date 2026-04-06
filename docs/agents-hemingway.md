@@ -10,38 +10,38 @@ status: "draft"
 
 ## Module Overview
 
-Hemingway is the documentation agent for the Cornelis Networks platform. It transforms source code, build artifacts, test results, release context, and meeting-derived clarifications into durable, source-grounded engineering and user-facing documentation. The agent operates as a deterministic-first coordinator that analyzes documentation impact, synthesizes authoritative inputs, validates structural integrity, and stages review-gated publication to repo Markdown and Confluence targets. Hemingway does not generate speculative prose — every claim traces to an actual source artifact, record, or approved meeting summary.
+Hemingway is the documentation agent for the Cornelis Networks platform. It transforms source code, build artifacts, test results, release context, and meeting-derived clarifications into source-grounded, validation-gated internal documentation. The agent operates as a deterministic-first coordinator that produces reviewable documentation patches for repo-owned Markdown and Confluence targets, with all publication gated through explicit human approval.
 
 ## What Changed
 
-**Before:** Documentation generation was manual, ad-hoc, and often detached from implementation truth. Engineers wrote docs after the fact, leading to drift between code and documentation.
+**Before:** Documentation generation was manual, disconnected from source truth, and lacked structured validation or traceability to authoritative inputs.
 
-**After:** Hemingway automates documentation generation from authoritative system records (code, builds, tests, releases, meetings). It produces candidate documentation updates that are validated, reviewed, and published through a gated workflow.
+**After:** Hemingway automates documentation generation from authoritative system records (code, builds, tests, releases, meetings), validates all claims against source artifacts, and produces review-gated publication patches with full audit trails.
 
-**Impact:** Engineering teams now have a systematic way to keep documentation synchronized with code changes. The review-gated publication model ensures human oversight while reducing manual documentation burden. Other agents (Linus, Josephine, Faraday, Hedy, Linnaeus, Herodotus) supply inputs to Hemingway, creating a documentation pipeline grounded in actual system state.
+**Impact:** Engineering teams now have a deterministic path from source changes to durable documentation updates. All documentation claims are traceable to source artifacts. Publication requires explicit approval, preventing speculative or unsupported content from reaching internal or external targets.
 
 ## Component Diagram
 
 ```mermaid
 graph TB
-    API[HemingwayDocumentationAgent API]
+    API[FastAPI Service<br/>port 8203]
     Agent[HemingwayDocumentationAgent]
-    RecordStore[HemingwayRecordStore]
-    ReviewAgent[ReviewAgent]
-    Models[Documentation Models]
-    Tools[Hemingway Tools]
-    Prompts[Doc-Type Prompts]
+    RecordStore[HemingwayRecordStore<br/>JSON + Markdown persistence]
+    ReviewAgent[ReviewAgent<br/>approval workflow]
+    Tools[HemingwayTools<br/>agent-callable wrappers]
+    CLI[Standalone CLI<br/>hemingway-agent]
     
     API --> Agent
+    CLI --> Agent
+    Tools --> Agent
     Agent --> RecordStore
     Agent --> ReviewAgent
-    Agent --> Models
-    Agent --> Prompts
-    Tools --> Agent
+    Agent --> ConfluenceTools[confluence_tools]
+    Agent --> FileTools[file_tools]
+    Agent --> EvidenceBundle[EvidenceBundle]
     
-    Agent -.->|reads| Prompts
-    Agent -.->|persists| RecordStore
-    Agent -.->|creates| ReviewAgent
+    RecordStore --> Storage[(data/hemingway_docs)]
+    ReviewAgent --> PublicationCoordinator[PublicationCoordinator]
 ```
 
 ## Key Flows
@@ -50,74 +50,76 @@ graph TB
 
 ```mermaid
 sequenceDiagram
-    participant Client
+    participant User
     participant API
-    participant Agent
-    participant RecordStore
-    participant ReviewAgent
+    participant Agent as HemingwayDocumentationAgent
+    participant Store as HemingwayRecordStore
+    participant Review as ReviewAgent
     
-    Client->>API: POST /v1/docs/generate
+    User->>API: POST /v1/docs/generate
     API->>Agent: plan_documentation(request)
     Agent->>Agent: detect_documentation_impact()
     Agent->>Agent: _load_authoritative_inputs()
-    Agent->>Agent: _generate_content() [LLM]
+    Agent->>Agent: _generate_content() [LLM synthesis]
     Agent->>Agent: _build_patches()
     Agent->>Agent: _validate_patches()
-    Agent->>ReviewAgent: create_review_session()
+    Agent->>Review: create_review_session()
     Agent-->>API: (record, review_session)
-    API->>RecordStore: save_record(record)
-    RecordStore-->>API: stored_summary
-    API-->>Client: {record, review_session, stored}
+    API->>Store: save_record(record)
+    Store-->>API: stored summary
+    API-->>User: {record, review_session, stored}
 ```
 
-**Description:** The client submits a 'DocumentationRequest' specifying title, doc type, source paths, and publication targets. The agent detects impact, loads source materials and evidence, invokes the LLM to generate content using a doc-type-specific prompt, builds candidate patches, validates them, and creates a review session. The record is persisted to disk as JSON + Markdown. No publication occurs until explicit approval.
+**Description:** User submits a documentation request with source paths, evidence files, and target configuration. The agent detects impact, loads authoritative inputs (source files, existing docs, evidence bundles), synthesizes content via LLM using doc-type-specific prompts, builds candidate patches, validates them, and creates a review session. The record is persisted to 'data/hemingway_docs/<DOC_ID>/' as JSON + Markdown. No publication occurs without explicit approval.
 
 ### Flow 2: Review-Gated Publication
 
 ```mermaid
 sequenceDiagram
-    participant Client
+    participant User
     participant API
-    participant Agent
-    participant RecordStore
-    participant ReviewAgent
-    participant ConfluenceTools
+    participant Agent as HemingwayDocumentationAgent
+    participant Review as ReviewAgent
+    participant Store as HemingwayRecordStore
+    participant Confluence as confluence_tools
     
-    Client->>API: POST /v1/docs/publish {doc_id}
-    API->>RecordStore: get_record(doc_id)
-    RecordStore-->>API: record_data
-    API->>ReviewAgent: approve_all(review_session)
+    User->>API: POST /v1/docs/publish {doc_id}
+    API->>Store: get_record(doc_id)
+    Store-->>API: record data
+    API->>Review: approve_all(review_session)
     API->>Agent: publish_approved(review_session)
-    Agent->>ReviewAgent: execute_approved(session)
-    ReviewAgent->>ConfluenceTools: create_confluence_page() / update_confluence_page()
-    ConfluenceTools-->>ReviewAgent: result
-    ReviewAgent-->>Agent: publications
-    Agent->>RecordStore: record_publications(doc_id, publications)
-    API-->>Client: {publications}
+    Agent->>Review: execute_approved(session)
+    Review->>Confluence: create_confluence_page() / update_confluence_page()
+    Review->>FileSystem: write repo markdown
+    Review-->>Agent: execution results
+    Agent-->>API: publications list
+    API->>Store: record_publications(doc_id, publications)
+    API-->>User: {publications, stored}
 ```
 
-**Description:** The client requests publication of an approved documentation record. The API loads the stored record, approves all review items, and delegates to 'publish_approved()'. The 'ReviewAgent' executes approved actions (writing repo Markdown, creating/updating Confluence pages). Publication results are appended to the stored record. Shannon is notified of successful publication.
+**Description:** User requests publication of an approved documentation record. The agent retrieves the stored record, approves all review items, and executes the approved patches. For Confluence targets, it calls 'create_confluence_page()' or 'update_confluence_page()' with diagram rendering. For repo targets, it writes Markdown files. All publication results are appended to the stored record as 'PublicationRecord' objects with status, timestamps, and error details.
 
-### Flow 3: Documentation Impact Detection
+### Flow 3: Shannon Notification on Impact Detection
 
 ```mermaid
 sequenceDiagram
-    participant Client
+    participant User
     participant API
-    participant Agent
-    participant Shannon
+    participant Agent as HemingwayDocumentationAgent
+    participant Shannon as notify_shannon()
     
-    Client->>API: POST /v1/docs/impact
+    User->>API: POST /v1/docs/impact
     API->>Agent: detect_documentation_impact(request)
-    Agent->>Agent: _default_target_file()
-    Agent->>Agent: resolve Confluence operation
-    Agent->>Agent: check blocking issues
     Agent-->>API: DocumentationImpactRecord
-    API->>Shannon: notify_shannon() [if high/medium impact]
-    API-->>Client: {impact}
+    API->>API: check impact_level
+    alt impact_level in (high, medium)
+        API->>Shannon: notify_shannon(agent_id, title, text, body_lines)
+        Shannon-->>API: notification sent
+    end
+    API-->>User: {impact record}
 ```
 
-**Description:** The client submits an impact detection request. The agent resolves affected targets (repo Markdown, Confluence pages), identifies blocking issues (e.g., missing Confluence space for page creation), and assigns a confidence level. If impact is high or medium, Shannon is notified via 'notify_shannon()'. The impact record is returned without persistence.
+**Description:** When documentation impact is detected at 'high' or 'medium' levels, the API posts a notification to Shannon with the impact level, affected sections, and document title. This ensures engineering teams are alerted to significant documentation changes in real time. The notification is non-blocking — failures are logged as warnings but do not abort the impact detection workflow.
 
 ## Data Model
 
@@ -127,67 +129,69 @@ sequenceDiagram
 - 'title': Document title
 - 'doc_type': One of 'as_built', 'engineering_reference', 'user_guide', 'how_to', 'release_note_support'
 - 'project_key': Jira project key (optional)
-- 'source_paths': List of source file paths to document
+- 'source_paths': List of source file paths to analyze
 - 'evidence_paths': List of evidence files (JSON, YAML, Markdown)
 - 'target_file': Repo-owned Markdown target path
-- 'confluence_title', 'confluence_page', 'confluence_space', 'confluence_parent_id': Confluence publication parameters
+- 'confluence_title', 'confluence_page', 'confluence_space', 'confluence_parent_id': Confluence publication targets
 - 'validation_profile': One of 'default', 'strict', 'sphinx'
+- 'diff_context': PR diff/patch for context during PR-review generation
+- 'branch': Git branch to fetch sources from
+- 'pr_number': PR number for fork-aware ref resolution
 
 **DocumentationRecord** ('agents/hemingway/models.py'):
-- 'doc_id': Unique identifier (8-char UUID prefix)
+- 'doc_id': Unique 8-character UUID
 - 'title', 'doc_type', 'project_key': Metadata
 - 'request': Original 'DocumentationRequest' as dict
 - 'impact': 'DocumentationImpactRecord' as dict
-- 'source_refs': List of source references (file paths, commit SHAs, build IDs)
-- 'evidence_summary': Evidence bundle summary
-- 'content_markdown': Generated documentation content
-- 'summary_markdown': Human-readable summary of the record
+- 'source_refs': List of source file references
+- 'evidence_summary': 'EvidenceBundle.to_summary()' output
+- 'content_markdown': Full generated Markdown content
+- 'summary_markdown': Human-readable summary for review
 - 'patches': List of 'DocumentationPatch' objects
-- 'validation': Validation result dict ('valid': bool, 'blocking_issues': list)
-- 'warnings': List of warning messages
-- 'confidence': 'low', 'medium', or 'high'
+- 'validation': Validation results dict with 'valid' boolean and 'blocking_issues' list
+- 'warnings': List of warning strings
+- 'confidence': One of 'low', 'medium', 'high'
 - 'publication_records': List of 'PublicationRecord' objects
 
 **DocumentationPatch** ('agents/hemingway/models.py'):
-- 'patch_id': Unique identifier
+- 'patch_id': Unique 8-character UUID
 - 'target_type': 'repo_markdown' or 'confluence_page'
 - 'operation': 'create' or 'update'
 - 'title': Patch title
 - 'target_ref': File path or Confluence page ID/title
-- 'content_markdown': Patch content
-- 'preview': Preview metadata (line count, word count, etc.)
-- 'validation': Patch-level validation result
-- 'source_refs': Source references for this patch
+- 'content_markdown': Markdown content to publish
+- 'preview': Dict with preview metadata
+- 'validation': Validation results for this patch
+- 'source_refs': Source file references for this patch
+- 'metadata': Additional metadata (e.g., 'space', 'parent_id', 'version_message')
 
 **PublicationRecord** ('agents/hemingway/models.py'):
-- 'publication_id': Unique identifier
-- 'doc_id', 'patch_id': Parent record identifiers
-- 'target_type', 'operation', 'target_ref': Publication target metadata
+- 'publication_id': Unique 8-character UUID
+- 'doc_id', 'patch_id': Parent record and patch IDs
+- 'target_type', 'operation', 'target_ref': Publication target details
 - 'status': 'pending', 'published', or 'failed'
 - 'published_at': ISO 8601 timestamp
-- 'result': Publication result dict (e.g., Confluence page URL)
+- 'result': Dict with publication result data (e.g., Confluence page URL)
 - 'error': Error message if status is 'failed'
 
-### Persistence
+### Persistence Schema
 
 Records are stored at 'data/hemingway_docs/<DOC_ID>/':
 - 'record.json': Full 'DocumentationRecord' as JSON
-- 'summary.md': Human-readable summary Markdown
-
-The 'HemingwayRecordStore' class ('agents/hemingway/state/record_store.py') provides CRUD operations and search.
+- 'summary.md': 'summary_markdown' field as Markdown
 
 ## Dependencies
 
 | Dependency | Purpose | Version |
 |------------|---------|---------|
-| 'agents.base' | Base agent framework ('BaseAgent', 'AgentConfig', 'AgentResponse') | internal |
-| 'agents.review_agent' | Review-gated execution ('ReviewAgent', 'ReviewSession', 'ReviewItem') | internal |
-| 'core.evidence' | Evidence bundle loading ('EvidenceBundle', 'load_evidence_bundle') | internal |
-| 'tools.confluence_tools' | Confluence page creation/update ('create_confluence_page', 'update_confluence_page', 'get_confluence_page') | internal |
-| 'tools.file_tools' | File reading ('read_file') | internal |
-| 'agents.pm_runtime' | Shannon notification ('notify_shannon') | internal |
-| 'fastapi' | REST API framework | 0.115.6 |
-| 'pydantic' | Request/response validation | 2.10.5 |
+| 'agents.base' | 'BaseAgent', 'AgentConfig', 'AgentResponse' | internal |
+| 'agents.review_agent' | 'ReviewAgent', 'ReviewItem', 'ReviewSession' | internal |
+| 'core.evidence' | 'EvidenceBundle', 'load_evidence_bundle' | internal |
+| 'tools.confluence_tools' | 'create_confluence_page', 'update_confluence_page', 'get_confluence_page' | internal |
+| 'tools.file_tools' | 'read_file' | internal |
+| 'agents.pm_runtime' | 'notify_shannon' | internal |
+| 'fastapi' | REST API framework | external |
+| 'pydantic' | Request/response models | external |
 
 ## Configuration
 
@@ -196,73 +200,76 @@ The 'HemingwayRecordStore' class ('agents/hemingway/state/record_store.py') prov
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | 'HEMINGWAY_DOC_DIR' | No | 'data/hemingway_docs' | Storage directory for documentation records |
-| 'CONFLUENCE_URL' | Yes (for Confluence publication) | - | Atlassian Confluence base URL |
-| 'CONFLUENCE_USER' | Yes (for Confluence publication) | - | Confluence username |
-| 'CONFLUENCE_API_TOKEN' | Yes (for Confluence publication) | - | Confluence API token |
-| 'LLM_PROVIDER' | No | 'openai' | LLM provider for content generation |
-| 'LLM_MODEL' | No | 'gpt-4' | LLM model for content generation |
-| 'DRY_RUN' | No | 'true' | Global dry-run gate (overridden by per-request 'dry_run' parameter) |
+| 'DRY_RUN' | No | 'true' | Global dry-run gate for mutation endpoints |
+| 'CONFLUENCE_URL' | Yes (for Confluence) | — | Atlassian Confluence base URL |
+| 'CONFLUENCE_USER' | Yes (for Confluence) | — | Confluence username |
+| 'CONFLUENCE_API_TOKEN' | Yes (for Confluence) | — | Confluence API token |
 
-### Configuration Files
+### Prompt Files
 
-- 'agents/hemingway/prompts/system.md': Core agent behavior prompt
-- 'agents/hemingway/prompts/as-built-design.md': As-built/engineering reference prompt (3-pass methodology)
-- 'agents/hemingway/prompts/user-guide.md': User guide/how-to prompt (man-page style)
-- 'agents/hemingway/prompts/traceability.md': Traceability/RTM prompt (requirements → implementation → test mapping)
+| File | Purpose |
+|------|---------|
+| 'prompts/system.md' | Core agent behavior prompt (required) |
+| 'prompts/as-built-design.md' | As-built/engineering reference prompt (3-pass methodology) |
+| 'prompts/user-guide.md' | User guide/how-to prompt (man-page style) |
+| 'prompts/traceability.md' | Traceability/RTM prompt (requirements → implementation → test mapping) |
 
-### Feature Flags
+### Validation Profiles
 
-- 'dry_run' (per-request): When 'true', preview mode — no LLM invocation, no persistence, no publication. Resolved via 'config.env_loader.resolve_dry_run()'.
-- 'persist' (per-request): When 'false', skip record persistence (used for ephemeral generation).
+| Profile | Description |
+|---------|-------------|
+| 'default' | Standard validation: required sections, no empty sections, source refs present |
+| 'strict' | Adds: all links must resolve, no placeholders, all facts must have source refs |
+| 'sphinx' | Adds: Sphinx-compatible RST/MD structure validation |
 
 ## Error Handling
 
 ### Error Handling Patterns
 
-1. **Validation Errors**: Raised as 'ValueError' when required fields are missing or invalid (e.g., missing 'doc_id', unknown 'doc_type'). Caught by API endpoints and returned as HTTP 400.
-
-2. **File I/O Errors**: Logged as warnings when source files or evidence files cannot be read. The agent continues with available inputs and lowers confidence. Missing files are recorded in 'warnings'.
-
-3. **LLM Errors**: Caught during '_generate_content()'. If LLM invocation fails, the agent returns an error response with the exception message. No partial content is persisted.
-
-4. **Publication Errors**: Caught during 'publish_approved()'. Each publication attempt is wrapped in a try/except. Failed publications are recorded as 'PublicationRecord' with 'status="failed"' and 'error' message. Successful publications proceed independently.
-
-5. **Confluence Errors**: Handled by 'tools.confluence_tools'. Errors (e.g., page not found, permission denied) are returned as 'ToolResult.failure()'. The agent logs the error and includes it in the publication record.
-
-6. **Shannon Notification Errors**: Logged as warnings (non-fatal). If 'notify_shannon()' fails, the agent continues without interruption.
+1. **API-level errors**: FastAPI 'HTTPException' with status codes (404 for missing records, 400 for invalid requests).
+2. **Agent-level errors**: 'AgentResponse.error_response(str(e))' for workflow failures.
+3. **Tool-level errors**: 'ToolResult.failure(error_message)' for tool execution failures.
+4. **Validation errors**: Stored in 'DocumentationRecord.validation["blocking_issues"]' and 'DocumentationRecord.warnings'.
+5. **Publication errors**: Stored in 'PublicationRecord.error' with 'status="failed"'.
 
 ### Exception Hierarchy
 
-- 'ValueError': Invalid input parameters
-- 'FileNotFoundError': Missing prompt files or source files
-- 'HTTPException' (FastAPI): HTTP-level errors (404, 400, 500)
-- Generic 'Exception': Catch-all for unexpected errors during LLM invocation, file I/O, or publication
+- 'FileNotFoundError': Raised when required prompt files are missing ('agents/hemingway/agent.py:__init__').
+- 'ValueError': Raised when 'DocumentationRecord' is missing 'doc_id' ('agents/hemingway/state/record_store.py:save_record').
+- 'HTTPException': Raised by FastAPI endpoints for client errors (404, 400).
+
+### Missing Error Handling
+
+- **External API calls**: Confluence tool calls ('create_confluence_page', 'update_confluence_page') do not have explicit try/except blocks in 'agents/hemingway/agent.py'. Errors propagate to the caller.
+- **File I/O**: 'read_file()' calls in '_load_authoritative_inputs()' do not have explicit error handling. Missing files are logged as warnings but do not abort the workflow.
 
 ## Known Limitations / Technical Debt
 
-1. **Hardcoded Prompt Paths**: Prompt files are loaded from 'agents/hemingway/prompts/' using hardcoded relative paths. If the module is moved, prompt loading will fail. Consider using 'importlib.resources' for package-relative resource loading.
+### Hardcoded Values
 
-2. **Missing Confluence URL Parsing Validation**: The '_parse_confluence_url()' function in 'api.py' uses a simple regex to extract space and page ID from Confluence URLs. It does not validate the domain or handle all Confluence URL formats (e.g., legacy URLs, custom domains). This could lead to silent failures when users paste unsupported URL formats.
+- **Default storage directory**: 'data/hemingway_docs' is hardcoded in 'HemingwayRecordStore.__init__()' when 'HEMINGWAY_DOC_DIR' is not set.
+- **Default doc type**: 'engineering_reference' is hardcoded in 'DocumentationRequest', 'GenerateDocRequest', and 'ImpactDetectRequest'.
+- **Default validation profile**: 'default' is hardcoded in 'DocumentationRequest' and 'GenerateDocRequest'.
+- **Default port**: 8203 is hardcoded in 'agents/hemingway/README.md' and deployment instructions.
 
-3. **No Token Budget Tracking**: The agent invokes the LLM for content generation but does not track token usage. The plan document specifies token tracking as a requirement, but no implementation exists. Add token logging to '_generate_content()' and expose cumulative totals via '/v1/status/tokens'.
+### Missing Implementations
 
-4. **Incomplete Validation Profiles**: The 'validation_profile' parameter ('default', 'strict', 'sphinx') is accepted but not fully implemented. The '_validate_patches()' method does not differentiate between profiles. Implement profile-specific validation rules (e.g., 'strict' requires all source refs to resolve, 'sphinx' validates RST syntax).
+- **Token tracking**: The '/v1/status/tokens' endpoint returns placeholder data ('token_usage_today': 0, 'token_usage_cumulative': 0). Actual LLM token usage is not tracked.
+- **Confluence URL parsing**: '_parse_confluence_url()' in 'agents/hemingway/api.py' only supports '/wiki/spaces/SPACE/pages/PAGE_ID' format. Other Confluence URL formats are not handled.
+- **PR diff context**: 'DocumentationRequest.diff_context' is defined but not used in the agent workflow. PR-review generation does not yet incorporate diff context.
 
-5. **No Circular Dependency Detection**: The agent does not detect circular dependencies between documentation targets. If doc A references doc B and doc B references doc A, the agent will not flag this as a warning.
+### Technical Debt
 
-6. **God Class**: 'HemingwayDocumentationAgent' ('agents/hemingway/agent.py') is 1,200+ lines with 20+ public methods. This violates the single-responsibility principle. Consider splitting into:
-   - 'DocImpactAnalyzer' (impact detection)
-   - 'SourceSynthesizer' (input loading)
-   - 'DocGenerator' (LLM invocation)
-   - 'DocValidator' (validation)
-   - 'PublicationCoordinator' (publication)
+- **God class**: 'HemingwayDocumentationAgent' has 15+ public methods and >500 lines. Consider splitting into 'DocImpactAnalyzer', 'SourceSynthesizer', 'DocGenerator', 'DocValidator', 'PublicationCoordinator' as described in 'docs/PLAN.md'.
+- **Circular dependency risk**: 'agents/hemingway/__init__.py' uses lazy imports to avoid circular dependency with 'agents.base → tools'. This is a workaround, not a fix.
+- **Duplicate tool definitions**: 'generate_hypatia_documentation', 'get_hypatia_record', 'list_hypatia_records', 'search_hypatia_records' are aliases for Hemingway tools. This duplication should be removed once the Hypatia → Hemingway rename is complete.
+- **Missing error handling on external calls**: Confluence tool calls and file I/O operations lack explicit try/except blocks. Errors propagate to the caller, which may not handle them gracefully.
+- **Incomplete validation**: 'strict' and 'sphinx' validation profiles are defined but not fully implemented. The agent does not enforce link resolution or Sphinx-compatible structure.
 
-7. **Missing Error Handling on External Calls**: The 'notify_shannon()' call in 'api.py' is wrapped in a try/except, but other external calls (e.g., 'load_evidence_bundle()', 'read_file()') are not. If these fail, the agent will crash instead of degrading gracefully.
+### Anti-patterns Detected
 
-8. **Hardcoded Default Doc Type**: The default 'doc_type' is hardcoded to 'engineering_reference' in multiple places ('DocumentationRequest', 'GenerateDocRequest', 'ImpactDetectRequest'). This should be a configurable default.
-
-9. **No Retry Logic for LLM Calls**: If the LLM invocation fails due to a transient error (e.g., rate limit, network timeout), the agent does not retry. Add exponential backoff retry logic to '_generate_content()'.
-
-10. **Incomplete PR Review Workflow**: The '/v1/docs/pr-review' endpoint is partially implemented but not fully tested. The 'diff_context' and 'branch' parameters are accepted but not used in all code paths. The PR review workflow should be completed or removed.
+- **Missing error handling on external calls**: 'create_confluence_page()', 'update_confluence_page()', and 'read_file()' calls in 'agents/hemingway/agent.py' lack explicit error handling. Failures propagate to the caller.
+- **Hardcoded credentials**: No hardcoded credentials detected. Confluence credentials are loaded from environment variables ('CONFLUENCE_USER', 'CONFLUENCE_API_TOKEN').
+- **Hardcoded URLs**: No hardcoded URLs detected. Confluence URL is loaded from 'CONFLUENCE_URL' environment variable.
 
 <!-- End Documentation Agent generated content -->

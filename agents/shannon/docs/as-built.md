@@ -2,7 +2,7 @@
 
 ```yaml
 ---
-title: "As-Built: Shannon Communications Agent"
+title: "As-Built: Shannon — Communications Agent"
 date: "2026-04-06"
 status: "draft"
 ---
@@ -10,7 +10,7 @@ status: "draft"
 
 # Module Overview
 
-Shannon is the single Microsoft Teams bot that serves as the unified human interface for all domain agents in the Cornelis Networks Agent Workforce. Named after Claude Shannon, the father of information theory, Shannon receives messages from Teams channels, routes commands to the correct agent API, renders responses as Adaptive Cards, manages approval workflows, and logs every interaction for audit. Shannon is not a proxy—it owns command parsing, routing, response rendering, approval lifecycle management, conversation threading, rate limiting, error handling, and audit logging.
+Shannon is the single Microsoft Teams bot that serves as the unified human interface for all domain agents in the Cornelis Networks Agent Workforce. Named after Claude Shannon, the father of information theory, it receives messages from Teams channels, routes commands to the correct agent API, renders responses as Adaptive Cards, manages approval workflows, and logs every interaction for audit. Shannon is not a proxy—it owns command parsing, routing, response rendering, approval lifecycle management, conversation threading, rate limiting, error handling, and audit logging.
 
 # What Changed
 
@@ -18,8 +18,7 @@ Shannon is the single Microsoft Teams bot that serves as the unified human inter
 
 **After:** Shannon is implemented as a lightweight, deterministic routing service with:
 - Microsoft Graph API integration (not Bot Framework SDK)
-- Outgoing webhook support for receiving user commands
-- Workflows webhook support for posting proactive messages
+- Outgoing webhook for user commands + Workflows webhook for proactive messages
 - Typed parameter coercion for POST commands
 - Per-agent notification channels
 - Email sending capability via Graph API
@@ -40,31 +39,32 @@ graph TB
 
     subgraph Shannon["Shannon Service"]
         WH[Webhook Receiver]
-        SVC[ShannonService]
-        REG[AgentRegistry]
+        CR[Command Router]
         CARD[Card Renderer]
-        POST[Poster]
-        STATE[StateStore]
+        POSTER[Message Poster]
+        REG[Agent Registry]
+        STATE[State Store]
     end
 
-    subgraph Agents["Domain Agents"]
-        DRUG[Drucker API]
-        GANT[Gantt API]
-        HEMI[Hemingway API]
+    subgraph Agents["Domain Agent APIs"]
+        DRUCKER["Drucker API<br/>:8201"]
+        GANTT["Gantt API<br/>:8202"]
+        HEMINGWAY["Hemingway API<br/>:8203"]
     end
 
-    subgraph Data["Persistence"]
-        JSON[(JSON Files)]
+    subgraph Data["Data Stores"]
+        JSON[(JSON Files<br/>conversation refs<br/>audit logs)]
     end
 
     CH1 & CH2 & CH3 & CH4 -->|outgoing webhook| WH
-    WH --> SVC
-    SVC --> REG
-    SVC --> CARD
-    SVC --> POST
-    SVC --> STATE
-    POST --> CH1 & CH2 & CH3 & CH4
-    SVC --> DRUG & GANT & HEMI
+    WH --> CR
+    CR --> REG
+    REG --> DRUCKER & GANTT & HEMINGWAY
+    DRUCKER & GANTT & HEMINGWAY -->|/v1/bot/notify| WH
+    CR --> CARD
+    CARD --> POSTER
+    POSTER -->|Workflows webhook| CH1 & CH2 & CH3 & CH4
+    CR --> STATE
     STATE --> JSON
 ```
 
@@ -72,90 +72,75 @@ graph TB
 
 ## Flow 1: User Command Routing
 
-**Description:** A user posts `@Shannon /stats` in `#agent-drucker`. Shannon parses the command, resolves the agent from the channel registry, routes the request to Drucker's API, and posts the response as an Adaptive Card.
+**Description:** A user posts `@Shannon /stats` in `#agent-drucker`. Shannon parses the command, resolves the agent from the channel registry, routes to Drucker's API, and posts the response as an Adaptive Card.
 
 ```mermaid
 sequenceDiagram
     participant U as User
     participant T as Teams
-    participant WH as Webhook Receiver
-    participant SVC as ShannonService
-    participant REG as AgentRegistry
-    participant API as Drucker API
+    participant SH as Shannon
+    participant REG as Agent Registry
+    participant DR as Drucker API
     participant CARD as Card Renderer
     participant POST as Poster
 
     U->>T: @Shannon /stats
-    T->>WH: POST /api/webhook
-    WH->>SVC: handle_teams_message()
-    SVC->>REG: resolve_agent(channel_id)
-    REG-->>SVC: agent_id=drucker, api_base_url
-    SVC->>API: GET /v1/status/stats
-    API-->>SVC: JSON response
-    SVC->>CARD: build_fact_card()
-    CARD-->>SVC: Adaptive Card JSON
-    SVC->>POST: post_card()
-    POST->>T: POST to Workflows webhook
+    T->>SH: POST /api/webhook (outgoing webhook)
+    SH->>REG: resolve_agent(channel_id)
+    REG-->>SH: agent_id=drucker, api_base_url=:8201
+    SH->>DR: GET :8201/v1/status/stats
+    DR-->>SH: JSON stats payload
+    SH->>CARD: build_fact_card(stats)
+    CARD-->>SH: Adaptive Card JSON
+    SH->>POST: post_card(channel_id, card)
+    POST->>T: POST Workflows webhook
     T-->>U: Adaptive Card rendered
+    SH->>SH: append_audit_record(event=decision)
 ```
 
-## Flow 2: Agent Notification
+## Flow 2: Agent Proactive Notification
 
-**Description:** Drucker completes a PR hygiene scan and posts a notification to its channel via Shannon's Bot API. Shannon renders the notification as an Adaptive Card and posts it to the configured channel.
+**Description:** Drucker completes a polling task and posts an activity notification to its channel via Shannon's Bot API.
 
 ```mermaid
 sequenceDiagram
-    participant DRUG as Drucker Agent
-    participant API as Shannon Bot API
-    participant SVC as ShannonService
-    participant REG as AgentRegistry
+    participant DR as Drucker Agent
+    participant SH as Shannon
+    participant REG as Agent Registry
     participant CARD as Card Renderer
     participant POST as Poster
     participant T as Teams
 
-    DRUG->>API: POST /v1/bot/notify
-    API->>SVC: notify_channel()
-    SVC->>REG: resolve_agent(agent_id=drucker)
-    REG-->>SVC: channel_id, webhook_url
-    SVC->>CARD: build_pr_hygiene_card()
-    CARD-->>SVC: Adaptive Card JSON
-    SVC->>POST: post_card()
-    POST->>T: POST to Workflows webhook
-    T-->>DRUG: 200 OK
+    DR->>SH: POST /v1/bot/notify {agent_id, title, text}
+    SH->>REG: resolve_agent(agent_id=drucker)
+    REG-->>SH: channel_id, notifications_webhook_url
+    SH->>CARD: activity_card(agent_id, action, details)
+    CARD-->>SH: Adaptive Card JSON
+    SH->>POST: post_card(webhook_url, card)
+    POST->>T: POST Workflows webhook
+    T-->>T: Card posted to #agent-drucker
+    SH->>SH: append_audit_record(event=notification_posted)
 ```
 
-## Flow 3: Dry-Run Preview
+## Flow 3: Typed Parameter Coercion
 
-**Description:** A user posts a mutation command (e.g., `/pr-hygiene execute`). Shannon first sends `dry_run=true` to the agent API, renders a preview card, then waits for the user to append `execute` to the command to trigger the real action.
+**Description:** A user posts `@Shannon /pr-hygiene repo cornelisnetworks/ifs-all stale_days 7`. Shannon coerces `stale_days` from string to int before forwarding to Drucker.
 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant T as Teams
-    participant SVC as ShannonService
-    participant API as Agent API
-    participant CARD as Card Renderer
-    participant POST as Poster
+    participant SH as Shannon
+    participant REG as Agent Registry
+    participant DR as Drucker API
 
-    U->>T: @Shannon /pr-hygiene repo=ifs-all
-    T->>SVC: handle_teams_message()
-    SVC->>API: POST /v1/pr-hygiene?dry_run=true
-    API-->>SVC: Preview response
-    SVC->>CARD: build_dry_run_preview_card()
-    CARD-->>SVC: Preview card JSON
-    SVC->>POST: post_card()
-    POST->>T: Preview card
-    T-->>U: "This is a preview. Append 'execute' to run."
-    
-    U->>T: @Shannon /pr-hygiene repo=ifs-all execute
-    T->>SVC: handle_teams_message()
-    SVC->>API: POST /v1/pr-hygiene?dry_run=false
-    API-->>SVC: Execution response
-    SVC->>CARD: build_pr_hygiene_card()
-    CARD-->>SVC: Result card JSON
-    SVC->>POST: post_card()
-    POST->>T: Result card
-    T-->>U: "PR hygiene scan completed."
+    U->>SH: /pr-hygiene repo cornelisnetworks/ifs-all stale_days 7
+    SH->>SH: parse_command_args(text)
+    SH->>REG: get_command_metadata(agent_id, command)
+    REG-->>SH: params=[{name:repo, type:str}, {name:stale_days, type:int}]
+    SH->>SH: _coerce_params({repo:"...", stale_days:"7"}, params)
+    Note over SH: Result: {repo:"cornelisnetworks/ifs-all", stale_days:7}
+    SH->>DR: POST :8201/v1/hygiene/pr-hygiene {repo, stale_days:7}
+    DR-->>SH: JSON response
 ```
 
 # Data Model
@@ -163,7 +148,7 @@ sequenceDiagram
 ## Core Data Structures
 
 ### `ConversationReference`
-Tracks a Teams conversation for message threading and agent resolution.
+Tracks a Teams conversation for proactive messaging.
 
 ```python
 @dataclass
@@ -171,66 +156,68 @@ class ConversationReference:
     reference_id: str          # Unique identifier
     agent_id: str              # Associated agent
     channel_id: str            # Teams channel ID
-    conversation_id: str       # Teams conversation ID
     team_id: str               # Teams team ID
+    conversation_id: str       # Teams conversation ID
     service_url: str           # Bot Framework service URL
     user_id: str               # User who initiated
     user_name: str             # User display name
-    timestamp: str             # ISO 8601 timestamp
+    created_at: str            # ISO timestamp
+    metadata: Dict[str, Any]   # Additional context
 ```
 
 ### `AuditRecord`
-Logs every Shannon action for audit and decision tracing.
+Logs every Shannon action for audit trail.
 
 ```python
 @dataclass
 class AuditRecord:
-    record_id: str             # Unique record ID
+    record_id: str             # Unique audit record ID
     event_type: str            # activity_received, decision, notification_posted
     status: str                # ok, error
     agent_id: str              # Agent involved
-    channel_id: str            # Teams channel ID
-    conversation_id: str       # Teams conversation ID
-    team_id: str               # Teams team ID
-    user_id: str               # User involved
+    channel_id: str            # Teams channel
+    conversation_id: str       # Teams conversation
+    team_id: str               # Teams team
+    user_id: str               # User identity
     user_name: str             # User display name
     command: str               # Command text
-    decision: str              # Decision made
-    timestamp: str             # ISO 8601 timestamp
+    decision: str              # Decision made (e.g., "routed_to_drucker")
+    timestamp: str             # ISO timestamp
     details: Dict[str, Any]    # Additional context
 ```
 
 ### `ChannelMapping`
-Maps logical channel names to Teams team/channel IDs.
+Maps logical channel names to Teams IDs.
 
 ```python
 @dataclass
 class ChannelMapping:
-    name: str                  # Logical name (e.g., 'drucker')
+    name: str                  # Logical name (e.g., "drucker")
     team_id: str               # Teams team ID
     channel_id: str            # Teams channel ID
     team_name: str             # Team display name
     channel_display_name: str  # Channel display name
-    enabled: bool              # Whether the channel is active
+    enabled: bool              # Whether active
 ```
 
 ## State Persistence
 
-Shannon uses JSON files for state persistence:
+Shannon uses JSON files for state (no database):
 
-- **`conversation_references.json`**: Maps agent IDs, channel IDs, and conversation IDs to `ConversationReference` objects.
-- **`audit/{YYYY-MM-DD}.jsonl`**: Daily JSONL files containing `AuditRecord` entries.
+- **`conversation_references.json`**: Maps `agent:{id}`, `channel:{id}`, `conversation:{id}` to `ConversationReference` objects.
+- **`audit/{YYYY-MM-DD}.jsonl`**: Daily append-only audit logs (one JSON object per line).
 
 # Dependencies
 
 | Dependency | Purpose | Version |
 |------------|---------|---------|
-| `aiohttp` | Async HTTP client for Microsoft Graph API | 3.9+ |
+| `aiohttp` | Async HTTP client for Graph API | 3.9+ |
 | `pydantic` | Data validation and serialization | 2.0+ |
-| `pyyaml` | YAML config parsing for agent registry | 6.0+ |
-| `requests` | Synchronous HTTP client for agent API calls | 2.31+ |
-| `fastapi` | REST API framework for Bot API | 0.109+ |
-| `uvicorn` | ASGI server for FastAPI | 0.27+ |
+| `pyyaml` | Agent registry config parsing | 6.0+ |
+| `fastapi` | REST API framework | 0.100+ |
+| `uvicorn` | ASGI server | 0.20+ |
+| Microsoft Graph API | Teams messaging and email | v1.0 |
+| Podman | Container runtime | 5.x |
 
 # Configuration
 
@@ -241,18 +228,19 @@ Shannon uses JSON files for state persistence:
 | `SHANNON_APP_ID` | Azure AD Application (client) ID | (required) |
 | `SHANNON_APP_SECRET` | Azure AD Client Secret | (required) |
 | `SHANNON_TENANT_ID` | Azure AD Directory (tenant) ID | (required) |
-| `SHANNON_TEAMS_POST_MODE` | Posting mode: `memory`, `workflows`, `botframework` | `memory` |
-| `SHANNON_TEAMS_OUTGOING_WEBHOOK_SECRET` | HMAC secret for outgoing webhook validation | (required for webhooks) |
-| `SHANNON_TEAMS_WORKFLOWS_WEBHOOK_URL` | Workflows webhook URL for proactive messages | (required for workflows mode) |
+| `SHANNON_TEAMS_POST_MODE` | Poster mode: `memory`, `workflows`, `botframework` | `workflows` |
+| `SHANNON_TEAMS_OUTGOING_WEBHOOK_SECRET` | HMAC secret for outgoing webhook validation | (required) |
+| `SHANNON_TEAMS_WORKFLOWS_WEBHOOK_URL` | Incoming webhook URL for proactive messages | (required) |
 | `SHANNON_TEAMS_BOT_NAME` | Bot display name | `Shannon` |
 | `SHANNON_STATE_DIR` | Directory for JSON state files | `data/shannon` |
 | `SHANNON_SEND_WELCOME_ON_INSTALL` | Send welcome message on bot install | `true` |
+| `LOG_LEVEL` | Logging verbosity | `INFO` |
 
 ## Configuration Files
 
 ### `config/shannon/agent_registry.yaml`
 
-Defines the mapping of Teams channels to domain agents and their custom commands.
+Defines all registered agents and their commands.
 
 ```yaml
 agents:
@@ -264,10 +252,9 @@ agents:
     notifications_webhook_url: "https://...powerautomate.com/..."
     custom_commands:
       - command: /pr-hygiene
-        description: "Scan PRs for hygiene issues"
+        description: "Analyze PR hygiene for a repository"
         api_method: POST
-        api_path: /v1/pr-hygiene
-        mutation: true
+        api_path: /v1/hygiene/pr-hygiene
         params:
           - name: repo
             type: str
@@ -275,49 +262,57 @@ agents:
           - name: stale_days
             type: int
             required: false
+            default: 14
 ```
 
 # Error Handling
 
 ## Exception Hierarchy
 
-- **`GraphAPIError`**: Raised for Microsoft Graph API errors. Contains `status`, `error_code`, `message`, and `request_id`.
-- **`KeyError`**: Raised when a channel name is not found in the agent registry.
-- **`requests.RequestException`**: Raised for agent API call failures.
+- **`GraphAPIError`**: Raised for Microsoft Graph API errors. Includes `status`, `error_code`, `message`, and `request_id`.
+- **`KeyError`**: Raised when a channel name is not found in the registry.
+- **`ValueError`**: Raised for invalid parameter types during coercion.
 
 ## Error Handling Patterns
 
-1. **Graph API Retry**: Rate-limited requests (429) are retried with exponential backoff (base 2.0 seconds). Transient server errors (5xx) are retried up to 3 times.
-2. **Agent API Timeout**: Agent API calls have a 30-second timeout. Failures are logged and returned as error cards to the user.
-3. **Webhook Validation**: Outgoing webhook HMAC signatures are validated. Invalid signatures are rejected with 401 Unauthorized.
-4. **Audit Logging**: All errors are logged to the audit trail with `status='error'` and full exception details in the `details` field.
+1. **Graph API Retry Logic**: Rate-limited requests (429) are retried with exponential backoff (base 2.0 seconds). Transient server errors (5xx) are retried up to 3 times.
+
+2. **Token Expiry Handling**: OAuth2 tokens are cached and refreshed automatically when expired (with 5-minute buffer).
+
+3. **Missing Credentials**: If `SHANNON_APP_ID`, `SHANNON_APP_SECRET`, or `SHANNON_TENANT_ID` are missing, a warning is logged and API calls will fail gracefully.
+
+4. **Command Routing Errors**: If an agent API is unreachable, Shannon logs the error, posts an error card to the channel, and records the failure in the audit log.
+
+5. **Audit Log Resilience**: If an audit log file is corrupted, Shannon logs a warning and continues processing (does not crash).
 
 # Known Limitations / Technical Debt
 
 ## Hardcoded Values
 
-- **Token expiry buffer**: 5-minute buffer before token refresh is hardcoded in `graph_client.py:GraphToken.is_expired`.
-- **Retry backoff base**: 2.0 seconds exponential backoff base is hardcoded in `graph_client.py:_RETRY_BACKOFF_BASE`.
-- **Default timeout**: 30-second timeout for agent API calls is hardcoded in `service.py:_handle_agent_command`.
+- **Retry backoff base**: `_RETRY_BACKOFF_BASE = 2.0` in `graph_client.py` (line 23).
+- **Max retries**: `_MAX_RETRIES = 3` in `graph_client.py` (line 22).
+- **Token expiry buffer**: 5 minutes (300 seconds) in `GraphToken.is_expired` (line 42).
+- **Default OAuth scope**: `_DEFAULT_SCOPE = 'https://graph.microsoft.com/.default'` (line 20).
 
 ## Missing Implementations
 
-- **Approval workflows**: Phase 2 feature. The `ApprovalEngine` component is planned but not implemented. Approval request API (`/v1/bot/request-approval`) returns `NotImplementedError`.
-- **Input requests**: Phase 3 feature. The input request API (`/v1/bot/request-input`) returns `NotImplementedError`.
-- **Free-text queries**: Phase 3 feature. LLM-based query interpretation is not implemented. All commands must match a registered command pattern.
+- **Approval workflows**: Phase 2 feature. The `ApprovalRecord` model exists but approval request/response handling is not implemented.
+- **Input requests**: Phase 2 feature. The `InputRequest` model exists but form card generation and submission handling are not implemented.
+- **Free-text query interpretation**: Phase 3 feature. LLM-based query parsing is not implemented.
+- **Bot Framework SDK integration**: Shannon uses Graph API directly. Bot Framework SDK (for richer interactive cards with Action.Submit) is not integrated.
 
 ## Technical Debt
 
-- **Synchronous agent API calls**: Agent API calls in `service.py` use `requests` (blocking). Should migrate to `aiohttp` for async execution.
-- **No rate limiting**: Inbound webhook rate limiting is not implemented. Redis-based rate limiting is planned but not wired up.
-- **No message deduplication**: Duplicate message detection is not implemented. Redis-based deduplication is planned but not wired up.
-- **No conversation threading**: Shannon posts all responses as top-level messages. Threaded replies are not implemented.
-- **No approval timeout detection**: Approval timeout and escalation scheduler is not implemented.
+- **No database**: Shannon uses JSON files for state. This is acceptable for Phase 1 but will not scale beyond ~1000 conversations. Migration to PostgreSQL is planned for Phase 2.
+- **No rate limiting**: Shannon does not enforce rate limits on inbound commands. This is acceptable for internal use but should be added before external exposure.
+- **No message deduplication**: Shannon does not deduplicate identical commands sent in quick succession. This could lead to duplicate API calls.
+- **No conversation threading**: Shannon posts all responses as top-level messages. Threaded replies (linking responses to the original command) are not implemented.
+- **Email sending is untested**: The `send_email` method in `graph_client.py` (added in recent PR) has no test coverage and has not been used in production.
 
-## Anti-Patterns Detected
+## Anti-patterns Detected
 
-- **God class**: `ShannonService` has 15+ public methods and handles command routing, card rendering, agent API calls, and state management. Should be refactored into separate `CommandRouter`, `CardRenderer`, and `AgentClient` classes.
-- **Missing error handling**: `_handle_agent_command` in `service.py` does not catch `requests.RequestException`. Agent API failures will propagate as unhandled exceptions.
-- **Hardcoded credentials**: The production deployment uses environment variables for credentials, but the `TeamsGraphClient` constructor logs a warning if credentials are missing instead of raising an exception. This allows the service to start in a broken state.
+- **God class**: `ShannonService` (line 1 in `service.py`) has 15+ public methods and handles command routing, card rendering, state management, and audit logging. This should be refactored into separate `CommandRouter`, `CardRenderer`, and `AuditLogger` classes.
+- **Missing error handling**: `_coerce_params` in `service.py` (line 67) catches `ValueError` for int coercion but does not handle other type coercion errors (e.g., invalid list syntax).
+- **Hardcoded URLs**: `host.containers.internal` is hardcoded in the agent registry examples. This assumes Podman networking and will break in Kubernetes.
 
 <!-- End Documentation Agent generated content -->
