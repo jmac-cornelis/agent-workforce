@@ -95,6 +95,8 @@ __all__ = [
     # Diagram rendering & full conversion pipeline
     'render_diagrams', 'convert_markdown_to_confluence',
     'DiagramRenderResult',
+    # Jira macro builders
+    'build_jira_jql_table_macro', 'build_jira_filter_table_macro',
     # Display
     'output',
     # Exceptions
@@ -2135,6 +2137,142 @@ def storage_to_markdown(storage_text: str) -> str:
     markdown = html.unescape(markdown)
     markdown = re.sub(r'\n{3,}', '\n\n', markdown)
     return markdown.strip() + ('\n' if markdown.strip() else '')
+
+
+# ****************************************************************************************
+# Jira Macro Builders — live filter/JQL tables for Confluence pages
+# ****************************************************************************************
+
+
+def build_jira_jql_table_macro(
+    jql,
+    columns=None,
+    column_ids=None,
+    maximum_issues=200,
+    server_name=None,
+    server_id=None,
+):
+    '''
+    Build a Confluence Jira Issues macro from a JQL query string.
+
+    Returns raw Confluence storage-format XHTML that renders a live Jira
+    table when the page is viewed.  The returned block can be embedded
+    directly in a Markdown document as a raw HTML block — it will pass
+    through ``markdown_to_storage()`` unchanged.
+
+    Args:
+        jql:             JQL query string (required).
+        columns:         Display column names, e.g. ``['key', 'summary']``.
+                         Defaults to key/summary/type/status/assignee/priority/updated.
+        column_ids:      Jira field IDs matching *columns*.
+                         Defaults to issuekey/summary/issuetype/status/assignee/priority/updated.
+        maximum_issues:  Max rows the macro should render (default 200).
+        server_name:     Confluence application-link display name.
+                         Defaults to env ``CONFLUENCE_JIRA_SERVER`` or ``'System Jira'``.
+        server_id:       Confluence application-link UUID.
+                         Defaults to env ``CONFLUENCE_JIRA_SERVER_ID`` /
+                         ``JIRA_SERVER_ID`` or the Cornelis default UUID.
+
+    Returns:
+        str — Confluence storage XHTML ``<div>…</div>`` block.
+    '''
+    log.debug(f'build_jira_jql_table_macro(jql={jql[:80]}...)')
+
+    server_name = server_name or os.getenv('CONFLUENCE_JIRA_SERVER') or 'System Jira'
+    server_id = (
+        server_id
+        or os.getenv('CONFLUENCE_JIRA_SERVER_ID')
+        or os.getenv('JIRA_SERVER_ID')
+        or '332fe428-27be-3c06-ad09-b2cd4d269bee'
+    )
+
+    macro_columns = columns or [
+        'key', 'summary', 'type', 'status', 'assignee', 'priority', 'updated',
+    ]
+    macro_column_ids = column_ids or [
+        'issuekey', 'summary', 'issuetype', 'status', 'assignee', 'priority', 'updated',
+    ]
+
+    column_csv = ','.join(macro_columns)
+    column_id_csv = ','.join(macro_column_ids)
+    escaped_jql = html.escape(jql)
+    escaped_server = html.escape(server_name)
+    escaped_server_id = html.escape(server_id)
+
+    return '\n'.join([
+        '<div>',
+        '<ac:structured-macro ac:name="jira" ac:schema-version="1" data-layout="full-width">',
+        f'<ac:parameter ac:name="server">{escaped_server}</ac:parameter>',
+        f'<ac:parameter ac:name="columns">{column_csv}</ac:parameter>',
+        f'<ac:parameter ac:name="columnIds">{column_id_csv}</ac:parameter>',
+        f'<ac:parameter ac:name="maximumIssues">{maximum_issues}</ac:parameter>',
+        f'<ac:parameter ac:name="jqlQuery">{escaped_jql}</ac:parameter>',
+        f'<ac:parameter ac:name="serverId">{escaped_server_id}</ac:parameter>',
+        '</ac:structured-macro>',
+        '</div>',
+    ])
+
+
+def build_jira_filter_table_macro(
+    filter_id,
+    columns=None,
+    column_ids=None,
+    maximum_issues=200,
+    server_name=None,
+    server_id=None,
+):
+    '''
+    Build a Confluence Jira Issues macro from a saved Jira filter ID.
+
+    Identical to ``build_jira_jql_table_macro()`` except the macro
+    references a saved filter instead of an inline JQL string.
+
+    Args:
+        filter_id:       Saved Jira filter ID (str or int).
+        columns:         Display column names (same defaults as JQL variant).
+        column_ids:      Jira field IDs matching *columns*.
+        maximum_issues:  Max rows the macro should render (default 200).
+        server_name:     Confluence application-link display name.
+        server_id:       Confluence application-link UUID.
+
+    Returns:
+        str — Confluence storage XHTML ``<div>…</div>`` block.
+    '''
+    filter_id = str(filter_id)
+    log.debug(f'build_jira_filter_table_macro(filter_id={filter_id})')
+
+    server_name = server_name or os.getenv('CONFLUENCE_JIRA_SERVER') or 'System Jira'
+    server_id = (
+        server_id
+        or os.getenv('CONFLUENCE_JIRA_SERVER_ID')
+        or os.getenv('JIRA_SERVER_ID')
+        or '332fe428-27be-3c06-ad09-b2cd4d269bee'
+    )
+
+    macro_columns = columns or [
+        'key', 'summary', 'type', 'status', 'assignee', 'priority', 'updated',
+    ]
+    macro_column_ids = column_ids or [
+        'issuekey', 'summary', 'issuetype', 'status', 'assignee', 'priority', 'updated',
+    ]
+
+    column_csv = ','.join(macro_columns)
+    column_id_csv = ','.join(macro_column_ids)
+    escaped_server = html.escape(server_name)
+    escaped_server_id = html.escape(server_id)
+
+    return '\n'.join([
+        '<div>',
+        '<ac:structured-macro ac:name="jira" ac:schema-version="1" data-layout="full-width">',
+        f'<ac:parameter ac:name="server">{escaped_server}</ac:parameter>',
+        f'<ac:parameter ac:name="columns">{column_csv}</ac:parameter>',
+        f'<ac:parameter ac:name="columnIds">{column_id_csv}</ac:parameter>',
+        f'<ac:parameter ac:name="maximumIssues">{maximum_issues}</ac:parameter>',
+        f'<ac:parameter ac:name="filter">{filter_id}</ac:parameter>',
+        f'<ac:parameter ac:name="serverId">{escaped_server_id}</ac:parameter>',
+        '</ac:structured-macro>',
+        '</div>',
+    ])
 
 
 def _storage_heading_text(fragment: str) -> str:

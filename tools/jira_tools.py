@@ -49,6 +49,7 @@ try:
         list_filters as _ju_list_filters,
         run_filter as _ju_run_filter,
         run_jql_query as _ju_run_jql_query,
+        create_filter as _ju_create_filter,
         get_project_fields as _ju_get_project_fields,
         get_children_hierarchy as _ju_get_children_hierarchy,
         get_project_versions as _ju_get_project_versions,
@@ -1502,6 +1503,52 @@ def run_jql_query(jql: str, limit: int = 50) -> ToolResult:
 
 
 @tool(
+    name='create_filter',
+    description='Create a new Jira saved filter from a name and JQL query'
+)
+def create_filter(
+    name: str,
+    jql: str,
+    description: Optional[str] = None,
+    favourite: bool = False,
+    dry_run: Optional[bool] = None,
+) -> ToolResult:
+    '''
+    Create a new saved Jira filter.
+
+    Delegates to jira_utils.create_filter() which calls the Jira REST API
+    to create a persisted filter.
+
+    Input:
+        name: Display name for the new filter.
+        jql: JQL query string for the filter.
+        description: Optional description text.
+        favourite: If True, star the new filter for the current user.
+        dry_run: If True, preview without creating. None uses env default.
+
+    Output:
+        ToolResult with the created filter dict (id, name, jql, viewUrl).
+    '''
+    log.debug(f'create_filter(name={name}, jql={jql[:80]}, dry_run={dry_run})')
+
+    try:
+        jira = get_jira()
+        result = _ju_create_filter(
+            jira,
+            name=name,
+            jql=jql,
+            description=description,
+            favourite=favourite,
+            dry_run=dry_run,
+        )
+        filter_id = str(result.get('id', ''))
+        return ToolResult.success(result, filter_id=filter_id)
+    except Exception as e:
+        log.error(f'Failed to create filter: {e}')
+        return ToolResult.failure(f'Failed to create filter: {e}')
+
+
+@tool(
     name='get_children_hierarchy',
     description='Get child tickets in a hierarchy tree starting from a root ticket'
 )
@@ -2678,6 +2725,17 @@ class JiraTools(BaseTool):
     @tool(description='Run a Jira filter by ID and return matching tickets')
     def run_filter(self, filter_id: str, limit: int = 50) -> ToolResult:
         return run_filter(filter_id, limit)
+
+    @tool(description='Create a new Jira saved filter from name and JQL')
+    def create_filter(
+        self,
+        name: str,
+        jql: str,
+        description: Optional[str] = None,
+        favourite: bool = False,
+        dry_run: Optional[bool] = None,
+    ) -> ToolResult:
+        return create_filter(name, jql, description, favourite, dry_run)
     
     @tool(description='Run a JQL query and return matching tickets')
     def run_jql_query(self, jql: str, limit: int = 50) -> ToolResult:

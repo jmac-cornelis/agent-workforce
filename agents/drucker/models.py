@@ -139,6 +139,7 @@ class DruckerHygieneReport:
     tickets: List[Dict[str, Any]] = field(default_factory=list)
     errors: List[str] = field(default_factory=list)
     summary_markdown: str = ''
+    jql_queries: List[str] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -153,4 +154,5 @@ class DruckerHygieneReport:
             'tickets': self.tickets,
             'errors': self.errors,
             'summary_markdown': self.summary_markdown,
+            'jql_queries': self.jql_queries,
         }

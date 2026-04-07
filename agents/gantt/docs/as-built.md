@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: "As-Built: Gantt Project Planner Agent"
-date: "2026-04-03"
+date: "2026-04-06"
 status: "draft"
 ---
 ```
@@ -14,9 +14,9 @@ Gantt is the project-planning agent for the Cornelis Networks agent workforce pl
 
 # What Changed
 
-- **Before:** Gantt exposed planning snapshots, release monitoring, release surveys, plan export/import, and release-task queries through its REST API and CLI. All user interaction required structured commands or API calls with explicit parameters.
-- **After:** A new **natural-language query interface** was added via `agents/gantt/nl_query.py` and the `POST /v1/nl/query` API endpoint. Users can now ask plain English questions (e.g., "how healthy is release 12.2?") which are translated into structured Gantt tool calls using LLM function-calling, executed, and summarized back in natural language. The API model `NLQueryRequest` was added to `api.py`, and the `/v1/info` endpoint now advertises the new capability.
-- **Impact:** Shannon bot integrations and any API consumers gain a conversational planning interface. The new module introduces a hard dependency on `llm.cornelis_llm.CornelisLLM` and `jira_utils` (for the `gantt_release_tasks` and `gantt_plan_export` executors), which are lazy-imported at call time.
+- **Before:** Planning snapshots, release monitors, and release surveys stored their output but did not preserve the JQL queries used to generate them. Confluence integration for release survey Jira macros was implemented inline with hardcoded XHTML generation.
+- **After:** All three report types (`PlanningSnapshot`, `ReleaseMonitorReport`, `ReleaseSurveyReport`) now include a `jql_queries: List[str]` field that captures the exact JQL used to query Jira. The `_build_release_ticket_jql()` method was extracted from `_query_release_tickets()` to enable JQL collection without executing queries. Confluence Jira macro generation now delegates to the shared `confluence_utils.build_jira_jql_table_macro()` function with a fallback to inline XHTML if the utility is unavailable.
+- **Impact:** Stored reports are now fully reproducible — users can re-run the exact same JQL to verify or update results. Confluence integration is centralized and consistent across agents. The change is backward-compatible: existing reports without `jql_queries` will have an empty list.
 
 # Component Diagram
 
@@ -38,6 +38,8 @@ graph TB
             DEP_STORE["dependency_review_store.py"]
         end
     end
+    
+    CONFLUENCE["confluence_utils.py<br/>Shared Confluence Helpers"]
 
     API --> AGENT
     API --> NL
@@ -51,13 +53,14 @@ graph TB
     AGENT --> RS_STORE
     COMPONENTS --> DEP_STORE
     NL --> AGENT
+    AGENT -.->|optional| CONFLUENCE
 ```
 
 # Key Flows
 
-## 1. Planning Snapshot Creation
+## 1. Planning Snapshot Creation with JQL Capture
 
-The primary flow: a user requests a planning snapshot for a Jira project. The agent queries Jira, normalizes issues, maps dependencies, proposes milestones, projects risks, and persists the result.
+The primary flow: a user requests a planning snapshot for a Jira project. The agent queries Jira, normalizes issues, maps dependencies, proposes milestones, projects risks, and persists the result **with the JQL used**.
 
 ```mermaid
 sequenceDiagram
@@ -73,6 +76,8 @@ sequenceDiagram
 
     User->>API: POST /v1/planning/snapshot
     API->>Agent: create_snapshot(PlanningRequest)
+    Agent->>BI: build_backlog_jql(request)
+    BI-->>Agent: JQL string
     Agent->>BI: load_backlog_issues(request)
     BI->>Jira: search_issues(JQL)
     Jira-->>BI: Raw issues
@@ -85,17 +90,47 @@ sequenceDiagram
     MP-->>Agent: List[MilestoneProposal]
     Agent->>RP: project_risks(issues, graph, milestones)
     RP-->>Agent: List[PlanningRiskRecord]
+    Note over Agent: Attach JQL to snapshot.jql_queries
     Agent->>Store: save_snapshot(PlanningSnapshot)
     Store-->>Agent: stored summary
     Agent-->>API: PlanningSnapshot
     API-->>User: JSON response
 ```
 
-The `BacklogInterpreter.load_backlog_issues()` method builds JQL from the `PlanningRequest`, queries Jira via `self._jira_provider()`, and normalizes each issue through `normalize_issue()`. This method enriches each issue with computed fields like `is_stale`, `age_days`, `is_done`, and `status_category`. The `DependencyMapper` then extracts explicit edges from Jira issue links and parent relationships, infers additional edges from text references in summaries and descriptions, and consults the `GanttDependencyReviewStore` to suppress previously-rejected inferences.
+**Code Evidence:**
 
-## 2. Release Monitor Report
+In `agent.py`, the `create_snapshot()` method now builds the JQL before querying and stores it in the snapshot:
 
-Tracks the health of active releases with bug trends, velocity metrics, readiness assessment, and optional roadmap gap analysis.
+```python
+# Line 616
+backlog_jql = request.backlog_jql or BacklogInterpreter.build_backlog_jql(request)
+
+snapshot = PlanningSnapshot(
+    project_key=request.project_key,
+    planning_horizon_days=request.planning_horizon_days,
+    # ... other fields ...
+    jql_queries=[backlog_jql],  # Line 629
+)
+```
+
+The `BacklogInterpreter.build_backlog_jql()` method is a static method that constructs JQL from the request without executing it:
+
+```python
+# components.py, BacklogInterpreter class
+@staticmethod
+def build_backlog_jql(request: PlanningRequest) -> str:
+    clauses = [
+        f'project = "{request.project_key}"',
+        'issuetype != "Sub-task"',
+    ]
+    if not request.include_done:
+        clauses.append('statusCategory != Done')
+    return ' AND '.join(clauses) + ' ORDER BY updated DESC'
+```
+
+## 2. Release Monitor Report with JQL Collection
+
+Tracks the health of active releases with bug trends, velocity metrics, readiness assessment, and optional roadmap gap analysis. **Now captures the JQL for each release queried.**
 
 ```mermaid
 sequenceDiagram
@@ -108,49 +143,158 @@ sequenceDiagram
 
     User->>API: POST /v1/release-monitor/run
     API->>Agent: create_release_monitor(ReleaseMonitorRequest)
-    Agent->>Jira: Query bugs by fixVersion
-    Jira-->>Agent: Bug issues
+    loop For each release
+        Agent->>Agent: _build_release_ticket_jql(release, scope_label)
+        Note over Agent: Collect JQL without executing
+        Agent->>Jira: Query bugs by fixVersion
+        Jira-->>Agent: Bug issues
+    end
     Agent->>Agent: Compute bug summary, velocity, readiness
     Agent->>RMStore: get_latest_compatible_report()
     RMStore-->>Agent: Previous report (if any)
     Agent->>Agent: compute_delta(current, previous)
     Agent->>Agent: Optional gap analysis (LLM)
+    Note over Agent: Attach collected JQL to report.jql_queries
     Agent->>RMStore: save_report(ReleaseMonitorReport)
     RMStore-->>Agent: stored summary
     Agent-->>API: ReleaseMonitorReport
     API-->>User: JSON response
 ```
 
-The release monitor uses `_RELEASE_TICKET_QUERY_FIELDS` (defined in `agent.py`) to fetch a targeted set of Jira fields. The `ReleaseMonitorRequest` model controls which analysis sections are included via boolean flags: `include_gap_analysis`, `include_bug_report`, `include_velocity`, `include_readiness`, and `compare_to_previous`. The store's `get_latest_compatible_report()` method matches on project key, release names, and scope label to find the correct prior report for delta comparison.
+**Code Evidence:**
 
-## 3. Natural Language Query
+In `agent.py`, the `create_release_monitor()` method now collects JQL before querying:
 
-New flow added in the latest change. A plain English question is translated into a structured Gantt tool call via LLM function-calling, executed, and summarized.
+```python
+# Line 1920
+collected_jql: List[str] = []
+
+for release in release_names:
+    collected_jql.append(self._build_release_ticket_jql(release, request.scope_label))  # Line 1923
+    tickets = self._query_release_tickets(release, request.scope_label)
+    all_tickets_by_release[release] = tickets
+    # ... process tickets ...
+```
+
+The `_build_release_ticket_jql()` method was extracted from `_query_release_tickets()`:
+
+```python
+# Line 2885
+def _build_release_ticket_jql(
+    self,
+    release: str,
+    scope_label: Optional[str] = None,
+) -> str:
+    '''
+    Build JQL for querying release tickets without executing the query.
+    '''
+    jql_parts = [
+        f'project = {self.project_key or "STL"}',
+        f'fixVersion = "{release}"',
+    ]
+    if scope_label:
+        # ... scope filtering logic ...
+    return ' AND '.join(jql_parts) + ' ORDER BY priority ASC, updated DESC'
+```
+
+The `_query_release_tickets()` method now delegates to `_build_release_ticket_jql()`:
+
+```python
+# Line 2907
+def _query_release_tickets(
+    self,
+    release: str,
+    scope_label: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    '''
+    Query Jira for all tickets in a given release.
+    '''
+    jql = self._build_release_ticket_jql(release, scope_label)  # Line 2917
+    log.debug(f'Release ticket query JQL: {jql}')
+    # ... execute query ...
+```
+
+The collected JQL is attached to the report:
+
+```python
+# Line 2139
+report = ReleaseMonitorReport(
+    # ... other fields ...
+    jql_queries=collected_jql,
+)
+```
+
+## 3. Confluence Jira Macro Generation
+
+When generating Confluence pages with live Jira issue tables, the agent now delegates to a shared utility function instead of inline XHTML generation.
 
 ```mermaid
 sequenceDiagram
-    participant User
-    participant API as api.py
-    participant NL as nl_query.py
-    participant LLM as CornelisLLM
-    participant Executor as Tool Executor
     participant Agent as GanttProjectPlannerAgent
+    participant ConfUtils as confluence_utils
+    participant Fallback as Inline XHTML
 
-    User->>API: POST /v1/nl/query {query, project_key}
-    API->>NL: run_nl_query(query, project_key)
-    NL->>LLM: chat(NL_SYSTEM_PROMPT + query, tools=TOOL_SCHEMAS)
-    LLM-->>NL: tool_call(name, arguments)
-    NL->>Executor: TOOL_EXECUTORS[tool_name](args)
-    Executor->>Agent: e.g. create_release_monitor(request)
-    Agent-->>Executor: Result dict
-    Executor-->>NL: Result dict
-    NL->>LLM: chat(summarize results)
-    LLM-->>NL: Natural language summary
-    NL-->>API: {ok, tool_used, tool_args, result, summary}
-    API-->>User: JSON response
+    Agent->>Agent: _build_release_survey_jira_macro_block(jql, columns)
+    alt confluence_utils available
+        Agent->>ConfUtils: build_jira_jql_table_macro(jql, columns, ...)
+        ConfUtils-->>Agent: XHTML macro block
+    else confluence_utils unavailable
+        Agent->>Fallback: Generate inline XHTML
+        Fallback-->>Agent: XHTML macro block
+    end
+    Agent-->>Agent: Return macro block for Confluence page
 ```
 
-The `nl_query.py` module defines five tool schemas in `TOOL_SCHEMAS`: `gantt_release_health`, `gantt_release_tasks`, `gantt_planning_snapshot`, `gantt_release_survey`, and `gantt_plan_export`. The `NL_SYSTEM_PROMPT` constant instructs the LLM on Cornelis Networks conventions (version format normalization like "12.2" → "12.2.0.x", default project "STL", tool selection rules). The `TOOL_EXECUTORS` dict maps tool names to executor functions that lazy-import and invoke the appropriate Gantt agent methods. A second LLM call in `_summarize_results()` converts the structured output into a human-readable summary.
+**Code Evidence:**
+
+At the top of `agent.py`, the module attempts to import the shared utility:
+
+```python
+# Line 87
+try:
+    from confluence_utils import build_jira_jql_table_macro
+except ImportError:
+    build_jira_jql_table_macro = None  # type: ignore[assignment]
+```
+
+The `_build_release_survey_jira_macro_block()` method now delegates to the shared function:
+
+```python
+# Line 3885
+def _build_release_survey_jira_macro_block(
+    self,
+    jql: str,
+    columns: Optional[List[str]] = None,
+    column_ids: Optional[List[str]] = None,
+    maximum_issues: int = 1000,
+) -> str:
+    '''
+    Build a Confluence Jira Issues macro block for one live section.
+
+    Delegates to the shared confluence_utils builder.
+    '''
+    default_columns = [
+        'key', 'summary', 'type', 'status',
+        'assignee', 'priority', 'updated',
+    ]
+    default_column_ids = [
+        'issuekey', 'summary', 'issuetype', 'status',
+        'assignee', 'priority', 'updated',
+    ]
+
+    if build_jira_jql_table_macro is not None:  # Line 3897
+        return build_jira_jql_table_macro(
+            jql=jql,
+            columns=columns or default_columns,
+            column_ids=column_ids or default_column_ids,
+            maximum_issues=maximum_issues,
+        )
+
+    # Fallback: inline XHTML if confluence_utils is unavailable
+    macro_columns = columns or default_columns
+    macro_column_ids = column_ids or default_column_ids
+    # ... inline XHTML generation ...
+```
 
 # Data Model
 
@@ -158,48 +302,38 @@ The core data structures are defined as Python dataclasses in `agents/gantt/mode
 
 **Planning Domain:**
 
-| Dataclass | Purpose | Key Fields |
-|-----------|---------|------------|
-| `PlanningRequest` | Input for snapshot generation | `project_key`, `planning_horizon_days`, `limit`, `include_done`, `backlog_jql`, `policy_profile`, `evidence_paths` |
-| `PlanningSnapshot` | Durable snapshot of project state | `snapshot_id` (8-char UUID), `project_key`, `created_at`, `backlog_overview`, `milestones`, `dependency_graph`, `risks`, `issues`, `evidence_summary`, `summary_markdown` |
-| `DependencyEdge` | Single dependency between two issues | `source_key`, `target_key`, `relationship`, `inferred`, `confidence`, `rule_id`, `review_state`, `rationale` |
-| `DependencyGraph` | Full dependency graph for a backlog | `nodes`, `edges`, `blocked_keys`, `unscheduled_keys`, `cycle_paths`, `depth_by_key`, `blocker_chains`, `root_blockers`, `review_summary`, `suppressed_edges` |
-| `MilestoneProposal` | Proposed milestone grouping | `name`, `source`, `target_date`, `issue_keys`, `total_issues`, `open_issues`, `done_issues`, `blocked_issues`, `confidence`, `risk_level` |
-| `PlanningRiskRecord` | Identified planning risk | `risk_type`, `severity`, `title`, `description`, `issue_keys`, `evidence`, `recommendation` |
+| Dataclass | Purpose | Key Fields | **New in This Change** |
+|-----------|---------|------------|------------------------|
+| `PlanningRequest` | Input for snapshot generation | `project_key`, `planning_horizon_days`, `limit`, `include_done`, `backlog_jql`, `policy_profile`, `evidence_paths` | — |
+| `PlanningSnapshot` | Durable snapshot of project state | `snapshot_id` (8-char UUID), `project_key`, `created_at`, `backlog_overview`, `milestones`, `dependency_graph`, `risks`, `issues`, `evidence_summary`, `jql_queries` | **`jql_queries: List[str]`** (line 218) |
+| `DependencyEdge` | Single dependency between two issues | `source_key`, `target_key`, `relationship`, `inferred`, `confidence`, `rule_id`, `review_state`, `rationale` | — |
+| `DependencyGraph` | Full dependency graph for a backlog | `nodes`, `edges`, `blocked_keys`, `unscheduled_keys`, `cycle_paths`, `depth_by_key`, `blocker_chains`, `root_blockers`, `review_summary`, `suppressed_edges` | — |
+| `MilestoneProposal` | Proposed milestone grouping | `name`, `source`, `target_date`, `issue_keys`, `total_issues`, `open_issues`, `done_issues`, `blocked_issues`, `confidence`, `risk_level` | — |
+| `PlanningRiskRecord` | Identified planning risk | `risk_type`, `severity`, `title`, `description`, `issue_keys`, `evidence`, `recommendation` | — |
 
-**Roadmap Domain:**
+**Release Domain:**
 
-| Dataclass | Purpose | Key Fields |
-|-----------|---------|------------|
-| `RoadmapRequest` | Input for roadmap analysis | `project_key`, `scope_label`, `initiative_keys`, `fix_versions`, `hierarchy_depth`, `include_gap_analysis` |
-| `RoadmapItem` | Single Jira ticket in roadmap | `key`, `summary`, `issue_type`, `status`, `depth`, `source` ("Jira" or "Proposed") |
-| `RoadmapGap` | LLM-identified missing work | `summary`, `issue_type`, `priority`, `suggested_component`, `acceptance_criteria`, `dependencies` |
-| `RoadmapSection` | Logical grouping of items and gaps | `title`, `items`, `gaps` |
-| `RoadmapSnapshot` | Durable roadmap analysis output | `project_key`, `scope_label`, `snapshot_id`, `sections`, `summary_markdown` |
-
-**Release Domain** (referenced in agent.py imports but defined in models.py — source truncated):
-
-| Dataclass | Purpose |
-|-----------|---------|
-| `ReleaseMonitorRequest` | Input for release health monitoring |
-| `ReleaseMonitorReport` | Durable release health report |
-| `ReleaseSurveyRequest` | Input for release execution survey |
-| `ReleaseSurveyReport` | Durable release survey output |
-| `BugSummary` | Bug status/priority breakdown |
+| Dataclass | Purpose | Key Fields | **New in This Change** |
+|-----------|---------|------------|------------------------|
+| `ReleaseMonitorRequest` | Input for release health monitoring | `project_key`, `releases`, `scope_label`, `include_gap_analysis`, `include_bug_report`, `include_velocity`, `include_readiness`, `compare_to_previous`, `output_file` | — |
+| `ReleaseMonitorReport` | Durable release health report | `report_id`, `project_key`, `created_at`, `releases_monitored`, `scope_label`, `bug_summaries`, `velocity`, `readiness`, `gap_analysis`, `summary_markdown`, `jql_queries` | **`jql_queries: List[str]`** (line 575) |
+| `ReleaseSurveyRequest` | Input for release execution survey | `project_key`, `releases`, `scope_label`, `survey_mode`, `output_file` | — |
+| `ReleaseSurveyReport` | Durable release survey output | `survey_id`, `project_key`, `created_at`, `releases_surveyed`, `release_summaries`, `total_tickets`, `done_count`, `in_progress_count`, `remaining_count`, `blocked_count`, `summary_markdown`, `jql_queries` | **`jql_queries: List[str]`** (line 711) |
+| `BugSummary` | Bug status/priority breakdown | `release`, `total_bugs`, `by_status`, `by_priority`, `p0_open`, `p1_open` | — |
 
 **Persistence Layout:**
 
 ```
 data/
 ├── gantt_snapshots/<PROJECT>/<SNAPSHOT_ID>/
-│   ├── snapshot.json
+│   ├── snapshot.json          # Now includes jql_queries field
 │   └── summary.md
 ├── gantt_release_monitors/<PROJECT>/<REPORT_ID>/
-│   ├── report.json
+│   ├── report.json            # Now includes jql_queries field
 │   ├── summary.md
 │   └── *.xlsx (optional)
 ├── gantt_release_surveys/<PROJECT>/<SURVEY_ID>/
-│   ├── survey.json
+│   ├── survey.json            # Now includes jql_queries field
 │   ├── summary.md
 │   └── *.xlsx (optional)
 ├── gantt_dependency_reviews/<PROJECT>.json
@@ -208,24 +342,25 @@ data/
 
 # Dependencies
 
-| Dependency | Purpose | Version |
-|------------|---------|---------|
-| `agents.base` (internal) | `BaseAgent`, `AgentConfig`, `AgentResponse` base classes | — |
-| `llm.base` / `llm.cornelis_llm` (internal) | `Message`, `CornelisLLM` for LLM chat and function-calling | — |
-| `tools.jira_tools` (internal) | `JiraTools`, `get_jira`, `search_tickets`, `get_children_hierarchy`, `get_releases` | — |
-| `tools.knowledge_tools` (internal) | `search_knowledge`, `list_knowledge_files`, `read_knowledge_file` for org data | — |
-| `tools.base` (internal) | `BaseTool`, `ToolResult`, `@tool` decorator | — |
-| `core.evidence` (internal) | `EvidenceBundle`, `load_evidence_bundle` for build/test evidence | — |
-| `core.release_tracking` (internal) | `ReleaseSnapshot`, `build_snapshot`, `compute_delta`, `compute_velocity`, `assess_readiness` | — |
-| `core.tickets` (internal) | `issue_to_dict` for Jira issue normalization | — |
-| `agents.pm_runtime` (internal) | `normalize_csv_list`, `notify_shannon` shared PM utilities | — |
-| `excel_utils` (internal) | Excel formatting helpers (`STATUS_FILL_COLORS`, `_apply_header_style`, etc.) | — |
-| `config.env_loader` (internal) | `load_env()` for environment bootstrapping | — |
-| `jira_utils` (internal) | `connect_to_jira`, `run_jql_query`, `dump_tickets_to_file` (used by NL query executors) | — |
-| `fastapi` (external) | REST API framework | — |
-| `pydantic` (external) | Request/response model validation | — |
-| `openpyxl` (external) | Excel workbook generation for exports and reports | — |
-| `dotenv` (external) | Environment file loading in CLI | — |
+| Dependency | Purpose | Version | **New in This Change** |
+|------------|---------|---------|------------------------|
+| `agents.base` (internal) | `BaseAgent`, `AgentConfig`, `AgentResponse` base classes | — | — |
+| `llm.base` / `llm.cornelis_llm` (internal) | `Message`, `CornelisLLM` for LLM chat and function-calling | — | — |
+| `tools.jira_tools` (internal) | `JiraTools`, `get_jira`, `search_tickets`, `get_children_hierarchy`, `get_releases` | — | — |
+| `tools.knowledge_tools` (internal) | `search_knowledge`, `list_knowledge_files`, `read_knowledge_file` for org data | — | — |
+| `tools.base` (internal) | `BaseTool`, `ToolResult`, `@tool` decorator | — | — |
+| `core.evidence` (internal) | `EvidenceBundle`, `load_evidence_bundle` for build/test evidence | — | — |
+| `core.release_tracking` (internal) | `ReleaseSnapshot`, `build_snapshot`, `compute_delta`, `compute_velocity`, `assess_readiness` | — | — |
+| `core.tickets` (internal) | `issue_to_dict` for Jira issue normalization | — | — |
+| `agents.pm_runtime` (internal) | `normalize_csv_list`, `notify_shannon` shared PM utilities | — | — |
+| `excel_utils` (internal) | Excel formatting helpers (`STATUS_FILL_COLORS`, `_apply_header_style`, etc.) | — | — |
+| `config.env_loader` (internal) | `load_env()` for environment bootstrapping | — | — |
+| `jira_utils` (internal) | `connect_to_jira`, `run_jql_query`, `dump_tickets_to_file` (used by NL query executors) | — | — |
+| `confluence_utils` (internal) | `build_jira_jql_table_macro` for Confluence Jira macro generation | — | **Optional import** (line 87) |
+| `fastapi` (external) | REST API framework | — | — |
+| `pydantic` (external) | Request/response model validation | — | — |
+| `openpyxl` (external) | Excel workbook generation for exports and reports | — | — |
+| `dotenv` (external) | Environment file loading in CLI | — | — |
 
 # Configuration
 
@@ -262,45 +397,63 @@ The agent uses a layered error handling pattern:
 
 2. **Task dispatcher in `run_once()`**: Each task type (`planning_snapshot`, `release_monitor`, `release_survey`) validates the request type with explicit `TypeError` raises. Unsupported task types raise `ValueError`.
 
-3. **Poller `tick()` method**: Individual task failures within a polling cycle are caught, logged, and appended to an `errors` list. The cycle continues executing remaining tasks. The tick result includes both `tasks` and `errors` arrays.
+3. **Store-level validation**: The snapshot, release monitor, and release survey stores validate required fields (`snapshot_id`, `project_key`, `report_id`, `survey_id`) and raise `ValueError` if missing.
 
-4. **API endpoints**: Each FastAPI endpoint wraps its logic in try/except and returns `{'ok': False, 'error': str(e)}` on failure. The NL query endpoint follows the same pattern.
+4. **JQL construction**: The `_build_release_ticket_jql()` method does not raise exceptions — it constructs JQL from the provided parameters. If `scope_label` is provided, it builds scope filter clauses; otherwise, it omits them. Invalid JQL will fail at query execution time in `_query_release_tickets()`.
 
-5. **Store-level error handling**: All four stores (`GanttSnapshotStore`, `GanttReleaseMonitorStore`, `GanttReleaseSurveyStore`, `GanttDependencyReviewStore`) catch JSON parse errors and file I/O errors with `log.warning()` and return `None` or skip the unreadable record. Required fields (`snapshot_id`, `project_key`) raise `ValueError` if missing.
+5. **Confluence utility fallback**: If `confluence_utils.build_jira_jql_table_macro` is unavailable (import fails), the agent falls back to inline XHTML generation. This is a graceful degradation, not an error.
 
-6. **Tool wrappers**: Each `@tool`-decorated function in `tools.py` wraps its body in try/except and returns `ToolResult.failure()` on error.
+**Exception Hierarchy:**
 
-7. **NL query executor**: Tool execution failures in `nl_query.py` are caught and returned as `{'ok': False, 'error': str(e), 'tool_used': tool_name}`.
-
-The `BacklogInterpreter.parse_jira_datetime()` method silently returns `None` for unparseable date strings rather than raising, which propagates as `age_days = 0` and `is_stale = False`.
+- `ValueError`: Missing required fields, invalid request types, unsupported task types
+- `FileNotFoundError`: Missing system prompt file (`agents/gantt/prompts/system.md`)
+- `TypeError`: Incorrect request type passed to `run_once()`
+- Generic `Exception`: Caught and logged in `run()`, `create_snapshot()`, `create_release_monitor()`, `create_release_survey()`
 
 # Known Limitations / Technical Debt
 
-1. **God class: `GanttProjectPlannerAgent`** — The `agent.py` file is very large (source truncated well past 500 lines) and the agent class handles planning snapshots, release monitoring, release surveys, roadmap analysis, plan export/import, Excel generation, polling, Shannon notifications, and manager alias resolution. This class has far more than 10 public methods and should be decomposed.
+## Hardcoded Values
 
-2. **Hardcoded URL** — `JIRA_BASE_URL = 'https://cornelisnetworks.atlassian.net'` is hardcoded in `agent.py` rather than loaded from configuration.
+1. **Default project key**: The agent defaults to `'STL'` in multiple places (e.g., `_build_release_ticket_jql()` line 2893, `NL_SYSTEM_PROMPT` in `nl_query.py`). This should be configurable via environment variable or agent initialization.
 
-3. **Hardcoded Confluence server ID** — The fallback value `'332fe428-27be-3c06-ad09-b2cd4d269bee'` for `CONFLUENCE_JIRA_SERVER_ID` is hardcoded in `agent.py`.
+2. **Jira base URL**: Hardcoded to `'https://cornelisnetworks.atlassian.net'` (line 105 in `agent.py`). Should be configurable.
 
-4. **Hardcoded LLM model in NL query** — `run_nl_query()` hardcodes `model='developer-sonnet'` with no configuration override:
-   ```python
-   llm = CornelisLLM(model='developer-sonnet')
-   ```
+3. **Confluence Jira server ID**: Hardcoded default `'332fe428-27be-3c06-ad09-b2cd4d269bee'` (line 106). Should be environment-driven.
 
-5. **NL query `_exec_gantt_release_tasks` bypasses agent layer** — The release tasks executor directly calls `jira_utils.connect_to_jira()` and `jira_utils.run_jql_query()` instead of routing through the agent or its tools, creating a parallel Jira access path with no shared error handling or credential management.
+4. **LLM model selection**: The NL query interface hardcodes `'developer-sonnet'` in `nl_query.py`. Should be configurable.
 
-6. **NL query `_exec_gantt_plan_export` bypasses agent layer** — Similarly calls `excel_utils` and `jira_utils` directly rather than through the agent's plan export method.
+5. **Stale days threshold**: Hardcoded to `30` days (line 100). Should be configurable per project or policy profile.
 
-7. **Missing error handling on LLM calls in NL query** — The `run_nl_query()` function does not wrap the initial LLM `chat()` call or the summarization `_summarize_results()` call in try/except. Network failures or LLM errors will propagate as unhandled exceptions to the API endpoint's outer catch.
+## Missing Implementations
 
-8. **File-based persistence only** — All four stores use JSON files on the local filesystem. There is no database backend, no locking for concurrent writes, and no atomic write pattern (writes directly to the target path rather than writing to a temp file and renaming).
+1. **Policy profiles**: The `PlanningRequest.policy_profile` field is accepted but not used. The agent does not implement policy-driven planning rules.
 
-9. **Manager alias cache is a class-level mutable** — `_release_survey_manager_lookup_cache` is `Optional[Dict]` at class level, shared across all instances, with no thread safety.
+2. **Evidence bundle integration**: The `PlanningRequest.evidence_paths` field is accepted and loaded, but the evidence is only summarized — it is not used to enrich dependency inference or milestone proposals.
 
-10. **Source files truncated in provided context** — `agent.py`, `api.py`, `cli.py`, `models.py`, `nl_query.py`, and `components.py` are all truncated. Key methods like `create_snapshot()`, `create_release_monitor()`, `create_release_survey()`, `create_roadmap_snapshot()`, the full `tick()` implementation, and several model definitions (`ReleaseMonitorReport`, `ReleaseSurveyReport`, `BugSummary`, `ReleaseSurveyReleaseSummary`) are not visible in the provided source. This document describes what is observable; the actual implementation may contain additional patterns not covered here.
+3. **Roadmap gap analysis**: The roadmap analysis mode is documented in the system prompt but not fully implemented in the current codebase (the `create_roadmap_snapshot()` method is referenced in `tools.py` but not shown in the provided source).
 
-11. **Token tracking is stubbed** — The `/v1/status/tokens` endpoint returns hardcoded zeros for `token_usage_today` and `token_usage_cumulative`, despite the PLAN.md specifying per-call token tracking. The NL query module introduces real LLM usage but has no token accounting.
+4. **Cycle detection**: The `DependencyGraph.cycle_paths` field is populated by `_find_cycles()` in `components.py`, but the agent does not surface cycle-breaking recommendations in the planning snapshot summary.
 
-12. **No duplicate-post protection for Shannon notifications** — The `tick()` method builds notification payloads and calls `notify_shannon`, but there is no visible deduplication or idempotency mechanism for repeated polling cycles.
+## Technical Debt
+
+1. **JQL duplication**: The `_build_release_ticket_jql()` method is called once per release in `create_release_monitor()` and `create_release_survey()`, but the JQL is also constructed inline in `_query_release_tickets()`. This duplication was introduced to enable JQL collection without breaking existing behavior. A refactor should consolidate JQL construction into a single method.
+
+2. **Confluence utility coupling**: The agent has a hard dependency on `confluence_utils` for Confluence integration, but the import is optional with a fallback. This creates two code paths for the same functionality. The fallback should be removed once `confluence_utils` is guaranteed to be available.
+
+3. **Store interface inconsistency**: The snapshot, release monitor, and release survey stores have similar but not identical interfaces. A shared base class or protocol would reduce duplication.
+
+4. **Markdown summary generation**: The `_format_snapshot()`, `_format_release_monitor_summary()`, and `_format_release_survey_summary()` methods are large and procedural. They should be refactored into smaller, testable functions.
+
+5. **Test coverage**: The module has characterization tests (`test_gantt_agent_char.py`, `test_gantt_tools_char.py`) but lacks unit tests for individual methods like `_build_release_ticket_jql()`, `_apply_review()`, and `_find_cycles()`.
+
+## Anti-patterns Detected
+
+1. **God class**: `GanttProjectPlannerAgent` is 3800+ lines with 50+ public and private methods. It handles planning snapshots, release monitoring, release surveys, roadmap analysis, Confluence page generation, and natural-language query translation. This violates the Single Responsibility Principle. Recommendation: Split into separate agents or delegate to specialized service classes.
+
+2. **Circular dependency risk**: The agent imports `tools.jira_tools`, which imports `agents.gantt.agent` for the `create_gantt_snapshot` tool. This is not currently circular because the tool import is lazy, but it creates fragility. Recommendation: Move tool definitions to a separate module.
+
+3. **Missing error handling on external calls**: The `_query_release_tickets()` method calls `jira.search_issues()` without a try/except block. If Jira is unavailable or the JQL is invalid, the exception will propagate to the caller. Recommendation: Add explicit error handling with retry logic.
+
+4. **Hardcoded credentials**: The agent relies on `get_jira()` from `tools.jira_tools`, which reads credentials from environment variables. If those variables are missing, the agent will fail at runtime. Recommendation: Add explicit credential validation at agent initialization.
 
 <!-- End Documentation Agent generated content -->

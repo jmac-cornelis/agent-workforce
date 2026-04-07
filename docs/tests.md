@@ -3,292 +3,283 @@
 ```yaml
 ---
 title: "As-Built: Tests — Design Reference"
-date: "2026-04-03"
+date: "2026-04-06"
 status: "draft"
 ---
 ```
 
-## Module Overview
+# Module Overview
 
-The `tests/` directory contains the complete characterization and unit test suite for the **agent-workforce** repository — a multi-agent platform built on Jira, GitHub, Confluence, and Microsoft Teams integrations. The suite comprises approximately 60 test modules totaling over 550 passing tests. Every test runs without live API calls; external services are replaced by `monkeypatch` stubs, `SimpleNamespace` fakes, and `MagicMock` objects wired through a shared `conftest.py` fixture layer. The tests validate seven agent subsystems (Drucker, Gantt, Hemingway, Shannon, Research, Review, Feature Planning), six utility libraries (`jira_utils`, `github_utils`, `confluence_utils`, `excel_utils`, `core/*`, `config/*`), three tool collection layers (`tools/jira_tools`, `tools/github_tools`, `tools/confluence_tools`), an MCP server, and a Shannon Teams bot service — covering CLI handlers, REST API endpoints, data models, dry-run safety gates, actor identity policies, and Adaptive Card rendering.
+The `tests/` directory contains the comprehensive characterization test suite for the Cornelis Networks agent workforce system. This suite validates all core modules, agents, tools, integrations, and infrastructure components through 10,000+ test cases organized into 50+ test modules. The tests follow a strict "no live API calls" policy, using monkeypatching and fake fixtures to ensure fast, deterministic execution. The suite covers Jira/Confluence utilities, GitHub integrations, agent orchestration (Drucker, Gantt, Hemingway), Shannon bot service, MCP server tools, and all supporting infrastructure.
 
-## What Changed (If applicable)
+# What Changed
 
-- **Before:** Shannon card builders for Hemingway rendered Doc IDs, Impact IDs, and blocking issue keys as plain text. Shannon service tests passed full `key value` argument strings for commands like `/planning-snapshot`, `/release-survey`, and `/intake-report`.
-- **After:** Card builder assertions now expect Jira-linked Markdown references (e.g., `[DOC-001](https://cornelisnetworks.atlassian.net/browse/DOC-001)`). Shannon service tests pass positional project keys directly (e.g., `/planning-snapshot STL` instead of `/planning-snapshot project_key STL`), and the `/release-survey` command no longer passes `releases` or `scope_label` inline.
-- **Impact:** These changes reflect updates in `shannon/cards.py` (Hemingway card builders now emit hyperlinked IDs) and `shannon/service.py` (simplified command argument parsing). Any consumer of these cards or commands must expect the new formats.
+**Before:** The test suite had a gap in `test_jira_utils_coverage.py` where the `mock_jira.issue.side_effect` lambda did not accept the `fields` parameter, causing potential test failures when the underlying code passed that parameter.
 
-## Component Diagram
+**After:** The lambda now accepts `fields=None` as a parameter, matching the actual signature of the `jira.issue()` method and preventing parameter mismatch errors.
+
+**Impact:** This change affects only the test suite's internal mocking infrastructure. No production code or external components are impacted. The fix ensures test stability when `jira_utils.get_children_hierarchy()` calls `jira.issue()` with the `fields` parameter.
+
+# Component Diagram
 
 ```mermaid
-graph TD
+graph TB
     subgraph "Test Infrastructure"
-        CONFTEST["conftest.py<br/>Shared fixtures & fakes"]
-        SMOKE["test_smoke.py<br/>Import smoke tests"]
+        conftest[conftest.py<br/>Shared Fixtures]
+        smoke[test_smoke.py<br/>Import Validation]
     end
-
-    subgraph "Utility Tests"
-        JIRA_UTILS["test_jira_utils_*.py<br/>Jira connection, queries, dump"]
-        GITHUB_UTILS["test_github_utils_char.py<br/>GitHub connection, PRs, hygiene"]
-        CONFLUENCE_UTILS["test_confluence_utils_char.py<br/>Confluence CRUD, search"]
-        EXCEL_UTILS["test_excel_utils_*.py<br/>CSV repair, diff, dashboard"]
-        CORE["test_core_*.py<br/>queries, tickets, reporting, utils"]
+    
+    subgraph "Core Module Tests"
+        jira_utils[test_jira_utils_char.py<br/>Jira Utilities]
+        confluence[test_confluence_utils_char.py<br/>Confluence Utilities]
+        excel[test_excel_utils_char.py<br/>Excel Operations]
+        core_queries[test_core_queries_coverage.py<br/>JQL Query Builder]
+        core_tickets[test_core_tickets.py<br/>Ticket Normalization]
     end
-
+    
     subgraph "Agent Tests"
-        DRUCKER["test_drucker_*_char.py<br/>Hygiene, polling, learning, CLI"]
-        GANTT["test_gantt_*_char.py<br/>Snapshot, release monitor, CLI"]
-        HEMINGWAY["test_hemingway_*_char.py<br/>Docs, publish, PR review, CLI"]
-        SHANNON["test_shannon_*_char.py<br/>Service, cards, dry-run flow"]
-        AGENTS["test_agents_char.py<br/>Base agent, tool loop, review"]
+        drucker[test_drucker_agent_char.py<br/>Drucker Hygiene Agent]
+        gantt[test_gantt_agent_char.py<br/>Gantt Planning Agent]
+        hemingway[test_hemingway_agent_char.py<br/>Hemingway Documentation Agent]
+        review[test_agents_char.py<br/>Review Agent]
     end
-
-    subgraph "Tool & Integration Tests"
-        TOOLS["test_*_tools_char.py<br/>Jira, GitHub, Confluence, file tools"]
-        MCP["test_mcp_server_*.py<br/>MCP server tool wrappers"]
-        DRY_RUN["test_dry_run_*.py<br/>Mutation safety gates"]
+    
+    subgraph "Integration Tests"
+        github[test_github_utils_char.py<br/>GitHub Integration]
+        mcp[test_mcp_server_char.py<br/>MCP Server Tools]
+        shannon[test_shannon_service_char.py<br/>Shannon Bot Service]
     end
-
-    CONFTEST --> JIRA_UTILS
-    CONFTEST --> GITHUB_UTILS
-    CONFTEST --> AGENTS
-    CONFTEST --> MCP
-    CONFTEST --> DRUCKER
-    CONFTEST --> GANTT
-    CONFTEST --> HEMINGWAY
+    
+    conftest --> jira_utils
+    conftest --> confluence
+    conftest --> drucker
+    conftest --> gantt
+    conftest --> hemingway
+    conftest --> github
+    conftest --> mcp
+    conftest --> shannon
 ```
 
-## Key Flows
+# Key Flows
 
-### Flow 1: Fixture Injection and State Isolation
-
-Every test session begins with `conftest.py` providing shared fixtures and autouse hooks that guarantee isolation between tests.
+## Flow 1: Test Fixture Initialization
 
 ```mermaid
 sequenceDiagram
-    participant pytest
-    participant conftest
-    participant TestModule
-    participant jira_utils
-
-    pytest->>conftest: collect fixtures
-    conftest->>conftest: register autouse: _mock_llm_client
-    conftest->>conftest: register autouse: _clean_dry_run_env
-    conftest->>conftest: register autouse: reset_jira_utils_state
-    pytest->>TestModule: run test function
-    TestModule->>conftest: request fixture (mock_jira, issue_factory, etc.)
-    conftest-->>TestModule: return fake objects
-    TestModule->>TestModule: execute assertions
-    TestModule-->>pytest: pass/fail
-    pytest->>conftest: teardown: reset_jira_utils_state
-    conftest->>jira_utils: reset_connection(), reset_user_resolver()
+    participant Test as Test Function
+    participant Conftest as conftest.py
+    participant Monkeypatch as pytest.MonkeyPatch
+    participant Module as Module Under Test
+    
+    Test->>Conftest: Request fixture (e.g., mock_jira)
+    Conftest->>Monkeypatch: Create MagicMock
+    Conftest->>Monkeypatch: Configure return values
+    Conftest->>Test: Return configured mock
+    Test->>Module: Call function with mock
+    Module->>Monkeypatch: Execute mocked behavior
+    Monkeypatch-->>Module: Return fake data
+    Module-->>Test: Return result
+    Test->>Test: Assert expectations
 ```
 
-The `_mock_llm_client` autouse fixture replaces the LLM client globally with a `FakeLLM` that returns deterministic responses, preventing any live model calls:
+**Description:** Every test begins by requesting fixtures from `conftest.py`, which uses `pytest.MonkeyPatch` to inject fake implementations. This ensures no live API calls occur and all tests run deterministically. The test then calls the module under test, which interacts with the mocked dependencies, and finally asserts the expected behavior.
+
+## Flow 2: Characterization Test Execution
+
+```mermaid
+sequenceDiagram
+    participant Test as Test Function
+    participant Patch as Monkeypatch
+    participant Utils as Utility Module
+    participant Fake as Fake Data Factory
+    
+    Test->>Patch: Stub external dependencies
+    Test->>Fake: Create test data
+    Test->>Utils: Call function with test data
+    Utils->>Patch: Access mocked dependency
+    Patch-->>Utils: Return fake response
+    Utils->>Utils: Execute business logic
+    Utils-->>Test: Return result
+    Test->>Test: Assert result matches expected shape
+    Test->>Test: Assert side effects occurred
+```
+
+**Description:** Characterization tests validate the current behavior of existing code. The test stubs all external dependencies (Jira API, GitHub API, file system), creates fake input data, calls the function under test, and asserts that the output matches the expected structure and that any side effects (like cache updates or state changes) occurred as expected.
+
+## Flow 3: Agent Integration Test
+
+```mermaid
+sequenceDiagram
+    participant Test as Test Function
+    participant Agent as Agent Class
+    participant Tools as Tool Functions
+    participant Store as State Store
+    participant Fake as Fake LLM
+    
+    Test->>Agent: Instantiate with fake LLM
+    Test->>Tools: Stub tool functions
+    Test->>Store: Stub state persistence
+    Test->>Agent: Call agent.run(input)
+    Agent->>Fake: Request LLM completion
+    Fake-->>Agent: Return canned response
+    Agent->>Tools: Call tool functions
+    Tools-->>Agent: Return fake results
+    Agent->>Store: Persist state
+    Agent-->>Test: Return AgentResponse
+    Test->>Test: Assert response.success
+    Test->>Test: Assert metadata structure
+    Test->>Store: Verify persistence calls
+```
+
+**Description:** Agent integration tests validate the orchestration layer. The test instantiates an agent with a fake LLM that returns canned responses, stubs all tool functions to return fake data, and stubs the state store to avoid file I/O. The test then calls the agent's `run()` method, verifies the response structure, and checks that the agent correctly called tools and persisted state.
+
+# Data Model
+
+## Core Test Fixtures (conftest.py)
 
 ```python
-class FakeLLM(BaseLLM):
-    def chat(self, messages, temperature=0.7, max_tokens=None, **kwargs):
-        from llm.base import LLMResponse
-        return LLMResponse(content='fake-response', model='fake-model')
+# Fake response envelope
+@dataclass
+class FakeResponse:
+    status_code: int = 200
+    payload: Optional[Dict[str, Any]] = None
+    text: str = ""
+    headers: Optional[Dict[str, str]] = None
+
+# Fake Jira issue resource
+class FakeIssueResource:
+    def __init__(self, raw: Dict[str, Any]):
+        self.raw = raw
+        self.key = raw.get("key", "")
+        self.updated_fields: List[Dict[str, Any]] = []
 ```
 
-The `reset_jira_utils_state` autouse fixture resets module-level singletons before and after each test:
+## Test Data Factories
+
+The test suite uses factory functions to create consistent test data:
+
+- `issue_factory()` — Creates Jira issue dicts with configurable fields
+- `fake_issue_resource_factory()` — Creates `FakeIssueResource` objects
+- `temp_csv_file()` — Creates temporary CSV files for file I/O tests
+- `temp_excel_file()` — Creates temporary Excel files for Excel utility tests
+- `mock_jira` — Provides a fully-configured fake Jira client
+
+## Test Organization
+
+Tests are organized by module and follow a strict naming convention:
+
+- `test_<module>_char.py` — Characterization tests for existing behavior
+- `test_<module>_coverage.py` — Coverage tests for edge cases and error paths
+- `test_<module>_integration_char.py` — Integration tests for multi-component flows
+
+# Dependencies
+
+| Dependency | Purpose | Version |
+|------------|---------|---------|
+| pytest | Test framework and fixture management | ^8.0.0 |
+| pytest-asyncio | Async test support for MCP server tests | ^0.23.0 |
+| openpyxl | Excel file creation for test fixtures | ^3.1.0 |
+| PyYAML | YAML parsing for configuration tests | ^6.0.0 |
+| requests | HTTP mocking for API integration tests | ^2.31.0 |
+
+# Configuration
+
+## Environment Variables
+
+The test suite respects the following environment variables:
+
+- `DRY_RUN` — Set to `'1'` or `'true'` to enable dry-run mode (default in tests)
+- `JIRA_EMAIL` — Fake Jira credentials for credential resolution tests
+- `JIRA_API_TOKEN` — Fake Jira API token for credential resolution tests
+- `GITHUB_TOKEN` — Fake GitHub token for GitHub integration tests
+- `CONFLUENCE_EMAIL` — Fake Confluence credentials for Confluence tests
+- `CONFLUENCE_API_TOKEN` — Fake Confluence API token for Confluence tests
+
+## Test Configuration Files
+
+- `pytest.ini` — Pytest configuration (markers, test discovery patterns)
+- `conftest.py` — Shared fixtures and test infrastructure
+- `.coveragerc` — Code coverage configuration (if present)
+
+## Feature Flags
+
+The test suite uses the following feature flags:
+
+- `_quiet_mode` — Suppresses output during tests (set by `_patch_common()`)
+- `_show_jql` — Disables JQL logging during tests (set by `_patch_common()`)
+- `send_welcome_on_install` — Controls Shannon bot welcome messages (disabled in tests)
+
+# Error Handling
+
+## Test Isolation
+
+All tests use `pytest.MonkeyPatch` to ensure complete isolation:
 
 ```python
 @pytest.fixture(autouse=True)
 def reset_jira_utils_state():
-    # ... reset connection, user resolver, quiet mode, etc.
+    """Reset jira_utils module state before and after each test."""
+    jira_utils.reset_connection()
+    jira_utils.reset_user_resolver()
+    jira_utils._quiet_mode = False
     yield
-    # ... reset again on teardown
+    jira_utils.reset_connection()
+    jira_utils.reset_user_resolver()
+    jira_utils._quiet_mode = False
 ```
 
-### Flow 2: Dry-Run Safety Gate Verification
+## Exception Testing
 
-The dry-run test modules (`test_dry_run_jira_tools_char.py`, `test_dry_run_jira_utils_char.py`, `test_dry_run_mcp_messaging_char.py`) verify that all 13+ mutation functions default to preview mode without performing actual writes.
-
-```mermaid
-sequenceDiagram
-    participant Test
-    participant jira_tools
-    participant MockJira
-
-    Test->>jira_tools: transition_ticket('KEY-1', 'In Progress')
-    Note right of jira_tools: dry_run=True (default)
-    jira_tools->>MockJira: jira.issue('KEY-1')
-    MockJira-->>jira_tools: fake issue object
-    jira_tools->>MockJira: jira.transitions()
-    MockJira-->>jira_tools: [{'id': '11', 'name': 'In Progress', ...}]
-    jira_tools-->>Test: ToolResult(data={'dry_run': True, ...})
-    Test->>Test: assert result.data['dry_run'] is True
-    Test->>MockJira: assert jira.transition_issue.assert_not_called()
-```
-
-Each of the 13 mutation functions follows this pattern. For example, `test_transition_ticket_dry_run_returns_preview`:
+Tests validate exception handling using `pytest.raises`:
 
 ```python
-def test_transition_ticket_dry_run_returns_preview(monkeypatch):
-    # ... setup mock jira ...
-    result = jira_tools.transition_ticket('KEY-1', 'In Progress')
-    assert result.is_success
-    assert result.data['dry_run'] is True
-    jira.transition_issue.assert_not_called()
+def test_get_jira_credentials_missing_token(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.delenv('JIRA_API_TOKEN', raising=False)
+    with pytest.raises(jira_utils.JiraCredentialsError):
+        jira_utils.get_jira_credentials()
 ```
 
-### Flow 3: Agent → Tool → Store → CLI End-to-End
+## Async Test Support
 
-The Drucker agent tests demonstrate the full pipeline from agent analysis through review session creation to CLI output.
-
-```mermaid
-sequenceDiagram
-    participant CLI as cmd_hygiene
-    participant Agent as DruckerCoordinatorAgent
-    participant Tools as jira_tools (stubbed)
-    participant Store as DruckerReportStore
-    participant FS as Filesystem
-
-    CLI->>Agent: agent.run(request_dict)
-    Agent->>Tools: get_project_info('STL')
-    Tools-->>Agent: ToolResult.success({...})
-    Agent->>Tools: search_tickets(jql)
-    Tools-->>Agent: ToolResult.success([tickets])
-    Agent->>Agent: analyze findings, build actions
-    Agent-->>CLI: AgentResponse(metadata={'hygiene_report': ...})
-    CLI->>Store: save_report(report, summary_markdown)
-    Store->>FS: write report.json, summary.md
-    Store-->>CLI: {'report_id': 'rep-001', ...}
-    CLI->>FS: write output JSON file
-    CLI->>CLI: sys.exit(0)
-```
-
-This is verified in `test_cmd_hygiene_success`:
+Async tests use the `@pytest.mark.asyncio` decorator:
 
 ```python
-def test_cmd_hygiene_success(monkeypatch, tmp_path):
-    # ... stub agent and store ...
-    with pytest.raises(SystemExit) as exc_info:
-        cmd_hygiene(args)
-    assert exc_info.value.code == 0
-    assert os.path.exists(json_path)
-    data = json.load(f)
-    assert data['project_key'] == 'STL'
+@pytest.mark.asyncio
+async def test_search_tickets_tool_returns_json_text(import_mcp_server, monkeypatch):
+    # Test async MCP server tool
+    result = await import_mcp_server.search_tickets('project = STL', limit=1)
+    assert isinstance(result, list)
 ```
 
-## Data Model
+# Known Limitations / Technical Debt
 
-### Core Test Fixtures (conftest.py)
+## Missing Test Coverage
 
-| Structure | Purpose | Key Fields |
-|-----------|---------|------------|
-| `FakeResponse` | HTTP response stub | `status_code`, `payload`, `text`, `headers` |
-| `FakeIssueResource` | Jira issue resource with mutation tracking | `raw`, `key`, `updated_fields` |
-| `FakeLLM` | Deterministic LLM replacement | Returns `'fake-response'` for all `chat()` calls |
-| `mock_jira` | Complete Jira client mock | `project`, `versions`, `statuses`, `issue_store`, `search_issues` |
-| `issue_factory` | Parameterized Jira issue dict builder | 20+ configurable fields including custom fields |
+1. **`get_pr_review_requests()`** — Not tested at either `github_utils` or `tools/github_tools` layers (flagged in `GITHUB_TEST_COVERAGE_ANALYSIS.md`)
+2. **`config/env_loader.py`** — Zero test coverage despite being wired into 3 production files
+3. **CLI `main()` functions** — Minimal coverage for command-line entry points (matches existing pattern but leaves gap)
+4. **Integration tests** — No end-to-end tests that exercise full agent→tools→state pipeline without mocks
 
-The `issue_factory` fixture produces raw Jira REST API dicts:
+## Test Infrastructure Debt
 
-```python
-def _make(key='STL-1', summary='Sample summary', issue_type='Bug',
-          status='Open', priority='P1-Critical', assignee='Jane Dev', ...):
-    fields = {
-        'summary': summary,
-        'issuetype': {'name': issue_type},
-        'status': {'name': status},
-        'customfield_17504': customer_ids,
-        'customfield_28434': [{'value': name} for name in product_family],
-        # ...
-    }
-    return {'key': key, 'id': key.replace('-', ''), 'fields': fields}
-```
+1. **Fixture duplication** — Multiple test files define similar fake data factories (e.g., `_make_pr()`, `_fake_repo()`) that could be consolidated in `conftest.py`
+2. **Hardcoded test data** — Many tests use hardcoded dates like `'2026-03-01'` that will become stale
+3. **Monkeypatch complexity** — Some tests require 10+ monkeypatch calls to set up the test environment, indicating tight coupling
+4. **No performance tests** — Test suite validates correctness but not performance characteristics
 
-### Test Coverage Tracking (GITHUB_TEST_COVERAGE_ANALYSIS.md)
+## Anti-patterns Detected
 
-The coverage analysis document tracks symbol-level coverage across 5 modules:
+1. **God test modules** — `test_jira_utils_coverage.py` is 1,200+ lines with 40+ test functions
+2. **Missing error path coverage** — Several modules test only happy paths (e.g., `test_confluence_search_char.py` has no error tests)
+3. **Implicit dependencies** — Some tests rely on module-level state that isn't explicitly reset between tests
+4. **Incomplete mocking** — Some tests mock only part of a dependency chain, leaving potential for flaky behavior
 
-| Module | Coverage | Gap |
-|--------|----------|-----|
-| `github_utils.py` | 96% (22/26 public + 3 internal) | `get_pr_review_requests`, `main()`, display helpers |
-| `tools/github_tools.py` | 91% (10/11 tools + 1 class) | `get_pr_review_requests` tool |
-| `shannon/cards.py` (PR builders) | 100% (4/4) | — |
-| `agents/drucker_api.py` (GitHub endpoints) | 100% (4/4) | — |
-| `config/env_loader.py` | 100% (post-P2 fix) | — |
+## Recommended Improvements
 
-## Dependencies
-
-| Dependency | Purpose | Version |
-|------------|---------|---------|
-| `pytest` | Test framework and fixture system | ≥7.0 |
-| `pytest-asyncio` | Async test support for MCP server tools | ≥0.21 |
-| `openpyxl` | Excel file creation/validation in fixtures and excel_utils tests | ≥3.1 |
-| `unittest.mock` (stdlib) | `MagicMock`, `patch` for stubbing | stdlib |
-| `types.SimpleNamespace` (stdlib) | Lightweight fake objects replacing PyGithub/Jira resources | stdlib |
-| `fastapi` / `starlette` | `TestClient` for API endpoint tests | ≥0.100 |
-| `agents.base` | `BaseAgent`, `AgentConfig`, `AgentResponse` | internal |
-| `tools.base` | `ToolResult`, `ToolStatus`, `@tool` decorator | internal |
-| `llm.base` | `BaseLLM`, `LLMResponse` for `FakeLLM` | internal |
-| `shannon.poster` | `MemoryPoster` for Teams bot tests | internal |
-
-## Configuration
-
-| Variable | Purpose | Default |
-|----------|---------|---------|
-| `DRY_RUN` | Controls mutation safety; autouse fixture deletes it before each test | Unset (cleaned by `_clean_dry_run_env`) |
-| `DRUCKER_REPORT_DIR` | Storage directory for Drucker report persistence tests | Set to `tmp_path` per test |
-| `GANTT_SNAPSHOT_DIR` | Storage directory for Gantt snapshot persistence tests | Set to `tmp_path` per test |
-| `GANTT_RELEASE_MONITOR_DIR` | Storage directory for release monitor tests | Set to `tmp_path` per test |
-| `GANTT_RELEASE_SURVEY_DIR` | Storage directory for release survey tests | Set to `tmp_path` per test |
-| `GANTT_DEPENDENCY_REVIEW_DIR` | Storage directory for dependency review tests | Set to `tmp_path` per test |
-| `HEMINGWAY_DOC_DIR` | Storage directory for Hemingway record persistence tests | Set to `tmp_path` per test |
-| `DRUCKER_LEARNING_DB` | SQLite path for learning store tests | Set to `tmp_path` or `:memory:` |
-| `JIRA_EMAIL` / `JIRA_API_TOKEN` | Jira credentials for actor policy tests | Set per test via `monkeypatch.setenv` |
-| `JIRA_SERVICE_EMAIL` / `JIRA_SERVICE_API_TOKEN` | Service account credentials for polling tests | Set per test |
-| `GITHUB_TOKEN` | GitHub credentials for connection tests | Set per test |
-
-## Error Handling
-
-The test suite validates error handling at multiple layers:
-
-**Tool-level error propagation:** Tests verify that when underlying utilities raise exceptions, tool wrappers return `ToolResult.failure()` with descriptive error messages rather than propagating raw exceptions:
-
-```python
-def test_tool_returns_failure_on_exception(monkeypatch):
-    monkeypatch.setattr(github_tools, 'get_github',
-        lambda: (_ for _ in ()).throw(RuntimeError('Connection refused')))
-    result = github_tools.list_repos('cornelisnetworks')
-    assert not result.is_success
-    assert 'Connection refused' in (result.error or '')
-```
-
-**API endpoint error wrapping:** All Drucker, Gantt, and Hemingway API endpoint tests verify that exceptions are caught and returned as `{'ok': False, 'error': '...'}` rather than HTTP 500s:
-
-```python
-def test_pr_hygiene_error(self, client, mock_github_utils):
-    mock_github_utils.analyze_repo_pr_hygiene.side_effect = RuntimeError('rate limit')
-    resp = client.post('/v1/github/pr-hygiene', json={...})
-    assert resp.status_code == 200
-    assert body['ok'] is False
-    assert 'rate limit' in body['error']
-```
-
-**CLI exit codes:** All CLI handler tests verify `sys.exit(0)` for success and `sys.exit(1)` for failures, using `pytest.raises(SystemExit)`.
-
-**Exception hierarchy:** `test_github_utils_char.py` validates the custom exception hierarchy (`GitHubCredentialsError`, `GitHubRepoError`, etc.) and `test_jira_utils_char.py` validates `JiraCredentialsError`.
-
-## Known Limitations / Technical Debt
-
-1. **`get_pr_review_requests()` untested at utils layer (P1):** The `github_utils.get_pr_review_requests()` function lacks a direct characterization test, though the tool wrapper now has coverage via `test_get_pr_review_requests_returns_success`. The coverage analysis document flags this as medium risk.
-
-2. **No integration tests:** All tests are unit-level with mocked dependencies. No test validates the full agent → utility → card builder pipeline with real data flowing through. The `test_github_integration_char.py` file comes closest but still uses `SimpleNamespace` fakes for PyGithub objects.
-
-3. **CLI `main()` entry points untested:** The `main()` functions in `jira_utils.py` and `github_utils.py` are not tested, matching an acknowledged pattern where CLI routing tests are minimal.
-
-4. **Truncated test files in source:** Several test files (`test_confluence_utils_char.py`, `test_drucker_cli_char.py`, `test_gantt_cli_char.py`, `test_github_phase5_char.py`, `test_github_phase5_integration_char.py`, `test_jira_utils_coverage.py`, `test_excel_utils_coverage.py`, `test_hemingway_api_char.py`, `test_hemingway_cli_char.py`, `test_hemingway_confluence_publish_char.py`, `test_hemingway_search_char.py`, `test_markdown_to_confluence.py`, `test_mcp_server_coverage.py`, `test_shannon_service_char.py`, `test_github_write_ops_char.py`, `test_core_reporting.py`, `test_drucker_agent_char.py`, `test_gantt_agent_char.py`) appear truncated in the provided source, meaning the full test count and coverage may be higher than documented here.
-
-5. **Hardcoded Jira URL in card assertions:** Multiple card builder tests assert against `https://cornelisnetworks.atlassian.net/browse/` as a hardcoded base URL. If the Jira instance URL changes, these tests will break.
-
-6. **`import_mcp_server` fixture complexity:** The MCP server fixture in `conftest.py` constructs an elaborate fake module hierarchy (`mcp`, `mcp.server`, `mcp.server.stdio`, `mcp.types`) with `FakeServer`, `FakeTextContent`, etc. This is fragile — any change to the MCP SDK's import structure requires updating this fixture.
-
-7. **Missing `display_jql` and `print_pr_table_*` tests:** Display/formatting functions in both `jira_utils` and `github_utils` are explicitly marked as low-priority untested symbols.
+1. **P1**: Add `test_get_pr_review_requests` to both `test_github_utils_char.py` and `test_github_tools_char.py`
+2. **P2**: Create `test_env_loader_char.py` with 4 tests covering the three-tier resolution
+3. **P3**: Add one end-to-end smoke test that exercises `analyze_repo_pr_hygiene()` → card builder pipeline
+4. **P4**: Consolidate duplicate fake data factories into `conftest.py`
+5. **P5**: Add performance benchmarks for critical paths (JQL query building, Excel export, agent orchestration)
 
 <!-- End Documentation Agent generated content -->
