@@ -1,0 +1,3085 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for the Cornelis Networks Agent Workforce">
+      
+      
+      
+        <link rel="canonical" href="https://jmac-cornelis.github.io/agent-workforce/agents-drucker/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Agents drucker - Agent Workforce</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#drucker-engineering-hygiene-agent-design-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Agent Workforce" class="md-header__button md-logo" aria-label="Agent Workforce" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Agent Workforce
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Agents drucker
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/jmac-cornelis/agent-workforce" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jmac-cornelis/agent-workforce
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../user-guide/index.md" class="md-tabs__link">
+          
+  
+  
+    
+  
+  User Guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../agents/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Agents
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../cli/agent-cli.md" class="md-tabs__link">
+          
+  
+  
+    
+  
+  CLI Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../deployment/index.md" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Deployment
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../architecture/index.md" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Architecture
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Agent Workforce" class="md-nav__button md-logo" aria-label="Agent Workforce" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Agent Workforce
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/jmac-cornelis/agent-workforce" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    jmac-cornelis/agent-workforce
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User Guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User Guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/index.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/installation.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../user-guide/quickstart.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../agents/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_3" id="__nav_3_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Agents
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/drucker.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Drucker (Engineering Hygiene)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/gantt.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gantt (Project Planning)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/hemingway.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hemingway (Documentation)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agents/shannon.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shannon (Communications)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/agent-cli.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    agent-cli
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/drucker-agent.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    drucker-agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/gantt-agent.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gantt-agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/hemingway-agent.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    hemingway-agent
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cli/github-utils.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    github-utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Deployment
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/index.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/server-setup.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Server Setup
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/containers.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Docker & Podman
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/cloudflare.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cloudflare Tunnel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/index.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/framework.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Framework
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../architecture/shannon.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Shannon Integration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-module-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Module Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-what-changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. What Changed
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. What Changed">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#before" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Before
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#after" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        After
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#impact" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impact
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-component-diagram" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Component Diagram
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-key-flows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Key Flows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Key Flows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flow-1-jira-hygiene-scan-full-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow 1 — Jira Hygiene Scan (Full Project)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flow-2-github-pr-hygiene-scan" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow 2 — GitHub PR Hygiene Scan
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flow-3-pr-reminder-dm-delivery" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow 3 — PR Reminder DM Delivery
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-data-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Data Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Data Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-data-structures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Data Structures
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Core Data Structures">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#druckerrequest-modelspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DruckerRequest (models.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#druckerfinding-modelspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DruckerFinding (models.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#druckeraction-modelspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DruckerAction (models.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#druckerhygienereport-modelspy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        DruckerHygieneReport (models.py)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#state-store-schemas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        State Store Schemas
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="State Store Schemas">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#drucker_activitydb-activitycounter" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        drucker_activity.db — ActivityCounter
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#drucker_learningdb-druckerlearningstore" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        drucker_learning.db — DruckerLearningStore
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#drucker_monitor_statedb-druckermonitorstate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        drucker_monitor_state.db — DruckerMonitorState
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#drucker_pr_reminder_statedb-prreminderstate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        drucker_pr_reminder_state.db — PRReminderState
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="7. Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#configuration-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#feature-flags-job-level" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Feature Flags (Job-Level)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Error Handling
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="8. Error Handling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#dry-run-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dry-Run Safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#connection-guards" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Connection Guards
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#thread-safety" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Thread Safety
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#idempotent-writes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Idempotent Writes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-logging" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Logging
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-known-limitations-technical-debt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Known Limitations / Technical Debt
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Known Limitations / Technical Debt">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-empty-project-keys-in-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Empty Project Keys in Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-duplicated-repository-lists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Duplicated Repository Lists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-all-github-jobs-disabled-by-default" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. All GitHub Jobs Disabled by Default
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#4-no-schema-validation-for-configuration-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. No Schema Validation for Configuration Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-implicit-enabled-default-for-jira-jobs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Implicit enabled Default for Jira Jobs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-hardcoded-label-prefix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Hardcoded Label Prefix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#7-no-retry-logic-for-graph-api-calls" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. No Retry Logic for Graph API Calls
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-no-rate-limiting-for-github-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. No Rate Limiting for GitHub API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-no-pagination-for-large-pr-lists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. No Pagination for Large PR Lists
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#10-no-audit-trail-for-dry-run-overrides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. No Audit Trail for Dry-Run Overrides
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/jmac-cornelis/agent-workforce/edit/main/docs/agents-drucker.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
+    </a>
+  
+  
+
+
+<!-- Generated by Documentation Agent — do not edit between markers -->
+
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nn">---</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;As-Built:</span><span class="nv"> </span><span class="s">Drucker</span><span class="nv"> </span><span class="s">Engineering</span><span class="nv"> </span><span class="s">Hygiene</span><span class="nv"> </span><span class="s">Agent&quot;</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">date</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2026-04-06&quot;</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nt">status</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;draft&quot;</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nn">---</span>
+</span></code></pre></div>
+<h1 id="drucker-engineering-hygiene-agent-design-reference">Drucker Engineering Hygiene Agent — Design Reference<a class="headerlink" href="#drucker-engineering-hygiene-agent-design-reference" title="Permanent link">&para;</a></h1>
+<h2 id="1-module-overview">1. Module Overview<a class="headerlink" href="#1-module-overview" title="Permanent link">&para;</a></h2>
+<p>The Drucker Engineering Hygiene Agent is a deterministic-first automation system that monitors Jira ticket quality and GitHub pull request lifecycle health across the Cornelis Networks engineering organization. Named after management theorist Peter Drucker, the agent identifies workflow drift, missing metadata, stale work, and routing mistakes in both Jira and GitHub, then proposes safe, reviewable remediation actions. Drucker operates in dry-run mode by default, ensuring all mutations are explicitly approved before execution. The agent exposes REST API endpoints (port 8201), integrates with Shannon for Teams-based command routing, and persists hygiene reports, PR reminder state, and learning patterns in SQLite databases. Drucker's architecture prioritizes deterministic evidence over LLM inference — token usage is limited to natural language query translation (<code>/ask</code> endpoint), while all hygiene scans, validation rules, and action proposals follow hardcoded policy logic.</p>
+<h2 id="2-what-changed">2. What Changed<a class="headerlink" href="#2-what-changed" title="Permanent link">&para;</a></h2>
+<h3 id="before">Before<a class="headerlink" href="#before" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Drucker performed Jira hygiene scans only.</li>
+<li>GitHub PR hygiene was planned but not implemented.</li>
+<li>No PR reminder DM workflow existed.</li>
+<li>No natural language query translation capability.</li>
+<li>Hygiene reports did not include the JQL queries used to generate them.</li>
+</ul>
+<h3 id="after">After<a class="headerlink" href="#after" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>GitHub PR hygiene scanning</strong> is fully implemented with six scan types: stale PRs, missing reviews, naming compliance, merge conflicts, CI failures, and stale branches.</li>
+<li><strong>PR reminder DMs</strong> are delivered via Microsoft Teams Graph API with interactive Adaptive Cards supporting snooze and merge actions.</li>
+<li><strong>Natural language query translation</strong> (<code>/v1/nl/query</code>) uses LLM function calling to convert plain English questions into structured Jira tool calls.</li>
+<li><strong>JQL query logging</strong> — all hygiene reports now include a <code>jql_queries</code> field documenting the exact JQL used to fetch tickets.</li>
+<li><strong>Activity counters</strong> track per-category API request and error counts with timestamps.</li>
+<li><strong>PR reminder state store</strong> (<code>PRReminderState</code>) manages the full PR lifecycle including scheduling, snoozing, and action history.</li>
+</ul>
+<h3 id="impact">Impact<a class="headerlink" href="#impact" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Shannon integration</strong> now routes 20+ Drucker commands including GitHub PR hygiene and PR reminder operations.</li>
+<li><strong>Downstream consumers</strong> of hygiene reports can replay scans by executing the logged JQL queries.</li>
+<li><strong>PR authors and reviewers</strong> receive automated Teams DMs with actionable cards when PRs exceed staleness thresholds.</li>
+<li><strong>Observability</strong> improved via <code>/v1/status/*</code> endpoints exposing request counts, token usage (zero for deterministic paths), and recent decisions.</li>
+</ul>
+<h2 id="3-component-diagram">3. Component Diagram<a class="headerlink" href="#3-component-diagram" title="Permanent link">&para;</a></h2>
+<pre class="mermaid"><code>graph TD
+    subgraph "External Interfaces"
+        TEAMS[Microsoft Teams&lt;br/&gt;Shannon Commands]
+        JIRA[Jira REST API]
+        GITHUB[GitHub REST API]
+        GRAPH[Microsoft Graph API&lt;br/&gt;Teams DMs]
+    end
+
+    subgraph "agents/drucker"
+        API[api.py&lt;br/&gt;FastAPI REST Server&lt;br/&gt;Port 8201]
+        AGENT[agent.py&lt;br/&gt;DruckerCoordinatorAgent]
+        CLI[cli.py&lt;br/&gt;Standalone CLI]
+        CARDS[cards.py&lt;br/&gt;Adaptive Card Builders]
+        JREP[jira_reporting.py&lt;br/&gt;JQL Query Wrappers]
+        NL[nl_query.py&lt;br/&gt;LLM Query Translator]
+        PR_REM[pr_reminders.py&lt;br/&gt;PR Reminder Engine]
+        MODELS[models.py&lt;br/&gt;Data Models]
+        TOOLS[tools.py&lt;br/&gt;Agent Tools]
+    end
+
+    subgraph "State Layer"
+        ACT_CNT[ActivityCounter&lt;br/&gt;drucker_activity.db]
+        LEARN[DruckerLearningStore&lt;br/&gt;drucker_learning.db]
+        MON[DruckerMonitorState&lt;br/&gt;drucker_monitor_state.db]
+        PR_STATE[PRReminderState&lt;br/&gt;drucker_pr_reminder_state.db]
+        REP_STORE[DruckerReportStore&lt;br/&gt;data/drucker_reports/]
+    end
+
+    subgraph "Configuration"
+        MON_CFG[config/monitor.yaml]
+        POLL_CFG[config/polling.yaml]
+        PR_CFG[config/pr_reminders.yaml]
+    end
+
+    TEAMS --&gt; API
+    API --&gt; AGENT
+    API --&gt; JREP
+    API --&gt; NL
+    API --&gt; PR_REM
+    API --&gt; ACT_CNT
+    CLI --&gt; AGENT
+    AGENT --&gt; JIRA
+    AGENT --&gt; MODELS
+    AGENT --&gt; TOOLS
+    AGENT --&gt; LEARN
+    AGENT --&gt; MON
+    AGENT --&gt; REP_STORE
+    PR_REM --&gt; GITHUB
+    PR_REM --&gt; GRAPH
+    PR_REM --&gt; PR_STATE
+    PR_REM --&gt; CARDS
+    NL --&gt; JREP
+    JREP --&gt; JIRA
+    AGENT --&gt; MON_CFG
+    AGENT --&gt; POLL_CFG
+    PR_REM --&gt; PR_CFG</code></pre>
+<h2 id="4-key-flows">4. Key Flows<a class="headerlink" href="#4-key-flows" title="Permanent link">&para;</a></h2>
+<h3 id="flow-1-jira-hygiene-scan-full-project">Flow 1 — Jira Hygiene Scan (Full Project)<a class="headerlink" href="#flow-1-jira-hygiene-scan-full-project" title="Permanent link">&para;</a></h3>
+<p>When a user triggers a full Jira hygiene scan via Shannon (<code>@Shannon /hygiene-run</code>) or the API (<code>POST /v1/hygiene/run</code>), Drucker queries Jira for all active tickets, validates each against <code>monitor.yaml</code> rules, and generates a hygiene report with findings and proposed actions.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant User as User (Teams)
+    participant Shannon as Shannon Agent
+    participant API as Drucker API
+    participant Agent as DruckerCoordinatorAgent
+    participant Jira as Jira REST API
+    participant Store as DruckerReportStore
+
+    User-&gt;&gt;Shannon: @Shannon /hygiene-run project STL
+    Shannon-&gt;&gt;API: POST /v1/hygiene/run {project_key: "STL"}
+    API-&gt;&gt;Agent: run({project_key: "STL"})
+    Agent-&gt;&gt;Agent: _build_request() → DruckerRequest
+    Agent-&gt;&gt;Jira: search_tickets(JQL: project=STL AND status NOT IN (Closed, Done))
+    Jira--&gt;&gt;Agent: 200 tickets
+    Agent-&gt;&gt;Agent: validate_ticket() × 200 (monitor.yaml rules)
+    Agent-&gt;&gt;Agent: determine_actions() → DruckerAction[]
+    Agent-&gt;&gt;Agent: _format_report() → Markdown summary
+    Agent-&gt;&gt;Store: save_report(report, summary_markdown)
+    Store--&gt;&gt;Agent: {report_id, json_path, markdown_path}
+    Agent--&gt;&gt;API: AgentResponse(success=True, metadata={hygiene_report, review_session})
+    API--&gt;&gt;Shannon: {ok: true, report: {...}, summary_markdown: "..."}
+    Shannon--&gt;&gt;User: Hygiene report card with findings summary</code></pre>
+<p><strong>Key details:</strong>
+- The JQL query is now logged in <code>report.jql_queries</code> (recent change).
+- Validation rules are loaded from <code>config/monitor.yaml</code> per issue type (Bug, Story, Task, Epic).
+- Findings are categorized by severity (high, medium, low) and type (stale_ticket, missing_fix_version, etc.).
+- Proposed actions are review-gated — no Jira writes occur unless <code>dry_run=false</code> is explicitly passed.</p>
+<h3 id="flow-2-github-pr-hygiene-scan">Flow 2 — GitHub PR Hygiene Scan<a class="headerlink" href="#flow-2-github-pr-hygiene-scan" title="Permanent link">&para;</a></h3>
+<p>GitHub PR hygiene scans run on a configurable schedule (defined in <code>config/polling.yaml</code>) or on-demand via Shannon (<code>@Shannon /pr-hygiene cornelisnetworks/ifs-all</code>). Drucker fetches open PRs from the GitHub API, evaluates staleness and review coverage, and delivers findings through Shannon.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant Scheduler as Poller (cron)
+    participant API as Drucker API
+    participant Agent as DruckerCoordinatorAgent
+    participant GitHub as GitHub REST API
+    participant Shannon as Shannon Agent
+    participant Teams as Microsoft Teams
+
+    Scheduler-&gt;&gt;API: POST /v1/poller/tick (job: github-hygiene-scan)
+    API-&gt;&gt;Agent: run_poller_tick({job_name: "github-hygiene-scan"})
+    Agent-&gt;&gt;Agent: _resolve_poller_jobs() → github_repos from polling.yaml
+    loop For each repo in github_repos
+        Agent-&gt;&gt;GitHub: list_pull_requests(repo, state=open)
+        GitHub--&gt;&gt;Agent: Open PRs with metadata
+        Agent-&gt;&gt;Agent: Evaluate staleness (days_open &gt; github_stale_days)
+        Agent-&gt;&gt;Agent: Evaluate review coverage (requested_reviewers, approvals)
+        Agent-&gt;&gt;Agent: Generate findings (stale_pr, missing_review)
+    end
+    Agent-&gt;&gt;Agent: Build hygiene report
+    alt notify_shannon=true
+        Agent-&gt;&gt;Shannon: POST /v1/notify {title, text, body_lines}
+        Shannon-&gt;&gt;Teams: Post adaptive card to configured channel
+    end
+    Agent--&gt;&gt;API: {ok: true, repos_scanned, findings_count}</code></pre>
+<p><strong>Key details:</strong>
+- The default <code>github_stale_days</code> threshold is 5 days (configurable in <code>polling.yaml</code>).
+- Draft PRs receive a 2× grace period (10 days default).
+- Findings include PR number, title, author, reviewers, age, and a direct link.
+- Notifications are delivered through Shannon, not written as GitHub PR comments.</p>
+<h3 id="flow-3-pr-reminder-dm-delivery">Flow 3 — PR Reminder DM Delivery<a class="headerlink" href="#flow-3-pr-reminder-dm-delivery" title="Permanent link">&para;</a></h3>
+<p>The PR reminder engine scans configured repositories for stale PRs, schedules reminders based on <code>config/pr_reminders.yaml</code> cadences, resolves GitHub usernames to Teams identities via <code>config/identity_map.yaml</code>, and delivers interactive Adaptive Cards via Microsoft Graph API.</p>
+<pre class="mermaid"><code>sequenceDiagram
+    participant Scheduler as Poller (cron)
+    participant API as Drucker API
+    participant Engine as PRReminderEngine
+    participant State as PRReminderState
+    participant GitHub as GitHub REST API
+    participant Graph as Microsoft Graph API
+    participant Teams as Microsoft Teams
+
+    Scheduler-&gt;&gt;API: POST /v1/github/pr-reminders/scan
+    API-&gt;&gt;Engine: scan_repos()
+    Engine-&gt;&gt;GitHub: list_pull_requests(repo, state=open)
+    GitHub--&gt;&gt;Engine: Open PRs
+    loop For each PR
+        Engine-&gt;&gt;State: upsert_pr(repo, pr_number, metadata)
+        Engine-&gt;&gt;Engine: compute_next_reminder(created_at, reminder_count)
+        Engine-&gt;&gt;State: schedule_next_reminder(next_at)
+    end
+    Engine--&gt;&gt;API: {repos_scanned, prs_tracked, new_prs}
+
+    Note over Scheduler,API: Later, when reminders are due...
+
+    Scheduler-&gt;&gt;API: POST /v1/github/pr-reminders/process
+    API-&gt;&gt;Engine: process_due_reminders()
+    Engine-&gt;&gt;State: get_due_reminders()
+    State--&gt;&gt;Engine: PRs where next_reminder_at &lt;= now
+    loop For each due PR
+        Engine-&gt;&gt;Engine: resolve_teams_user(github_username) → teams_email
+        Engine-&gt;&gt;Engine: build_pr_reminder_card(pr_data, snooze_options, merge_methods)
+        Engine-&gt;&gt;Graph: create_one_on_one_chat(user_id)
+        Graph--&gt;&gt;Engine: {chat_id}
+        Engine-&gt;&gt;Graph: send_chat_adaptive_card(chat_id, card)
+        Graph--&gt;&gt;Teams: DM delivered to user
+        Engine-&gt;&gt;State: record_reminder(repo, pr_number, target_user)
+        Engine-&gt;&gt;Engine: compute_next_reminder(reminder_count + 1)
+        Engine-&gt;&gt;State: schedule_next_reminder(next_at)
+    end</code></pre>
+<p><strong>Key details:</strong>
+- Reminder cadences are per-repo configurable (e.g., <code>[5, 8, 10, 15]</code> days for most repos, <code>[3, 5, 8, 12]</code> for <code>agent-workforce</code>).
+- Adaptive Cards include snooze buttons (2, 5, 7 days) and merge buttons (squash, merge, rebase).
+- Snooze actions update <code>snoozed_until</code> in <code>PRReminderState</code> and suppress reminders until expiry.
+- Merge actions default to dry-run mode — a confirmation card is sent before execution.</p>
+<h2 id="5-data-model">5. Data Model<a class="headerlink" href="#5-data-model" title="Permanent link">&para;</a></h2>
+<h3 id="core-data-structures">Core Data Structures<a class="headerlink" href="#core-data-structures" title="Permanent link">&para;</a></h3>
+<h4 id="druckerrequest-modelspy"><code>DruckerRequest</code> (models.py)<a class="headerlink" href="#druckerrequest-modelspy" title="Permanent link">&para;</a></h4>
+<p>Input request for hygiene scans.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>project_key</code></td>
+<td><code>str</code></td>
+<td><code>''</code></td>
+<td>Jira project key</td>
+</tr>
+<tr>
+<td><code>ticket_key</code></td>
+<td><code>Optional[str]</code></td>
+<td><code>None</code></td>
+<td>Specific ticket for issue-check</td>
+</tr>
+<tr>
+<td><code>limit</code></td>
+<td><code>int</code></td>
+<td><code>200</code></td>
+<td>Max tickets per query</td>
+</tr>
+<tr>
+<td><code>include_done</code></td>
+<td><code>bool</code></td>
+<td><code>False</code></td>
+<td>Include resolved/closed tickets</td>
+</tr>
+<tr>
+<td><code>stale_days</code></td>
+<td><code>int</code></td>
+<td><code>30</code></td>
+<td>Staleness threshold in days</td>
+</tr>
+<tr>
+<td><code>jql</code></td>
+<td><code>Optional[str]</code></td>
+<td><code>None</code></td>
+<td>Custom JQL override</td>
+</tr>
+<tr>
+<td><code>since</code></td>
+<td><code>Optional[str]</code></td>
+<td><code>None</code></td>
+<td>Checkpoint override (ISO date)</td>
+</tr>
+<tr>
+<td><code>recent_only</code></td>
+<td><code>bool</code></td>
+<td><code>False</code></td>
+<td>Use recent-ticket intake mode</td>
+</tr>
+<tr>
+<td><code>label_prefix</code></td>
+<td><code>str</code></td>
+<td><code>'drucker'</code></td>
+<td>Label prefix for Drucker-applied labels</td>
+</tr>
+<tr>
+<td><code>requested_by</code></td>
+<td><code>Optional[str]</code></td>
+<td><code>None</code></td>
+<td>User who triggered the scan</td>
+</tr>
+<tr>
+<td><code>approved_by</code></td>
+<td><code>Optional[str]</code></td>
+<td><code>None</code></td>
+<td>User who approved actions</td>
+</tr>
+<tr>
+<td><code>correlation_id</code></td>
+<td><code>Optional[str]</code></td>
+<td><code>None</code></td>
+<td>Trace ID for multi-step workflows</td>
+</tr>
+<tr>
+<td><code>trigger</code></td>
+<td><code>str</code></td>
+<td><code>'interactive'</code></td>
+<td>Trigger source (interactive, scheduled, webhook)</td>
+</tr>
+</tbody>
+</table>
+<h4 id="druckerfinding-modelspy"><code>DruckerFinding</code> (models.py)<a class="headerlink" href="#druckerfinding-modelspy" title="Permanent link">&para;</a></h4>
+<p>A single hygiene violation for a ticket.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>finding_id</code></td>
+<td><code>str</code></td>
+<td>UUID-based unique ID</td>
+</tr>
+<tr>
+<td><code>ticket_key</code></td>
+<td><code>str</code></td>
+<td>Jira ticket key</td>
+</tr>
+<tr>
+<td><code>category</code></td>
+<td><code>str</code></td>
+<td>Finding type (stale_ticket, missing_fix_version, etc.)</td>
+</tr>
+<tr>
+<td><code>severity</code></td>
+<td><code>str</code></td>
+<td>high, medium, low</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td><code>str</code></td>
+<td>Human-readable title</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td><code>str</code></td>
+<td>Detailed explanation</td>
+</tr>
+<tr>
+<td><code>evidence</code></td>
+<td><code>List[str]</code></td>
+<td>Supporting facts (e.g., "Last updated 45 days ago")</td>
+</tr>
+<tr>
+<td><code>recommendation</code></td>
+<td><code>str</code></td>
+<td>Suggested remediation</td>
+</tr>
+<tr>
+<td><code>action_ids</code></td>
+<td><code>List[str]</code></td>
+<td>IDs of proposed actions addressing this finding</td>
+</tr>
+</tbody>
+</table>
+<h4 id="druckeraction-modelspy"><code>DruckerAction</code> (models.py)<a class="headerlink" href="#druckeraction-modelspy" title="Permanent link">&para;</a></h4>
+<p>A proposed Jira write-back action.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>action_id</code></td>
+<td><code>str</code></td>
+<td>UUID-based unique ID</td>
+</tr>
+<tr>
+<td><code>ticket_key</code></td>
+<td><code>str</code></td>
+<td>Target Jira ticket</td>
+</tr>
+<tr>
+<td><code>action_type</code></td>
+<td><code>str</code></td>
+<td>comment, label, field_update, transition</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td><code>str</code></td>
+<td>Human-readable title</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td><code>str</code></td>
+<td>Detailed explanation</td>
+</tr>
+<tr>
+<td><code>finding_ids</code></td>
+<td><code>List[str]</code></td>
+<td>Findings this action addresses</td>
+</tr>
+<tr>
+<td><code>confidence</code></td>
+<td><code>str</code></td>
+<td>high, medium, low</td>
+</tr>
+<tr>
+<td><code>comment</code></td>
+<td><code>str</code></td>
+<td>Comment text (if action_type=comment)</td>
+</tr>
+<tr>
+<td><code>update_fields</code></td>
+<td><code>Dict[str, Any]</code></td>
+<td>Field updates (if action_type=field_update)</td>
+</tr>
+<tr>
+<td><code>transition_to</code></td>
+<td><code>str</code></td>
+<td>Target status (if action_type=transition)</td>
+</tr>
+</tbody>
+</table>
+<h4 id="druckerhygienereport-modelspy"><code>DruckerHygieneReport</code> (models.py)<a class="headerlink" href="#druckerhygienereport-modelspy" title="Permanent link">&para;</a></h4>
+<p>Durable hygiene report artifact.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>report_id</code></td>
+<td><code>str</code></td>
+<td>8-character UUID prefix</td>
+</tr>
+<tr>
+<td><code>project_key</code></td>
+<td><code>str</code></td>
+<td>Jira project key</td>
+</tr>
+<tr>
+<td><code>created_at</code></td>
+<td><code>str</code></td>
+<td>ISO 8601 UTC timestamp</td>
+</tr>
+<tr>
+<td><code>request</code></td>
+<td><code>Dict[str, Any]</code></td>
+<td>Serialized <code>DruckerRequest</code></td>
+</tr>
+<tr>
+<td><code>project_info</code></td>
+<td><code>Dict[str, Any]</code></td>
+<td>Jira project metadata</td>
+</tr>
+<tr>
+<td><code>summary</code></td>
+<td><code>Dict[str, Any]</code></td>
+<td>Aggregated counts (total_tickets, finding_count, etc.)</td>
+</tr>
+<tr>
+<td><code>findings</code></td>
+<td><code>List[DruckerFinding]</code></td>
+<td>All findings</td>
+</tr>
+<tr>
+<td><code>proposed_actions</code></td>
+<td><code>List[DruckerAction]</code></td>
+<td>All proposed actions</td>
+</tr>
+<tr>
+<td><code>tickets</code></td>
+<td><code>List[Dict[str, Any]]</code></td>
+<td>Normalized ticket data</td>
+</tr>
+<tr>
+<td><code>errors</code></td>
+<td><code>List[str]</code></td>
+<td>Errors encountered during scan</td>
+</tr>
+<tr>
+<td><code>summary_markdown</code></td>
+<td><code>str</code></td>
+<td>Human-readable Markdown summary</td>
+</tr>
+<tr>
+<td><code>jql_queries</code></td>
+<td><code>List[str]</code></td>
+<td><strong>New:</strong> JQL queries used to fetch tickets</td>
+</tr>
+</tbody>
+</table>
+<h3 id="state-store-schemas">State Store Schemas<a class="headerlink" href="#state-store-schemas" title="Permanent link">&para;</a></h3>
+<h4 id="drucker_activitydb-activitycounter"><code>drucker_activity.db</code> — ActivityCounter<a class="headerlink" href="#drucker_activitydb-activitycounter" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>activity</code></td>
+<td><code>category</code></td>
+<td>TEXT PK</td>
+<td>Endpoint category (hygiene, jira, github, nl, pr-reminders)</td>
+</tr>
+<tr>
+<td></td>
+<td><code>request_count</code></td>
+<td>INTEGER</td>
+<td>Monotonically increasing</td>
+</tr>
+<tr>
+<td></td>
+<td><code>error_count</code></td>
+<td>INTEGER</td>
+<td>Subset of request_count</td>
+</tr>
+<tr>
+<td></td>
+<td><code>first_request_at</code></td>
+<td>TEXT</td>
+<td>ISO 8601 UTC</td>
+</tr>
+<tr>
+<td></td>
+<td><code>last_request_at</code></td>
+<td>TEXT</td>
+<td>ISO 8601 UTC</td>
+</tr>
+</tbody>
+</table>
+<h4 id="drucker_learningdb-druckerlearningstore"><code>drucker_learning.db</code> — DruckerLearningStore<a class="headerlink" href="#drucker_learningdb-druckerlearningstore" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>observations</code></td>
+<td><code>id</code></td>
+<td>INTEGER PK AUTO</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>ticket_key</code></td>
+<td>TEXT</td>
+<td>e.g., "PROJ-123"</td>
+</tr>
+<tr>
+<td></td>
+<td><code>field</code></td>
+<td>TEXT</td>
+<td>Normalized field name</td>
+</tr>
+<tr>
+<td></td>
+<td><code>predicted_value</code></td>
+<td>TEXT</td>
+<td>What was predicted</td>
+</tr>
+<tr>
+<td></td>
+<td><code>actual_value</code></td>
+<td>TEXT</td>
+<td>What was actually set</td>
+</tr>
+<tr>
+<td></td>
+<td><code>correct</code></td>
+<td>INTEGER</td>
+<td>0 or 1</td>
+</tr>
+<tr>
+<td></td>
+<td><code>timestamp</code></td>
+<td>TEXT</td>
+<td>ISO 8601 UTC</td>
+</tr>
+<tr>
+<td><code>keyword_patterns</code></td>
+<td><code>keyword, field, value</code></td>
+<td>TEXT PK (composite)</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>hit_count</code></td>
+<td>INTEGER</td>
+<td>Times keyword co-occurred with value</td>
+</tr>
+<tr>
+<td></td>
+<td><code>miss_count</code></td>
+<td>INTEGER</td>
+<td>Times keyword appeared without value</td>
+</tr>
+<tr>
+<td></td>
+<td><code>confidence</code></td>
+<td>REAL</td>
+<td><code>hit / (hit + miss + 2)</code></td>
+</tr>
+<tr>
+<td><code>reporter_profiles</code></td>
+<td><code>reporter_id, field, value</code></td>
+<td>TEXT PK (composite)</td>
+<td><code>value='__present__'</code> tracks compliance</td>
+</tr>
+<tr>
+<td></td>
+<td><code>count</code></td>
+<td>INTEGER</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>total</code></td>
+<td>INTEGER</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>compliance_rate</code></td>
+<td>REAL</td>
+<td><code>count / total</code></td>
+</tr>
+<tr>
+<td><code>learned_tickets</code></td>
+<td><code>ticket_key, fingerprint</code></td>
+<td>TEXT PK (composite)</td>
+<td>Deduplication via content hash</td>
+</tr>
+<tr>
+<td></td>
+<td><code>learned_at</code></td>
+<td>TEXT</td>
+<td>ISO 8601 UTC</td>
+</tr>
+</tbody>
+</table>
+<h4 id="drucker_monitor_statedb-druckermonitorstate"><code>drucker_monitor_state.db</code> — DruckerMonitorState<a class="headerlink" href="#drucker_monitor_statedb-druckermonitorstate" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>checkpoints</code></td>
+<td><code>project</code></td>
+<td>TEXT PK</td>
+<td>Jira project key</td>
+</tr>
+<tr>
+<td></td>
+<td><code>last_checked</code></td>
+<td>TEXT</td>
+<td>ISO 8601 cursor</td>
+</tr>
+<tr>
+<td><code>processed_tickets</code></td>
+<td><code>ticket_key</code></td>
+<td>TEXT PK</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>project</code></td>
+<td>TEXT</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>processed_at</code></td>
+<td>TEXT</td>
+<td></td>
+</tr>
+<tr>
+<td><code>validation_history</code></td>
+<td><code>id</code></td>
+<td>INTEGER PK AUTO</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>ticket_key</code></td>
+<td>TEXT</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>project</code></td>
+<td>TEXT</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>result_json</code></td>
+<td>TEXT</td>
+<td>JSON-serialized validation result</td>
+</tr>
+<tr>
+<td></td>
+<td><code>timestamp</code></td>
+<td>TEXT</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="drucker_pr_reminder_statedb-prreminderstate"><code>drucker_pr_reminder_state.db</code> — PRReminderState<a class="headerlink" href="#drucker_pr_reminder_statedb-prreminderstate" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pr_reminders</code></td>
+<td><code>id</code></td>
+<td>INTEGER PK AUTO</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>repo</code></td>
+<td>TEXT</td>
+<td>GitHub <code>owner/repo</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>pr_number</code></td>
+<td>INTEGER</td>
+<td>UNIQUE with repo</td>
+</tr>
+<tr>
+<td></td>
+<td><code>pr_title</code></td>
+<td>TEXT</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>pr_url</code></td>
+<td>TEXT</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>author_github</code></td>
+<td>TEXT</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>reviewers_github</code></td>
+<td>TEXT</td>
+<td>Comma-separated or JSON</td>
+</tr>
+<tr>
+<td></td>
+<td><code>created_at</code></td>
+<td>TEXT</td>
+<td>PR creation time</td>
+</tr>
+<tr>
+<td></td>
+<td><code>first_reminded_at</code></td>
+<td>TEXT</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>last_reminded_at</code></td>
+<td>TEXT</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>next_reminder_at</code></td>
+<td>TEXT</td>
+<td>Scheduling cursor</td>
+</tr>
+<tr>
+<td></td>
+<td><code>reminder_count</code></td>
+<td>INTEGER</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>snoozed_until</code></td>
+<td>TEXT</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>snoozed_by</code></td>
+<td>TEXT</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>status</code></td>
+<td>TEXT</td>
+<td><code>active</code>, <code>snoozed</code>, <code>closed</code>, <code>merged</code></td>
+</tr>
+<tr>
+<td><code>reminder_history</code></td>
+<td><code>id</code></td>
+<td>INTEGER PK AUTO</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>repo, pr_number</code></td>
+<td>TEXT, INTEGER</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>action</code></td>
+<td>TEXT</td>
+<td><code>reminded</code>, <code>snoozed</code>, <code>closed</code>, <code>merged</code></td>
+</tr>
+<tr>
+<td></td>
+<td><code>target_user</code></td>
+<td>TEXT</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>details_json</code></td>
+<td>TEXT</td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td><code>timestamp</code></td>
+<td>TEXT</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="6-dependencies">6. Dependencies<a class="headerlink" href="#6-dependencies" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Dependency</th>
+<th>Purpose</th>
+<th>Version</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>fastapi</code></td>
+<td>REST API framework</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td><code>pydantic</code></td>
+<td>Request/response validation</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td><code>uvicorn</code></td>
+<td>ASGI server</td>
+<td>N/A</td>
+</tr>
+<tr>
+<td><code>sqlite3</code></td>
+<td>Embedded database for state stores</td>
+<td>Python stdlib</td>
+</tr>
+<tr>
+<td><code>yaml</code></td>
+<td>Configuration file parsing</td>
+<td>PyYAML</td>
+</tr>
+<tr>
+<td><code>dotenv</code></td>
+<td>Environment variable loading</td>
+<td>python-dotenv</td>
+</tr>
+<tr>
+<td><code>jira</code></td>
+<td>Jira REST API client</td>
+<td>jira (Python library)</td>
+</tr>
+<tr>
+<td><code>github_utils</code></td>
+<td>GitHub REST API wrapper</td>
+<td>Internal module</td>
+</tr>
+<tr>
+<td><code>agents.shannon.graph_client</code></td>
+<td>Microsoft Graph API client for Teams DMs</td>
+<td>Internal module</td>
+</tr>
+<tr>
+<td><code>llm.cornelis_llm</code></td>
+<td>LLM client for natural language query translation</td>
+<td>Internal module</td>
+</tr>
+<tr>
+<td><code>agents.base</code></td>
+<td>Base agent framework</td>
+<td>Internal module</td>
+</tr>
+<tr>
+<td><code>agents.review_agent</code></td>
+<td>Review session management</td>
+<td>Internal module</td>
+</tr>
+<tr>
+<td><code>core.monitoring</code></td>
+<td>Jira validation rules engine</td>
+<td>Internal module</td>
+</tr>
+<tr>
+<td><code>core.reporting</code></td>
+<td>Bug activity reporting</td>
+<td>Internal module</td>
+</tr>
+<tr>
+<td><code>tools.jira_tools</code></td>
+<td>Jira tool wrappers for agent use</td>
+<td>Internal module</td>
+</tr>
+<tr>
+<td><code>tools.knowledge_tools</code></td>
+<td>Knowledge base search tools</td>
+<td>Internal module</td>
+</tr>
+<tr>
+<td><code>notifications.jira_comments</code></td>
+<td>Jira comment notification helpers</td>
+<td>Internal module</td>
+</tr>
+</tbody>
+</table>
+<h2 id="7-configuration">7. Configuration<a class="headerlink" href="#7-configuration" title="Permanent link">&para;</a></h2>
+<h3 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>JIRA_URL</code></td>
+<td>—</td>
+<td>Jira instance base URL (required)</td>
+</tr>
+<tr>
+<td><code>JIRA_SERVICE_EMAIL</code></td>
+<td>—</td>
+<td>Jira service account email (required)</td>
+</tr>
+<tr>
+<td><code>JIRA_SERVICE_API_TOKEN</code></td>
+<td>—</td>
+<td>Jira service account API token (required)</td>
+</tr>
+<tr>
+<td><code>GITHUB_TOKEN</code></td>
+<td>—</td>
+<td>GitHub personal access token (required for PR hygiene)</td>
+</tr>
+<tr>
+<td><code>GITHUB_API_URL</code></td>
+<td><code>https://api.github.com</code></td>
+<td>GitHub API base URL</td>
+</tr>
+<tr>
+<td><code>DRY_RUN</code></td>
+<td><code>true</code></td>
+<td>Global dry-run toggle (mutations disabled when true)</td>
+</tr>
+<tr>
+<td><code>LOG_LEVEL</code></td>
+<td><code>INFO</code></td>
+<td>Logging verbosity</td>
+</tr>
+<tr>
+<td><code>STATE_BACKEND</code></td>
+<td><code>json</code></td>
+<td>State backend type (unused by Drucker)</td>
+</tr>
+<tr>
+<td><code>PERSISTENCE_DIR</code></td>
+<td><code>/data/state</code></td>
+<td>State directory for containerized deployments</td>
+</tr>
+<tr>
+<td><code>DRUCKER_MONITOR_STATE_DB</code></td>
+<td><code>data/drucker_monitor_state.db</code></td>
+<td>Monitor state SQLite path</td>
+</tr>
+<tr>
+<td><code>DRUCKER_LEARNING_DB</code></td>
+<td><code>data/drucker_learning.db</code></td>
+<td>Learning store SQLite path</td>
+</tr>
+<tr>
+<td><code>DRUCKER_REPORT_DIR</code></td>
+<td><code>data/drucker_reports</code></td>
+<td>Report artifact directory</td>
+</tr>
+</tbody>
+</table>
+<h3 id="configuration-files">Configuration Files<a class="headerlink" href="#configuration-files" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>config/monitor.yaml</code></td>
+<td>Jira validation rules per issue type, learning subsystem config</td>
+</tr>
+<tr>
+<td><code>config/polling.yaml</code></td>
+<td>Polling job definitions, GitHub repo list, scan defaults</td>
+</tr>
+<tr>
+<td><code>config/pr_reminders.yaml</code></td>
+<td>PR reminder cadences, snooze options, merge methods</td>
+</tr>
+<tr>
+<td><code>config/identity_map.yaml</code></td>
+<td>GitHub username → Teams email mapping</td>
+</tr>
+<tr>
+<td><code>prompts/system.md</code></td>
+<td>Agent system prompt</td>
+</tr>
+</tbody>
+</table>
+<h3 id="feature-flags-job-level">Feature Flags (Job-Level)<a class="headerlink" href="#feature-flags-job-level" title="Permanent link">&para;</a></h3>
+<p>All GitHub scan jobs are disabled by default in <code>config/polling.yaml</code>:</p>
+<div class="language-yaml highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">jobs</span><span class="p">:</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">job_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github-hygiene-scan</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">job_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github-extended-scan</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">job_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">github-pr-reminders</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">false</span>
+</span></code></pre></div>
+<p>Jira jobs (<code>hygiene-scan</code>, <code>recent-ticket-intake</code>) are enabled by default (no <code>enabled</code> key).</p>
+<h2 id="8-error-handling">8. Error Handling<a class="headerlink" href="#8-error-handling" title="Permanent link">&para;</a></h2>
+<h3 id="dry-run-safety">Dry-Run Safety<a class="headerlink" href="#dry-run-safety" title="Permanent link">&para;</a></h3>
+<p>All mutation operations default to <code>dry_run: true</code>. This means:
+- Jira write-backs (comments, labels, field updates, transitions) are <strong>proposed but not executed</strong>.
+- GitHub PR merge actions return a <strong>preview card</strong> instead of merging.
+- PR reminder snooze actions are <strong>logged but not applied</strong> unless explicitly confirmed.</p>
+<p>To override dry-run mode:
+- <strong>Shannon:</strong> Append <code>execute</code> to the command (e.g., <code>@Shannon /hygiene-run project STL execute</code>).
+- <strong>API:</strong> Pass <code>dry_run=false</code> in the request body.
+- <strong>Environment:</strong> Set <code>DRY_RUN=false</code> in <code>deploy/env/shared.env</code>.</p>
+<h3 id="connection-guards">Connection Guards<a class="headerlink" href="#connection-guards" title="Permanent link">&para;</a></h3>
+<p>All state stores (<code>ActivityCounter</code>, <code>DruckerLearningStore</code>, <code>DruckerMonitorState</code>, <code>PRReminderState</code>, <code>DruckerReportStore</code>) implement a <code>_require_conn()</code> guard that raises <code>RuntimeError</code> if <code>close()</code> has been called. This prevents use-after-close bugs.</p>
+<h3 id="thread-safety">Thread Safety<a class="headerlink" href="#thread-safety" title="Permanent link">&para;</a></h3>
+<p>All SQLite stores use <code>threading.RLock</code> to protect concurrent access from multiple threads sharing a single store instance. All database operations are wrapped in <code>with self._lock:</code> blocks.</p>
+<h3 id="idempotent-writes">Idempotent Writes<a class="headerlink" href="#idempotent-writes" title="Permanent link">&para;</a></h3>
+<p>All SQLite insert operations use <code>INSERT ... ON CONFLICT DO UPDATE</code> (UPSERT), making repeated calls with the same key safe.</p>
+<h3 id="error-logging">Error Logging<a class="headerlink" href="#error-logging" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Failed Jira API calls are logged with <code>log.error()</code> and appended to <code>report.errors</code>.</li>
+<li>Failed GitHub API calls are logged and returned as <code>{ok: false, error: "..."}</code> in API responses.</li>
+<li>Failed Teams DM deliveries are logged and recorded in <code>reminder_history</code> with <code>action='error'</code>.</li>
+</ul>
+<h2 id="9-known-limitations-technical-debt">9. Known Limitations / Technical Debt<a class="headerlink" href="#9-known-limitations-technical-debt" title="Permanent link">&para;</a></h2>
+<h3 id="1-empty-project-keys-in-configuration">1. Empty Project Keys in Configuration<a class="headerlink" href="#1-empty-project-keys-in-configuration" title="Permanent link">&para;</a></h3>
+<p>Both <code>config/monitor.yaml</code> (<code>project: ''</code>) and <code>config/polling.yaml</code> (<code>defaults.project_key: ''</code>) ship with empty project keys. These are <strong>hardcoded placeholders</strong> that must be populated at runtime or via an external mechanism. There is no documented contract for how this resolution occurs.</p>
+<p><strong>Impact:</strong> Scans will fail if <code>project_key</code> is not explicitly passed in the request.</p>
+<h3 id="2-duplicated-repository-lists">2. Duplicated Repository Lists<a class="headerlink" href="#2-duplicated-repository-lists" title="Permanent link">&para;</a></h3>
+<p>The 25-repository list appears in both <code>config/polling.yaml</code> (<code>defaults.github_repos</code>) and <code>config/pr_reminders.yaml</code> (<code>repos</code>). These lists are manually synchronized. Any addition or removal must be applied to both files, creating a maintenance risk.</p>
+<p><strong>Recommendation:</strong> Consolidate to a single canonical source (e.g., <code>defaults.github_repos</code> in <code>polling.yaml</code>) and have <code>pr_reminders.yaml</code> reference it.</p>
+<h3 id="3-all-github-jobs-disabled-by-default">3. All GitHub Jobs Disabled by Default<a class="headerlink" href="#3-all-github-jobs-disabled-by-default" title="Permanent link">&para;</a></h3>
+<p>The three GitHub scan jobs (<code>github-hygiene-scan</code>, <code>github-extended-scan</code>, <code>github-pr-reminders</code>) are all set to <code>enabled: false</code>. This suggests the GitHub scanning capability is not yet production-ready or is gated behind an external activation step.</p>
+<p><strong>Impact:</strong> GitHub hygiene scans will not run on the polling schedule unless manually enabled.</p>
+<h3 id="4-no-schema-validation-for-configuration-files">4. No Schema Validation for Configuration Files<a class="headerlink" href="#4-no-schema-validation-for-configuration-files" title="Permanent link">&para;</a></h3>
+<p>There is no JSON Schema or equivalent validation definition for <code>monitor.yaml</code>, <code>polling.yaml</code>, or <code>pr_reminders.yaml</code>. Typos in key names (e.g., <code>reminder_day</code> instead of <code>reminder_days</code>) would silently produce incorrect behavior.</p>
+<p><strong>Recommendation:</strong> Add schema validation at startup or via a pre-commit hook.</p>
+<h3 id="5-implicit-enabled-default-for-jira-jobs">5. Implicit <code>enabled</code> Default for Jira Jobs<a class="headerlink" href="#5-implicit-enabled-default-for-jira-jobs" title="Permanent link">&para;</a></h3>
+<p>The Jira jobs (<code>hygiene-scan</code>, <code>recent-ticket-intake</code>) omit the <code>enabled</code> key entirely, relying on the runtime to treat absence as <code>true</code>. This implicit convention is not documented in the config and could lead to confusion.</p>
+<p><strong>Recommendation:</strong> Explicitly set <code>enabled: true</code> for all jobs.</p>
+<h3 id="6-hardcoded-label-prefix">6. Hardcoded Label Prefix<a class="headerlink" href="#6-hardcoded-label-prefix" title="Permanent link">&para;</a></h3>
+<p><code>defaults.label_prefix: drucker</code> is a hardcoded string that will be applied as Jira labels. Changing the agent's identity would require updating this value.</p>
+<p><strong>Impact:</strong> Labels like <code>drucker-stale</code> are agent-specific and not easily rebranded.</p>
+<h3 id="7-no-retry-logic-for-graph-api-calls">7. No Retry Logic for Graph API Calls<a class="headerlink" href="#7-no-retry-logic-for-graph-api-calls" title="Permanent link">&para;</a></h3>
+<p>The <code>PRReminderEngine</code> makes synchronous Graph API calls via <code>TeamsGraphClient</code> with no retry logic. Transient network failures will cause DM delivery to fail permanently.</p>
+<p><strong>Recommendation:</strong> Add exponential backoff retry logic for Graph API calls.</p>
+<h3 id="8-no-rate-limiting-for-github-api">8. No Rate Limiting for GitHub API<a class="headerlink" href="#8-no-rate-limiting-for-github-api" title="Permanent link">&para;</a></h3>
+<p>The GitHub PR hygiene scanner fetches open PRs for 25 repositories in a tight loop with no rate limiting. This could trigger GitHub's secondary rate limits (abuse detection).</p>
+<p><strong>Recommendation:</strong> Add a configurable delay between repository scans (e.g., 1 second).</p>
+<h3 id="9-no-pagination-for-large-pr-lists">9. No Pagination for Large PR Lists<a class="headerlink" href="#9-no-pagination-for-large-pr-lists" title="Permanent link">&para;</a></h3>
+<p>The <code>list_pull_requests()</code> call in <code>github_utils</code> has a hardcoded <code>limit=100</code>. Repositories with &gt;100 open PRs will have incomplete scans.</p>
+<p><strong>Recommendation:</strong> Implement pagination or raise the limit with a warning.</p>
+<h3 id="10-no-audit-trail-for-dry-run-overrides">10. No Audit Trail for Dry-Run Overrides<a class="headerlink" href="#10-no-audit-trail-for-dry-run-overrides" title="Permanent link">&para;</a></h3>
+<p>When a user passes <code>dry_run=false</code> to execute mutations, there is no audit log recording who approved the action or when. The <code>DruckerRequest</code> model has <code>requested_by</code> and <code>approved_by</code> fields, but they are not populated by the API layer.</p>
+<p><strong>Recommendation:</strong> Capture <code>requested_by</code> from Shannon's conversation context and log all <code>dry_run=false</code> executions to a dedicated audit table.</p>
+<!-- End Documentation Agent generated content -->
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/jmac-cornelis/agent-workforce" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "navigation.indexes", "search.suggest", "search.highlight", "content.code.copy", "content.action.edit", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
