@@ -677,6 +677,73 @@ class TeamsGraphClient:
         log.info(f'Sent Adaptive Card {msg_id} to chat {chat_id}')
         return result
 
+
+    # ------------------------------------------------------------------
+    # Email via Microsoft Graph
+    # ------------------------------------------------------------------
+
+    async def send_email(
+        self,
+        from_user: str,
+        to_addresses: list[str],
+        subject: str,
+        body_html: str,
+        cc_addresses: list[str] | None = None,
+        save_to_sent: bool = True,
+    ) -> dict[str, Any]:
+        '''
+        Send an email via Microsoft Graph API.
+
+        Requires Mail.Send application permission in Azure AD.
+
+        Args:
+            from_user: UPN or user-id of the sending mailbox
+                       (e.g. "shannon@cornelisnetworks.com").
+            to_addresses: List of recipient email addresses.
+            subject: Email subject line.
+            body_html: HTML email body.
+            cc_addresses: Optional CC recipients.
+            save_to_sent: Whether to save in the Sent Items folder.
+
+        Returns:
+            Empty dict on success (Graph returns 202 Accepted).
+        '''
+        to_recipients = [
+            {'emailAddress': {'address': addr}}
+            for addr in to_addresses
+        ]
+        cc_recipients = [
+            {'emailAddress': {'address': addr}}
+            for addr in (cc_addresses or [])
+        ]
+
+        payload: dict[str, Any] = {
+            'message': {
+                'subject': subject,
+                'body': {
+                    'contentType': 'HTML',
+                    'content': body_html,
+                },
+                'toRecipients': to_recipients,
+            },
+            'saveToSentItems': save_to_sent,
+        }
+        if cc_recipients:
+            payload['message']['ccRecipients'] = cc_recipients
+
+        result = await self._request(
+            'POST',
+            f'/users/{from_user}/sendMail',
+            json_body=payload,
+        )
+        log.info(
+            'Sent email from %s to %s: %s',
+            from_user,
+            ', '.join(to_addresses),
+            subject,
+        )
+        return result
+
     # ------------------------------------------------------------------
     # Context manager support
     # ------------------------------------------------------------------

@@ -1,13 +1,30 @@
-# GitHub-to-Teams identity mapping for PR reminder DMs.
-# Each entry maps a GitHub login to the corresponding Microsoft Teams identity.
-# teams_email is used to resolve the Teams user ID via Graph API.
+# Cross-platform identity map for notification routing.
+# Maps GitHub logins to Jira, Teams, and email identities.
+# Used by: PR reminders, NotificationRouter, all agent notifications.
+
+# Notification channels: teams_dm, email, channel
+# Default: all enabled channels for the user
+
+defaults:
+  notify_via: [teams_dm, email]
+  email_from: john.macdonald@cornelisnetworks.com
 
 users:
   jmac-cornelis:
-    name: John MacDonald
+    name: John Macdonald
+    email: john.macdonald@cornelisnetworks.com
     teams_email: john.macdonald@cornelisnetworks.com
+    jira_display_name: "Macdonald, John"
+    jira_account_id: "712020:daf767ac-e9e1-4880-b277-24add0de7116"
+    github_login: jmac-cornelis
+    notify_via: [teams_dm, email]
 
-  # Add more mappings as needed:
+  # Template for adding more users:
   # github-login:
   #   name: Display Name
-  #   teams_email: user@cornelisnetworks.com
+  #   email: first.last@cornelisnetworks.com
+  #   teams_email: first.last@cornelisnetworks.com
+  #   jira_display_name: "Last, First"
+  #   jira_account_id: "712020:..."
+  #   github_login: github-login
+  #   notify_via: [teams_dm, email]
