@@ -597,6 +597,106 @@ def build_todays_prs_card(data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
+def build_bug_updates_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a bug ticket updates polling result.
+    '''
+    project = data.get('project_key', data.get('project', ''))
+    activity = data.get('activity', data)
+    summary = activity.get('summary', {})
+    opened = activity.get('opened', [])
+    status_changed = activity.get('status_changed', [])
+
+    facts = {
+        'Project': project,
+        'Bugs Opened': summary.get('bugs_opened', 0),
+        'Status Transitions': summary.get('status_transitions', 0),
+        'Bugs With Comments': summary.get('bugs_with_comments', 0),
+    }
+
+    body_lines: list[str] = []
+    if opened:
+        body_lines.append('**New Bugs:**')
+        for bug in opened[:5]:
+            key = bug.get('key', '')
+            pri = bug.get('priority', '')
+            title = bug.get('summary', '')
+            body_lines.append(f'• {key} [{pri}] {title}')
+        if len(opened) > 5:
+            body_lines.append(f'  ...and {len(opened) - 5} more')
+
+    if status_changed:
+        body_lines.append('**Status Changes:**')
+        for sc in status_changed[:5]:
+            body_lines.append(
+                f'• {sc.get("key", "")} '
+                f'{sc.get("from_status", "")} → {sc.get("to_status", "")} '
+                f'({sc.get("changed_by", "")})'
+            )
+        if len(status_changed) > 5:
+            body_lines.append(f'  ...and {len(status_changed) - 5} more')
+
+    if not body_lines:
+        body_lines.append('No bug updates detected.')
+
+    return build_fact_card(
+        title=f'Bug Updates — {project}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_pr_activity_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a GitHub PR activity polling result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    result = data.get('result', data)
+    created = result.get('created', [])
+    merged = result.get('merged', [])
+    minutes = result.get('minutes', 30)
+
+    facts = {
+        'Repository': repo,
+        'Window': f'Last {minutes} minutes',
+        'New PRs': len(created),
+        'Merged PRs': len(merged),
+    }
+
+    body_lines: list[str] = []
+    if created:
+        body_lines.append('**New PRs:**')
+        for pr in created[:5]:
+            draft = ' [DRAFT]' if pr.get('draft', False) else ''
+            body_lines.append(
+                f'• #{pr.get("number", "")} '
+                f'{pr.get("title", "")}{draft} '
+                f'({pr.get("author", "")})'
+            )
+        if len(created) > 5:
+            body_lines.append(f'  ...and {len(created) - 5} more')
+
+    if merged:
+        body_lines.append('**Merged PRs:**')
+        for pr in merged[:5]:
+            body_lines.append(
+                f'• #{pr.get("number", "")} '
+                f'{pr.get("title", "")} '
+                f'({pr.get("author", "")})'
+            )
+        if len(merged) > 5:
+            body_lines.append(f'  ...and {len(merged) - 5} more')
+
+    if not body_lines:
+        body_lines.append(f'No PR activity in last {minutes} minutes.')
+
+    return build_fact_card(
+        title=f'PR Activity — {repo}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
 def build_naming_compliance_card(data: Dict[str, Any]) -> Dict[str, Any]:
     '''
     Build an Adaptive Card for a naming compliance scan result.
