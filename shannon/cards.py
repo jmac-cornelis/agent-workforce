@@ -574,13 +574,17 @@ def build_todays_prs_card(data: Dict[str, Any]) -> Dict[str, Any]:
         facts['Merged'] = len(merged)
         facts['Closed'] = len(closed)
 
+    gh_base = f'https://github.com/{repo}/pull'
+
     body_lines: list[str] = []
     for pr in prs[:12]:
+        num = pr.get('number', '')
         draft = ' [DRAFT]' if pr.get('draft', False) else ''
         merged_tag = ' ✓merged' if pr.get('merged_at') else ''
         closed_tag = ' ✗closed' if pr.get('state') == 'closed' and not pr.get('merged_at') else ''
+        link = f'[#{num}]({gh_base}/{num})'
         body_lines.append(
-            f'• #{pr.get("number", "")} '
+            f'• {link} '
             f'{pr.get("title", "")}{draft}{merged_tag}{closed_tag} '
             f'({pr.get("author", "")})'
         )
@@ -621,15 +625,18 @@ def build_bug_updates_card(data: Dict[str, Any]) -> Dict[str, Any]:
             key = bug.get('key', '')
             pri = bug.get('priority', '')
             title = bug.get('summary', '')
-            body_lines.append(f'• {key} [{pri}] {title}')
+            link = f'[{key}]({_JIRA_BASE}/{key})'
+            body_lines.append(f'• {link} [{pri}] {title}')
         if len(opened) > 5:
             body_lines.append(f'  ...and {len(opened) - 5} more')
 
     if status_changed:
         body_lines.append('**Status Changes:**')
         for sc in status_changed[:5]:
+            key = sc.get('key', '')
+            link = f'[{key}]({_JIRA_BASE}/{key})'
             body_lines.append(
-                f'• {sc.get("key", "")} '
+                f'• {link} '
                 f'{sc.get("from_status", "")} → {sc.get("to_status", "")} '
                 f'({sc.get("changed_by", "")})'
             )
@@ -663,13 +670,17 @@ def build_pr_activity_card(data: Dict[str, Any]) -> Dict[str, Any]:
         'Merged PRs': len(merged),
     }
 
+    gh_base = f'https://github.com/{repo}/pull'
+
     body_lines: list[str] = []
     if created:
         body_lines.append('**New PRs:**')
         for pr in created[:5]:
+            num = pr.get('number', '')
             draft = ' [DRAFT]' if pr.get('draft', False) else ''
+            link = f'[#{num}]({gh_base}/{num})'
             body_lines.append(
-                f'• #{pr.get("number", "")} '
+                f'• {link} '
                 f'{pr.get("title", "")}{draft} '
                 f'({pr.get("author", "")})'
             )
@@ -679,8 +690,10 @@ def build_pr_activity_card(data: Dict[str, Any]) -> Dict[str, Any]:
     if merged:
         body_lines.append('**Merged PRs:**')
         for pr in merged[:5]:
+            num = pr.get('number', '')
+            link = f'[#{num}]({gh_base}/{num})'
             body_lines.append(
-                f'• #{pr.get("number", "")} '
+                f'• {link} '
                 f'{pr.get("title", "")} '
                 f'({pr.get("author", "")})'
             )
