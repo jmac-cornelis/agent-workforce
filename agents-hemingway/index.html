@@ -10,7 +10,7 @@
       
       
       
-        <link rel="canonical" href="https://jmac-cornelis.github.io/agent-workforce/tests/">
+        <link rel="canonical" href="https://jmac-cornelis.github.io/agent-workforce/agents-hemingway/">
       
       
       
@@ -23,7 +23,7 @@
     
     
       
-        <title>Tests - Agent Workforce</title>
+        <title>Agents hemingway - Agent Workforce</title>
       
     
     
@@ -108,7 +108,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Tests
+              Agents hemingway
             
           </span>
         </div>
@@ -1331,8 +1331,308 @@
   
   
   
-    
   
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#module-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Module Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what-changed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Changed
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#component-diagram" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Component Diagram
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-flows" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Flows
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Key Flows">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#flow-1-documentation-generation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow 1: Documentation Generation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flow-2-review-gated-publication" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow 2: Review-Gated Publication
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#flow-3-shannon-notification-on-impact-detection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Flow 3: Shannon Notification on Impact Detection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data Model
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Data Model">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-data-structures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Data Structures
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#persistence-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Persistence Schema
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Configuration
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Environment Variables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#prompt-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prompt Files
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#validation-profiles" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validation Profiles
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Handling
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Error Handling">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#error-handling-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Error Handling Patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#exception-hierarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Exception Hierarchy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#missing-error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Missing Error Handling
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-limitations-technical-debt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known Limitations / Technical Debt
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Known Limitations / Technical Debt">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#hardcoded-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hardcoded Values
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#missing-implementations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Missing Implementations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#technical-debt" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Technical Debt
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#anti-patterns-detected" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Anti-patterns Detected
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
   
 </nav>
                   </div>
@@ -1349,7 +1649,7 @@
 
 
   
-    <a href="https://github.com/jmac-cornelis/agent-workforce/edit/main/docs/tests.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/jmac-cornelis/agent-workforce/edit/main/docs/agents-hemingway.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4zm10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1z"/></svg>
     </a>
@@ -1357,196 +1657,155 @@
   
 
 
+  <h1>Agents hemingway</h1>
+
 <!-- Generated by Documentation Agent — do not edit between markers -->
 
 <div class="language-yaml highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nn">---</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;As-Built:</span><span class="nv"> </span><span class="s">Tests</span><span class="nv"> </span><span class="s">—</span><span class="nv"> </span><span class="s">Design</span><span class="nv"> </span><span class="s">Reference&quot;</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nt">title</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;As-Built:</span><span class="nv"> </span><span class="s">Hemingway</span><span class="nv"> </span><span class="s">Documentation</span><span class="nv"> </span><span class="s">Agent&quot;</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nt">date</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;2026-04-06&quot;</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nt">status</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;draft&quot;</span>
 </span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nn">---</span>
 </span></code></pre></div>
-<h1 id="module-overview">Module Overview<a class="headerlink" href="#module-overview" title="Permanent link">&para;</a></h1>
-<p>The <code>tests/</code> directory contains the comprehensive characterization test suite for the Cornelis Networks agent workforce platform. This suite validates all core modules, agents, tools, integrations, and infrastructure components through 10,000+ test cases organized into 50+ test modules. The tests follow a strict characterization testing methodology where each test documents and validates the actual behavior of production code without requiring live external API calls.</p>
-<h1 id="what-changed">What Changed<a class="headerlink" href="#what-changed" title="Permanent link">&para;</a></h1>
-<p><strong>Before:</strong> The test suite existed but lacked comprehensive documentation of its structure, coverage patterns, and testing philosophy.</p>
-<p><strong>After:</strong> This document provides a complete reference for the test suite's architecture, coverage methodology, and key testing patterns used across all modules.</p>
-<p><strong>Impact:</strong> Engineers joining the team or working on new features can now understand the testing philosophy, locate relevant test patterns, and maintain consistency with existing test practices.</p>
-<h1 id="component-diagram">Component Diagram<a class="headerlink" href="#component-diagram" title="Permanent link">&para;</a></h1>
+<h2 id="module-overview">Module Overview<a class="headerlink" href="#module-overview" title="Permanent link">&para;</a></h2>
+<p>Hemingway is the documentation agent for the Cornelis Networks platform. It transforms source code, build artifacts, test results, release context, and meeting-derived clarifications into source-grounded, validation-gated internal documentation. The agent operates as a deterministic-first coordinator that produces reviewable documentation patches for repo-owned Markdown and Confluence targets, with all publication gated through explicit human approval.</p>
+<h2 id="what-changed">What Changed<a class="headerlink" href="#what-changed" title="Permanent link">&para;</a></h2>
+<p><strong>Before:</strong> Documentation generation was manual, disconnected from source truth, and lacked structured validation or traceability to authoritative inputs.</p>
+<p><strong>After:</strong> Hemingway automates documentation generation from authoritative system records (code, builds, tests, releases, meetings), validates all claims against source artifacts, and produces review-gated publication patches with full audit trails.</p>
+<p><strong>Impact:</strong> Engineering teams now have a deterministic path from source changes to durable documentation updates. All documentation claims are traceable to source artifacts. Publication requires explicit approval, preventing speculative or unsupported content from reaching internal or external targets.</p>
+<h2 id="component-diagram">Component Diagram<a class="headerlink" href="#component-diagram" title="Permanent link">&para;</a></h2>
 <pre class="mermaid"><code>graph TB
-    subgraph "Test Infrastructure"
-        conftest[conftest.py&lt;br/&gt;Shared Fixtures]
-        smoke[test_smoke.py&lt;br/&gt;Import Validation]
-    end
+    API[FastAPI Service&lt;br/&gt;port 8203]
+    Agent[HemingwayDocumentationAgent]
+    RecordStore[HemingwayRecordStore&lt;br/&gt;JSON + Markdown persistence]
+    ReviewAgent[ReviewAgent&lt;br/&gt;approval workflow]
+    Tools[HemingwayTools&lt;br/&gt;agent-callable wrappers]
+    CLI[Standalone CLI&lt;br/&gt;hemingway-agent]
 
-    subgraph "Core Module Tests"
-        jira_utils[test_jira_utils_char.py&lt;br/&gt;Jira Integration]
-        confluence[test_confluence_utils_char.py&lt;br/&gt;Confluence Integration]
-        excel[test_excel_utils_char.py&lt;br/&gt;Excel Operations]
-        core_tests[test_core_*.py&lt;br/&gt;Queries, Reporting, Tickets]
-    end
+    API --&gt; Agent
+    CLI --&gt; Agent
+    Tools --&gt; Agent
+    Agent --&gt; RecordStore
+    Agent --&gt; ReviewAgent
+    Agent --&gt; ConfluenceTools[confluence_tools]
+    Agent --&gt; FileTools[file_tools]
+    Agent --&gt; EvidenceBundle[EvidenceBundle]
 
-    subgraph "Agent Tests"
-        gantt[test_gantt_agent_char.py&lt;br/&gt;Planning Agent]
-        drucker[test_drucker_agent_char.py&lt;br/&gt;Hygiene Agent]
-        hemingway[test_hemingway_agent_char.py&lt;br/&gt;Documentation Agent]
-        base_agents[test_agents_char.py&lt;br/&gt;Base Agent Framework]
-    end
-
-    subgraph "Tool Tests"
-        jira_tools[test_jira_tools_char.py&lt;br/&gt;Jira Tool Wrappers]
-        github_tools[test_github_tools_char.py&lt;br/&gt;GitHub Tool Wrappers]
-        confluence_tools[test_confluence_tools_char.py&lt;br/&gt;Confluence Tool Wrappers]
-        file_tools[test_file_tools_char.py&lt;br/&gt;File Operations]
-    end
-
-    subgraph "Integration Tests"
-        mcp[test_mcp_server_*.py&lt;br/&gt;MCP Server Tools]
-        shannon[test_shannon_*.py&lt;br/&gt;Teams Bot Service]
-        github_int[test_github_integration_char.py&lt;br/&gt;GitHub Pipeline]
-    end
-
-    conftest --&gt; core_tests
-    conftest --&gt; agent_tests
-    conftest --&gt; tool_tests
-    conftest --&gt; integration_tests
-
-    core_tests --&gt; jira_utils
-    core_tests --&gt; confluence
-    core_tests --&gt; excel
-
-    agent_tests --&gt; gantt
-    agent_tests --&gt; drucker
-    agent_tests --&gt; hemingway
-    agent_tests --&gt; base_agents
-
-    tool_tests --&gt; jira_tools
-    tool_tests --&gt; github_tools
-    tool_tests --&gt; confluence_tools
-    tool_tests --&gt; file_tools
-
-    integration_tests --&gt; mcp
-    integration_tests --&gt; shannon
-    integration_tests --&gt; github_int</code></pre>
-<h1 id="key-flows">Key Flows<a class="headerlink" href="#key-flows" title="Permanent link">&para;</a></h1>
-<h2 id="flow-1-characterization-test-execution">Flow 1: Characterization Test Execution<a class="headerlink" href="#flow-1-characterization-test-execution" title="Permanent link">&para;</a></h2>
-<p><strong>Purpose:</strong> Execute a characterization test that validates actual code behavior without live API calls.</p>
+    RecordStore --&gt; Storage[(data/hemingway_docs)]
+    ReviewAgent --&gt; PublicationCoordinator[PublicationCoordinator]</code></pre>
+<h2 id="key-flows">Key Flows<a class="headerlink" href="#key-flows" title="Permanent link">&para;</a></h2>
+<h3 id="flow-1-documentation-generation">Flow 1: Documentation Generation<a class="headerlink" href="#flow-1-documentation-generation" title="Permanent link">&para;</a></h3>
 <pre class="mermaid"><code>sequenceDiagram
-    participant Test as Test Function
-    participant Fixture as Pytest Fixture
-    participant Mock as Monkeypatch/Mock
-    participant SUT as System Under Test
-    participant Assert as Assertion
+    participant User
+    participant API
+    participant Agent as HemingwayDocumentationAgent
+    participant Store as HemingwayRecordStore
+    participant Review as ReviewAgent
 
-    Test-&gt;&gt;Fixture: Request fixture (e.g., mock_jira)
-    Fixture-&gt;&gt;Mock: Create fake objects
-    Mock--&gt;&gt;Fixture: Return mocked dependencies
-    Fixture--&gt;&gt;Test: Provide test context
-
-    Test-&gt;&gt;Mock: Configure behavior
-    Mock--&gt;&gt;Test: Ready
-
-    Test-&gt;&gt;SUT: Call function with test data
-    SUT-&gt;&gt;Mock: Access mocked dependency
-    Mock--&gt;&gt;SUT: Return fake response
-    SUT--&gt;&gt;Test: Return result
-
-    Test-&gt;&gt;Assert: Validate result structure
-    Test-&gt;&gt;Assert: Validate result content
-    Test-&gt;&gt;Assert: Validate mock interactions
-    Assert--&gt;&gt;Test: Pass/Fail</code></pre>
-<p><strong>Description:</strong> Each characterization test follows a strict pattern: (1) Set up fake dependencies using fixtures and monkeypatch, (2) Call the system under test with known inputs, (3) Assert on the actual behavior observed, (4) Verify mock interactions to ensure the code path was exercised. This pattern ensures tests document what the code actually does rather than what it should do.</p>
-<h2 id="flow-2-agent-test-execution">Flow 2: Agent Test Execution<a class="headerlink" href="#flow-2-agent-test-execution" title="Permanent link">&para;</a></h2>
-<p><strong>Purpose:</strong> Validate agent behavior including tool orchestration and state management.</p>
+    User-&gt;&gt;API: POST /v1/docs/generate
+    API-&gt;&gt;Agent: plan_documentation(request)
+    Agent-&gt;&gt;Agent: detect_documentation_impact()
+    Agent-&gt;&gt;Agent: _load_authoritative_inputs()
+    Agent-&gt;&gt;Agent: _generate_content() [LLM synthesis]
+    Agent-&gt;&gt;Agent: _build_patches()
+    Agent-&gt;&gt;Agent: _validate_patches()
+    Agent-&gt;&gt;Review: create_review_session()
+    Agent--&gt;&gt;API: (record, review_session)
+    API-&gt;&gt;Store: save_record(record)
+    Store--&gt;&gt;API: stored summary
+    API--&gt;&gt;User: {record, review_session, stored}</code></pre>
+<p><strong>Description:</strong> User submits a documentation request with source paths, evidence files, and target configuration. The agent detects impact, loads authoritative inputs (source files, existing docs, evidence bundles), synthesizes content via LLM using doc-type-specific prompts, builds candidate patches, validates them, and creates a review session. The record is persisted to 'data/hemingway_docs/<DOC_ID>/' as JSON + Markdown. No publication occurs without explicit approval.</p>
+<h3 id="flow-2-review-gated-publication">Flow 2: Review-Gated Publication<a class="headerlink" href="#flow-2-review-gated-publication" title="Permanent link">&para;</a></h3>
 <pre class="mermaid"><code>sequenceDiagram
-    participant Test as Agent Test
-    participant Agent as Agent Class
-    participant Tools as Tool Functions
-    participant Store as State Store
-    participant Review as Review Agent
+    participant User
+    participant API
+    participant Agent as HemingwayDocumentationAgent
+    participant Review as ReviewAgent
+    participant Store as HemingwayRecordStore
+    participant Confluence as confluence_tools
 
-    Test-&gt;&gt;Agent: Create agent instance
-    Agent-&gt;&gt;Store: Initialize state
-    Store--&gt;&gt;Agent: Ready
-
-    Test-&gt;&gt;Agent: Call agent.run(request)
-    Agent-&gt;&gt;Tools: Execute tool 1
-    Tools--&gt;&gt;Agent: ToolResult
-    Agent-&gt;&gt;Tools: Execute tool 2
-    Tools--&gt;&gt;Agent: ToolResult
-
-    Agent-&gt;&gt;Review: Create review session
-    Review--&gt;&gt;Agent: ReviewSession
-
-    Agent-&gt;&gt;Store: Persist results
-    Store--&gt;&gt;Agent: Storage metadata
-
-    Agent--&gt;&gt;Test: AgentResponse
-
-    Test-&gt;&gt;Test: Assert response.success
-    Test-&gt;&gt;Test: Assert metadata structure
-    Test-&gt;&gt;Test: Assert tool call sequence
-    Test-&gt;&gt;Test: Assert state persistence</code></pre>
-<p><strong>Description:</strong> Agent tests validate the complete agent lifecycle: initialization, tool orchestration, review session creation, and state persistence. Tests use monkeypatched tool functions that return canned <code>ToolResult</code> objects, allowing validation of agent logic without external dependencies. The test asserts on the agent's response structure, metadata content, tool call sequence, and state store interactions.</p>
-<h2 id="flow-3-integration-test-execution">Flow 3: Integration Test Execution<a class="headerlink" href="#flow-3-integration-test-execution" title="Permanent link">&para;</a></h2>
-<p><strong>Purpose:</strong> Validate end-to-end flows across multiple components.</p>
+    User-&gt;&gt;API: POST /v1/docs/publish {doc_id}
+    API-&gt;&gt;Store: get_record(doc_id)
+    Store--&gt;&gt;API: record data
+    API-&gt;&gt;Review: approve_all(review_session)
+    API-&gt;&gt;Agent: publish_approved(review_session)
+    Agent-&gt;&gt;Review: execute_approved(session)
+    Review-&gt;&gt;Confluence: create_confluence_page() / update_confluence_page()
+    Review-&gt;&gt;FileSystem: write repo markdown
+    Review--&gt;&gt;Agent: execution results
+    Agent--&gt;&gt;API: publications list
+    API-&gt;&gt;Store: record_publications(doc_id, publications)
+    API--&gt;&gt;User: {publications, stored}</code></pre>
+<p><strong>Description:</strong> User requests publication of an approved documentation record. The agent retrieves the stored record, approves all review items, and executes the approved patches. For Confluence targets, it calls 'create_confluence_page()' or 'update_confluence_page()' with diagram rendering. For repo targets, it writes Markdown files. All publication results are appended to the stored record as 'PublicationRecord' objects with status, timestamps, and error details.</p>
+<h3 id="flow-3-shannon-notification-on-impact-detection">Flow 3: Shannon Notification on Impact Detection<a class="headerlink" href="#flow-3-shannon-notification-on-impact-detection" title="Permanent link">&para;</a></h3>
 <pre class="mermaid"><code>sequenceDiagram
-    participant Test as Integration Test
-    participant API as API Endpoint
-    participant Agent as Agent
-    participant Utils as Utility Module
-    participant Card as Card Builder
+    participant User
+    participant API
+    participant Agent as HemingwayDocumentationAgent
+    participant Shannon as notify_shannon()
 
-    Test-&gt;&gt;API: POST /v1/endpoint
-    API-&gt;&gt;Agent: Create agent instance
-    Agent-&gt;&gt;Utils: Call utility function
-    Utils--&gt;&gt;Agent: Normalized data
-
-    Agent-&gt;&gt;Agent: Process data
-    Agent--&gt;&gt;API: Result dict
-
-    API-&gt;&gt;Card: Build card from result
-    Card--&gt;&gt;API: Adaptive Card JSON
-
-    API--&gt;&gt;Test: HTTP 200 + JSON response
-
-    Test-&gt;&gt;Test: Assert response.ok
-    Test-&gt;&gt;Test: Assert data structure
-    Test-&gt;&gt;Test: Assert card schema
-    Test-&gt;&gt;Test: Validate end-to-end flow</code></pre>
-<p><strong>Description:</strong> Integration tests validate complete flows from API endpoint through agent execution to card generation. These tests use the actual API client (TestClient) and stub only the lowest-level dependencies (e.g., Jira/GitHub API calls). The test validates the HTTP response, data structure, and card schema, ensuring all components integrate correctly.</p>
-<h1 id="data-model">Data Model<a class="headerlink" href="#data-model" title="Permanent link">&para;</a></h1>
-<h2 id="test-fixture-data-structures">Test Fixture Data Structures<a class="headerlink" href="#test-fixture-data-structures" title="Permanent link">&para;</a></h2>
-<p>The test suite uses several core data structures provided by fixtures in <code>conftest.py</code>:</p>
-<h3 id="fakeresponse">FakeResponse<a class="headerlink" href="#fakeresponse" title="Permanent link">&para;</a></h3>
-<p><div class="language-python highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nd">@dataclass</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="k">class</span><span class="w"> </span><span class="nc">FakeResponse</span><span class="p">:</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="n">status_code</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">200</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="n">payload</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="n">text</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="n">headers</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
-</span></code></pre></div>
-Used to simulate HTTP responses from external APIs (Jira, Confluence, GitHub).</p>
-<h3 id="fakeissueresource">FakeIssueResource<a class="headerlink" href="#fakeissueresource" title="Permanent link">&para;</a></h3>
-<p><div class="language-python highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">class</span><span class="w"> </span><span class="nc">FakeIssueResource</span><span class="p">:</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">raw</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]):</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">raw</span> <span class="o">=</span> <span class="n">raw</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">key</span> <span class="o">=</span> <span class="n">raw</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s2">&quot;key&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">updated_fields</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]]</span> <span class="o">=</span> <span class="p">[]</span>
-</span></code></pre></div>
-Simulates Jira issue resource objects with update tracking.</p>
-<h3 id="mock-jira-state">Mock Jira State<a class="headerlink" href="#mock-jira-state" title="Permanent link">&para;</a></h3>
-<p>The <code>mock_jira</code> fixture maintains internal state:
-- <code>_issue_store</code>: Dict mapping issue keys to raw issue data
-- <code>_project</code>: Project metadata
-- <code>_versions</code>: List of release versions
-- <code>_statuses</code>: List of workflow statuses</p>
-<h2 id="test-naming-conventions">Test Naming Conventions<a class="headerlink" href="#test-naming-conventions" title="Permanent link">&para;</a></h2>
-<p>All test modules follow the <code>test_&lt;module&gt;_char.py</code> naming pattern where <code>_char</code> indicates "characterization test". This distinguishes them from traditional unit tests and signals that they document actual behavior.</p>
-<p>Test function names follow the pattern:
-- <code>test_&lt;function_name&gt;_&lt;scenario&gt;</code> for single-function tests
-- <code>test_&lt;component&gt;_&lt;behavior&gt;</code> for component-level tests
-- <code>test_&lt;flow&gt;_&lt;outcome&gt;</code> for integration tests</p>
-<h1 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h1>
+    User-&gt;&gt;API: POST /v1/docs/impact
+    API-&gt;&gt;Agent: detect_documentation_impact(request)
+    Agent--&gt;&gt;API: DocumentationImpactRecord
+    API-&gt;&gt;API: check impact_level
+    alt impact_level in (high, medium)
+        API-&gt;&gt;Shannon: notify_shannon(agent_id, title, text, body_lines)
+        Shannon--&gt;&gt;API: notification sent
+    end
+    API--&gt;&gt;User: {impact record}</code></pre>
+<p><strong>Description:</strong> When documentation impact is detected at 'high' or 'medium' levels, the API posts a notification to Shannon with the impact level, affected sections, and document title. This ensures engineering teams are alerted to significant documentation changes in real time. The notification is non-blocking — failures are logged as warnings but do not abort the impact detection workflow.</p>
+<h2 id="data-model">Data Model<a class="headerlink" href="#data-model" title="Permanent link">&para;</a></h2>
+<h3 id="core-data-structures">Core Data Structures<a class="headerlink" href="#core-data-structures" title="Permanent link">&para;</a></h3>
+<p><strong>DocumentationRequest</strong> ('agents/hemingway/models.py'):
+- 'title': Document title
+- 'doc_type': One of 'as_built', 'engineering_reference', 'user_guide', 'how_to', 'release_note_support'
+- 'project_key': Jira project key (optional)
+- 'source_paths': List of source file paths to analyze
+- 'evidence_paths': List of evidence files (JSON, YAML, Markdown)
+- 'target_file': Repo-owned Markdown target path
+- 'confluence_title', 'confluence_page', 'confluence_space', 'confluence_parent_id': Confluence publication targets
+- 'validation_profile': One of 'default', 'strict', 'sphinx'
+- 'diff_context': PR diff/patch for context during PR-review generation
+- 'branch': Git branch to fetch sources from
+- 'pr_number': PR number for fork-aware ref resolution</p>
+<p><strong>DocumentationRecord</strong> ('agents/hemingway/models.py'):
+- 'doc_id': Unique 8-character UUID
+- 'title', 'doc_type', 'project_key': Metadata
+- 'request': Original 'DocumentationRequest' as dict
+- 'impact': 'DocumentationImpactRecord' as dict
+- 'source_refs': List of source file references
+- 'evidence_summary': 'EvidenceBundle.to_summary()' output
+- 'content_markdown': Full generated Markdown content
+- 'summary_markdown': Human-readable summary for review
+- 'patches': List of 'DocumentationPatch' objects
+- 'validation': Validation results dict with 'valid' boolean and 'blocking_issues' list
+- 'warnings': List of warning strings
+- 'confidence': One of 'low', 'medium', 'high'
+- 'publication_records': List of 'PublicationRecord' objects</p>
+<p><strong>DocumentationPatch</strong> ('agents/hemingway/models.py'):
+- 'patch_id': Unique 8-character UUID
+- 'target_type': 'repo_markdown' or 'confluence_page'
+- 'operation': 'create' or 'update'
+- 'title': Patch title
+- 'target_ref': File path or Confluence page ID/title
+- 'content_markdown': Markdown content to publish
+- 'preview': Dict with preview metadata
+- 'validation': Validation results for this patch
+- 'source_refs': Source file references for this patch
+- 'metadata': Additional metadata (e.g., 'space', 'parent_id', 'version_message')</p>
+<p><strong>PublicationRecord</strong> ('agents/hemingway/models.py'):
+- 'publication_id': Unique 8-character UUID
+- 'doc_id', 'patch_id': Parent record and patch IDs
+- 'target_type', 'operation', 'target_ref': Publication target details
+- 'status': 'pending', 'published', or 'failed'
+- 'published_at': ISO 8601 timestamp
+- 'result': Dict with publication result data (e.g., Confluence page URL)
+- 'error': Error message if status is 'failed'</p>
+<h3 id="persistence-schema">Persistence Schema<a class="headerlink" href="#persistence-schema" title="Permanent link">&para;</a></h3>
+<p>Records are stored at 'data/hemingway_docs/<DOC_ID>/':
+- 'record.json': Full 'DocumentationRecord' as JSON
+- 'summary.md': 'summary_markdown' field as Markdown</p>
+<h2 id="dependencies">Dependencies<a class="headerlink" href="#dependencies" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -1557,150 +1816,189 @@ Simulates Jira issue resource objects with update tracking.</p>
 </thead>
 <tbody>
 <tr>
-<td>pytest</td>
-<td>Test framework and fixture management</td>
-<td>8.3.4</td>
+<td>'agents.base'</td>
+<td>'BaseAgent', 'AgentConfig', 'AgentResponse'</td>
+<td>internal</td>
 </tr>
 <tr>
-<td>pytest-asyncio</td>
-<td>Async test support for MCP server tests</td>
-<td>0.24.0</td>
+<td>'agents.review_agent'</td>
+<td>'ReviewAgent', 'ReviewItem', 'ReviewSession'</td>
+<td>internal</td>
 </tr>
 <tr>
-<td>openpyxl</td>
-<td>Excel file creation for test fixtures</td>
-<td>3.1.5</td>
+<td>'core.evidence'</td>
+<td>'EvidenceBundle', 'load_evidence_bundle'</td>
+<td>internal</td>
 </tr>
 <tr>
-<td>unittest.mock</td>
-<td>Mock object creation (stdlib)</td>
-<td>—</td>
+<td>'tools.confluence_tools'</td>
+<td>'create_confluence_page', 'update_confluence_page', 'get_confluence_page'</td>
+<td>internal</td>
 </tr>
 <tr>
-<td>types.SimpleNamespace</td>
-<td>Lightweight fake object creation (stdlib)</td>
-<td>—</td>
+<td>'tools.file_tools'</td>
+<td>'read_file'</td>
+<td>internal</td>
+</tr>
+<tr>
+<td>'agents.pm_runtime'</td>
+<td>'notify_shannon'</td>
+<td>internal</td>
+</tr>
+<tr>
+<td>'fastapi'</td>
+<td>REST API framework</td>
+<td>external</td>
+</tr>
+<tr>
+<td>'pydantic'</td>
+<td>Request/response models</td>
+<td>external</td>
 </tr>
 </tbody>
 </table>
-<h1 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h1>
-<h2 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h2>
-<p>Tests use environment variable mocking via <code>monkeypatch.setenv()</code>:</p>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<h3 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>'HEMINGWAY_DOC_DIR'</td>
+<td>No</td>
+<td>'data/hemingway_docs'</td>
+<td>Storage directory for documentation records</td>
+</tr>
+<tr>
+<td>'DRY_RUN'</td>
+<td>No</td>
+<td>'true'</td>
+<td>Global dry-run gate for mutation endpoints</td>
+</tr>
+<tr>
+<td>'CONFLUENCE_URL'</td>
+<td>Yes (for Confluence)</td>
+<td>—</td>
+<td>Atlassian Confluence base URL</td>
+</tr>
+<tr>
+<td>'CONFLUENCE_USER'</td>
+<td>Yes (for Confluence)</td>
+<td>—</td>
+<td>Confluence username</td>
+</tr>
+<tr>
+<td>'CONFLUENCE_API_TOKEN'</td>
+<td>Yes (for Confluence)</td>
+<td>—</td>
+<td>Confluence API token</td>
+</tr>
+</tbody>
+</table>
+<h3 id="prompt-files">Prompt Files<a class="headerlink" href="#prompt-files" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>'prompts/system.md'</td>
+<td>Core agent behavior prompt (required)</td>
+</tr>
+<tr>
+<td>'prompts/as-built-design.md'</td>
+<td>As-built/engineering reference prompt (3-pass methodology)</td>
+</tr>
+<tr>
+<td>'prompts/user-guide.md'</td>
+<td>User guide/how-to prompt (man-page style)</td>
+</tr>
+<tr>
+<td>'prompts/traceability.md'</td>
+<td>Traceability/RTM prompt (requirements → implementation → test mapping)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="validation-profiles">Validation Profiles<a class="headerlink" href="#validation-profiles" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Profile</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>'default'</td>
+<td>Standard validation: required sections, no empty sections, source refs present</td>
+</tr>
+<tr>
+<td>'strict'</td>
+<td>Adds: all links must resolve, no placeholders, all facts must have source refs</td>
+</tr>
+<tr>
+<td>'sphinx'</td>
+<td>Adds: Sphinx-compatible RST/MD structure validation</td>
+</tr>
+</tbody>
+</table>
+<h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
+<h3 id="error-handling-patterns">Error Handling Patterns<a class="headerlink" href="#error-handling-patterns" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>API-level errors</strong>: FastAPI 'HTTPException' with status codes (404 for missing records, 400 for invalid requests).</li>
+<li><strong>Agent-level errors</strong>: 'AgentResponse.error_response(str(e))' for workflow failures.</li>
+<li><strong>Tool-level errors</strong>: 'ToolResult.failure(error_message)' for tool execution failures.</li>
+<li><strong>Validation errors</strong>: Stored in 'DocumentationRecord.validation["blocking_issues"]' and 'DocumentationRecord.warnings'.</li>
+<li><strong>Publication errors</strong>: Stored in 'PublicationRecord.error' with 'status="failed"'.</li>
+</ol>
+<h3 id="exception-hierarchy">Exception Hierarchy<a class="headerlink" href="#exception-hierarchy" title="Permanent link">&para;</a></h3>
 <ul>
-<li><code>JIRA_EMAIL</code>: Jira authentication email (mocked in tests)</li>
-<li><code>JIRA_API_TOKEN</code>: Jira API token (mocked in tests)</li>
-<li><code>JIRA_SERVICE_EMAIL</code>: Service account email (mocked in tests)</li>
-<li><code>JIRA_SERVICE_API_TOKEN</code>: Service account token (mocked in tests)</li>
-<li><code>GITHUB_TOKEN</code>: GitHub API token (mocked in tests)</li>
-<li><code>DRY_RUN</code>: Dry-run mode flag (set to 'true' or 'false' in tests)</li>
-<li><code>DRUCKER_REPORT_DIR</code>: Drucker report storage directory (set to tmp_path in tests)</li>
-<li><code>GANTT_SNAPSHOT_DIR</code>: Gantt snapshot storage directory (set to tmp_path in tests)</li>
-<li><code>HEMINGWAY_DOC_DIR</code>: Hemingway documentation storage directory (set to tmp_path in tests)</li>
+<li>'FileNotFoundError': Raised when required prompt files are missing ('agents/hemingway/agent.py:<strong>init</strong>').</li>
+<li>'ValueError': Raised when 'DocumentationRecord' is missing 'doc_id' ('agents/hemingway/state/record_store.py:save_record').</li>
+<li>'HTTPException': Raised by FastAPI endpoints for client errors (404, 400).</li>
 </ul>
-<h2 id="test-execution">Test Execution<a class="headerlink" href="#test-execution" title="Permanent link">&para;</a></h2>
-<p>Run all tests:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>pytest<span class="w"> </span>tests/
-</span></code></pre></div></p>
-<p>Run specific test module:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>pytest<span class="w"> </span>tests/test_jira_utils_char.py
-</span></code></pre></div></p>
-<p>Run with coverage:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>pytest<span class="w"> </span>--cov<span class="o">=</span>jira_utils<span class="w"> </span>--cov<span class="o">=</span>agents<span class="w"> </span>--cov<span class="o">=</span>tools<span class="w"> </span>tests/
-</span></code></pre></div></p>
-<p>Run only smoke tests:
-<div class="language-bash highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>pytest<span class="w"> </span>tests/test_smoke.py
-</span></code></pre></div></p>
-<h1 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h1>
-<h2 id="test-isolation">Test Isolation<a class="headerlink" href="#test-isolation" title="Permanent link">&para;</a></h2>
-<p>Each test is isolated through:
-1. <strong>Autouse fixtures</strong>: <code>reset_jira_utils_state</code>, <code>reset_github_utils_state</code>, <code>_clean_dry_run_env</code> run before every test
-2. <strong>Monkeypatch cleanup</strong>: All environment variable and module patches are automatically cleaned up after each test
-3. <strong>Temporary directories</strong>: <code>tmp_path</code> fixture provides isolated filesystem for each test</p>
-<h2 id="common-test-patterns">Common Test Patterns<a class="headerlink" href="#common-test-patterns" title="Permanent link">&para;</a></h2>
-<h3 id="pattern-1-monkeypatching-external-dependencies">Pattern 1: Monkeypatching External Dependencies<a class="headerlink" href="#pattern-1-monkeypatching-external-dependencies" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_function_with_external_call</span><span class="p">(</span><span class="n">monkeypatch</span><span class="p">):</span>
-</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>    <span class="n">monkeypatch</span><span class="o">.</span><span class="n">setattr</span><span class="p">(</span><span class="s1">&#39;module.external_function&#39;</span><span class="p">,</span> <span class="k">lambda</span><span class="p">:</span> <span class="s1">&#39;fake_result&#39;</span><span class="p">)</span>
-</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">function_under_test</span><span class="p">()</span>
-</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a>    <span class="k">assert</span> <span class="n">result</span> <span class="o">==</span> <span class="s1">&#39;expected_based_on_fake&#39;</span>
-</span></code></pre></div>
-<h3 id="pattern-2-using-fake-objects">Pattern 2: Using Fake Objects<a class="headerlink" href="#pattern-2-using-fake-objects" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-8-1"><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_function_with_complex_object</span><span class="p">(</span><span class="n">fake_issue_resource_factory</span><span class="p">):</span>
-</span><span id="__span-8-2"><a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>    <span class="n">issue</span> <span class="o">=</span> <span class="n">fake_issue_resource_factory</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="s1">&#39;STL-1&#39;</span><span class="p">,</span> <span class="n">summary</span><span class="o">=</span><span class="s1">&#39;Test&#39;</span><span class="p">)</span>
-</span><span id="__span-8-3"><a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>    <span class="n">result</span> <span class="o">=</span> <span class="n">process_issue</span><span class="p">(</span><span class="n">issue</span><span class="p">)</span>
-</span><span id="__span-8-4"><a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a>    <span class="k">assert</span> <span class="n">result</span><span class="p">[</span><span class="s1">&#39;key&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;STL-1&#39;</span>
-</span></code></pre></div>
-<h3 id="pattern-3-capturing-output">Pattern 3: Capturing Output<a class="headerlink" href="#pattern-3-capturing-output" title="Permanent link">&para;</a></h3>
-<div class="language-python highlight"><pre><span></span><code><span id="__span-9-1"><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">test_function_output</span><span class="p">(</span><span class="n">capture_stdout</span><span class="p">):</span>
-</span><span id="__span-9-2"><a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>    <span class="k">with</span> <span class="n">capture_stdout</span><span class="p">()</span> <span class="k">as</span> <span class="n">out</span><span class="p">:</span>
-</span><span id="__span-9-3"><a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a>        <span class="n">function_that_prints</span><span class="p">()</span>
-</span><span id="__span-9-4"><a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>    <span class="k">assert</span> <span class="s1">&#39;expected text&#39;</span> <span class="ow">in</span> <span class="n">out</span><span class="o">.</span><span class="n">getvalue</span><span class="p">()</span>
-</span></code></pre></div>
-<h2 id="error-scenarios-tested">Error Scenarios Tested<a class="headerlink" href="#error-scenarios-tested" title="Permanent link">&para;</a></h2>
-<p>The test suite validates error handling for:
-- Missing credentials (<code>test_get_jira_credentials_missing_token</code>)
-- Invalid repository names (<code>test_list_repos_unknown_org_raises</code>)
-- API rate limiting (<code>test_get_tickets_handles_rate_limit_pagination_and_limit</code>)
-- Connection failures (<code>test_user_resolver_handles_connection_error</code>)
-- Invalid input data (<code>test_pr_review_validates_repo_format</code>)
-- Missing required fields (<code>test_confluence_publish_missing_content_returns_400</code>)</p>
-<h1 id="known-limitations-technical-debt">Known Limitations / Technical Debt<a class="headerlink" href="#known-limitations-technical-debt" title="Permanent link">&para;</a></h1>
-<h2 id="coverage-gaps">Coverage Gaps<a class="headerlink" href="#coverage-gaps" title="Permanent link">&para;</a></h2>
-<ol>
-<li>
-<p><strong>CLI Entry Points</strong>: Main functions in <code>jira_utils.py</code>, <code>confluence_utils.py</code>, and <code>github_utils.py</code> have minimal test coverage. This matches the existing pattern where CLI tests are considered lower priority than API/library tests.</p>
-</li>
-<li>
-<p><strong>Display Helpers</strong>: Functions like <code>print_pr_table_header()</code>, <code>print_pr_table_row()</code>, and <code>print_pr_table_footer()</code> in <code>github_utils.py</code> are untested. These are low-risk formatting functions.</p>
-</li>
-<li>
-<p><strong>Integration Tests</strong>: While each layer is individually tested, there are few true end-to-end tests that exercise the complete pipeline from API endpoint through agent execution to card generation without any mocking.</p>
-</li>
-<li>
-<p><strong><code>config/env_loader.py</code></strong>: Zero test coverage on environment variable loading logic. This is flagged as P2 priority in the coverage analysis document.</p>
-</li>
-<li>
-<p><strong><code>get_pr_review_requests()</code></strong>: Missing tests at both <code>github_utils</code> and <code>tools/github_tools</code> layers. Flagged as P1 priority.</p>
-</li>
-</ol>
-<h2 id="test-maintenance-issues">Test Maintenance Issues<a class="headerlink" href="#test-maintenance-issues" title="Permanent link">&para;</a></h2>
-<ol>
-<li>
-<p><strong>Fixture Complexity</strong>: The <code>mock_jira</code> fixture in <code>conftest.py</code> has grown to 100+ lines with complex state management. Consider splitting into smaller, focused fixtures.</p>
-</li>
-<li>
-<p><strong>Monkeypatch Overuse</strong>: Some tests have 10+ monkeypatch calls, making them brittle and hard to understand. Consider using fixture composition instead.</p>
-</li>
-<li>
-<p><strong>Magic Values</strong>: Many tests use hardcoded strings like 'STL-1', '12.1.0', 'acct-jdoe' without clear documentation of their significance.</p>
-</li>
-<li>
-<p><strong>Test Data Duplication</strong>: Similar fake data structures are recreated in multiple test modules. Consider centralizing common test data in <code>conftest.py</code>.</p>
-</li>
-</ol>
-<h2 id="anti-patterns-detected">Anti-patterns Detected<a class="headerlink" href="#anti-patterns-detected" title="Permanent link">&para;</a></h2>
-<ol>
-<li>
-<p><strong>God Test Modules</strong>: <code>test_jira_utils_coverage.py</code> is 1000+ lines with 40+ test functions. Consider splitting by functional area.</p>
-</li>
-<li>
-<p><strong>Missing Negative Tests</strong>: Many modules test only happy paths. For example, <code>test_gantt_components_char.py</code> lacks tests for invalid input data.</p>
-</li>
-<li>
-<p><strong>Implicit Dependencies</strong>: Some tests depend on the order of execution or shared state. All tests should be independently executable.</p>
-</li>
-<li>
-<p><strong>Incomplete Mocking</strong>: Some tests mock only part of a dependency chain, leading to potential test flakiness if the unmocked portion changes.</p>
-</li>
-</ol>
-<h2 id="recommendations">Recommendations<a class="headerlink" href="#recommendations" title="Permanent link">&para;</a></h2>
-<ol>
-<li><strong>P1</strong>: Add missing tests for <code>get_pr_review_requests()</code> at both utility and tool layers</li>
-<li><strong>P2</strong>: Add test coverage for <code>config/env_loader.py</code> (4 tests recommended)</li>
-<li><strong>P3</strong>: Split large test modules (&gt;500 lines) into focused test files</li>
-<li><strong>P3</strong>: Add integration smoke tests for critical user flows</li>
-<li><strong>P4</strong>: Refactor <code>mock_jira</code> fixture into smaller, composable fixtures</li>
-<li><strong>P4</strong>: Document magic values and test data patterns in <code>conftest.py</code></li>
-</ol>
+<h3 id="missing-error-handling">Missing Error Handling<a class="headerlink" href="#missing-error-handling" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>External API calls</strong>: Confluence tool calls ('create_confluence_page', 'update_confluence_page') do not have explicit try/except blocks in 'agents/hemingway/agent.py'. Errors propagate to the caller.</li>
+<li><strong>File I/O</strong>: 'read_file()' calls in '_load_authoritative_inputs()' do not have explicit error handling. Missing files are logged as warnings but do not abort the workflow.</li>
+</ul>
+<h2 id="known-limitations-technical-debt">Known Limitations / Technical Debt<a class="headerlink" href="#known-limitations-technical-debt" title="Permanent link">&para;</a></h2>
+<h3 id="hardcoded-values">Hardcoded Values<a class="headerlink" href="#hardcoded-values" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Default storage directory</strong>: 'data/hemingway_docs' is hardcoded in 'HemingwayRecordStore.<strong>init</strong>()' when 'HEMINGWAY_DOC_DIR' is not set.</li>
+<li><strong>Default doc type</strong>: 'engineering_reference' is hardcoded in 'DocumentationRequest', 'GenerateDocRequest', and 'ImpactDetectRequest'.</li>
+<li><strong>Default validation profile</strong>: 'default' is hardcoded in 'DocumentationRequest' and 'GenerateDocRequest'.</li>
+<li><strong>Default port</strong>: 8203 is hardcoded in 'agents/hemingway/README.md' and deployment instructions.</li>
+</ul>
+<h3 id="missing-implementations">Missing Implementations<a class="headerlink" href="#missing-implementations" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Token tracking</strong>: The '/v1/status/tokens' endpoint returns placeholder data ('token_usage_today': 0, 'token_usage_cumulative': 0). Actual LLM token usage is not tracked.</li>
+<li><strong>Confluence URL parsing</strong>: '_parse_confluence_url()' in 'agents/hemingway/api.py' only supports '/wiki/spaces/SPACE/pages/PAGE_ID' format. Other Confluence URL formats are not handled.</li>
+<li><strong>PR diff context</strong>: 'DocumentationRequest.diff_context' is defined but not used in the agent workflow. PR-review generation does not yet incorporate diff context.</li>
+</ul>
+<h3 id="technical-debt">Technical Debt<a class="headerlink" href="#technical-debt" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>God class</strong>: 'HemingwayDocumentationAgent' has 15+ public methods and &gt;500 lines. Consider splitting into 'DocImpactAnalyzer', 'SourceSynthesizer', 'DocGenerator', 'DocValidator', 'PublicationCoordinator' as described in 'docs/PLAN.md'.</li>
+<li><strong>Circular dependency risk</strong>: 'agents/hemingway/<strong>init</strong>.py' uses lazy imports to avoid circular dependency with 'agents.base → tools'. This is a workaround, not a fix.</li>
+<li><strong>Duplicate tool definitions</strong>: 'generate_hypatia_documentation', 'get_hypatia_record', 'list_hypatia_records', 'search_hypatia_records' are aliases for Hemingway tools. This duplication should be removed once the Hypatia → Hemingway rename is complete.</li>
+<li><strong>Missing error handling on external calls</strong>: Confluence tool calls and file I/O operations lack explicit try/except blocks. Errors propagate to the caller, which may not handle them gracefully.</li>
+<li><strong>Incomplete validation</strong>: 'strict' and 'sphinx' validation profiles are defined but not fully implemented. The agent does not enforce link resolution or Sphinx-compatible structure.</li>
+</ul>
+<h3 id="anti-patterns-detected">Anti-patterns Detected<a class="headerlink" href="#anti-patterns-detected" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Missing error handling on external calls</strong>: 'create_confluence_page()', 'update_confluence_page()', and 'read_file()' calls in 'agents/hemingway/agent.py' lack explicit error handling. Failures propagate to the caller.</li>
+<li><strong>Hardcoded credentials</strong>: No hardcoded credentials detected. Confluence credentials are loaded from environment variables ('CONFLUENCE_USER', 'CONFLUENCE_API_TOKEN').</li>
+<li><strong>Hardcoded URLs</strong>: No hardcoded URLs detected. Confluence URL is loaded from 'CONFLUENCE_URL' environment variable.</li>
+</ul>
 <!-- End Documentation Agent generated content -->
 
 
