@@ -992,9 +992,18 @@ def create_app() -> FastAPI:
             if module_dir == '.':
                 repo_short = body.repo.split('/')[-1] if '/' in body.repo else body.repo
                 slug = repo_short.lower().replace('_', '-').replace(' ', '-')
+                target = f'{target_dir}/{slug}.md'
+            elif module_dir.startswith('agents/') and '/' in module_dir.split('agents/', 1)[1]:
+                parts = module_dir.split('/')
+                agent_name = parts[1]
+                sub = '-'.join(parts[2:]).lower().replace('_', '-') if len(parts) > 2 else 'as-built'
+                target = f'agents/{agent_name}/docs/{sub}.md'
+            elif module_dir.startswith('agents/'):
+                agent_name = module_dir.split('/')[1]
+                target = f'agents/{agent_name}/docs/as-built.md'
             else:
                 slug = module_dir.lower().replace('/', '-').replace('_', '-').replace(' ', '-')
-            target = f'{target_dir}/{slug}.md'
+                target = f'{target_dir}/{slug}.md'
             first_entry = entries[0]
             is_readme = any(
                 posixpath.basename(_extract_filename(e)).upper().startswith('README')
@@ -1029,16 +1038,27 @@ def create_app() -> FastAPI:
                 repo_short = body.repo.split('/')[-1] if '/' in body.repo else body.repo
                 slug = repo_short.lower().replace('_', '-').replace(' ', '-')
                 title_label = repo_short.replace('_', ' ').replace('-', ' ').title()
+                target_file = f'{target_dir}/{slug}.md'
+            elif module_dir.startswith('agents/') and '/' in module_dir.split('agents/', 1)[1]:
+                parts = module_dir.split('/')
+                agent_name = parts[1]
+                sub = '-'.join(parts[2:]).lower().replace('_', '-') if len(parts) > 2 else 'as-built'
+                title_label = posixpath.basename(module_dir).replace('_', ' ').replace('-', ' ').title()
+                target_file = f'agents/{agent_name}/docs/{sub}.md'
+            elif module_dir.startswith('agents/'):
+                agent_name = module_dir.split('/')[1]
+                title_label = agent_name.replace('_', ' ').replace('-', ' ').title()
+                target_file = f'agents/{agent_name}/docs/as-built.md'
             else:
                 slug = module_dir.lower().replace('/', '-').replace('_', '-').replace(' ', '-')
                 title_label = posixpath.basename(module_dir).replace('_', ' ').replace('-', ' ').title()
+                target_file = f'{target_dir}/{slug}.md'
 
             is_readme = any(
                 posixpath.basename(_extract_filename(e)).upper().startswith('README')
                 for e in entries
             )
             doc_type = 'user_guide' if is_readme else 'as_built'
-            target_file = f'{target_dir}/{slug}.md'
 
             if body.doc_types and doc_type not in body.doc_types:
                 continue

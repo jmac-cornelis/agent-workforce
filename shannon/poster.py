@@ -150,7 +150,7 @@ class WorkflowsPoster(BasePoster):
             card = {
                 '$schema': 'http://adaptivecards.io/schemas/adaptive-card.json',
                 'type': 'AdaptiveCard',
-                'version': '1.5',
+                'version': '1.4',
                 'body': [{'type': 'TextBlock', 'text': text, 'wrap': True}],
             }
 

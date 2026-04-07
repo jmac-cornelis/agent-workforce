@@ -81,7 +81,7 @@ def build_fact_card(
     return {
         '$schema': 'http://adaptivecards.io/schemas/adaptive-card.json',
         'type': 'AdaptiveCard',
-        'version': '1.5',
+        'version': '1.4',
         'body': body,
     }
 
@@ -813,7 +813,7 @@ def build_dry_run_preview_card(
     return {
         '$schema': 'http://adaptivecards.io/schemas/adaptive-card.json',
         'type': 'AdaptiveCard',
-        'version': '1.5',
+        'version': '1.4',
         'body': card_body,
     }
 
@@ -1535,6 +1535,33 @@ def _get_doc_link(rec: Dict[str, Any]) -> str:
     )
 
 
+def _doc_link_inline(title: str, url: str) -> dict:
+    if url:
+        return {
+            'type': 'RichTextBlock',
+            'inlines': [
+                {
+                    'type': 'TextRun',
+                    'text': '\u2022 ',
+                },
+                {
+                    'type': 'TextRun',
+                    'text': title,
+                    'selectAction': {
+                        'type': 'Action.OpenUrl',
+                        'url': url,
+                    },
+                    'color': 'Accent',
+                },
+            ],
+        }
+    return {
+        'type': 'TextBlock',
+        'text': f'\u2022 {title}',
+        'wrap': True,
+    }
+
+
 def build_hemingway_nl_query_card(data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     if not data or not data.get('ok'):
         error = data.get('error', 'Query failed') if data else 'No data'
@@ -1603,56 +1630,12 @@ def build_hemingway_nl_query_card(data: Dict[str, Any]) -> Optional[Dict[str, An
             for rec in categories[cat]:
                 title = rec.get('title', rec.get('doc_title', 'Untitled'))
                 link = _get_doc_link(rec)
-                source = str(rec.get('source', ''))
-
-                columns = []
-                if link:
-                    columns.append({
-                        'type': 'Column',
-                        'width': 'stretch',
-                        'items': [{
-                            'type': 'TextBlock',
-                            'text': f'\u2022 [{title}]({link})',
-                            'wrap': True,
-                        }],
-                        'selectAction': {
-                            'type': 'Action.OpenUrl',
-                            'url': link,
-                        },
-                    })
-                else:
-                    columns.append({
-                        'type': 'Column',
-                        'width': 'stretch',
-                        'items': [{
-                            'type': 'TextBlock',
-                            'text': f'\u2022 {title}',
-                            'wrap': True,
-                        }],
-                    })
-
-                if source and source != cat:
-                    columns.append({
-                        'type': 'Column',
-                        'width': 'auto',
-                        'items': [{
-                            'type': 'TextBlock',
-                            'text': source,
-                            'isSubtle': True,
-                            'size': 'Small',
-                        }],
-                    })
-
-                card_body.append({
-                    'type': 'ColumnSet',
-                    'columns': columns,
-                    'spacing': 'Small',
-                })
+                card_body.append(_doc_link_inline(title, link))
 
         if total and int(total) > 20:
             card_body.append({
                 'type': 'TextBlock',
-                'text': f'*...and {int(total) - 20} more*',
+                'text': '...and ' + str(int(total) - 20) + ' more',
                 'wrap': True,
                 'isSubtle': True,
             })
@@ -1663,13 +1646,17 @@ def build_hemingway_nl_query_card(data: Dict[str, Any]) -> Optional[Dict[str, An
             'wrap': True,
         })
 
-    if not records and summary:
-        pass
+    if not records and not summary:
+        card_body.append({
+            'type': 'TextBlock',
+            'text': 'No results found.',
+            'wrap': True,
+        })
 
     return {
         '$schema': 'http://adaptivecards.io/schemas/adaptive-card.json',
         'type': 'AdaptiveCard',
-        'version': '1.5',
+        'version': '1.4',
         'body': card_body,
     }
 
