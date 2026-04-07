@@ -981,6 +981,173 @@ def list_pull_requests(repo_name, state='open', sort='created', direction='desc'
         raise GitHubPRError(f'Failed to list PRs for {repo_name}: {e}')
 
 
+def list_todays_prs(repo_name, state='all', date_field='created', target_date=None):
+    '''
+    List pull requests matching a date filter.
+
+    Fetches PRs and filters to those where the specified date field matches the
+    target date. Useful for "show me PRs opened/updated/merged/closed today".
+
+    Input:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        state: PR state — 'opened', 'updated', 'merged', 'closed', or 'all'.
+                'opened' maps to GitHub API state='all' with date_field='created'.
+                'merged' maps to state='closed' with date_field='merged'.
+                'closed' maps to state='closed' with date_field='closed'.
+                'updated' maps to state='all' with date_field='updated'.
+                'all' returns all PRs matching the target date on any date field.
+        date_field: Which timestamp to filter on — 'created', 'updated',
+                    'merged', or 'closed'. Overridden when state implies a
+                    specific date field (e.g. state='merged' forces date_field='merged').
+        target_date: ISO date string (YYYY-MM-DD) or None for today (UTC).
+
+    Output:
+        List of normalized PR dicts matching the filter.
+
+    Raises:
+        GitHubRepoError: If the repository cannot be found.
+    '''
+    log.debug(f'Entering list_todays_prs(repo_name={repo_name}, state={state}, '
+              f'date_field={date_field}, target_date={target_date})')
+
+    # Resolve target date
+    if target_date:
+        target = datetime.fromisoformat(target_date).date()
+    else:
+        target = datetime.now(timezone.utc).date()
+
+    # Map user-friendly state to GitHub API state + date_field
+    state_map = {
+        'opened': ('all', 'created'),
+        'updated': ('all', 'updated'),
+        'merged': ('closed', 'merged'),
+        'closed': ('closed', 'closed'),
+        'all': ('all', date_field),
+    }
+    api_state, effective_date_field = state_map.get(state, ('all', date_field))
+
+    # Fetch PRs sorted by the effective date field (or 'updated' as fallback)
+    sort_field = effective_date_field if effective_date_field in ('created', 'updated') else 'updated'
+    prs = list_pull_requests(
+        repo_name,
+        state=api_state,
+        sort=sort_field,
+        direction='desc',
+        limit=500,
+    )
+
+    # Post-filter by date
+    date_key = f'{effective_date_field}_at'
+    filtered = []
+    for pr in prs:
+        date_value = pr.get(date_key)
+        if not date_value:
+            continue
+        try:
+            pr_date = datetime.fromisoformat(date_value.replace('Z', '+00:00')).date()
+        except (ValueError, AttributeError):
+            continue
+        if pr_date == target:
+            filtered.append(pr)
+
+    log.info(f'list_todays_prs: {len(filtered)} PRs for {repo_name} '
+             f'(state={state}, date_field={effective_date_field}, date={target})')
+    return filtered
+
+
+def list_prs_since(repo_name, minutes=30, events=None):
+    '''
+    List PRs created or merged within the last N minutes.
+
+    Designed for polling jobs that need to detect recent PR activity.
+    Fetches PRs and filters to those with matching timestamps within
+    the time window.
+
+    Input:
+        repo_name: Full repository name (e.g. 'cornelisnetworks/opa-psm2').
+        minutes: Look-back window in minutes (default: 30).
+        events: List of event types to detect — 'created', 'merged', or both.
+                Default: ['created', 'merged'].
+
+    Output:
+        Dict with keys:
+            'repo': repository name,
+            'since': ISO timestamp of the window start,
+            'minutes': look-back minutes,
+            'created': list of PRs created in the window,
+            'merged': list of PRs merged in the window,
+            'total': total count of unique PRs found.
+    '''
+    if events is None:
+        events = ['created', 'merged']
+
+    log.debug(f'Entering list_prs_since(repo_name={repo_name}, minutes={minutes}, '
+              f'events={events})')
+
+    cutoff = datetime.now(timezone.utc) - timedelta(minutes=minutes)
+    cutoff_iso = cutoff.isoformat()
+
+    created_prs = []
+    merged_prs = []
+
+    if 'created' in events:
+        # Fetch recent open PRs sorted by creation date
+        all_prs = list_pull_requests(
+            repo_name, state='all', sort='created', direction='desc', limit=200,
+        )
+        for pr in all_prs:
+            created_str = pr.get('created_at', '')
+            if not created_str:
+                continue
+            try:
+                created_dt = datetime.fromisoformat(created_str.replace('Z', '+00:00'))
+            except (ValueError, AttributeError):
+                continue
+            if created_dt >= cutoff:
+                created_prs.append(pr)
+            else:
+                break  # sorted desc, so no more recent ones
+
+    if 'merged' in events:
+        # Fetch recently closed PRs to find merges
+        closed_prs = list_pull_requests(
+            repo_name, state='closed', sort='updated', direction='desc', limit=200,
+        )
+        for pr in closed_prs:
+            merged_str = pr.get('merged_at')
+            if not merged_str:
+                continue
+            try:
+                merged_dt = datetime.fromisoformat(merged_str.replace('Z', '+00:00'))
+            except (ValueError, AttributeError):
+                continue
+            if merged_dt >= cutoff:
+                merged_prs.append(pr)
+            elif datetime.fromisoformat(pr.get('updated_at', '').replace('Z', '+00:00')) < cutoff:
+                break  # sorted by updated desc, safe to stop
+
+    # Deduplicate across both lists
+    seen_numbers = set()
+    total = 0
+    for pr in created_prs + merged_prs:
+        num = pr.get('number')
+        if num not in seen_numbers:
+            seen_numbers.add(num)
+            total += 1
+
+    log.info(f'list_prs_since: {len(created_prs)} created, {len(merged_prs)} merged '
+             f'for {repo_name} (last {minutes}m)')
+
+    return {
+        'repo': repo_name,
+        'since': cutoff_iso,
+        'minutes': minutes,
+        'created': created_prs,
+        'merged': merged_prs,
+        'total': total,
+    }
+
+
 def get_pull_request(repo_name, pr_number):
     '''
     Get a single pull request with full detail.

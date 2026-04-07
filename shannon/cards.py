@@ -549,6 +549,167 @@ def build_pr_list_card(data: Dict[str, Any]) -> Dict[str, Any]:
     )
 
 
+def build_todays_prs_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for today's PRs result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    prs = data.get('prs', [])
+    state = data.get('state', 'all')
+    target_date = data.get('target_date', 'today')
+
+    # Group by state for the summary
+    opened = [p for p in prs if p.get('state') == 'open']
+    merged = [p for p in prs if p.get('merged_at')]
+    closed = [p for p in prs if p.get('state') == 'closed' and not p.get('merged_at')]
+
+    facts = {
+        'Repository': repo,
+        'Filter': state,
+        'Date': str(target_date),
+        'Total': len(prs),
+    }
+    if state == 'all':
+        facts['Opened'] = len(opened)
+        facts['Merged'] = len(merged)
+        facts['Closed'] = len(closed)
+
+    gh_base = f'https://github.com/{repo}/pull'
+
+    body_lines: list[str] = []
+    for pr in prs[:12]:
+        num = pr.get('number', '')
+        draft = ' [DRAFT]' if pr.get('draft', False) else ''
+        merged_tag = ' ✓merged' if pr.get('merged_at') else ''
+        closed_tag = ' ✗closed' if pr.get('state') == 'closed' and not pr.get('merged_at') else ''
+        link = f'[#{num}]({gh_base}/{num})'
+        body_lines.append(
+            f'• {link} '
+            f'{pr.get("title", "")}{draft}{merged_tag}{closed_tag} '
+            f'({pr.get("author", "")})'
+        )
+    if len(prs) > 12:
+        body_lines.append(f'  ...and {len(prs) - 12} more')
+
+    if not body_lines:
+        body_lines.append(f'No PRs found for {state} on {target_date}.')
+
+    return build_fact_card(
+        title=f"Today's PRs — {repo}",
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_bug_updates_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a bug ticket updates polling result.
+    '''
+    project = data.get('project_key', data.get('project', ''))
+    activity = data.get('activity', data)
+    summary = activity.get('summary', {})
+    opened = activity.get('opened', [])
+    status_changed = activity.get('status_changed', [])
+
+    facts = {
+        'Project': project,
+        'Bugs Opened': summary.get('bugs_opened', 0),
+        'Status Transitions': summary.get('status_transitions', 0),
+        'Bugs With Comments': summary.get('bugs_with_comments', 0),
+    }
+
+    body_lines: list[str] = []
+    if opened:
+        body_lines.append('**New Bugs:**')
+        for bug in opened[:5]:
+            key = bug.get('key', '')
+            pri = bug.get('priority', '')
+            title = bug.get('summary', '')
+            link = f'[{key}]({_JIRA_BASE}/{key})'
+            body_lines.append(f'• {link} [{pri}] {title}')
+        if len(opened) > 5:
+            body_lines.append(f'  ...and {len(opened) - 5} more')
+
+    if status_changed:
+        body_lines.append('**Status Changes:**')
+        for sc in status_changed[:5]:
+            key = sc.get('key', '')
+            link = f'[{key}]({_JIRA_BASE}/{key})'
+            body_lines.append(
+                f'• {link} '
+                f'{sc.get("from_status", "")} → {sc.get("to_status", "")} '
+                f'({sc.get("changed_by", "")})'
+            )
+        if len(status_changed) > 5:
+            body_lines.append(f'  ...and {len(status_changed) - 5} more')
+
+    if not body_lines:
+        body_lines.append('No bug updates detected.')
+
+    return build_fact_card(
+        title=f'Bug Updates — {project}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
+def build_pr_activity_card(data: Dict[str, Any]) -> Dict[str, Any]:
+    '''
+    Build an Adaptive Card for a GitHub PR activity polling result.
+    '''
+    repo = data.get('repo', 'Unknown')
+    result = data.get('result', data)
+    created = result.get('created', [])
+    merged = result.get('merged', [])
+    minutes = result.get('minutes', 30)
+
+    facts = {
+        'Repository': repo,
+        'Window': f'Last {minutes} minutes',
+        'New PRs': len(created),
+        'Merged PRs': len(merged),
+    }
+
+    gh_base = f'https://github.com/{repo}/pull'
+
+    body_lines: list[str] = []
+    if created:
+        body_lines.append('**New PRs:**')
+        for pr in created[:5]:
+            num = pr.get('number', '')
+            draft = ' [DRAFT]' if pr.get('draft', False) else ''
+            link = f'[#{num}]({gh_base}/{num})'
+            body_lines.append(
+                f'• {link} '
+                f'{pr.get("title", "")}{draft} '
+                f'({pr.get("author", "")})'
+            )
+        if len(created) > 5:
+            body_lines.append(f'  ...and {len(created) - 5} more')
+
+    if merged:
+        body_lines.append('**Merged PRs:**')
+        for pr in merged[:5]:
+            num = pr.get('number', '')
+            link = f'[#{num}]({gh_base}/{num})'
+            body_lines.append(
+                f'• {link} '
+                f'{pr.get("title", "")} '
+                f'({pr.get("author", "")})'
+            )
+        if len(merged) > 5:
+            body_lines.append(f'  ...and {len(merged) - 5} more')
+
+    if not body_lines:
+        body_lines.append(f'No PR activity in last {minutes} minutes.')
+
+    return build_fact_card(
+        title=f'PR Activity — {repo}',
+        facts=facts,
+        body_lines=body_lines,
+    )
+
+
 def build_naming_compliance_card(data: Dict[str, Any]) -> Dict[str, Any]:
     '''
     Build an Adaptive Card for a naming compliance scan result.

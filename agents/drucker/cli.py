@@ -578,6 +578,81 @@ def cmd_github_hygiene(args: argparse.Namespace) -> None:
     sys.exit(0)
 
 
+# ------------------------------------------------------------------
+# todays-prs — List PRs opened/updated/merged/closed today
+# ------------------------------------------------------------------
+
+def cmd_todays_prs(args: argparse.Namespace) -> None:
+    _load_env(args)
+
+    import github_utils
+
+    quiet = getattr(args, 'quiet', False)
+    state = getattr(args, 'state', 'all')
+    target_date = getattr(args, 'target_date', None)
+
+    if not quiet:
+        print('')
+        print('=' * 60)
+        print("Drucker: Today's PRs")
+        print('=' * 60)
+        print('')
+        print(f'Repository: {args.repo}')
+        print(f'State filter: {state}')
+        print(f'Date: {target_date or "today"}')
+        print('')
+        print('Fetching PRs...')
+
+    prs = github_utils.list_todays_prs(
+        args.repo,
+        state=state,
+        target_date=target_date,
+    )
+
+    result = {
+        'repo': args.repo,
+        'state': state,
+        'target_date': target_date or 'today',
+        'prs': prs,
+        'total': len(prs),
+    }
+
+    if getattr(args, 'json', False):
+        _print_json(result)
+        sys.exit(0)
+
+    output_base = args.output or f'{args.repo.replace("/", "_")}_todays_prs.json'
+    summary_lines = [
+        f"# Today's PRs — {args.repo}",
+        '',
+        f'State: {state}',
+        f'Date: {target_date or "today"}',
+        f'Total: {len(prs)}',
+        '',
+    ]
+    for pr in prs:
+        draft = ' [DRAFT]' if pr.get('draft', False) else ''
+        summary_lines.append(f'- #{pr.get("number", "")} {pr.get("title", "")}{draft} ({pr.get("author", "")})')
+
+    json_path, md_path = _write_output_files(
+        result,
+        '\n'.join(summary_lines),
+        output_base,
+    )
+
+    if not quiet:
+        print(f'  Saved: {json_path}')
+        print(f'  Saved: {md_path}')
+        print(f'  Total PRs: {len(prs)}')
+
+        _print_summary('drucker-todays-prs', [
+            (json_path, "Today's PRs JSON"),
+            (md_path, "Today's PRs summary"),
+        ])
+
+    sys.exit(0)
+
+
 def cmd_pr_reminder_scan(args: argparse.Namespace) -> None:
     _load_env(args)
 
@@ -1229,6 +1304,16 @@ def register_subcommands(subparsers) -> None:
                    help='Run extended hygiene scan (all 6 checks)')
     _add_common_args(p)
     p.set_defaults(func=cmd_github_hygiene)
+
+    # --- todays-prs ---
+    p = subparsers.add_parser('todays-prs', help="List PRs opened/updated/merged/closed today")
+    p.add_argument('repo', help='GitHub repository (e.g. cornelisnetworks/opa-psm2)')
+    p.add_argument('--state', default='all', choices=['opened', 'updated', 'merged', 'closed', 'all'],
+                   help='PR state filter (default: all)')
+    p.add_argument('--target-date', default=None, metavar='DATE', dest='target_date',
+                   help='Target date YYYY-MM-DD (default: today)')
+    _add_common_args(p)
+    p.set_defaults(func=cmd_todays_prs)
 
     # --- poll ---
     p = subparsers.add_parser('poll', help='Scheduled hygiene polling loop')

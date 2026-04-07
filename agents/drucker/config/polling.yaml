@@ -68,3 +68,43 @@ jobs:
   - 3
   - 7
   - 14
+- job_id: bug-ticket-updates
+  description: 'Monitor bug ticket updates and push cards to #agent-drucker.'
+  scan_type: jira-bug-updates
+  enabled: true
+  notify_shannon: true
+  interval_minutes: 15
+  project_key: STL
+- job_id: github-pr-activity
+  description: 'Monitor PR creation and merges, push cards to #agent-drucker.'
+  scan_type: github-pr-activity
+  enabled: true
+  notify_shannon: true
+  interval_minutes: 30
+  github_repos:
+  # Production target repos (from jira-github-automations prod env)
+  - cornelisnetworks/ifs-all
+  - cornelisnetworks/opa400-port-manager
+  - cornelisnetworks/opa400-meta-cornelis
+  - cornelisnetworks/opa400-cli
+  - cornelisnetworks/opa400-FirmwareTools
+  - cornelisnetworks/emb-dev-tools
+  - cornelisnetworks/libfabric-internal
+  - cornelisnetworks/openbmc-linux
+  - cornelisnetworks/wfr-linux-devel
+  - cornelisnetworks/scm-jenkins-shared-library
+  - cornelisnetworks/swvl
+  - cornelisnetworks/hfisvc_client
+  - cornelisnetworks/libfabric-devel
+  - cornelisnetworks/wfr-pcie-gen3
+  - cornelisnetworks/bmc-all
+  - cornelisnetworks/brandy
+  - cornelisnetworks/opa-distro-drivers-internal
+  - cornelisnetworks/scm-tools
+  - cornelisnetworks/opa400-MFG
+  - cornelisnetworks/wfr-driver
+  - cornelisnetworks/cn-fabric-k8s
+  - cornelisnetworks/cn-forge-sw
+  - cornelisnetworks/rdma-core-internal
+  # Test repo
+  - jmac-cornelis/agent-workforce

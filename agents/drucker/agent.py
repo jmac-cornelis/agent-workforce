@@ -630,6 +630,169 @@ class DruckerCoordinatorAgent(BaseAgent):
                     errors.append(f'{job_id}: {exc}')
                 continue
 
+            # ── Bug ticket updates (polling) ────────────────────────
+            elif scan_type == 'jira-bug-updates':
+                project_key = str(
+                    job_spec.get('project_key') or self.project_key or ''
+                ).strip()
+                if not project_key:
+                    errors.append(f'{job_id}: jira-bug-updates requires project_key')
+                    continue
+
+                interval_minutes = int(job_spec.get('interval_minutes', 15))
+                resolved_project_key = resolved_project_key or project_key
+
+                try:
+                    from core.reporting import bug_activity_today
+                    jira = connect_to_jira()
+                    activity = bug_activity_today(
+                        jira,
+                        project_key,
+                        target_date=None,  # today
+                    )
+                    opened = activity.get('opened', [])
+                    status_changed = activity.get('status_changed', [])
+                    summary = activity.get('summary', {})
+
+                    tasks.append({
+                        'ok': True,
+                        'task_type': 'jira_bug_updates',
+                        'job_id': job_id,
+                        'project_key': project_key,
+                        'activity': activity,
+                    })
+
+                    total_activity = (
+                        summary.get('bugs_opened', 0)
+                        + summary.get('status_transitions', 0)
+                        + summary.get('bugs_with_comments', 0)
+                    )
+
+                    if notify_enabled and total_activity > 0:
+                        body_lines = []
+                        if opened:
+                            body_lines.append(
+                                f'**Bugs Opened:** {len(opened)}'
+                            )
+                            for bug in opened[:5]:
+                                body_lines.append(
+                                    f'• {bug.get("key", "")} '
+                                    f'[{bug.get("priority", "")}] '
+                                    f'{bug.get("summary", "")}'
+                                )
+                            if len(opened) > 5:
+                                body_lines.append(
+                                    f'  ...and {len(opened) - 5} more'
+                                )
+                        if status_changed:
+                            body_lines.append(
+                                f'**Status Changes:** {len(status_changed)}'
+                            )
+                            for sc in status_changed[:5]:
+                                body_lines.append(
+                                    f'• {sc.get("key", "")} '
+                                    f'{sc.get("from_status", "")} → '
+                                    f'{sc.get("to_status", "")} '
+                                    f'({sc.get("changed_by", "")})'
+                                )
+                            if len(status_changed) > 5:
+                                body_lines.append(
+                                    f'  ...and {len(status_changed) - 5} more'
+                                )
+                        notifications.append(
+                            notify_shannon(
+                                agent_id='drucker',
+                                shannon_base_url=shannon_base_url,
+                                title=f'Bug Updates: {project_key}',
+                                text=(
+                                    f'{summary.get("bugs_opened", 0)} opened, '
+                                    f'{summary.get("status_transitions", 0)} '
+                                    f'status changes'
+                                ),
+                                body_lines=body_lines,
+                            )
+                        )
+                except Exception as exc:
+                    errors.append(f'{job_id}: {exc}')
+                continue
+
+            # ── GitHub PR activity (polling) ─────────────────────────
+            elif scan_type == 'github-pr-activity':
+                github_repos = job_spec.get('github_repos') or []
+                if isinstance(github_repos, str):
+                    github_repos = [github_repos]
+                interval_minutes = int(
+                    job_spec.get('interval_minutes', 30)
+                )
+
+                for repo in github_repos:
+                    try:
+                        import github_utils
+                        result = github_utils.list_prs_since(
+                            repo, minutes=interval_minutes,
+                        )
+                        created = result.get('created', [])
+                        merged = result.get('merged', [])
+
+                        tasks.append({
+                            'ok': True,
+                            'task_type': 'github_pr_activity',
+                            'job_id': job_id,
+                            'repo': repo,
+                            'result': result,
+                        })
+
+                        if notify_enabled and (created or merged):
+                            body_lines = []
+                            if created:
+                                body_lines.append(
+                                    f'**New PRs:** {len(created)}'
+                                )
+                                for pr in created[:5]:
+                                    draft = (
+                                        ' [DRAFT]'
+                                        if pr.get('draft', False)
+                                        else ''
+                                    )
+                                    body_lines.append(
+                                        f'• #{pr.get("number", "")} '
+                                        f'{pr.get("title", "")}{draft} '
+                                        f'({pr.get("author", "")})'
+                                    )
+                                if len(created) > 5:
+                                    body_lines.append(
+                                        f'  ...and {len(created) - 5} more'
+                                    )
+                            if merged:
+                                body_lines.append(
+                                    f'**Merged PRs:** {len(merged)}'
+                                )
+                                for pr in merged[:5]:
+                                    body_lines.append(
+                                        f'• #{pr.get("number", "")} '
+                                        f'{pr.get("title", "")} '
+                                        f'({pr.get("author", "")})'
+                                    )
+                                if len(merged) > 5:
+                                    body_lines.append(
+                                        f'  ...and {len(merged) - 5} more'
+                                    )
+                            notifications.append(
+                                notify_shannon(
+                                    agent_id='drucker',
+                                    shannon_base_url=shannon_base_url,
+                                    title=f'PR Activity: {repo}',
+                                    text=(
+                                        f'{len(created)} created, '
+                                        f'{len(merged)} merged'
+                                    ),
+                                    body_lines=body_lines,
+                                )
+                            )
+                    except Exception as exc:
+                        errors.append(f'{job_id}:{repo}: {exc}')
+                continue
+
             # ── Jira hygiene scan (default) ─────────────────────────
             project_key = str(
                 job_spec.get('project_key') or self.project_key or ''
