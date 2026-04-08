@@ -303,6 +303,8 @@ List parameters use comma-separation: `source_paths src/a.c,src/b.c` → `["src/
 
 Use `/help` in any agent channel to see the full parameter syntax for all commands
 
+| Agent | Role | Port | Commands |
+|-------|------|------|----------|
 | Shannon | Communications | 8200 | 6 built-in |
 | Drucker | Engineering Hygiene | 8201 | 15 commands (Jira + GitHub) |
 | Gantt | Project Planning | 8202 | 8 commands |

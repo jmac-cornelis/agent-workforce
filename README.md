@@ -123,7 +123,7 @@ Agent routing is configured in [`config/shannon/agent_registry.yaml`](config/sha
 
 Shannon and Drucker are currently deployed on `bld-node-48.cornelisnetworks.com` with HTTPS provided by a Cloudflare named tunnel at `shannon.cn-agents.com` (domain: `cn-agents.com`).
 
-### Agent Workforce Vision
+## Agent Workforce Vision
 
 This repo implements the first agents of a planned 17-agent workforce for Cornelis Networks engineering, organized across six zones:
 
@@ -262,10 +262,6 @@ Coming soon: Model Context Protocol (MCP) server implementations for agent tool 
 
 ## Development
 
-See [docs/development.md](docs/development.md) for contribution guidelines, testing procedures, and development workflows.
-
 ---
 
 ## License
-
-Proprietary — Co

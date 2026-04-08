@@ -327,6 +327,3 @@ drucker-agent <subcommand> [options]
 ```
 
 All Drucker subcommands are also available through the unified agent CLI:
-
-```bash
-agent-cli
