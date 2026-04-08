@@ -323,4 +323,5 @@ docker compose up drucker
 The preferred way to run drucker-agent is:
 
 ```bash
-drucker-agent <subcommand> [options]
+agent-cli drucker <subcommand> [options]
+```

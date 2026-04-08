@@ -6,5 +6,6 @@
 - Updated the Bot API and notification pipeline to support structured multi-line messages via `body_lines`
 - Enhanced Adaptive Card rendering to preserve original message spacing and layout structure
 - Improved audit log resilience to automatically create a new log file if corruption is detected
+- Migrated technical specifications and API references from the README to specialized as-built documentation
 
 _Overview pending._
