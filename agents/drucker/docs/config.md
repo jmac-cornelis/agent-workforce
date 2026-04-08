@@ -5,7 +5,7 @@ This internal document candidate was generated from authoritative source artifac
 
 ## Metadata
 - Documentation class: `as_built`
-- Generated: `2026-04-08 14:46 UTC`
+- Generated: `2026-04-08 14:54 UTC`
 - Confidence: `medium`
 
 ## Authoritative Inputs
