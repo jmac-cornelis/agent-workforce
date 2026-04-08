@@ -219,151 +219,117 @@ This internal document candidate was generated from authoritative source artifac
 ### Source: `jmac-cornelis/agent-workforce:agents/drucker/nl_query.py`
 - Module: agents/drucker/nl_query.py
 - Description: Natural language query translation for Drucker. Uses LLM function calling
-- to convert plain English questions into structured Jira tool calls, execute
-- them, and summarize results.
+- to convert plain English questions into structured Jira queries.
 - Author: Cornelis Networks
-- from __future__ import annotations
-- import json
-- import logging
-- import os
-- import sys
 
-### Source: `jmac-cornelis/agent-workforce:agents/drucker/pr_reminders.py`
-- Module: agents/drucker/pr_reminders.py
-- Description: Core PR reminder engine. Orchestrates repo scanning, reminder
-- scheduling, Teams user resolution, DM delivery via Graph API,
-- and snooze / merge action handling.
-- Author: Cornelis Networks
-- from __future__ import annotations
-- import asyncio
-- import logging
-- import os
-- import sys
+## Architecture Overview
 
-### Source: `jmac-cornelis/agent-workforce:agents/drucker/prompts/system.md`
-- Drucker Engineering Hygiene Agent
-- You are Drucker, an engineering hygiene agent specialized in project hygiene across Jira and GitHub, operational coherence, and review-gated write-back.
-- Your Role
-- You examine engineering project state across Jira and GitHub and produce:
-- 1. Project-level hygiene summaries (Jira tickets and GitHub PRs)
-- 2. Ticket-level and PR-level findings with evidence
-- 3. Suggested remediation actions
-- 4. Safe, reviewable Jira write-back plans
-- 5. GitHub PR lifecycle notifications (stale PRs, missing reviews)
-- Operating Principles
+The Drucker agent implements a polling-based architecture for GitHub PR hygiene monitoring with aggregated multi-repository reporting. The agent scans configured repositories on a scheduled interval, collects findings across all repositories, and produces unified reports with per-repository breakdowns.
 
-### Source: `jmac-cornelis/agent-workforce:agents/drucker/state/activity_counter.py`
-- Module: state/activity_counter.py
-- Description: SQLite-backed persistent counter for all Drucker API request activity.
-- Tracks request counts, error counts, and first/last timestamps by
-- endpoint category (hygiene, jira, github, nl, pr-reminders).
-- Author: Cornelis Networks
-- from __future__ import annotations
-- import sqlite3
-- import threading
-- from datetime import datetime, timezone
-- from pathlib import Path
+### GitHub PR Hygiene Workflow
 
-### Source: `jmac-cornelis/agent-workforce:agents/drucker/state/monitor_state.py`
-- Module: state/drucker_monitor_state.py
-- Description: Checkpoint and processed-ticket persistence for Drucker intake
-- monitoring. Tracks recent polling cursors and validation history
-- without performing any Jira writes.
-- Author: Cornelis Networks
-- from __future__ import annotations
-- import json
-- import sqlite3
-- import threading
-- from datetime import datetime, timezone
+The `tick()` method in `agent.py` orchestrates GitHub PR hygiene scans:
 
-### Source: `jmac-cornelis/agent-workforce:agents/drucker/state/learning_store.py`
-- Module: state/drucker_learning_store.py
-- Description: Drucker-owned learning store for ticket-intake suggestions.
-- Tracks keyword/component patterns, reporter field habits, and
-- basic observation history for review-gated metadata suggestions.
-- Author: Cornelis Networks
-- from __future__ import annotations
-- import hashlib
-- import json
-- import logging
-- import os
+1. **Repository Scanning**: Iterates through configured repositories from `polling.yaml`
+2. **Finding Aggregation**: Collects stale PRs, missing reviews, and open PR counts across all repositories
+3. **Report Generation**: Produces both JSON and Markdown reports with overall statistics and per-repository details
+4. **Report Persistence**: Saves reports to `/data/state/github_reports/{timestamp}/` directory structure
+5. **Notification**: Optionally notifies Shannon with aggregated findings summary
 
-### Source: `jmac-cornelis/agent-workforce:agents/drucker/state/pr_reminder_state.py`
-- Module: state/pr_reminder_state.py
-- Description: SQLite state store for PR reminder tracking. Manages reminder
-- scheduling, snooze state, and action history for pull requests
-- that need reviewer attention.
-- Author: Cornelis Networks
-- from __future__ import annotations
-- import json
-- import sqlite3
-- import threading
-- from datetime import datetime, timezone
+### Key Functions
 
-### Source: `jmac-cornelis/agent-workforce:agents/drucker/state/report_store.py`
-- Module: state/drucker_report_store.py
-- Description: Persistence helpers for Drucker hygiene reports.
-- Stores durable JSON + Markdown artifacts for Jira hygiene analysis.
-- Author: Cornelis Networks
-- from __future__ import annotations
-- import json
-- import logging
-- import os
-- import sys
-- from datetime import datetime
+#### `_load_previous_github_hygiene()`
 
-### Source: `jmac-cornelis/agent-workforce:agents/drucker/tools.py`
-- Module: tools/drucker_tools.py
-- Description: Drucker hygiene tools for agent use.
-- Wraps the Drucker hygiene workflow as agent-callable tools.
-- Author: Cornelis Networks
-- import logging
-- import os
-- import sys
-- from typing import Optional
-- from tools.base import BaseTool, ToolResult, tool
-- Logging config - follows jira_utils.py pattern
-- No authoritative source facts were available.
+Loads the most recent previous GitHub hygiene report for comparison and trend analysis.
 
-## Existing Target Context
-- Existing repo doc: `agents/drucker/docs/as-built.md`
-  - <!-- Generated by Documentation Agent — do not edit between markers -->
-  - title: "As-Built: Drucker Engineering Hygiene Agent"
-  - date: "2026-04-06"
-  - status: "draft"
-  - Drucker Engineering Hygiene Agent — Design Reference
-  - 1. Module Overview
-  - The Drucker Engineering Hygiene Agent is a deterministic-first automation system that monitors Jira ticket quality and GitHub pull request lifecycle health across the Cornelis Networks engineering organization. Named after management theorist Peter Drucker, the agent identifies workflow drift, missing metadata, stale work, and routing mistakes in both Jira and GitHub, then produces actionable hygiene reports with review-gated remediation proposals. Drucker operates in dry-run mode by default, ensuring all mutation operations are previewed before execution. It exposes a REST API (port 8201), integrates with the Shannon Teams bot for interactive commands, and runs scheduled polling jobs for continuous hygiene monitoring. The agent is the most feature-rich implemented agent in the workforce, combining Jira ticket validation, GitHub PR staleness detection, PR reminder DMs via Teams, natural language query translation, and a learning subsystem that observes ticket-intake patterns to suggest metadata for new issues.
-  - 2. What Changed
-  - Drucker was a Jira-only hygiene agent with three core workflows: full project hygiene scans, single-ticket intake validation, and recent-ticket intake reports.
-  - GitHub PR hygiene was a planned feature but not implemented.
+**Implementation Details**:
+- Scans `/data/state/github_reports/` directory for timestamped report directories
+- Sorts directories in reverse chronological order
+- Loads `report.json` from the second-most-recent directory (previous scan)
+- Returns empty dict if no previous report exists or on error
+- Used for detecting changes in PR hygiene status between scans
 
-## Publication Targets
-- `repo_markdown` -> `agents/drucker/docs/as-built.md` (update)
+**Return Value**: Dictionary containing previous scan's aggregated report data
 
-## Source References
-- `agents/drucker/`
-- `jmac-cornelis/agent-workforce:agents/drucker/config/monitor.yaml`
-- `jmac-cornelis/agent-workforce:agents/drucker/README.md`
-- `jmac-cornelis/agent-workforce:agents/drucker/cards.py`
-- `jmac-cornelis/agent-workforce:agents/drucker/cli.py`
-- `jmac-cornelis/agent-workforce:agents/drucker/api.py`
-- `jmac-cornelis/agent-workforce:agents/drucker/config/polling.yaml`
-- `jmac-cornelis/agent-workforce:agents/drucker/agent.py`
-- `jmac-cornelis/agent-workforce:agents/drucker/config/pr_reminders.yaml`
-- `jmac-cornelis/agent-workforce:agents/drucker/docs/as-built.md`
-- `jmac-cornelis/agent-workforce:agents/drucker/docs/PLAN.md`
-- `jmac-cornelis/agent-workforce:agents/drucker/docs/docs.md`
-- `jmac-cornelis/agent-workforce:agents/drucker/docs/state.md`
-- `jmac-cornelis/agent-workforce:agents/drucker/docs/config.md`
-- `jmac-cornelis/agent-workforce:agents/drucker/jira_reporting.py`
-- `jmac-cornelis/agent-workforce:agents/drucker/models.py`
-- `jmac-cornelis/agent-workforce:agents/drucker/nl_query.py`
-- `jmac-cornelis/agent-workforce:agents/drucker/pr_reminders.py`
-- `jmac-cornelis/agent-workforce:agents/drucker/prompts/system.md`
-- `jmac-cornelis/agent-workforce:agents/drucker/state/activity_counter.py`
-- `jmac-cornelis/agent-workforce:agents/drucker/state/monitor_state.py`
-- `jmac-cornelis/agent-workforce:agents/drucker/state/learning_store.py`
-- `jmac-cornelis/agent-workforce:agents/drucker/state/pr_reminder_state.py`
-- `jmac-cornelis/agent-workforce:agents/drucker/state/report_store.py`
-- `jmac-cornelis/agent-workforce:agents/drucker/tools.py`
+#### GitHub PR Hygiene Aggregation (in `tick()`)
+
+The polling loop now aggregates findings across all configured repositories into a single unified report.
+
+**Aggregation Logic**:
+- Accumulates findings, stale PR counts, missing review counts, and open PR totals across all repositories
+- Builds per-repository summary strings (e.g., `"repo: 5 open, 2 stale, 1 no review"`)
+- Tracks scan errors per repository
+- Constructs aggregated report structure with:
+  - `repos_scanned`: Total number of repositories processed
+  - `repos_with_errors`: Count of repositories that failed to scan
+  - `total_findings`: Sum of all findings across repositories
+  - `total_stale`: Sum of stale PRs across repositories
+  - `total_missing_review`: Sum of PRs missing reviews
+  - `total_open_prs`: Sum of open PRs across all repositories
+  - `findings`: Combined list of all findings
+  - `repo_summaries`: List of per-repository summary strings
+  - `errors`: List of scan error messages
+
+**Report Generation**:
+- Creates Markdown report with overall statistics table
+- Includes per-repository sections with stale PR and missing review details
+- Generates unique report ID and timestamp
+- Saves both JSON (`report.json`) and Markdown (`report.md`) to timestamped directory
+
+**Report Structure**:
+```markdown
+# GitHub PR Hygiene Report
+
+**Report ID:** {uuid}
+**Scan Date:** {timestamp}
+**Repos Scanned:** {count}
+
+## Overall Stats
+
+| Metric | Value |
+|--------|-------|
+| Repos Scanned | {count} |
+| Total Open PRs | {count} |
+| Stale PRs (>{days} days) | {count} |
+| Missing Reviews | {count} |
+| Total Findings | {count} |
+| Scan Errors | {count} |
+
+## {repo_name}
+
+Open PRs: {count} | Findings: {count}
+
+### Stale PRs
+- PR #{number}: {title} by {author}
+  - Age: {days} days
+  - URL: {html_url}
+
+### Missing Reviews
+- PR #{number}: {title} by {author}
+  - URL: {html_url}
+```
+
+### Data Flow
+
+1. **Configuration Loading**: `polling.yaml` defines `github_repos` list and `github_stale_days` threshold
+2. **Repository Iteration**: Each repository is scanned via `github_utils.analyze_repo_pr_hygiene()`
+3. **Finding Collection**: Results are accumulated into aggregated counters and lists
+4. **Report Assembly**: Aggregated data is structured into unified report format
+5. **Persistence**: Report is saved to filesystem with UUID-based report ID
+6. **Task Recording**: Aggregated report is appended to `tasks` list for return to caller
+7. **Notification**: If enabled, Shannon is notified with aggregated summary statistics
+
+### Error Handling
+
+- Repository scan failures are captured in `scan_errors` list
+- Errors do not halt processing of remaining repositories
+- Aggregated report includes error count and details
+- Task is marked as `ok: False` if any scan errors occurred
+- Previous report loading failures return empty dict without raising exceptions
+
+### State Management
+
+- Reports are persisted to `/data/state/github_reports/{timestamp}/` directories
+- Each scan creates a new timestamped directory
+- `_load_previous_github_hygiene()` enables historical comparison
+- Report artifacts include both JSON (machine-readable) and Markdown (human-readable) formats

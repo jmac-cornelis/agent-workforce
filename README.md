@@ -107,7 +107,7 @@ The repo implements specialized agents that automate engineering workflows. Each
 | Agent | Directory | Description | Port |
 |-------|-----------|-------------|------|
 | **Shannon** | `shannon/` + `agents/shannon/` | Microsoft Teams communications service. Routes commands from Teams to backend agents, renders Adaptive Card responses, and posts proactive notifications. Deployed at `shannon.cn-agents.com` via Cloudflare tunnel. | 8200 |
-| **Drucker** | `agents/drucker/` | Engineering hygiene agent. Jira ticket quality scans, GitHub PR lifecycle monitoring (6 scan types), and remediation reports. | 8201 |
+| **Drucker** | `agents/drucker/` | Engineering hygiene agent. Jira ticket quality scans, GitHub PR lifecycle monitoring (6 scan types), and remediation reports. Supports scheduled polling with aggregated multi-repo GitHub PR hygiene reports and markdown exports. | 8201 |
 | **Gantt** | `agents/gantt/` | Project planning service. Builds Jira-grounded planning snapshots, release-health reports, and scheduled PM polling outputs. | 8202 |
 | **Hemingway** | `agents/hemingway/` | Documentation agent. Produces source-grounded documentation candidates for repo Markdown and optional Confluence publication. | — |
 
@@ -146,7 +146,7 @@ Agentic workflows are multi-step operator flows orchestrated by [`agent_cli.py`]
 | **Gantt Poller** | `agent-cli gantt poll` | Scheduled Gantt cycles for always-on planning and release monitoring |
 | **Feature Plan** | `agent-cli feature-plan` | Scope document → Initiative → Epics → Stories in Jira |
 | **Drucker Hygiene** | `agent-cli drucker hygiene` | Ticket hygiene reports with remediation suggestions |
-| **Drucker Poller** | `agent-cli drucker poll` | Scheduled Drucker hygiene scans with optional Shannon notifications |
+| **Drucker Poller** | `agent-cli drucker poll` | Scheduled Drucker hygiene scans with optional Shannon notifications. GitHub PR hygiene polling produces aggregated multi-repo reports with markdown exports. |
 | **Hemingway Docs** | `agent-cli hemingway generate` | Source-grounded documentation drafts for repo Markdown or Confluence |
 | **Bug Report** | `agent-cli bug-report` | Enriched bug reports from Jira filters, exported to styled Excel |
 
@@ -250,52 +250,7 @@ python3 jira_utils.py --bulk-delete --input-file to_delete.csv --execute   # exe
 python3 jira_utils.py --dashboards
 python3 jira_utils.py --dashboard 12345
 python3 jira_utils.py --create-dashboard "My Dashboard"
-python3 jira_utils.py --copy-dashboard 12345 --name "Copy"
-```
-
-</details>
-
-<details>
-<summary>Excel CLI examples</summary>
-
-```bash
-# Concatenation
-python3 excel_utils.py --concat fileA.xlsx fileB.xlsx --method merge-sheet --output merged.xlsx
-python3 excel_utils.py --concat fileA.xlsx fileB.xlsx --method add-sheet --output combined.xlsx
-
-# Conversion
-python3 excel_utils.py --convert-to-csv data.xlsx
-python3 excel_utils.py --convert-from-csv data.csv
-python3 excel_utils.py --convert-from-csv data.csv --jira-url https://cornelisnetworks.atlassian.net
-
-# Diff
-python3 excel_utils.py --diff fileA.xlsx fileB.xlsx --output changes.xlsx
-
-# Plain output (no formatting)
-python3 excel_utils.py --convert-from-csv data.csv --no-formatting
-```
-
-</details>
-
-<details>
-<summary>Draw.io CLI examples</summary>
-
-```bash
-# Generate diagram from Jira hierarchy CSV
-python3 drawio_utilities.py --create-map tickets.csv
-
-# End-to-end: Jira → CSV → Draw.io
-python3 jira_utils.py --get-related PROJ-100 --hierarchy --dump-file tickets
-python3 drawio_utilities.py --create-map tickets.csv
-```
-
-</details>
-
-<details>
-<summary>Confluence CLI examples</summary>
-
-```bash
-confluence-utils -h   # Full usage
+python3 jira_utils.py --copy-dashboard 12345 "New Dashboard Name"
 ```
 
 </details>
@@ -304,93 +259,16 @@ confluence-utils -h   # Full usage
 
 ## Tools (MCP / Agent API)
 
-The `tools/` directory and [`mcp_server.py`](mcp_server.py) expose agent-callable wrappers around the underlying standalone utilities. These tools provide safe, structured access to Jira, Excel, and other capabilities for AI agents and external consumers via MCP (Model Context Protocol).
-
-| Category | Tools |
-|----------|-------|
-| **Jira** | `get_project_info`, `search_tickets`, `create_ticket`, `update_ticket`, `bulk_update_tickets`, `get_releases`, `get_components`, `get_related_tickets`, `link_tickets`, `assign_ticket` |
-| **Excel** | `convert_from_csv`, `convert_to_csv`, `concat_merge_sheet`, `concat_add_sheet`, `diff_files` |
-| **Draw.io** | `parse_org_chart`, `get_responsibilities`, `create_ticket_diagram`, `create_diagram_from_tickets` |
-| **Vision** | `analyze_image`, `extract_roadmap_from_ppt`, `extract_roadmap_from_excel` |
-| **Confluence** | `confluence_tools` |
+Coming soon: Model Context Protocol (MCP) server implementations for agent tool access.
 
 ---
 
 ## Development
 
-### Project Structure
-
-```
-agent-workforce/
-├── agent_cli.py                 # Unified CLI entry point (→ agent-cli)
-├── jira_utils.py                # Standalone Jira CLI (→ jira-utils)
-├── excel_utils.py               # Standalone Excel CLI (→ excel-utils)
-├── drawio_utilities.py          # Standalone Draw.io CLI (→ drawio-utils)
-├── confluence_utils.py          # Standalone Confluence CLI (→ confluence-utils)
-├── mcp_server.py                # MCP server for exposing tools
-├── shannon/                     # Teams communication service
-│   ├── app.py                   # FastAPI server (port 8200)
-│   ├── service.py               # Agent bridge / command routing
-│   ├── poster.py                # Teams message posting (Workflows / Bot Framework)
-│   └── cards.py                 # Adaptive Card renderers
-├── agents/                      # Agent definitions
-│   ├── base.py                  # BaseAgent abstract class
-│   ├── drucker_api.py           # Drucker hygiene agent service (port 8201)
-│   ├── gantt_agent.py           # Gantt planning agent
-│   ├── hemingway_agent.py       # Documentation agent
-│   ├── feature_planning_orchestrator.py
-│   ├── research_agent.py
-│   ├── hardware_analyst.py
-│   ├── scoping_agent.py
-│   └── ...
-├── tools/                       # Agent-callable wrappers (MCP + direct)
-│   ├── jira_tools.py
-│   ├── excel_tools.py
-│   ├── drawio_tools.py
-│   ├── confluence_tools.py
-│   └── ...
-├── config/
-│   ├── shannon/                 # Shannon bot config + agent registry
-│   └── prompts/                 # Agent system prompts
-├── docs/
-│   ├── workflows.md             # Full agentic workflow reference
-│   ├── shannon-teams-setup.md   # Teams integration setup guide
-│   ├── shannon-deployment-plan.md
-│   └── workforce/               # Agent workforce vision (17 agents)
-├── pyproject.toml               # Package metadata & console_scripts
-├── requirements.txt
-└── .env.example
-```
-
-### Adding New Tools
-
-```python
-from tools.base import tool, ToolResult
-
-@tool(description='My new tool')
-def my_tool(param: str) -> ToolResult:
-    return ToolResult.success({'result': 'data'})
-```
-
-### Adding New Agents
-
-1. Create agent class extending `BaseAgent`
-2. Define instruction prompt in `config/prompts/`
-3. Register tools and implement `run()` method
-
-### Testing
-
-```bash
-pytest tests/
-pytest tests/test_tools/test_jira_tools.py
-```
+See [docs/development.md](docs/development.md) for contribution guidelines, testing procedures, and development workflows.
 
 ---
 
 ## License
 
-Proprietary — Cornelis Networks
-
-## Support
-
-For issues or questions, contact the Engineering Tools team.
+Proprietary — Cornelis Networks internal use only.

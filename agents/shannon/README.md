@@ -223,6 +223,12 @@ agents:
 4. Restart Shannon: `systemctl --user restart shannon`
 5. Test: `curl -X POST http://localhost:8200/v1/bot/notify -H 'Content-Type: application/json' -d '{"agent_id": "drucker", "title": "Test", "text": "Hello from Drucker"}'`
 
+Notification cards are rendered with enhanced formatting:
+- URLs are automatically detected and converted to clickable links
+- Link text is intelligently derived from the URL or surrounding context
+- GitHub URLs are shortened to `org/repo` format for readability
+- Multi-line notifications preserve structure with proper spacing
+
 #### Re-establishing Conversation References
 
 After a container restart, Shannon loses its in-memory conversation references. Send **`@Shannon /stats`** in the Teams channel to re-establish the reference. This is required before Shannon can route commands to other agents.
@@ -304,69 +310,4 @@ Use `/help` in any agent channel to see the full parameter syntax for all comman
 | Shannon | Communications | 8200 | 6 built-in |
 | Drucker | Engineering Hygiene | 8201 | 15 commands (Jira + GitHub) |
 | Gantt | Project Planning | 8202 | 8 commands |
-| Hemingway | Documentation | 8203 | 7 commands (generate, search, publish) |
-
-## Approval Workflows
-
-Shannon manages approval workflows end-to-end:
-
-1. An agent requests approval via the Bot API (`POST /v1/bot/notify`)
-2. Shannon posts an approval card in the appropriate Teams channel
-3. The user responds (approve/reject) via card action buttons
-4. Shannon tracks the response with timeout and escalation
-5. The result is forwarded back to the requesting agent
-
-## API Reference
-
-Shannon exposes a REST API on port 8200:
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/v1/bot/notify` | POST | Receive proactive notifications from agents |
-| `/v1/status/stats` | GET | Service statistics |
-| `/v1/status/load` | GET | Current load summary |
-| `/v1/status/work-summary` | GET | Today's work summary |
-| `/v1/status/tokens` | GET | Token execution summary |
-| `/v1/status/decisions` | GET | Recent routing decisions |
-| `/v1/status/decisions/{record_id}` | GET | Specific decision details |
-
-## Configuration
-
-- `config/shannon/agent_registry.yaml` — Agent and command routing
-- Environment variables: `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`, `TEAMS_WEBHOOK_URL`
-
-## Directory Structure
-
-```text
-agents/shannon/
-├── README.md               # This file
-├── cli.py                  # Standalone CLI for card testing
-└── docs/
-    ├── PLAN.md             # Full technical specification
-    └── TEAMS_BOT_FRAMEWORK.md  # Bot Framework integration details
-
-shannon/                    # Implementation (repo root)
-├── app.py                  # FastAPI application factory (create_app)
-├── service.py              # Command dispatch, agent routing
-├── cards.py                # Adaptive Card builders for all agents
-├── poster.py               # Teams message posting (Workflows, Bot Framework)
-└── registry.py             # Agent registry loader (YAML + env overrides)
-
-deploy/                     # Server deployment configuration
-├── env/                    # Environment files (credentials)
-│   ├── shared.env          # Non-sensitive: log level, paths
-│   └── teams.env           # Teams webhook secrets
-├── systemd/
-│   └── shannon.service     # Podman systemd user unit
-├── caddy/
-│   └── Caddyfile           # TLS reverse proxy
-└── scripts/
-    ├── deploy-shannon.sh   # One-shot deployment script
-    └── fix-server.sh       # SSH rate-limit + host networking fix
-```
-
-> Note: Shannon's implementation lives in `shannon/` at the repo root (legacy FastAPI service), while agent metadata and documentation live in `agents/shannon/`.
-
-## Detailed Plan
-
-See [docs/PLAN.md](docs/PLAN.md) for the full technical specification.
+| Hemingway | Documentation | 8203 | 7 commands (genera

@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: "As-Built: Shannon — Communications Agent"
-date: "2026-04-06"
+date: "2026-04-08"
 status: "draft"
 ---
 ```
@@ -111,11 +111,11 @@ sequenceDiagram
     participant POST as Poster
     participant T as Teams
 
-    DR->>SH: POST /v1/bot/notify {agent_id, title, text}
+    DR->>SH: POST /v1/bot/notify {agent_id, title, text, body_lines}
     SH->>REG: resolve_agent(agent_id=drucker)
     REG-->>SH: channel_id, notifications_webhook_url
-    SH->>CARD: activity_card(agent_id, action, details)
-    CARD-->>SH: Adaptive Card JSON
+    SH->>CARD: _build_notification_card(title, subtitle, body_lines)
+    CARD-->>SH: Adaptive Card JSON with clickable links
     SH->>POST: post_card(webhook_url, card)
     POST->>T: POST Workflows webhook
     T-->>T: Card posted to #agent-drucker
@@ -265,6 +265,51 @@ agents:
             default: 14
 ```
 
+# Key Functions
+
+## `_build_notification_card`
+
+**Purpose:** Constructs an Adaptive Card for agent notifications with automatic URL detection and clickable link rendering.
+
+**Location:** `shannon/service.py` (static method in `ShannonService`)
+
+**Signature:**
+```python
+@staticmethod
+def _build_notification_card(
+    title: str,
+    subtitle: str,
+    body_lines: List[str],
+) -> Dict[str, Any]
+```
+
+**Implementation Details:**
+- Uses regex pattern `r'(https?://\S+)'` to detect URLs in body lines
+- For lines containing URLs:
+  - Extracts the URL and surrounding text
+  - Generates a human-readable label from the URL path (e.g., `cornelisnetworks/ifs-all` from GitHub PR URLs)
+  - Creates a `RichTextBlock` with `Action.OpenUrl` to make the text clickable
+  - Applies `Accent` color to indicate interactivity
+- For lines without URLs:
+  - Renders as plain `TextBlock` with wrapping enabled
+- Returns Adaptive Card v1.4 JSON structure
+
+**Example:**
+```python
+# Input:
+body_lines = [
+    "Stale PR detected:",
+    "https://github.com/cornelisnetworks/ifs-all/pulls/123 — Open for 21 days"
+]
+
+# Output card includes:
+# - Title: "Stale PR Alert"
+# - Subtitle: "Notification for Drucker"
+# - Clickable link: "cornelisnetworks/ifs-all — Open for 21 days"
+```
+
+**Usage:** Called by `post_notification()` to render agent notifications with rich formatting and clickable GitHub/web links.
+
 # Error Handling
 
 ## Exception Hierarchy
@@ -293,6 +338,7 @@ agents:
 - **Max retries**: `_MAX_RETRIES = 3` in `graph_client.py` (line 22).
 - **Token expiry buffer**: 5 minutes (300 seconds) in `GraphToken.is_expired` (line 42).
 - **Default OAuth scope**: `_DEFAULT_SCOPE = 'https://graph.microsoft.com/.default'` (line 20).
+- **URL regex pattern**: `r'(https?://\S+)'` in `_build_notification_card()` for link detection.
 
 ## Missing Implementations
 
@@ -305,14 +351,5 @@ agents:
 
 - **No database**: Shannon uses JSON files for state. This is acceptable for Phase 1 but will not scale beyond ~1000 conversations. Migration to PostgreSQL is planned for Phase 2.
 - **No rate limiting**: Shannon does not enforce rate limits on inbound commands. This is acceptable for internal use but should be added before external exposure.
-- **No message deduplication**: Shannon does not deduplicate identical commands sent in quick succession. This could lead to duplicate API calls.
-- **No conversation threading**: Shannon posts all responses as top-level messages. Threaded replies (linking responses to the original command) are not implemented.
-- **Email sending is untested**: The `send_email` method in `graph_client.py` (added in recent PR) has no test coverage and has not been used in production.
-
-## Anti-patterns Detected
-
-- **God class**: `ShannonService` (line 1 in `service.py`) has 15+ public methods and handles command routing, card rendering, state management, and audit logging. This should be refactored into separate `CommandRouter`, `CardRenderer`, and `AuditLogger` classes.
-- **Missing error handling**: `_coerce_params` in `service.py` (line 67) catches `ValueError` for int coercion but does not handle other type coercion errors (e.g., invalid list syntax).
-- **Hardcoded URLs**: `host.containers.internal` is hardcoded in the agent registry examples. This assumes Podman networking and will break in Kubernetes.
-
-<!-- End Documentation Agent generated content -->
+- **No message deduplication**: Shannon does not deduplicate identical notification requests.
+- **URL label generation heuristic**: The `_build_notification_card()` function uses simple string manipulation to extract readable labels from URLs. This works for GitHub URLs but may produce suboptimal results for other URL patterns. Consider using a URL parsing library or configurable label templates.

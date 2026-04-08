@@ -121,6 +121,28 @@ Drucker performs several types of hygiene scans:
 5.  **CI Failures**: Flags PRs with failing check runs.
 6.  **Stale Branches**: Finds branches with no commits beyond the configured threshold and no open PRs.
 
+## Polling and Automated Reports
+
+Drucker's polling system can automatically run hygiene scans on a schedule and generate aggregated reports.
+
+### GitHub PR Hygiene Polling
+
+When the `github-hygiene-scan` polling job is enabled, Drucker:
+
+1.  Scans all configured repositories for PR hygiene issues
+2.  Aggregates findings across all repositories into a single report
+3.  Saves the report to `/data/state/github_reports/{timestamp}/` with both JSON and Markdown formats
+4.  Optionally sends a notification to Shannon with summary statistics
+
+The aggregated report includes:
+
+*   Overall statistics (total open PRs, stale PRs, missing reviews)
+*   Per-repository breakdowns with detailed findings
+*   Comparison with the previous scan (if available)
+*   Markdown-formatted output for easy sharing
+
+Reports are persisted to disk and can be retrieved later for historical analysis.
+
 ## Configuration
 
 Drucker is configured via YAML files and environment variables.
@@ -318,114 +340,4 @@ drucker-agent <subcommand> [options]
 All Drucker subcommands are also available through the unified agent CLI:
 
 ```bash
-agent-cli drucker hygiene -p STL
-agent-cli drucker poll -p STL --poll-interval 300 --max-cycles 0
-```
-
-### Drucker CLI Options
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--stale-days DAYS` | 14 | Stale ticket threshold in days |
-| `--ticket-key KEY` / `-t` | — | Specific Jira ticket for `issue-check` |
-| `--target-date YYYY-MM-DD` | today | Target date for `bug-activity` |
-| `--since DATE` | — | Checkpoint override (YYYY-MM-DD) |
-| `--recent-only` | off | Use recent-ticket intake scanning in `poll` |
-| `--poll-config FILE` | — | YAML config for polling jobs |
-| `--poll-job NAME` | — | Specific job ID from `--poll-config` |
-| `--poll-interval SECS` | 300 | Polling interval in seconds |
-| `--max-cycles N` | 1 | Number of polling cycles (`0` = continuous) |
-| `--github-repos REPO...` | — | GitHub repos for PR hygiene (format: `owner/repo`) |
-| `--github-stale-days DAYS` | 5 | Stale PR threshold in days |
-| `--branch-stale-days DAYS` | 30 | Branch staleness threshold for `github-hygiene` |
-| `--extended` | off | Run all 6 GitHub checks in `github-hygiene` |
-| `--notify-shannon` | off | Post summaries through Shannon |
-| `--shannon-url URL` | localhost:8200 | Shannon service base URL |
-| `--include-done` | off | Include done/closed issues |
-| `--output FILE` | auto | Output filename |
-| `--limit N` | 200 | Maximum tickets per scan |
-| `--json` | off | Output as JSON |
-| `--env FILE` | `.env` | Alternate environment file |
-
-### Polling Examples
-
-```bash
-# Single Jira hygiene cycle
-drucker-agent poll -p STL --max-cycles 1
-
-# Continuous polling with GitHub PR scanning
-drucker-agent poll -p STL \
-  --poll-interval 300 --max-cycles 0 \
-  --github-repos cornelisnetworks/ifs-all cornelisnetworks/opa-psm2 \
-  --github-stale-days 7 --notify-shannon
-
-# Poll with custom config file
-drucker-agent poll -p STL \
-  --poll-config agents/drucker/config/polling.yaml
-
-# GitHub-only: scan a single repo
-drucker-agent github-hygiene cornelisnetworks/ifs-all --extended
-```
-
-### GitHub Utilities (via `github_utils.py`)
-
-Standalone CLI for GitHub operations. Requires `GITHUB_TOKEN` in the environment.
-
-| Command | Description | Example |
-|---------|-------------|---------|
-| `--list-repos ORG` | List repositories in a GitHub org | `python github_utils.py --list-repos cornelisnetworks` |
-| `--repo-info REPO` | Get metadata for a repository | `python github_utils.py --repo-info cornelisnetworks/ifs-all` |
-| `--list-prs REPO` | List pull requests | `python github_utils.py --list-prs cornelisnetworks/ifs-all --state open` |
-| `--get-pr REPO N` | Get details for a specific PR | `python github_utils.py --get-pr cornelisnetworks/ifs-all 623` |
-| `--pr-reviews REPO N` | Get reviews for a specific PR | `python github_utils.py --pr-reviews cornelisnetworks/ifs-all 623` |
-| `--stale-prs REPO` | Find stale PRs | `python github_utils.py --stale-prs cornelisnetworks/ifs-all --days 7` |
-| `--missing-reviews REPO` | Find PRs missing reviews | `python github_utils.py --missing-reviews cornelisnetworks/ifs-all` |
-| `--pr-hygiene REPO` | Full PR hygiene report | `python github_utils.py --pr-hygiene cornelisnetworks/ifs-all --days 5` |
-| `--naming-compliance REPO` | Branch/PR naming compliance | `python github_utils.py --naming-compliance cornelisnetworks/ifs-all` |
-| `--merge-conflicts REPO` | Find PRs with merge conflicts | `python github_utils.py --merge-conflicts cornelisnetworks/ifs-all` |
-| `--ci-failures REPO` | Find PRs with failing CI | `python github_utils.py --ci-failures cornelisnetworks/ifs-all` |
-| `--stale-branches REPO` | Find stale branches | `python github_utils.py --stale-branches cornelisnetworks/ifs-all --branch-stale-days 60` |
-| `--extended-hygiene REPO` | Full extended report (all scans) | `python github_utils.py --extended-hygiene cornelisnetworks/ifs-all` |
-| `--rate-limit` | Show API rate limit status | `python github_utils.py --rate-limit` |
-| `--get-readme REPO` | Get repository README content | `python github_utils.py --get-readme cornelisnetworks/ifs-all` |
-| `--list-docs REPO` | List documentation files in a repo | `python github_utils.py --list-docs cornelisnetworks/ifs-all --docs-path docs` |
-| `--search-docs REPO QUERY` | Search repository documentation content | `python github_utils.py --search-docs cornelisnetworks/ifs-all "build instructions"` |
-
-#### GitHub CLI Options
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--state STATE` | open | PR state filter (`open`, `closed`, `all`) |
-| `--limit N` | 100 | Maximum number of results |
-| `--days N` | 5 | Staleness threshold in days |
-| `--branch-stale-days N` | 30 | Branch staleness threshold in days |
-| `--env FILE` | — | Alternate `.env` file |
-| `--quiet` / `-q` | off | Suppress stdout (log file still written) |
-| `--json` | off | Output as JSON instead of tables |
-| `--verbose` / `-v` | off | Enable verbose console logging |
-| `--docs-path DIR` | `docs` | Directory to search for `--list-docs` |
-
-## Directory Structure
-
-```text
-agents/drucker/
-├── README.md              # This file
-├── __init__.py
-├── agent.py               # Core DruckerCoordinatorAgent (tick, polling, analysis)
-├── api.py                 # FastAPI endpoints (port 8201)
-├── models.py              # DruckerRequest, DruckerFinding, DruckerAction, DruckerHygieneReport
-├── cli.py                 # Standalone CLI (drucker-agent entry point)
-├── tools.py               # Agent tool wrappers
-├── config/
-│   ├── polling.yaml       # Polling job definitions
-│   └── monitor.yaml       # Validation rules
-├── prompts/
-│   └── system.md          # Agent behavior prompt
-├── state/
-│   ├── __init__.py
-│   ├── report_store.py    # Hygiene report persistence
-│   ├── monitor_state.py   # Monitor state tracking
-│   └── learning_store.py  # Learning from past findings
-└── docs/
-    └── PLAN.md            # Detailed technical plan
-```
+agent-cli
