@@ -8,7 +8,6 @@ defaults:
   notify_shannon: true
   github_stale_days: 5
   github_repos:
-  - jmac-cornelis/agent-workforce
   - cornelisnetworks/ifs-all
   - cornelisnetworks/opa400-port-manager
   - cornelisnetworks/opa400-meta-cornelis
@@ -32,7 +31,6 @@ defaults:
   - cornelisnetworks/cn-fabric-k8s
   - cornelisnetworks/rdma-core-internal
   - cornelisnetworks/opa-psm2
-  - cornelisnetworks/opa-psm3
 jobs:
 - job_id: hygiene-scan
   description: Full-project hygiene scan for active work.
@@ -47,13 +45,13 @@ jobs:
 - job_id: github-hygiene-scan
   description: GitHub PR hygiene scan for stale PRs and missing reviews.
   scan_type: github
-  enabled: false
+  enabled: true
   github_stale_days: 5
   notify_shannon: true
 - job_id: github-extended-scan
   description: Extended GitHub hygiene scan including naming, conflicts, CI, and stale branches.
   scan_type: github-extended
-  enabled: false
+  enabled: true
   github_stale_days: 5
   branch_stale_days: 30
   notify_shannon: true
@@ -63,7 +61,6 @@ jobs:
   enabled: true
   notify_shannon: true
   repos:
-  - jmac-cornelis/agent-workforce
   reminder_schedule:
   - 3
   - 7
@@ -107,4 +104,3 @@ jobs:
   - cornelisnetworks/cn-forge-sw
   - cornelisnetworks/rdma-core-internal
   # Test repo
-  - jmac-cornelis/agent-workforce
