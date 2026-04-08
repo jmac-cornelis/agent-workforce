@@ -1312,6 +1312,45 @@ class ShannonService:
         )
         return response.to_outgoing_webhook_response()
 
+    @staticmethod
+    def _build_notification_card(
+        title: str,
+        subtitle: str,
+        body_lines: List[str],
+    ) -> Dict[str, Any]:
+        URL_RE = re_mod.compile(r'(https?://\S+)')
+        card_body: list = [
+            {'type': 'TextBlock', 'size': 'Large', 'weight': 'Bolder', 'text': title, 'wrap': True},
+            {'type': 'TextBlock', 'text': subtitle, 'wrap': True, 'isSubtle': True, 'spacing': 'Small'},
+        ]
+        for line in body_lines:
+            line = line.strip()
+            if not line:
+                continue
+            url_match = URL_RE.search(line)
+            if url_match:
+                url = url_match.group(1)
+                before = line[:url_match.start()].strip()
+                after = line[url_match.end():].strip()
+                label = before.rstrip(' —-:') if before else url.split('/')[-2] + '/' + url.split('/')[-1] if '/' in url else url
+                if not label or label == url:
+                    label = url.replace('https://github.com/', '').replace('/pulls', '')
+                display = f'{label} {after}'.strip() if after else label
+                card_body.append({
+                    'type': 'RichTextBlock',
+                    'inlines': [
+                        {'type': 'TextRun', 'text': display, 'selectAction': {'type': 'Action.OpenUrl', 'url': url}, 'color': 'Accent'},
+                    ],
+                })
+            else:
+                card_body.append({'type': 'TextBlock', 'text': line, 'wrap': True})
+        return {
+            '$schema': 'http://adaptivecards.io/schemas/adaptive-card.json',
+            'type': 'AdaptiveCard',
+            'version': '1.4',
+            'body': card_body,
+        }
+
     def post_notification(
         self,
         *,
@@ -1332,13 +1371,14 @@ class ShannonService:
         if registration is None:
             raise ValueError('Unknown Shannon agent/channel target')
 
+        card = self._build_notification_card(
+            title=title,
+            subtitle=f'Notification for {registration.display_name}',
+            body_lines=body_lines or [text],
+        )
         response = ShannonResponse(
             text=text,
-            card=build_fact_card(
-                title=title,
-                subtitle=f'Notification for {registration.display_name}',
-                body_lines=body_lines or [text],
-            ),
+            card=card,
             decision='posted_agent_notification',
         )
 

@@ -517,6 +517,50 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=404, detail=f'Report {report_id} not found')
         return {'ok': True, 'data': result}
 
+    @app.get('/v1/github/hygiene/report/{report_id}')
+    def github_hygiene_report(report_id: str):
+        from fastapi.responses import HTMLResponse
+        import os
+        report_dir = f'/data/state/github_reports/{report_id}'
+        md_path = os.path.join(report_dir, 'report.md')
+        if not os.path.exists(md_path):
+            raise HTTPException(status_code=404, detail=f'GitHub hygiene report {report_id} not found')
+        with open(md_path) as f:
+            md_content = f.read()
+        try:
+            import markdown
+            html_body = markdown.markdown(md_content, extensions=['tables'])
+        except ImportError:
+            html_body = f'<pre>{md_content}</pre>'
+        html = f'''<html><head>
+<title>GitHub PR Hygiene Report {report_id}</title>
+<style>body{{font-family:Segoe UI,Arial,sans-serif;max-width:900px;margin:40px auto;padding:0 20px}}
+table{{border-collapse:collapse;width:100%}}th,td{{border:1px solid #ddd;padding:8px;text-align:left}}
+th{{background:#f4f5f7}}a{{color:#0078d4}}</style>
+</head><body>{html_body}</body></html>'''
+        return HTMLResponse(content=html)
+
+    @app.get('/v1/github/hygiene/reports')
+    def github_hygiene_reports():
+        import os, json
+        base = '/data/state/github_reports'
+        if not os.path.exists(base):
+            return {'ok': True, 'reports': []}
+        reports = []
+        for d in sorted(os.listdir(base), reverse=True)[:20]:
+            json_path = os.path.join(base, d, 'report.json')
+            if os.path.exists(json_path):
+                with open(json_path) as f:
+                    data = json.load(f)
+                reports.append({
+                    'report_id': d,
+                    'repos_scanned': data.get('repos_scanned', 0),
+                    'total_open_prs': data.get('total_open_prs', 0),
+                    'total_stale': data.get('total_stale', 0),
+                    'total_missing_review': data.get('total_missing_review', 0),
+                })
+        return {'ok': True, 'reports': reports}
+
     @app.get('/v1/hygiene/reports')
     def hygiene_reports(
         project_key: Optional[str] = Query(default=None),

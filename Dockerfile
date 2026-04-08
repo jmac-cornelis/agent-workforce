@@ -34,7 +34,7 @@ COPY pyproject.toml requirements.txt ./
 
 # Install core + agent pipeline dependencies (no dev/test extras).
 RUN pip install --no-cache-dir -e ".[agents]" && \
-    pip install --no-cache-dir litellm
+    pip install --no-cache-dir litellm markdown
 
 # Copy all source files into the build context.
 COPY . .

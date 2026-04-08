@@ -288,6 +288,24 @@ class DruckerCoordinatorAgent(BaseAgent):
             )
         return result
 
+    def _load_previous_github_hygiene(self) -> dict:
+        import os, json
+        base = '/data/state/github_reports'
+        if not os.path.exists(base):
+            return {}
+        dirs = sorted(os.listdir(base), reverse=True)
+        if len(dirs) < 2:
+            return {}
+        prev_dir = dirs[1]
+        json_path = os.path.join(base, prev_dir, 'report.json')
+        if not os.path.exists(json_path):
+            return {}
+        try:
+            with open(json_path) as f:
+                return json.load(f)
+        except Exception:
+            return {}
+
     @staticmethod
     def _build_hygiene_notification_payload(result: Dict[str, Any]) -> Dict[str, Any]:
         report = result.get('report', {})
@@ -496,47 +514,207 @@ class DruckerCoordinatorAgent(BaseAgent):
                     job_spec.get('github_stale_days', 5)
                 )
 
+                # Aggregate all repos into one report
+                all_findings = []
+                total_stale = 0
+                total_missing = 0
+                total_open = 0
+                repo_summaries = []
+                scan_errors = []
+                per_repo_reports = []
+
                 for repo in github_repos:
                     try:
                         import github_utils
                         report = github_utils.analyze_repo_pr_hygiene(
                             repo, stale_days=github_stale_days,
                         )
-                        tasks.append({
-                            'ok': True,
-                            'task_type': 'github_pr_hygiene',
-                            'job_id': job_id,
-                            'repo': repo,
-                            'report': report,
-                        })
-                        if notify_enabled:
-                            finding_count = len(
-                                report.get('findings', [])
-                            )
-                            stale_count = report.get('stale_count', 0)
-                            missing_count = report.get(
-                                'missing_review_count', 0
-                            )
-                            notifications.append(
-                                notify_shannon(
-                                    agent_id='drucker',
-                                    shannon_base_url=shannon_base_url,
-                                    title=f'GitHub PR Hygiene: {repo}',
-                                    text=(
-                                        f'{finding_count} finding(s) '
-                                        f'in {repo}'
-                                    ),
-                                    body_lines=[
-                                        f'Stale PRs (>{github_stale_days} '
-                                        f'days): {stale_count}',
-                                        f'Missing reviews: {missing_count}',
-                                        f'Total open PRs: '
-                                        f'{report.get("open_pr_count", 0)}',
-                                    ],
-                                )
+                        findings = report.get('findings', [])
+                        stale = len(report.get('stale_prs', []))
+                        missing = len(report.get('missing_reviews', []))
+                        open_prs = report.get('total_open_prs', report.get('open_pr_count', 0))
+                        all_findings.extend(findings)
+                        total_stale += stale
+                        total_missing += missing
+                        total_open += open_prs
+                        per_repo_reports.append(report)
+                        if findings or open_prs > 0:
+                            repo_summaries.append(
+                                f'{repo}: {open_prs} open, '
+                                f'{stale} stale, {missing} no review'
                             )
                     except Exception as exc:
-                        errors.append(f'{job_id}:{repo}: {exc}')
+                        scan_errors.append(f'{repo}: {exc}')
+
+                # Save aggregated report
+                aggregated = {
+                    'report_type': 'github_pr_hygiene',
+                    'repos_scanned': len(github_repos),
+                    'repos_with_errors': len(scan_errors),
+                    'total_findings': len(all_findings),
+                    'total_stale': total_stale,
+                    'total_missing_review': total_missing,
+                    'total_open_prs': total_open,
+                    'findings': all_findings,
+                    'repo_summaries': repo_summaries,
+                    'errors': scan_errors,
+                }
+                tasks.append({
+                    'ok': not scan_errors,
+                    'task_type': 'github_pr_hygiene',
+                    'job_id': job_id,
+                    'report': aggregated,
+                })
+
+                # Build markdown report and save
+                try:
+                    import uuid as _uuid
+                    import json as _json
+                    import os as _os
+                    from datetime import datetime as _dt, timezone as _tz
+
+                    report_id = str(_uuid.uuid4())[:8]
+                    scan_time = _dt.now(_tz.utc).strftime('%Y-%m-%d %H:%M UTC')
+
+                    md_lines = [
+                        f'# GitHub PR Hygiene Report',
+                        f'',
+                        f'**Report ID:** {report_id}  ',
+                        f'**Scan Date:** {scan_time}  ',
+                        f'**Repos Scanned:** {len(github_repos)}  ',
+                        f'',
+                        f'## Overall Stats',
+                        f'',
+                        f'| Metric | Value |',
+                        f'|--------|-------|',
+                        f'| Repos Scanned | {len(github_repos)} |',
+                        f'| Total Open PRs | {total_open} |',
+                        f'| Stale PRs (>{github_stale_days} days) | {total_stale} |',
+                        f'| Missing Reviews | {total_missing} |',
+                        f'| Total Findings | {len(all_findings)} |',
+                        f'| Scan Errors | {len(scan_errors)} |',
+                        f'',
+                    ]
+
+                    for repo_report in per_repo_reports:
+                        repo_name = repo_report.get('repo', '')
+                        stale_prs = repo_report.get('stale_prs', [])
+                        missing_reviews = repo_report.get('missing_reviews', [])
+                        repo_open = repo_report.get('total_open_prs', 0)
+                        repo_findings = repo_report.get('total_findings', 0)
+
+                        md_lines.append(f'## {repo_name}')
+                        md_lines.append(f'')
+                        md_lines.append(f'Open PRs: {repo_open} | Findings: {repo_findings}')
+                        md_lines.append(f'')
+
+                        if not stale_prs and not missing_reviews:
+                            md_lines.append(f'No issues found.')
+                            md_lines.append(f'')
+                            continue
+
+                        if stale_prs:
+                            md_lines.append(f'### Stale PRs')
+                            md_lines.append(f'')
+                            for finding in stale_prs:
+                                pr = finding.get('pr', finding)
+                                pr_num = pr.get('number', '')
+                                pr_title = pr.get('title', '')
+                                pr_author = pr.get('author', '')
+                                url = pr.get('html_url', f'https://github.com/{repo_name}/pull/{pr_num}')
+                                days = finding.get('days_stale', '')
+                                md_lines.append(f'- [#{pr_num}]({url}) — {pr_title} (by {pr_author}, {days} days stale)')
+                            md_lines.append(f'')
+
+                        if missing_reviews:
+                            md_lines.append(f'### Missing Reviews')
+                            md_lines.append(f'')
+                            for finding in missing_reviews:
+                                pr = finding.get('pr', finding)
+                                pr_num = pr.get('number', '')
+                                pr_title = pr.get('title', '')
+                                pr_author = pr.get('author', '')
+                                url = pr.get('html_url', f'https://github.com/{repo_name}/pull/{pr_num}')
+                                reason = finding.get('reason', 'no reviews')
+                                md_lines.append(f'- [#{pr_num}]({url}) — {pr_title} (by {pr_author}, {reason})')
+                            md_lines.append(f'')
+
+                    if scan_errors:
+                        md_lines.append(f'## Errors')
+                        md_lines.append(f'')
+                        for err in scan_errors:
+                            md_lines.append(f'- {err}')
+                        md_lines.append(f'')
+
+                    md_lines.append(f'---')
+                    md_lines.append(f'*Generated by Drucker Engineering Hygiene Agent on {scan_time}*')
+
+                    md_content = '\n'.join(md_lines)
+
+                    report_dir = f'/data/state/github_reports/{report_id}'
+                    _os.makedirs(report_dir, exist_ok=True)
+                    report_path = f'{report_dir}/report.md'
+                    with open(report_path, 'w') as _f:
+                        _f.write(md_content)
+                    with open(f'{report_dir}/report.json', 'w') as _f:
+                        _json.dump(aggregated, _f, indent=2, default=str)
+                    log.info('Saved GitHub hygiene report %s', report_id)
+                    report_url = f'https://drucker.cn-agents.com/v1/github/hygiene/report/{report_id}'
+                except Exception as store_exc:
+                    log.warning('Failed to save GitHub hygiene report: %s', store_exc)
+                    report_id = 'unsaved'
+                    report_url = ''
+
+                # Send ONE summary notification
+                if notify_enabled:
+                    prev = self._load_previous_github_hygiene()
+                    body_lines = [
+                        f'Repos scanned: {len(github_repos)}',
+                        f'Total open PRs: {total_open}',
+                        f'Stale PRs (>{github_stale_days} days): {total_stale}',
+                        f'Missing reviews: {total_missing}',
+                    ]
+                    if prev:
+                        d_open = total_open - prev.get('total_open_prs', 0)
+                        d_stale = total_stale - prev.get('total_stale', 0)
+                        d_missing = total_missing - prev.get('total_missing_review', 0)
+                        def delta(v):
+                            return f'+{v}' if v > 0 else str(v) if v < 0 else '0'
+                        body_lines.append(f'vs yesterday: open {delta(d_open)}, stale {delta(d_stale)}, no-review {delta(d_missing)}')
+                    body_lines.append('')
+                    if repo_summaries:
+                        body_lines.append('Repos with activity:')
+                        for s in repo_summaries[:10]:
+                            repo_short = s.split(':')[0]
+                            body_lines.append(f'  https://github.com/{repo_short}/pulls — {s.split(":", 1)[1].strip()}')
+                        if len(repo_summaries) > 10:
+                            body_lines.append(
+                                f'  ...and {len(repo_summaries) - 10} more'
+                            )
+                    if report_url:
+                        body_lines.append('')
+                        body_lines.append(f'Full report: {report_url}')
+                    if scan_errors:
+                        body_lines.append(
+                            f'Errors: {len(scan_errors)} repo(s) failed'
+                        )
+                    notifications.append(
+                        notify_shannon(
+                            agent_id='drucker',
+                            shannon_base_url=shannon_base_url,
+                            title='GitHub PR Hygiene Report',
+                            text=(
+                                f'{len(github_repos)} repos, '
+                                f'{total_open} open PRs, '
+                                f'{total_stale} stale, '
+                                f'{total_missing} no review'
+                            ),
+                            body_lines=body_lines,
+                        )
+                    )
+
+                for err in scan_errors:
+                    errors.append(f'{job_id}:{err}')
                 continue
 
             # ── GitHub extended hygiene scan ───────────────────────

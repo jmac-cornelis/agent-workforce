@@ -450,3 +450,44 @@ Exit criteria:
 - PR hygiene notifications go through Shannon, not direct GitHub API writes
 - Linnaeus, Hedy, and Herodotus continue to own their current domains
 - existing `fuze` Jira automation remains available during migration
+
+
+## Polling Functionality
+
+### Purpose
+
+This section defines the polling features for the deployed version of Drucker.
+
+### Bug Ticket Updates
+
+- Polling interval: 15 minutes
+- Whenever bug ticket updates are found since the last polling period, push a card with the update details to #agent-drucker
+
+### GitHub PR Updates
+
+- Polling interval: 30 minutes
+- Poll for new PR creation and PR merge
+- Whenever a PR create or PR merge is found since the last polling period, push a card with the update details to #agent-drucker
+
+### GitHub PR Hygiene
+
+- Polling period: daily
+- Create a hygiene report and save it in Drucker's local db on the server
+- Send a card with a link to the report on #agent-drucker Teams channel
+
+
+### GitHub PR Hygiene Report Format
+
+#### Target Repos
+- Use repos defined in the polling config target list
+
+#### Report Document
+- Create a single report document with sections for each repo
+- In each section, list all PRs that need attention with hyperlinks
+- Include an overall stats section at the top
+- Save the report as a markdown file in Drucker's report store
+
+#### Agent-Drucker Card
+- Send a single card to #agent-drucker Teams channel
+- Card contains summary stats (repos scanned, total open PRs, stale PRs, missing reviews)
+- Card contains a hyperlink to the generated report file
