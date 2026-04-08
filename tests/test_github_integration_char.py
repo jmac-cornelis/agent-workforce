@@ -107,7 +107,7 @@ def test_hygiene_report_to_card_pipeline(monkeypatch):
     card = build_pr_hygiene_card(report)
 
     assert card['type'] == 'AdaptiveCard'
-    assert card['version'] == '1.5'
+    assert card['version'] == '1.4'
     assert isinstance(card['body'], list)
     assert len(card['body']) > 0
 

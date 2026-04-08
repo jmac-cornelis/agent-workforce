@@ -23,7 +23,7 @@ def _card_schema_ok(card: dict) -> None:
     '''Assert the standard Adaptive Card envelope is present.'''
     assert card['$schema'] == 'http://adaptivecards.io/schemas/adaptive-card.json'
     assert card['type'] == 'AdaptiveCard'
-    assert card['version'] == '1.5'
+    assert card['version'] == '1.4'
     assert isinstance(card['body'], list)
 
 
