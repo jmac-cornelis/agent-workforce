@@ -5,5 +5,6 @@
 - Implemented intelligent link text derivation, including GitHub `org/repo` shortening for better readability
 - Updated the Bot API and notification pipeline to support structured multi-line messages via `body_lines`
 - Enhanced Adaptive Card rendering to preserve original message spacing and layout structure
+- Improved audit log resilience to automatically create a new log file if corruption is detected
 
 _Overview pending._

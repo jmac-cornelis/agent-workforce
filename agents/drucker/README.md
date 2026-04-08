@@ -324,6 +324,3 @@ The preferred way to run drucker-agent is:
 
 ```bash
 drucker-agent <subcommand> [options]
-```
-
-All Drucker subcommands are also available through the unified agent CLI:
