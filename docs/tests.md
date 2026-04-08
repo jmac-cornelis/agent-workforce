@@ -3,366 +3,380 @@
 ```yaml
 ---
 title: "As-Built: Tests — Design Reference"
-date: "2026-04-06"
+date: "2026-04-08"
 status: "draft"
 ---
 ```
 
 # Module Overview
 
-The `tests/` directory contains the comprehensive characterization test suite for the Cornelis Networks agent workforce platform. This suite validates all core modules, agents, tools, integrations, and infrastructure components through 10,000+ test cases organized into 50+ test modules. The tests follow a strict characterization testing methodology where each test documents and validates the actual behavior of production code without requiring live external API calls.
+The `tests/` directory contains the comprehensive characterization test suite for the agent-workforce repository. This suite validates the behavior of all core modules, agents, tools, and integrations through 59+ test modules covering approximately 1,200+ individual test cases. The tests follow a strict "no live API calls" policy, using monkeypatching and mock objects to ensure fast, deterministic execution. The suite is organized by functional domain (agents, tools, core utilities, integrations) and employs consistent naming conventions (`*_char.py` for characterization tests, `*_coverage.py` for gap-filling tests).
 
 # What Changed
 
-**Before:** The test suite existed but lacked comprehensive documentation of its structure, coverage patterns, and testing philosophy.
+**Before:** The test suite used Adaptive Card schema version `1.5` in card validation assertions across multiple test modules.
 
-**After:** This document provides a complete reference for the test suite's architecture, coverage methodology, and key testing patterns used across all modules.
+**After:** All card schema version assertions now validate against version `1.4` to align with the Microsoft Teams Adaptive Card renderer compatibility requirements.
 
-**Impact:** Engineers joining the team or working on new features can now understand the testing philosophy, locate relevant test patterns, and maintain consistency with existing test practices.
+**Impact:** This change affects 5 test modules that validate Shannon card builders and GitHub integration card outputs. The change is backward-compatible and ensures cards render correctly in all Teams clients.
 
 # Component Diagram
 
 ```mermaid
 graph TB
+    subgraph "Test Organization"
+        AGENT_TESTS[Agent Tests<br/>drucker, gantt, hemingway]
+        TOOL_TESTS[Tool Tests<br/>jira, confluence, github]
+        CORE_TESTS[Core Utility Tests<br/>queries, tickets, reporting]
+        INTEGRATION_TESTS[Integration Tests<br/>mcp_server, shannon]
+        FIXTURE_TESTS[Test Fixtures<br/>conftest.py]
+    end
+    
     subgraph "Test Infrastructure"
-        conftest[conftest.py<br/>Shared Fixtures]
-        smoke[test_smoke.py<br/>Import Validation]
+        CONFTEST[conftest.py<br/>Shared Fixtures]
+        MOCK_FACTORIES[Mock Factories<br/>issue_factory, fake_response]
+        MONKEYPATCH[Monkeypatch Utilities<br/>_patch_common, _silence_cli]
     end
     
-    subgraph "Core Module Tests"
-        jira_utils[test_jira_utils_char.py<br/>Jira Integration]
-        confluence[test_confluence_utils_char.py<br/>Confluence Integration]
-        excel[test_excel_utils_char.py<br/>Excel Operations]
-        core_tests[test_core_*.py<br/>Queries, Reporting, Tickets]
+    subgraph "Validation Patterns"
+        CHAR_TESTS[Characterization Tests<br/>*_char.py]
+        COVERAGE_TESTS[Coverage Tests<br/>*_coverage.py]
+        SMOKE_TESTS[Smoke Tests<br/>test_smoke.py]
     end
     
-    subgraph "Agent Tests"
-        gantt[test_gantt_agent_char.py<br/>Planning Agent]
-        drucker[test_drucker_agent_char.py<br/>Hygiene Agent]
-        hemingway[test_hemingway_agent_char.py<br/>Documentation Agent]
-        base_agents[test_agents_char.py<br/>Base Agent Framework]
-    end
+    AGENT_TESTS --> CONFTEST
+    TOOL_TESTS --> CONFTEST
+    CORE_TESTS --> CONFTEST
+    INTEGRATION_TESTS --> CONFTEST
     
-    subgraph "Tool Tests"
-        jira_tools[test_jira_tools_char.py<br/>Jira Tool Wrappers]
-        github_tools[test_github_tools_char.py<br/>GitHub Tool Wrappers]
-        confluence_tools[test_confluence_tools_char.py<br/>Confluence Tool Wrappers]
-        file_tools[test_file_tools_char.py<br/>File Operations]
-    end
+    CONFTEST --> MOCK_FACTORIES
+    CONFTEST --> MONKEYPATCH
     
-    subgraph "Integration Tests"
-        mcp[test_mcp_server_*.py<br/>MCP Server Tools]
-        shannon[test_shannon_*.py<br/>Teams Bot Service]
-        github_int[test_github_integration_char.py<br/>GitHub Pipeline]
-    end
-    
-    conftest --> core_tests
-    conftest --> agent_tests
-    conftest --> tool_tests
-    conftest --> integration_tests
-    
-    core_tests --> jira_utils
-    core_tests --> confluence
-    core_tests --> excel
-    
-    agent_tests --> gantt
-    agent_tests --> drucker
-    agent_tests --> hemingway
-    agent_tests --> base_agents
-    
-    tool_tests --> jira_tools
-    tool_tests --> github_tools
-    tool_tests --> confluence_tools
-    tool_tests --> file_tools
-    
-    integration_tests --> mcp
-    integration_tests --> shannon
-    integration_tests --> github_int
+    CHAR_TESTS --> AGENT_TESTS
+    CHAR_TESTS --> TOOL_TESTS
+    COVERAGE_TESTS --> CORE_TESTS
+    SMOKE_TESTS --> INTEGRATION_TESTS
 ```
 
 # Key Flows
 
-## Flow 1: Characterization Test Execution
-
-**Purpose:** Execute a characterization test that validates actual code behavior without live API calls.
+## Flow 1: Agent Characterization Test Execution
 
 ```mermaid
 sequenceDiagram
-    participant Test as Test Function
-    participant Fixture as Pytest Fixture
-    participant Mock as Monkeypatch/Mock
-    participant SUT as System Under Test
-    participant Assert as Assertion
-
-    Test->>Fixture: Request fixture (e.g., mock_jira)
-    Fixture->>Mock: Create fake objects
-    Mock-->>Fixture: Return mocked dependencies
-    Fixture-->>Test: Provide test context
+    participant Test as test_drucker_agent_char.py
+    participant Fixture as conftest.py
+    participant Agent as DruckerCoordinatorAgent
+    participant Store as DruckerReportStore
+    participant Mock as Monkeypatched Dependencies
     
-    Test->>Mock: Configure behavior
-    Mock-->>Test: Ready
-    
-    Test->>SUT: Call function with test data
-    SUT->>Mock: Access mocked dependency
-    Mock-->>SUT: Return fake response
-    SUT-->>Test: Return result
-    
-    Test->>Assert: Validate result structure
-    Test->>Assert: Validate result content
-    Test->>Assert: Validate mock interactions
-    Assert-->>Test: Pass/Fail
+    Test->>Fixture: Request fake_issue_resource_factory
+    Fixture-->>Test: Return factory function
+    Test->>Mock: Patch jira_utils.get_connection
+    Test->>Mock: Patch search_tickets tool
+    Test->>Agent: Initialize with project_key='STL'
+    Agent->>Mock: Call search_tickets (mocked)
+    Mock-->>Agent: Return fake issue list
+    Test->>Agent: Call analyze_project_hygiene()
+    Agent->>Agent: Build DruckerHygieneReport
+    Agent->>Store: Save report (mocked)
+    Store-->>Agent: Return storage metadata
+    Agent-->>Test: Return report + session
+    Test->>Test: Assert report.summary['finding_count']
+    Test->>Test: Assert session.items[0].action
 ```
 
-**Description:** Each characterization test follows a strict pattern: (1) Set up fake dependencies using fixtures and monkeypatch, (2) Call the system under test with known inputs, (3) Assert on the actual behavior observed, (4) Verify mock interactions to ensure the code path was exercised. This pattern ensures tests document what the code actually does rather than what it should do.
+**Description:** This flow demonstrates the standard pattern for agent characterization tests. The test uses fixtures from `conftest.py` to create fake Jira issues, monkeypatches all external dependencies (Jira API, LLM calls, file I/O), invokes the agent's core analysis method, and validates the structured output. The pattern ensures zero network calls while exercising the full agent logic path.
 
-## Flow 2: Agent Test Execution
-
-**Purpose:** Validate agent behavior including tool orchestration and state management.
+## Flow 2: Tool Wrapper Validation
 
 ```mermaid
 sequenceDiagram
-    participant Test as Agent Test
-    participant Agent as Agent Class
-    participant Tools as Tool Functions
-    participant Store as State Store
-    participant Review as Review Agent
+    participant Test as test_jira_tools_char.py
+    participant Tool as jira_tools.get_ticket()
+    participant Utils as jira_utils (mocked)
+    participant Result as ToolResult
     
-    Test->>Agent: Create agent instance
-    Agent->>Store: Initialize state
-    Store-->>Agent: Ready
-    
-    Test->>Agent: Call agent.run(request)
-    Agent->>Tools: Execute tool 1
-    Tools-->>Agent: ToolResult
-    Agent->>Tools: Execute tool 2
-    Tools-->>Agent: ToolResult
-    
-    Agent->>Review: Create review session
-    Review-->>Agent: ReviewSession
-    
-    Agent->>Store: Persist results
-    Store-->>Agent: Storage metadata
-    
-    Agent-->>Test: AgentResponse
-    
-    Test->>Test: Assert response.success
-    Test->>Test: Assert metadata structure
-    Test->>Test: Assert tool call sequence
-    Test->>Test: Assert state persistence
+    Test->>Test: Monkeypatch jira_utils.get_connection
+    Test->>Test: Monkeypatch jira.issue() to return fake
+    Test->>Tool: Call get_ticket('STL-800', include_comments=True)
+    Tool->>Utils: get_connection() [mocked]
+    Utils-->>Tool: Return mock Jira client
+    Tool->>Utils: jira.issue('STL-800') [mocked]
+    Utils-->>Tool: Return fake issue resource
+    Tool->>Tool: Normalize issue to dict
+    Tool->>Result: Build ToolResult.success(data=issue_dict)
+    Result-->>Test: Return ToolResult
+    Test->>Test: Assert result.is_success
+    Test->>Test: Assert result.data['comments'][0]['body']
 ```
 
-**Description:** Agent tests validate the complete agent lifecycle: initialization, tool orchestration, review session creation, and state persistence. Tests use monkeypatched tool functions that return canned `ToolResult` objects, allowing validation of agent logic without external dependencies. The test asserts on the agent's response structure, metadata content, tool call sequence, and state store interactions.
+**Description:** Tool wrapper tests validate the thin adapter layer between agent code and utility modules. The test monkeypatches the underlying utility function (`jira_utils.get_connection`, `jira.issue`), calls the tool wrapper (`get_ticket`), and verifies that the wrapper correctly transforms the utility output into a `ToolResult` with proper success/failure status and metadata. This pattern is repeated across all 11 tool collections.
 
-## Flow 3: Integration Test Execution
-
-**Purpose:** Validate end-to-end flows across multiple components.
+## Flow 3: Shannon Card Builder Validation
 
 ```mermaid
 sequenceDiagram
-    participant Test as Integration Test
-    participant API as API Endpoint
-    participant Agent as Agent
-    participant Utils as Utility Module
-    participant Card as Card Builder
+    participant Test as test_shannon_pr_cards_char.py
+    participant Builder as build_pr_hygiene_card()
+    participant Card as Adaptive Card JSON
+    participant Validator as _card_schema_ok()
     
-    Test->>API: POST /v1/endpoint
-    API->>Agent: Create agent instance
-    Agent->>Utils: Call utility function
-    Utils-->>Agent: Normalized data
-    
-    Agent->>Agent: Process data
-    Agent-->>API: Result dict
-    
-    API->>Card: Build card from result
-    Card-->>API: Adaptive Card JSON
-    
-    API-->>Test: HTTP 200 + JSON response
-    
-    Test->>Test: Assert response.ok
-    Test->>Test: Assert data structure
-    Test->>Test: Assert card schema
-    Test->>Test: Validate end-to-end flow
+    Test->>Test: Create fake hygiene report dict
+    Test->>Builder: Call build_pr_hygiene_card(report)
+    Builder->>Builder: Extract repo, total_open_prs, findings
+    Builder->>Card: Build card['$schema'] = 'http://...'
+    Builder->>Card: Set card['version'] = '1.4'
+    Builder->>Card: Append title TextBlock
+    Builder->>Card: Append FactSet with repo/counts
+    Builder->>Card: Append findings sections
+    Card-->>Builder: Return complete card dict
+    Builder-->>Test: Return card
+    Test->>Validator: Call _card_schema_ok(card)
+    Validator->>Validator: Assert card['version'] == '1.4'
+    Validator->>Validator: Assert card['type'] == 'AdaptiveCard'
+    Validator-->>Test: Validation passed
+    Test->>Test: Assert fact values and body texts
 ```
 
-**Description:** Integration tests validate complete flows from API endpoint through agent execution to card generation. These tests use the actual API client (TestClient) and stub only the lowest-level dependencies (e.g., Jira/GitHub API calls). The test validates the HTTP response, data structure, and card schema, ensuring all components integrate correctly.
+**Description:** Shannon card builder tests validate the Adaptive Card JSON generation for Microsoft Teams notifications. The test creates a fake data payload (e.g., GitHub PR hygiene report), calls the card builder function, and validates the resulting JSON structure against the Adaptive Card schema. The `_card_schema_ok()` helper ensures all cards have the correct envelope (`$schema`, `type`, `version`), while subsequent assertions verify fact sets, text blocks, and data-driven content rendering.
 
 # Data Model
 
-## Test Fixture Data Structures
+## Core Test Fixtures (conftest.py)
 
-The test suite uses several core data structures provided by fixtures in `conftest.py`:
-
-### FakeResponse
 ```python
-@dataclass
-class FakeResponse:
-    status_code: int = 200
-    payload: Optional[Dict[str, Any]] = None
-    text: str = ""
-    headers: Optional[Dict[str, str]] = None
-```
-Used to simulate HTTP responses from external APIs (Jira, Confluence, GitHub).
+# Fake Jira issue resource factory
+@pytest.fixture
+def fake_issue_resource_factory():
+    """
+    Returns a factory function that creates SimpleNamespace objects
+    mimicking jira.Issue resources with configurable fields.
+    """
+    def _make(key='STL-1', summary='Test', status='Open', ...):
+        return SimpleNamespace(
+            key=key,
+            raw={'fields': {...}},
+            fields=SimpleNamespace(
+                summary=summary,
+                status=SimpleNamespace(name=status),
+                ...
+            )
+        )
+    return _make
 
-### FakeIssueResource
-```python
-class FakeIssueResource:
-    def __init__(self, raw: Dict[str, Any]):
-        self.raw = raw
-        self.key = raw.get("key", "")
-        self.updated_fields: List[Dict[str, Any]] = []
+# Fake HTTP response factory
+@pytest.fixture
+def fake_response_factory():
+    """
+    Returns a factory function that creates FakeResponse objects
+    with configurable status codes and JSON payloads.
+    """
+    def _make(status_code=200, payload=None, text=''):
+        return FakeResponse(status_code, payload, text)
+    return _make
 ```
-Simulates Jira issue resource objects with update tracking.
-
-### Mock Jira State
-The `mock_jira` fixture maintains internal state:
-- `_issue_store`: Dict mapping issue keys to raw issue data
-- `_project`: Project metadata
-- `_versions`: List of release versions
-- `_statuses`: List of workflow statuses
 
 ## Test Naming Conventions
 
-All test modules follow the `test_<module>_char.py` naming pattern where `_char` indicates "characterization test". This distinguishes them from traditional unit tests and signals that they document actual behavior.
+| Pattern | Purpose | Example |
+|---------|---------|---------|
+| `test_<module>_char.py` | Characterization tests for a module | `test_jira_utils_char.py` |
+| `test_<module>_coverage.py` | Gap-filling tests for edge cases | `test_jira_utils_coverage.py` |
+| `test_<agent>_agent_char.py` | Agent behavior validation | `test_drucker_agent_char.py` |
+| `test_<agent>_tools_char.py` | Agent tool wrapper validation | `test_drucker_tools_char.py` |
+| `test_<agent>_api_char.py` | Agent REST API endpoint validation | `test_drucker_api_char.py` |
+| `test_<integration>_char.py` | Integration layer validation | `test_mcp_server_char.py` |
 
-Test function names follow the pattern:
-- `test_<function_name>_<scenario>` for single-function tests
-- `test_<component>_<behavior>` for component-level tests
-- `test_<flow>_<outcome>` for integration tests
+## Monkeypatch Patterns
+
+```python
+# Standard pattern for silencing CLI output
+def _patch_common(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(jira_utils, 'output', lambda *a, **kw: None)
+    monkeypatch.setattr(jira_utils, 'show_jql', lambda _jql: None)
+
+# Standard pattern for mocking authentication
+def _mock_auth(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        jira_utils,
+        'get_jira_credentials',
+        lambda: ('engineer@cornelisnetworks.com', 'token-123'),
+    )
+
+# Standard pattern for injecting fake modules
+def _inject_github_utils(monkeypatch, **attrs):
+    fake_module = types.ModuleType('github_utils')
+    for name, fn in attrs.items():
+        setattr(fake_module, name, fn)
+    monkeypatch.setitem(sys.modules, 'github_utils', fake_module)
+```
 
 # Dependencies
 
 | Dependency | Purpose | Version |
 |------------|---------|---------|
-| pytest | Test framework and fixture management | 8.3.4 |
-| pytest-asyncio | Async test support for MCP server tests | 0.24.0 |
-| openpyxl | Excel file creation for test fixtures | 3.1.5 |
-| unittest.mock | Mock object creation (stdlib) | — |
-| types.SimpleNamespace | Lightweight fake object creation (stdlib) | — |
+| `pytest` | Test framework and fixture management | 8.3.4 |
+| `pytest-asyncio` | Async test support for MCP server tests | 0.24.0 |
+| `openpyxl` | Excel file validation in `test_excel_utils_char.py` | 3.1.5 |
+| `conftest.py` | Shared fixtures and mock factories | N/A (local) |
+| `agents/*` | Agent modules under test | N/A (local) |
+| `tools/*` | Tool wrapper modules under test | N/A (local) |
+| `core/*` | Core utility modules under test | N/A (local) |
+| `shannon/*` | Shannon service modules under test | N/A (local) |
 
 # Configuration
 
 ## Environment Variables
 
-Tests use environment variable mocking via `monkeypatch.setenv()`:
-
-- `JIRA_EMAIL`: Jira authentication email (mocked in tests)
-- `JIRA_API_TOKEN`: Jira API token (mocked in tests)
-- `JIRA_SERVICE_EMAIL`: Service account email (mocked in tests)
-- `JIRA_SERVICE_API_TOKEN`: Service account token (mocked in tests)
-- `GITHUB_TOKEN`: GitHub API token (mocked in tests)
-- `DRY_RUN`: Dry-run mode flag (set to 'true' or 'false' in tests)
-- `DRUCKER_REPORT_DIR`: Drucker report storage directory (set to tmp_path in tests)
-- `GANTT_SNAPSHOT_DIR`: Gantt snapshot storage directory (set to tmp_path in tests)
-- `HEMINGWAY_DOC_DIR`: Hemingway documentation storage directory (set to tmp_path in tests)
+| Variable | Purpose | Default | Required |
+|----------|---------|---------|----------|
+| `DRY_RUN` | Controls mutation behavior in tests | `'1'` (set by `conftest.py`) | No |
+| `JIRA_EMAIL` | Fake Jira credentials for tests | `'engineer@cornelisnetworks.com'` | No |
+| `JIRA_API_TOKEN` | Fake Jira token for tests | `'token-123'` | No |
+| `GITHUB_TOKEN` | Fake GitHub token for tests | `'ghp_test_token_123'` | No |
 
 ## Test Execution
 
-Run all tests:
 ```bash
-pytest tests/
+# Run all tests
+pytest
+
+# Run specific test module
+pytest tests/test_drucker_agent_char.py
+
+# Run tests matching a pattern
+pytest -k "test_drucker"
+
+# Run with coverage report
+pytest --cov=agents --cov=tools --cov=core
+
+# Run with verbose output
+pytest -v
+
+# Run only characterization tests
+pytest tests/*_char.py
 ```
 
-Run specific test module:
-```bash
-pytest tests/test_jira_utils_char.py
-```
+## Pytest Configuration (pyproject.toml)
 
-Run with coverage:
-```bash
-pytest --cov=jira_utils --cov=agents --cov=tools tests/
-```
-
-Run only smoke tests:
-```bash
-pytest tests/test_smoke.py
+```toml
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--tb=short",
+    "--disable-warnings",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
 ```
 
 # Error Handling
 
 ## Test Isolation
 
-Each test is isolated through:
-1. **Autouse fixtures**: `reset_jira_utils_state`, `reset_github_utils_state`, `_clean_dry_run_env` run before every test
-2. **Monkeypatch cleanup**: All environment variable and module patches are automatically cleaned up after each test
-3. **Temporary directories**: `tmp_path` fixture provides isolated filesystem for each test
+All tests use `pytest` fixtures with automatic cleanup to ensure test isolation:
 
-## Common Test Patterns
-
-### Pattern 1: Monkeypatching External Dependencies
 ```python
-def test_function_with_external_call(monkeypatch):
-    monkeypatch.setattr('module.external_function', lambda: 'fake_result')
-    result = module.function_under_test()
-    assert result == 'expected_based_on_fake'
+@pytest.fixture(autouse=True)
+def reset_jira_utils_state():
+    """Reset jira_utils module state before and after each test."""
+    import jira_utils
+    jira_utils.reset_connection()
+    jira_utils._quiet_mode = False
+    yield
+    jira_utils.reset_connection()
+    jira_utils._quiet_mode = False
 ```
 
-### Pattern 2: Using Fake Objects
+## Monkeypatch Cleanup
+
+The `monkeypatch` fixture automatically restores all patched attributes and environment variables after each test, preventing state leakage between tests.
+
+## Exception Validation
+
+Tests validate exception handling using `pytest.raises`:
+
 ```python
-def test_function_with_complex_object(fake_issue_resource_factory):
-    issue = fake_issue_resource_factory(key='STL-1', summary='Test')
-    result = process_issue(issue)
-    assert result['key'] == 'STL-1'
+def test_get_jira_credentials_missing_token(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv('JIRA_EMAIL', 'engineer@cornelisnetworks.com')
+    monkeypatch.delenv('JIRA_API_TOKEN', raising=False)
+
+    with pytest.raises(jira_utils.JiraCredentialsError):
+        jira_utils.get_jira_credentials()
 ```
 
-### Pattern 3: Capturing Output
+## Async Test Error Handling
+
+Async tests use `pytest.mark.asyncio` and validate error responses:
+
 ```python
-def test_function_output(capture_stdout):
-    with capture_stdout() as out:
-        function_that_prints()
-    assert 'expected text' in out.getvalue()
+@pytest.mark.asyncio
+async def test_get_ticket_not_found(import_mcp_server, monkeypatch):
+    jira = MagicMock()
+    jira.issue.side_effect = Exception('Issue does not exist')
+    monkeypatch.setattr(import_mcp_server.jira_utils, 'get_connection', lambda: jira)
+
+    result = await import_mcp_server.get_ticket('STL-999999')
+    data = json.loads(result[0].text)
+
+    assert 'not found' in data['error'].lower()
 ```
-
-## Error Scenarios Tested
-
-The test suite validates error handling for:
-- Missing credentials (`test_get_jira_credentials_missing_token`)
-- Invalid repository names (`test_list_repos_unknown_org_raises`)
-- API rate limiting (`test_get_tickets_handles_rate_limit_pagination_and_limit`)
-- Connection failures (`test_user_resolver_handles_connection_error`)
-- Invalid input data (`test_pr_review_validates_repo_format`)
-- Missing required fields (`test_confluence_publish_missing_content_returns_400`)
 
 # Known Limitations / Technical Debt
 
-## Coverage Gaps
+## Test Coverage Gaps
 
-1. **CLI Entry Points**: Main functions in `jira_utils.py`, `confluence_utils.py`, and `github_utils.py` have minimal test coverage. This matches the existing pattern where CLI tests are considered lower priority than API/library tests.
+1. **`config/env_loader.py`**: Zero test coverage on a module wired into 3 files (Drucker API, Gantt API, settings). Needs 4 tests covering three-tier resolution (explicit path, config/env/ directory, .env fallback).
 
-2. **Display Helpers**: Functions like `print_pr_table_header()`, `print_pr_table_row()`, and `print_pr_table_footer()` in `github_utils.py` are untested. These are low-risk formatting functions.
+2. **`github_utils.get_pr_review_requests()`**: Missing tests at both `github_utils` and `tools/github_tools` layers. This function returns `(users, teams)` and should be tested with monkeypatched repo/PR returning users+teams.
 
-3. **Integration Tests**: While each layer is individually tested, there are few true end-to-end tests that exercise the complete pipeline from API endpoint through agent execution to card generation without any mocking.
+3. **CLI `main()` functions**: Not tested in `jira_utils`, `confluence_utils`, `github_utils`. This matches existing pattern where CLI tests are minimal, but integration smoke tests would improve confidence.
 
-4. **`config/env_loader.py`**: Zero test coverage on environment variable loading logic. This is flagged as P2 priority in the coverage analysis document.
+4. **No integration tests**: All tests are unit-level with mocked dependencies. No test validates the full Drucker→github_utils→Shannon card pipeline end-to-end.
 
-5. **`get_pr_review_requests()`**: Missing tests at both `github_utils` and `tools/github_tools` layers. Flagged as P1 priority.
+## Hardcoded Test Data
 
-## Test Maintenance Issues
+- **Fake timestamps**: Tests use hardcoded dates like `'2026-03-01T00:00:00.000+0000'` which may cause confusion when tests are run in different years.
+- **Fake credentials**: Tests use `'engineer@cornelisnetworks.com'` and `'token-123'` which are not configurable.
+- **Fake URLs**: Tests use `'https://example.test'` and `'https://cornelisnetworks.atlassian.net'` which are not parameterized.
 
-1. **Fixture Complexity**: The `mock_jira` fixture in `conftest.py` has grown to 100+ lines with complex state management. Consider splitting into smaller, focused fixtures.
+## Adaptive Card Version Inconsistency (RESOLVED)
 
-2. **Monkeypatch Overuse**: Some tests have 10+ monkeypatch calls, making them brittle and hard to understand. Consider using fixture composition instead.
+**Status**: Fixed in recent PR diff.
 
-3. **Magic Values**: Many tests use hardcoded strings like 'STL-1', '12.1.0', 'acct-jdoe' without clear documentation of their significance.
+**Before**: Tests validated against Adaptive Card schema version `1.5` in 5 test modules:
+- `test_github_integration_char.py`
+- `test_github_phase5_integration_char.py`
+- `test_hemingway_confluence_publish_char.py`
+- `test_hemingway_shannon_cards_char.py`
+- `test_shannon_pr_cards_char.py`
 
-4. **Test Data Duplication**: Similar fake data structures are recreated in multiple test modules. Consider centralizing common test data in `conftest.py`.
+**After**: All tests now validate against version `1.4` to align with Microsoft Teams renderer compatibility.
 
-## Anti-patterns Detected
+**Impact**: This was a low-risk change affecting only test assertions, not production card generation code.
 
-1. **God Test Modules**: `test_jira_utils_coverage.py` is 1000+ lines with 40+ test functions. Consider splitting by functional area.
+## Missing Test Utilities
 
-2. **Missing Negative Tests**: Many modules test only happy paths. For example, `test_gantt_components_char.py` lacks tests for invalid input data.
+- **No shared card validation helpers**: Each test module defines its own `_card_schema_ok()`, `_find_fact_set()`, `_fact_value()`, and `_body_texts()` helpers. These should be extracted to a shared `tests/card_helpers.py` module.
 
-3. **Implicit Dependencies**: Some tests depend on the order of execution or shared state. All tests should be independently executable.
+- **No shared fake data builders**: Each test module defines its own `_make_issue()`, `_make_pr()`, `_make_review()` helpers. These should be extracted to `conftest.py` or a shared `tests/factories.py` module.
 
-4. **Incomplete Mocking**: Some tests mock only part of a dependency chain, leading to potential test flakiness if the unmocked portion changes.
+## Test Execution Performance
 
-## Recommendations
+- **No test parallelization**: Tests run sequentially. Adding `pytest-xdist` would enable parallel execution with `pytest -n auto`.
+- **No test categorization**: Tests are not marked as `unit`, `integration`, or `slow`, making it difficult to run subsets during development.
 
-1. **P1**: Add missing tests for `get_pr_review_requests()` at both utility and tool layers
-2. **P2**: Add test coverage for `config/env_loader.py` (4 tests recommended)
-3. **P3**: Split large test modules (>500 lines) into focused test files
-4. **P3**: Add integration smoke tests for critical user flows
-5. **P4**: Refactor `mock_jira` fixture into smaller, composable fixtures
-6. **P4**: Document magic values and test data patterns in `conftest.py`
+## Documentation Gaps
+
+- **No test writing guide**: New contributors must infer patterns from existing tests.
+- **No test coverage report**: The repository does not generate or publish test coverage metrics.
+- **No test failure triage guide**: When tests fail, there is no documented process for determining whether the failure indicates a regression or a test maintenance issue.
 
 <!-- End Documentation Agent generated content -->
