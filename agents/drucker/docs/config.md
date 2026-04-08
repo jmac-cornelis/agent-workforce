@@ -3,231 +3,337 @@
 ```yaml
 ---
 title: "As-Built: Drucker Agent Configuration"
-date: "2026-04-06"
+date: "2026-04-08"
 status: "draft"
 ---
 ```
 
 ## Module Overview
 
-The Drucker agent configuration module defines three YAML configuration files that control the behavior of a project management hygiene monitoring system. The module configures validation rules for Jira issue types (`monitor.yaml`), polling job schedules and parameters (`polling.yaml`), and GitHub pull request reminder settings (`pr_reminders.yaml`). These configurations enable automated scanning of Jira tickets and GitHub repositories across the Cornelis Networks organization, with support for notifications, learning-based field suggestions, and stale work detection.
+The Drucker agent configuration module consists of three YAML configuration files that control a project management hygiene monitoring system for Cornelis Networks. The module defines validation rules for Jira issue types (`monitor.yaml`), polling job schedules and scan parameters (`polling.yaml`), and GitHub pull request reminder policies (`pr_reminders.yaml`). Together, these configurations enable automated scanning of Jira tickets and GitHub repositories, with support for notifications, machine learning-based field suggestions, and detection of stale work items.
 
 ## What Changed
 
-**Before:** The `polling.yaml` configuration had `notify_shannon: false` as the default, and the `github-pr-reminders` job was disabled. The job definitions lacked explicit `notify_shannon` overrides and repository-specific reminder schedules.
+**Before:** The `polling.yaml` configuration included the test repository `jmac-cornelis/agent-workforce` and `cornelisnetworks/opa-psm3` in the default GitHub repository list. The `github-hygiene-scan` and `github-extended-scan` jobs were disabled (`enabled: false`). The `github-pr-reminders` job included the test repository in its monitored repos list.
 
-**After:** The default `notify_shannon` is now `true`, enabling notifications by default for all jobs. Each job definition now explicitly includes `notify_shannon: true`. The `github-pr-reminders` job is enabled with a specific repository list (`jmac-cornelis/agent-workforce`) and a custom reminder schedule of `[3, 7, 14]` days.
+**After:** The test repository `jmac-cornelis/agent-workforce` and `cornelisnetworks/opa-psm3` have been removed from the default `github_repos` list in `polling.yaml`. The `github-hygiene-scan` and `github-extended-scan` jobs are now enabled (`enabled: true`). The `github-pr-reminders` job no longer includes the test repository in its monitored repos list. The `github-pr-activity` job also no longer includes the test repository.
 
-**Impact:** All polling jobs now send notifications to Shannon by default. The PR reminder system is active and will send reminders for the specified repository at 3, 7, and 14 days. Teams using the Drucker agent will receive automated notifications for hygiene issues and stale PRs.
+**Impact:** The Drucker agent now actively monitors production repositories only, excluding test repositories from hygiene scans and PR activity monitoring. GitHub hygiene scans (both basic and extended) are now operational, detecting stale PRs, missing reviews, naming issues, merge conflicts, CI failures, and stale branches across all production repositories. Teams will receive automated notifications for these hygiene issues.
 
 ## Component Diagram
 
 ```mermaid
 graph TB
-    Monitor[monitor.yaml<br/>Validation Rules]
-    Polling[polling.yaml<br/>Job Scheduler]
-    PRReminders[pr_reminders.yaml<br/>PR Reminder Config]
+    subgraph "Drucker Configuration Module"
+        Monitor[monitor.yaml<br/>Validation Rules]
+        Polling[polling.yaml<br/>Job Definitions]
+        PRReminders[pr_reminders.yaml<br/>Reminder Policies]
+    end
     
-    Monitor --> ValidationEngine[Validation Engine]
-    Monitor --> LearningEngine[Learning Engine]
+    subgraph "External Systems"
+        Jira[Jira API]
+        GitHub[GitHub API]
+        Teams[Microsoft Teams]
+    end
     
-    Polling --> JiraScanner[Jira Scanner]
-    Polling --> GitHubScanner[GitHub Scanner]
-    Polling --> NotificationService[Notification Service]
+    subgraph "Drucker Agent Runtime"
+        Scanner[Hygiene Scanner]
+        Learner[ML Learning Engine]
+        Notifier[Notification Service]
+    end
     
-    PRReminders --> PRReminderService[PR Reminder Service]
-    PRReminders --> NotificationService
+    Monitor --> Scanner
+    Polling --> Scanner
+    PRReminders --> Scanner
     
-    ValidationEngine --> JiraScanner
-    LearningEngine --> JiraScanner
+    Scanner --> Jira
+    Scanner --> GitHub
+    Scanner --> Notifier
+    
+    Monitor --> Learner
+    Notifier --> Teams
 ```
 
 ## Key Flows
 
-### Flow 1: Jira Hygiene Scan Execution
+### Flow 1: Jira Hygiene Validation
+
+This flow describes how the Drucker agent validates Jira tickets against configured rules and optionally learns from historical patterns.
 
 ```mermaid
 sequenceDiagram
-    participant Scheduler
+    participant Scanner as Hygiene Scanner
+    participant Config as monitor.yaml
+    participant Jira as Jira API
+    participant Learner as ML Learning Engine
+    participant Notifier as Notification Service
+    
+    Scanner->>Config: Load validation_rules
+    Scanner->>Jira: Query tickets (project, limit, filters)
+    Jira-->>Scanner: Return ticket list
+    
+    loop For each ticket
+        Scanner->>Scanner: Check required fields
+        Scanner->>Scanner: Check warn fields
+        
+        alt Learning enabled
+            Scanner->>Learner: Request field suggestions
+            Learner-->>Scanner: Return suggestions (confidence >= threshold)
+        end
+        
+        alt Validation failures found
+            Scanner->>Notifier: Send hygiene alert
+        end
+    end
+    
+    Scanner->>Learner: Update observations (if enabled)
+```
+
+**Description:** The scanner loads validation rules from `monitor.yaml`, queries Jira for tickets matching the configured project and filters, then validates each ticket against issue-type-specific required and warning fields. If learning is enabled (`learning.enabled: true`), the ML engine provides field suggestions based on historical patterns when confidence exceeds the configured thresholds (`auto_fill: 0.90`, `suggest: 0.50`). Validation failures trigger notifications via the notification service.
+
+### Flow 2: GitHub PR Hygiene Scan
+
+This flow describes how the Drucker agent scans GitHub repositories for stale pull requests and missing reviews.
+
+```mermaid
+sequenceDiagram
+    participant Scanner as Hygiene Scanner
+    participant Config as polling.yaml
+    participant GitHub as GitHub API
+    participant Notifier as Notification Service
+    
+    Scanner->>Config: Load job: github-hygiene-scan
+    Scanner->>Config: Get github_repos, github_stale_days
+    
+    loop For each repository
+        Scanner->>GitHub: Query open PRs
+        GitHub-->>Scanner: Return PR list
+        
+        loop For each PR
+            Scanner->>Scanner: Calculate age (days)
+            
+            alt Age > github_stale_days
+                Scanner->>Notifier: Flag as stale PR
+            end
+            
+            Scanner->>GitHub: Get review status
+            GitHub-->>Scanner: Return reviews
+            
+            alt No reviews or approvals
+                Scanner->>Notifier: Flag missing reviews
+            end
+        end
+    end
+    
+    Scanner->>Notifier: Send consolidated hygiene report
+```
+
+**Description:** The scanner loads the `github-hygiene-scan` job configuration from `polling.yaml`, which specifies `github_stale_days: 5` and a list of 22 production repositories. For each repository, it queries the GitHub API for open PRs, calculates their age, and flags PRs older than 5 days as stale. It also checks review status and flags PRs with missing reviews. The notifier sends a consolidated hygiene report to the configured channels (Shannon and/or Teams).
+
+### Flow 3: GitHub PR Reminder Delivery
+
+This flow describes how the Drucker agent sends periodic reminders to PR authors and reviewers based on configured schedules.
+
+```mermaid
+sequenceDiagram
+    participant Scanner as Hygiene Scanner
     participant PollingConfig as polling.yaml
-    participant MonitorConfig as monitor.yaml
-    participant JiraScanner
-    participant ValidationEngine
-    participant NotificationService
+    participant ReminderConfig as pr_reminders.yaml
+    participant GitHub as GitHub API
+    participant Teams as Microsoft Teams DM
     
-    Scheduler->>PollingConfig: Load job definitions
-    PollingConfig-->>Scheduler: hygiene-scan job config
-    Scheduler->>MonitorConfig: Load validation rules
-    MonitorConfig-->>Scheduler: Story/Bug/Task/Epic rules
-    Scheduler->>JiraScanner: Execute scan (recent_only=false)
-    JiraScanner->>ValidationEngine: Validate issues against rules
-    ValidationEngine-->>JiraScanner: Validation results
-    JiraScanner->>NotificationService: Send results (notify_shannon=true)
-    NotificationService-->>Scheduler: Notification sent
+    Scanner->>PollingConfig: Load job: github-pr-reminders
+    Scanner->>ReminderConfig: Load reminder policies
+    
+    loop For each repository in repos
+        Scanner->>GitHub: Query open PRs
+        GitHub-->>Scanner: Return PR list
+        
+        loop For each PR
+            Scanner->>Scanner: Calculate age (days)
+            Scanner->>ReminderConfig: Get reminder_days for repo
+            
+            alt Age matches reminder_days
+                Scanner->>GitHub: Get author and reviewers
+                GitHub-->>Scanner: Return user list
+                
+                Scanner->>Teams: Send DM to author
+                Scanner->>Teams: Send DM to reviewers
+            end
+        end
+    end
 ```
 
-The `hygiene-scan` job performs a full-project scan of Jira tickets. It loads validation rules from `monitor.yaml` (required and warning fields for each issue type) and applies them to all active issues. Results are sent to the notification service when `notify_shannon: true`.
-
-### Flow 2: GitHub PR Reminder Delivery
-
-```mermaid
-sequenceDiagram
-    participant Scheduler
-    participant PollingConfig as polling.yaml
-    participant PRConfig as pr_reminders.yaml
-    participant GitHubScanner
-    participant PRReminderService
-    participant TeamsAPI
-    
-    Scheduler->>PollingConfig: Load github-pr-reminders job
-    PollingConfig-->>Scheduler: enabled=true, repos, reminder_schedule
-    Scheduler->>PRConfig: Load reminder defaults
-    PRConfig-->>Scheduler: reminder_days, notify, channels
-    Scheduler->>GitHubScanner: Scan repos for stale PRs
-    GitHubScanner-->>Scheduler: List of stale PRs
-    Scheduler->>PRReminderService: Process reminders (3, 7, 14 days)
-    PRReminderService->>TeamsAPI: Send DM to author/reviewers
-    TeamsAPI-->>PRReminderService: DM delivered
-```
-
-The `github-pr-reminders` job scans configured repositories for pull requests that have been open for 3, 7, or 14 days. It sends Teams direct messages to authors and reviewers based on the `reminder_schedule` defined in `polling.yaml` and the notification preferences in `pr_reminders.yaml`.
-
-### Flow 3: Learning-Based Field Suggestion
-
-```mermaid
-sequenceDiagram
-    participant JiraScanner
-    participant MonitorConfig as monitor.yaml
-    participant LearningEngine
-    participant ValidationEngine
-    participant NotificationService
-    
-    JiraScanner->>MonitorConfig: Load learning config
-    MonitorConfig-->>JiraScanner: enabled=true, min_observations=20
-    JiraScanner->>LearningEngine: Collect field patterns
-    LearningEngine->>LearningEngine: Build confidence scores
-    LearningEngine-->>JiraScanner: Suggestions (confidence >= 0.50)
-    JiraScanner->>ValidationEngine: Apply suggestions to new issues
-    ValidationEngine->>NotificationService: Report auto-filled fields (confidence >= 0.90)
-```
-
-When `learning.enabled: true` in `monitor.yaml`, the system observes field patterns across at least 20 issues. It builds confidence scores and suggests field values when confidence exceeds 0.50. Fields are auto-filled when confidence reaches 0.90, and all actions are logged to the notification service.
+**Description:** The scanner loads the `github-pr-reminders` job from `polling.yaml` and the reminder policies from `pr_reminders.yaml`. For each configured repository, it queries open PRs and calculates their age. When a PR's age matches one of the configured `reminder_days` (default: `[5, 8, 10, 15]`, or repo-specific overrides like `[3, 5, 8, 12]` for `jmac-cornelis/agent-workforce`), the scanner retrieves the PR author and reviewers from GitHub and sends direct messages via Microsoft Teams to both parties. The reminders include snooze options (`[2, 5, 7]` days) and merge method suggestions (`[squash, merge, rebase]`).
 
 ## Data Model
 
-### Monitor Configuration Schema
+### monitor.yaml Schema
 
 ```yaml
 project: string                    # Jira project key (empty = all projects)
-poll_interval_minutes: integer     # Polling frequency
+poll_interval_minutes: integer     # Polling frequency for validation checks
 
 validation_rules:
-  <IssueType>:                     # Story, Bug, Task, Epic
-    required: [string]             # Fields that must be present
-    warn: [string]                 # Fields that trigger warnings if missing
+  <IssueType>:                     # e.g., Story, Bug, Task, Epic
+    required: [string]             # Field names that must be populated
+    warn: [string]                 # Field names that should be populated (warnings only)
 
 learning:
   enabled: boolean                 # Enable ML-based field suggestions
-  min_observations: integer        # Minimum samples before suggesting
+  min_observations: integer        # Minimum data points before learning activates
   confidence_thresholds:
-    auto_fill: float              # Threshold for automatic field population
-    suggest: float                # Threshold for suggesting values
-    flag_only: float              # Threshold for flagging patterns
+    auto_fill: float               # Confidence threshold for automatic field population (0.0-1.0)
+    suggest: float                 # Confidence threshold for suggesting values (0.0-1.0)
+    flag_only: float               # Confidence threshold for flagging issues (0.0-1.0)
 ```
 
-### Polling Configuration Schema
+**Key Structures:**
+- `validation_rules`: Maps Jira issue types to field validation requirements. Currently defines rules for `Story`, `Bug`, `Task`, and `Epic` issue types.
+- `learning.confidence_thresholds`: Controls ML behavior at three levels: `auto_fill` (0.90) for automatic field population, `suggest` (0.50) for user suggestions, and `flag_only` (0.0) for issue flagging.
+
+### polling.yaml Schema
 
 ```yaml
 defaults:
-  project_key: string              # Default Jira project
-  limit: integer                   # Max issues per scan
-  include_done: boolean            # Include completed issues
-  stale_days: integer              # Days before marking stale
-  label_prefix: string             # Label prefix for tagging
-  persist: boolean                 # Save scan state
-  notify_shannon: boolean          # Send notifications
-  github_stale_days: integer       # Days before PR is stale
-  github_repos: [string]           # List of org/repo names
+  project_key: string              # Default Jira project key
+  limit: integer                   # Maximum tickets per query
+  include_done: boolean            # Include completed tickets in scans
+  stale_days: integer              # Days before a ticket is considered stale
+  label_prefix: string             # Prefix for Drucker-applied labels
+  persist: boolean                 # Persist scan results to storage
+  notify_shannon: boolean          # Send notifications to Shannon channel
+  github_stale_days: integer       # Days before a PR is considered stale
+  github_repos: [string]           # Default list of GitHub repositories to scan
 
 jobs:
   - job_id: string                 # Unique job identifier
-    description: string            # Human-readable description
-    scan_type: string              # jira | github | github-extended | github-pr-reminders
-    recent_only: boolean           # Scan only recent changes
-    enabled: boolean               # Job active flag
+    description: string            # Human-readable job description
+    scan_type: string              # Type of scan (jira, github, github-extended, etc.)
+    enabled: boolean               # Enable/disable the job
+    recent_only: boolean           # Scan only recent tickets (uses checkpoint state)
     notify_shannon: boolean        # Override default notification setting
-    repos: [string]                # Job-specific repo list
-    reminder_schedule: [integer]   # Days for PR reminders
+    interval_minutes: integer      # Polling interval for continuous jobs
+    github_stale_days: integer     # Override default stale threshold
+    branch_stale_days: integer     # Days before a branch is considered stale
+    github_repos: [string]         # Override default repository list
+    repos: [string]                # Repository list for specific jobs
+    reminder_schedule: [integer]   # Days for sending reminders
 ```
 
-### PR Reminders Configuration Schema
+**Key Structures:**
+- `defaults.github_repos`: List of 22 production repositories across the Cornelis Networks organization, including kernel drivers (`wfr-linux-devel`, `wfr-driver`), firmware tools (`opa400-FirmwareTools`), and infrastructure (`scm-jenkins-shared-library`).
+- `jobs`: Array of 7 job definitions including Jira hygiene scans, GitHub PR hygiene scans, PR reminders, bug ticket monitoring, and PR activity tracking.
+
+### pr_reminders.yaml Schema
 
 ```yaml
 defaults:
   reminder_days: [integer]         # Days after PR creation to send reminders
-  notify: [string]                 # author | reviewers
-  channels: [string]               # teams_dm | email
+  notify: [string]                 # Notification targets (author, reviewers)
+  channels: [string]               # Notification channels (teams_dm)
   snooze_options_days: [integer]   # Snooze duration options
-  merge_methods: [string]          # squash | merge | rebase
-  enabled: boolean                 # Global enable flag
+  merge_methods: [string]          # Suggested merge methods (squash, merge, rebase)
+  enabled: boolean                 # Enable/disable PR reminders globally
 
 repos:
-  - repo: string                   # org/repo name
+  - repo: string                   # Repository name (org/repo format)
     reminder_days: [integer]       # Override default reminder schedule
 ```
+
+**Key Structures:**
+- `defaults.reminder_days`: Default reminder schedule of `[5, 8, 10, 15]` days after PR creation.
+- `repos`: List of 25 repositories with optional per-repository reminder schedule overrides (e.g., `jmac-cornelis/agent-workforce` uses `[3, 5, 8, 12]`).
 
 ## Dependencies
 
 | Dependency | Purpose | Version |
 |------------|---------|---------|
-| PyYAML | YAML parsing and validation | Not specified |
-| Jira API | Issue retrieval and validation | Not specified |
-| GitHub API | PR and repository scanning | Not specified |
-| Microsoft Teams API | Direct message notifications | Not specified |
+| Jira API | Query and validate Jira tickets | Not specified |
+| GitHub API | Query PRs, reviews, branches, and CI status | Not specified |
+| Microsoft Teams API | Send direct messages and channel notifications | Not specified |
+| YAML Parser | Parse configuration files | Not specified |
+| ML Learning Engine | Generate field suggestions based on historical patterns | Not specified |
+| Notification Service | Route alerts to Shannon channel and Teams DMs | Not specified |
 
 ## Configuration
 
 ### Environment Variables
 
-The configuration files themselves do not reference environment variables, but the consuming application likely requires:
+The configuration files themselves do not directly reference environment variables, but the Drucker agent runtime likely requires:
 
-- `JIRA_API_TOKEN` — Authentication for Jira API
-- `GITHUB_TOKEN` — Authentication for GitHub API
-- `TEAMS_WEBHOOK_URL` or `TEAMS_BOT_TOKEN` — Teams notification credentials
+- `JIRA_API_TOKEN`: Authentication token for Jira API access
+- `GITHUB_TOKEN`: Authentication token for GitHub API access
+- `TEAMS_WEBHOOK_URL` or `TEAMS_BOT_TOKEN`: Authentication for Microsoft Teams notifications
+- `DRUCKER_CONFIG_PATH`: Path to configuration directory (defaults to `agents/drucker/config/`)
 
 ### Configuration Files
 
-- **`agents/drucker/config/monitor.yaml`** — Defines validation rules and learning parameters
-- **`agents/drucker/config/polling.yaml`** — Defines polling jobs, schedules, and notification settings
-- **`agents/drucker/config/pr_reminders.yaml`** — Defines PR reminder schedules and notification channels
+**monitor.yaml:**
+- `project`: Empty string (scans all projects)
+- `poll_interval_minutes`: 5 minutes
+- `learning.enabled`: `true`
+- `learning.min_observations`: 20 data points required before ML activates
+- `learning.confidence_thresholds.auto_fill`: 0.90 (90% confidence for automatic field population)
+
+**polling.yaml:**
+- `defaults.limit`: 200 tickets per query
+- `defaults.stale_days`: 30 days for Jira tickets
+- `defaults.github_stale_days`: 5 days for GitHub PRs
+- `defaults.notify_shannon`: `true` (notifications enabled by default)
+- `jobs[github-hygiene-scan].enabled`: `true`
+- `jobs[github-extended-scan].enabled`: `true`
+- `jobs[github-extended-scan].branch_stale_days`: 30 days
+
+**pr_reminders.yaml:**
+- `defaults.reminder_days`: `[5, 8, 10, 15]`
+- `defaults.snooze_options_days`: `[2, 5, 7]`
+- `defaults.enabled`: `true`
 
 ### Feature Flags
 
-- `learning.enabled` (monitor.yaml) — Enables ML-based field suggestion engine
-- `notify_shannon` (polling.yaml) — Controls notification delivery per job
-- `enabled` (polling.yaml, pr_reminders.yaml) — Activates/deactivates individual jobs or the entire PR reminder system
+- `learning.enabled` (monitor.yaml): Enables ML-based field suggestions
+- `defaults.persist` (polling.yaml): Enables persistence of scan results
+- `defaults.notify_shannon` (polling.yaml): Enables Shannon channel notifications
+- `jobs[*].enabled` (polling.yaml): Per-job enable/disable flags
+- `defaults.enabled` (pr_reminders.yaml): Global PR reminder enable/disable
 
 ## Error Handling
 
-The configuration files are declarative YAML and do not contain error handling logic. The consuming application must implement:
+The configuration files do not contain explicit error handling logic, as they are declarative YAML documents. Error handling is expected to occur in the Drucker agent runtime that consumes these configurations:
 
-- **Schema validation** — Ensure required fields are present and types are correct
-- **Default value handling** — Apply defaults from `polling.yaml` and `pr_reminders.yaml` when job-specific values are missing
-- **Graceful degradation** — If a repository or job is misconfigured, log the error and continue processing other jobs
-- **Notification failure handling** — Retry or log failures when `notify_shannon: true` but the notification service is unavailable
+**Expected Runtime Error Handling:**
+- **Invalid YAML syntax**: The YAML parser should raise parsing errors with line numbers.
+- **Missing required fields**: The configuration loader should validate required fields (e.g., `job_id`, `scan_type`) and raise validation errors.
+- **Invalid field values**: Type validation should occur for integers, booleans, and enums (e.g., `scan_type` must be one of `jira`, `github`, `github-extended`, etc.).
+- **API authentication failures**: The runtime should catch authentication errors when connecting to Jira, GitHub, or Teams APIs and log appropriate error messages.
+- **Repository not found**: GitHub API calls should handle 404 errors for repositories that no longer exist or are inaccessible.
+- **Rate limiting**: The runtime should implement exponential backoff and retry logic for API rate limit errors.
+
+**Validation Patterns:**
+- The `validation_rules` structure in `monitor.yaml` defines a two-tier validation system: `required` fields trigger errors, while `warn` fields trigger warnings only.
+- The `learning.confidence_thresholds` structure defines three confidence levels for ML suggestions, allowing graceful degradation from automatic field population to manual flagging.
 
 ## Known Limitations / Technical Debt
 
-1. **Empty project key** — The `project` field in `monitor.yaml` is an empty string, which may indicate incomplete configuration or a placeholder for multi-project support.
+1. **Hardcoded Repository Lists**: The `polling.yaml` and `pr_reminders.yaml` files contain hardcoded lists of 22-25 repositories. Adding or removing repositories requires manual configuration updates. Consider implementing dynamic repository discovery via GitHub organization API or a separate repository registry.
 
-2. **Hardcoded repository list** — The `github_repos` list in `polling.yaml` contains 26 repositories. This list is duplicated in `pr_reminders.yaml` (with minor differences), creating a maintenance burden. Consider centralizing the repository list or loading it from an external source.
+2. **Empty Project Key**: The `monitor.yaml` file has `project: ''`, which scans all Jira projects. This may cause performance issues in large Jira instances. Consider adding project filtering or pagination support.
 
-3. **Inconsistent reminder schedules** — The `jmac-cornelis/agent-workforce` repository has a custom reminder schedule of `[3, 5, 8, 12]` in `pr_reminders.yaml` but `[3, 7, 14]` in `polling.yaml`. This inconsistency may cause confusion or unexpected behavior.
+3. **No Validation Schema**: The YAML files lack JSON Schema or similar validation definitions. Invalid configurations may only be detected at runtime. Consider adding schema validation using tools like `yamllint` or `jsonschema`.
 
-4. **Missing validation for confidence thresholds** — The `confidence_thresholds` in `monitor.yaml` are floats between 0.0 and 1.0, but there is no schema enforcement to ensure `auto_fill >= suggest >= flag_only`.
+4. **Duplicate Repository Lists**: The `polling.yaml` file contains the same repository list in `defaults.github_repos` and in the `github-pr-activity` job. This violates DRY principles and creates maintenance burden. Consider using YAML anchors or references to deduplicate.
 
-5. **Disabled jobs** — The `github-hygiene-scan` and `github-extended-scan` jobs are disabled (`enabled: false`). If these are deprecated, they should be removed to reduce configuration clutter.
+5. **Missing Interval Configuration**: The `github-pr-reminders` job in `polling.yaml` lacks an `interval_minutes` field, while other continuous jobs (e.g., `bug-ticket-updates`, `github-pr-activity`) have explicit intervals. The polling frequency for PR reminders is unclear.
 
-6. **No version pinning** — The configuration does not specify versions for external dependencies (Jira API, GitHub API, Teams API), which may lead to compatibility issues during upgrades.
+6. **No Retry Configuration**: The configuration files do not specify retry policies for API failures, rate limiting, or transient errors. The runtime must implement these policies without configuration guidance.
+
+7. **Hardcoded Confidence Thresholds**: The `learning.confidence_thresholds` in `monitor.yaml` are hardcoded to `0.90`, `0.50`, and `0.0`. These values may not be optimal for all issue types or projects. Consider making thresholds configurable per issue type.
+
+8. **No Notification Routing**: The `notify_shannon` flag is binary (true/false) and does not support routing to multiple channels or users. Consider implementing a more flexible notification routing configuration.
+
+9. **Missing Job Dependencies**: The `jobs` array in `polling.yaml` does not define dependencies between jobs (e.g., `recent-ticket-intake` depends on `hygiene-scan` checkpoint state). Job execution order and dependencies are implicit.
+
+10. **No Rate Limit Configuration**: The configuration files do not specify API rate limits or request throttling parameters. The runtime must implement rate limiting without configuration guidance, which may lead to API quota exhaustion.
 
 <!-- End Documentation Agent generated content -->

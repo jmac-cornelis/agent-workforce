@@ -3,7 +3,7 @@
 ```yaml
 ---
 title: "As-Built: Drucker Engineering Hygiene Agent"
-date: "2026-04-06"
+date: "2026-04-08"
 status: "draft"
 ---
 ```
@@ -19,12 +19,16 @@ The Drucker Engineering Hygiene Agent is a deterministic-first automation system
 ### Before
 - Drucker was a Jira-only hygiene agent with three core workflows: full project hygiene scans, single-ticket intake validation, and recent-ticket intake reports.
 - GitHub PR hygiene was a planned feature but not implemented.
-- No PR reminder system existed.
-- No natural language query capability existed.
-- The agent had no persistent activity tracking or observability into its own API usage.
+- GitHub PR hygiene scans generated one notification per repository, resulting in notification spam when scanning 20+ repositories.
+- GitHub PR hygiene reports were ephemeral — no persistent storage or web-accessible report viewer existed.
+- No delta reporting existed — each scan was presented in isolation without comparison to previous scans.
 
 ### After
 - **GitHub PR hygiene scanning** is fully implemented with six scan types: stale PRs, missing reviews, naming compliance, merge conflicts, CI failures, and stale branches.
+- **Aggregated GitHub PR hygiene reports**: The `github-hygiene-scan` polling job now aggregates findings across all configured repositories into a single report with overall statistics, per-repo breakdowns, and delta comparison to the previous scan.
+- **Persistent GitHub hygiene reports**: Reports are saved to `/data/state/github_reports/<REPORT_ID>/` with both JSON and Markdown artifacts. A web-accessible report viewer is available at `/v1/github/hygiene/report/{report_id}`.
+- **Delta reporting**: Each GitHub hygiene scan compares total open PRs, stale PRs, and missing-review PRs to the previous scan and includes delta metrics (e.g., "+3 stale PRs since yesterday") in the notification.
+- **Single notification per scan**: Instead of one notification per repository, Drucker now sends one summary notification per polling cycle with a breakdown of repos with activity and a link to the full report.
 - **PR reminder engine** delivers Teams DM notifications to PR authors and reviewers on configurable cadences, with snooze and merge actions via Adaptive Cards.
 - **Natural language query translation** uses LLM function calling to convert plain English questions into structured Jira tool calls (e.g., "show me bugs updated in the last 24 hours" → JQL query).
 - **Activity counter** tracks all API requests by category (hygiene, jira, github, nl, pr-reminders) with error counts and timestamps.
@@ -35,6 +39,8 @@ The Drucker Engineering Hygiene Agent is a deterministic-first automation system
 - **Observability improved**: The `/v1/status/*` endpoints now expose request counts, error rates, token usage (zero for deterministic paths, non-zero for NL queries), and recent decision history.
 - **Deployment complexity increased**: Drucker now requires GitHub PAT credentials (`GITHUB_TOKEN`) and Teams Graph API credentials (`TEAMS_CLIENT_ID`, `TEAMS_CLIENT_SECRET`, `TEAMS_TENANT_ID`) for full functionality.
 - **State layer expanded**: Five SQLite stores now manage state (activity, learning, monitor checkpoints, PR reminders, reports), up from three.
+- **Notification noise reduced**: GitHub hygiene scans now generate one notification per polling cycle instead of one per repository, reducing Teams channel noise by ~95% (from 20+ notifications to 1).
+- **Report persistence enables trend analysis**: Stored GitHub hygiene reports allow teams to track PR hygiene trends over time and identify repositories with chronic stale-PR issues.
 
 ## 3. Component Diagram
 
@@ -56,6 +62,7 @@ graph TD
         MON[monitor_state.py]
         PR_STATE[pr_reminder_state.py]
         REP[report_store.py]
+        GH_REP[/data/state/github_reports/]
     end
 
     subgraph "External Dependencies"
@@ -79,10 +86,12 @@ graph TD
     API --> JIRA_REP
     API --> ACT
     API --> REP
+    API --> GH_REP
 
     AGENT --> LEARN
     AGENT --> MON
     AGENT --> REP
+    AGENT --> GH_REP
     AGENT --> JIRA
     AGENT --> GITHUB
 
@@ -139,33 +148,39 @@ sequenceDiagram
 
 **Description:** The agent builds a `DruckerRequest` from the input, queries Jira for active tickets (excluding Done/Closed), validates each ticket against the `monitor.yaml` validation rules (e.g., Bug must have assignee, fix_versions, components, priority), identifies stale tickets (no update in 30+ days), detects missing required fields, generates `DruckerFinding` objects with severity (high/medium/low), proposes `DruckerAction` objects (e.g., "add label `needs-triage`", "post comment requesting assignee"), builds a `DruckerHygieneReport` with summary statistics, formats a Markdown summary, persists the report to `data/drucker_reports/<PROJECT>/<REPORT_ID>/`, and returns the report + review session to the caller. The exact JQL query used is now logged in `report.jql_queries[]` (recent change).
 
-### Flow 2 — GitHub PR Hygiene Scan
+### Flow 2 — GitHub PR Hygiene Scan (Aggregated Multi-Repo)
 
-GitHub PR hygiene scans run on a configurable schedule (default: disabled) and detect stale PRs, missing reviews, naming violations, merge conflicts, CI failures, and stale branches.
+GitHub PR hygiene scans run on a configurable schedule (default: enabled) and detect stale PRs, missing reviews, naming violations, merge conflicts, CI failures, and stale branches across all configured repositories. The scan aggregates findings into a single report with delta comparison to the previous scan.
 
 ```mermaid
 sequenceDiagram
     participant Poller as Polling Job
-    participant API as Drucker API
+    participant Agent as DruckerCoordinatorAgent
     participant GH as github_utils
+    participant FS as Filesystem (/data/state/github_reports)
     participant Shannon as Shannon Agent
 
-    Poller->>API: POST /v1/github/pr-hygiene {repo: "cornelisnetworks/ifs-all"}
-    API->>GH: list_pull_requests(repo, state="open")
-    GH-->>API: 12 open PRs
-    API->>API: For each PR: check age, review status, branch name
-    API->>API: Identify stale PRs (no update in 5+ days)
-    API->>API: Identify PRs with no requested reviewers
-    API->>API: Identify PRs with branch names missing Jira ticket pattern
-    API->>API: Build findings list
-    alt Findings exist
-        API->>Shannon: POST /v1/notify {title: "PR Hygiene Findings", body: [...]}
+    Poller->>Agent: tick({job_id: "github-hygiene-scan", github_repos: [...]})
+    loop For each repo in github_repos
+        Agent->>GH: analyze_repo_pr_hygiene(repo, stale_days=5)
+        GH-->>Agent: {stale_prs: [...], missing_reviews: [...], total_open_prs: N}
+        Agent->>Agent: Aggregate findings, stale count, missing count, open count
+    end
+    Agent->>Agent: Build aggregated report {total_open_prs, total_stale, total_missing_review, findings: [...]}
+    Agent->>FS: Load previous report from /data/state/github_reports/<PREV_ID>/report.json
+    FS-->>Agent: {total_open_prs: M, total_stale: X, total_missing_review: Y}
+    Agent->>Agent: Compute deltas (d_open, d_stale, d_missing)
+    Agent->>Agent: Build Markdown report with per-repo breakdowns and delta summary
+    Agent->>FS: Save report.json and report.md to /data/state/github_reports/<REPORT_ID>/
+    FS-->>Agent: {report_id, report_url}
+    alt Findings exist or open PRs > 0
+        Agent->>Shannon: POST /v1/notify {title: "GitHub PR Hygiene Report", body: [...], report_url}
         Shannon->>Shannon: Post to Teams channel
     end
-    API-->>Poller: {ok: true, findings: [...], actions: [...]}
+    Agent-->>Poller: {ok: true, task_type: "github_pr_hygiene", report: {...}}
 ```
 
-**Description:** The poller triggers a GitHub PR hygiene scan for a configured repository. The API calls `github_utils.list_pull_requests()` to fetch all open PRs with metadata (author, reviewers, created_at, updated_at, branch name). For each PR, the agent checks: (1) staleness — if `updated_at` is older than `github_stale_days` (default 5), flag as stale; (2) review coverage — if `requested_reviewers` is empty and no approvals exist, flag as missing review; (3) naming compliance — if the branch name does not match a Jira ticket pattern (e.g., `STLSW-12345`) or `[NO-JIRA]`, flag as non-compliant. Findings are aggregated and, if any exist, a notification is sent to Shannon for Teams delivery. The scan does **not** write GitHub comments or status checks — all notifications go through Shannon.
+**Description:** The poller triggers a GitHub PR hygiene scan for all configured repositories (defined in `polling.yaml`). For each repository, the agent calls `github_utils.analyze_repo_pr_hygiene()` to fetch all open PRs with metadata (author, reviewers, created_at, updated_at, branch name). For each PR, the agent checks: (1) staleness — if `updated_at` is older than `github_stale_days` (default 5), flag as stale; (2) review coverage — if `requested_reviewers` is empty and no approvals exist, flag as missing review. Findings are aggregated across all repositories into a single report with overall statistics (`total_open_prs`, `total_stale`, `total_missing_review`). The agent loads the previous scan's report from `/data/state/github_reports/` and computes deltas (e.g., "+3 stale PRs since yesterday"). A Markdown report is generated with per-repo breakdowns (stale PRs, missing reviews) and a delta summary. The report is saved to `/data/state/github_reports/<REPORT_ID>/` with both JSON and Markdown artifacts. If findings exist or open PRs > 0, a single notification is sent to Shannon with a summary of repos with activity and a link to the full report. The scan does **not** write GitHub comments or status checks — all notifications go through Shannon.
 
 ### Flow 3 — PR Reminder DM Delivery
 
@@ -231,6 +246,46 @@ sequenceDiagram
 | `PRReminderState` | `pr_reminders`, `reminder_history` | PR reminder lifecycle |
 | `DruckerReportStore` | Filesystem: `data/drucker_reports/<PROJECT>/<REPORT_ID>/report.json` | Hygiene report persistence |
 
+### GitHub Hygiene Report Schema (Filesystem)
+
+GitHub PR hygiene reports are stored in `/data/state/github_reports/<REPORT_ID>/` with the following structure:
+
+```json
+{
+  "report_type": "github_pr_hygiene",
+  "repos_scanned": 20,
+  "repos_with_errors": 0,
+  "total_findings": 15,
+  "total_stale": 8,
+  "total_missing_review": 7,
+  "total_open_prs": 45,
+  "findings": [
+    {
+      "repo": "cornelisnetworks/ifs-all",
+      "pr": {
+        "number": 623,
+        "title": "Fix memory leak in OPX driver",
+        "author": "jdoe",
+        "html_url": "https://github.com/cornelisnetworks/ifs-all/pull/623"
+      },
+      "category": "stale_pr",
+      "days_stale": 12
+    }
+  ],
+  "repo_summaries": [
+    "cornelisnetworks/ifs-all: 12 open, 3 stale, 2 no review",
+    "cornelisnetworks/opa-psm2: 8 open, 1 stale, 0 no review"
+  ],
+  "errors": []
+}
+```
+
+The Markdown report (`report.md`) includes:
+- Overall stats table (repos scanned, total open PRs, stale PRs, missing reviews, findings, errors)
+- Per-repo breakdowns with stale PR lists and missing-review PR lists
+- Delta comparison to previous scan (e.g., "+3 stale PRs since yesterday")
+- Links to individual PRs on GitHub
+
 ### Validation Rules (`config/monitor.yaml`)
 
 ```yaml
@@ -264,6 +319,7 @@ validation_rules:
 | `sqlite3` | State persistence | Python stdlib |
 | `litellm` (via `CornelisLLM`) | LLM function calling for NL queries | N/A |
 | `dotenv` | Environment variable loading | N/A |
+| `markdown` (optional) | Markdown-to-HTML conversion for report viewer | N/A |
 
 ## 7. Configuration
 
@@ -274,134 +330,79 @@ validation_rules:
 | `JIRA_URL` | Yes | — | Jira instance URL (e.g., `https://cornelisnetworks.atlassian.net`) |
 | `JIRA_SERVICE_EMAIL` | Yes | — | Jira service account email |
 | `JIRA_SERVICE_API_TOKEN` | Yes | — | Jira service account API token |
-| `GITHUB_TOKEN` | No | — | GitHub PAT with `repo` + `read:org` scopes (required for GitHub scans) |
-| `GITHUB_API_URL` | No | `https://api.github.com` | GitHub API base URL |
-| `TEAMS_CLIENT_ID` | No | — | Azure AD app client ID (required for PR reminders) |
-| `TEAMS_CLIENT_SECRET` | No | — | Azure AD app client secret |
-| `TEAMS_TENANT_ID` | No | — | Azure AD tenant ID |
-| `DRY_RUN` | No | `true` | Mutation safety flag (set to `false` to execute Jira writes) |
-| `LOG_LEVEL` | No | `INFO` | Logging verbosity |
-| `STATE_BACKEND` | No | `json` | State backend type (unused by Drucker) |
-| `PERSISTENCE_DIR` | No | `/data/state` | State directory (unused by Drucker) |
+| `GITHUB_TOKEN` | No (required for GitHub scans) | — | GitHub personal access token with `repo` + `read:org` scopes |
+| `GITHUB_API_URL` | No | `https://api.github.com` | GitHub API base URL (for GitHub Enterprise) |
+| `TEAMS_CLIENT_ID` | No (required for PR reminders) | — | Azure AD app client ID for Teams Graph API |
+| `TEAMS_CLIENT_SECRET` | No (required for PR reminders) | — | Azure AD app client secret |
+| `TEAMS_TENANT_ID` | No (required for PR reminders) | — | Azure AD tenant ID |
+| `DRY_RUN` | No | `true` | Controls mutation safety (set to `false` to execute Jira write-backs) |
+| `DRUCKER_REPORT_DIR` | No | `data/drucker_reports` | Filesystem directory for Jira hygiene report artifacts |
+| `DRUCKER_MONITOR_STATE_DB` | No | `data/drucker_monitor_state.db` | SQLite database path for intake checkpoint tracking |
+| `DRUCKER_LEARNING_DB` | No | `data/drucker_learning.db` | SQLite database path for ticket-intake pattern learning |
+| `DRUCKER_ACTIVITY_DB` | No | `data/drucker_activity.db` | SQLite database path for API request activity tracking |
+| `DRUCKER_PR_REMINDER_STATE_DB` | No | `data/drucker_pr_reminder_state.db` | SQLite database path for PR reminder lifecycle tracking |
 
 ### Configuration Files
 
-| File | Purpose |
-|---|---|
-| `agents/drucker/config/monitor.yaml` | Jira field validation rules, learning subsystem config |
-| `agents/drucker/config/polling.yaml` | Polling job definitions, GitHub repo list, scan intervals |
-| `agents/drucker/config/pr_reminders.yaml` | PR reminder cadences, snooze options, merge methods |
-| `config/identity_map.yaml` | GitHub username → Teams email mapping |
-| `agents/drucker/prompts/system.md` | Agent system prompt |
+- **`agents/drucker/config/monitor.yaml`** — Defines validation rules per Jira issue type (required/warn fields), learning subsystem parameters (`min_observations`, `confidence_thresholds`), and polling interval.
+- **`agents/drucker/config/polling.yaml`** — Defines polling jobs, schedules, and notification settings. Each job has a `job_id`, `scan_type` (jira, github, github-extended, github-pr-reminders), `enabled` flag, and `notify_shannon` flag. The `github-hygiene-scan` job lists all repositories to scan in `github_repos[]`.
+- **`agents/drucker/config/pr_reminders.yaml`** — Defines PR reminder schedules (`reminder_days`), notification targets (`notify: [author, reviewers]`), snooze options, and merge methods per repository.
+- **`config/identity_map.yaml`** — Maps GitHub usernames to Teams email addresses for PR reminder DM delivery.
 
-### Feature Flags (Polling Jobs)
+### Feature Flags
 
-All GitHub scan jobs are **disabled by default** in `polling.yaml`:
-
-```yaml
-jobs:
-  - job_id: hygiene-scan
-    scan_type: jira
-    # enabled: true (implicit)
-
-  - job_id: recent-ticket-intake
-    scan_type: jira
-    recent_only: true
-    # enabled: true (implicit)
-
-  - job_id: github-hygiene-scan
-    scan_type: github
-    enabled: false  # Explicit disable
-
-  - job_id: github-extended-scan
-    scan_type: github-extended
-    enabled: false
-
-  - job_id: github-pr-reminders
-    scan_type: github-pr-reminders
-    enabled: false
-```
+- `learning.enabled` (monitor.yaml) — Enables ML-based field suggestion engine
+- `notify_shannon` (polling.yaml) — Controls notification delivery per job (default: `true`)
+- `enabled` (polling.yaml, pr_reminders.yaml) — Activates/deactivates individual jobs or the entire PR reminder system
+- `DRY_RUN` (environment variable) — Controls Jira write-back execution (default: `true`)
 
 ## 8. Error Handling
 
-### Dry-Run Safety
+### Jira Hygiene Scans
 
-All mutation operations default to `dry_run: true`. This applies to:
-- Jira field updates (`update_ticket`)
-- Jira transitions (`transition_ticket`)
-- Jira comment writes (`add_ticket_comment`)
-- GitHub PR merges (`/v1/github/pr-reminders/merge`)
+- **Connection failures**: If `jira_utils.connect_to_jira()` fails, the scan aborts and returns an error response with `ok: false`.
+- **JQL query failures**: If `search_tickets()` raises an exception, the error is logged and appended to `report.errors[]`. The scan continues with partial results.
+- **Validation rule mismatches**: If a ticket's issue type is not defined in `monitor.yaml`, the agent uses a fallback rule (no required fields, warn on missing description).
+- **Missing metadata**: Missing required fields generate `DruckerFinding` objects with `severity: high`. Missing warn fields generate `severity: low` findings.
 
-To override, pass `dry_run=false` in the request body or set `DRY_RUN=false` in the environment.
+### GitHub PR Hygiene Scans
 
-### Connection Errors
+- **Repository access failures**: If `github_utils.list_pull_requests()` raises an exception (e.g., 404 Not Found, 403 Forbidden), the error is logged to `scan_errors[]` and the scan continues with the next repository.
+- **Partial scan results**: If some repositories fail but others succeed, the aggregated report includes both successful findings and error summaries. The `repos_with_errors` count is incremented.
+- **Previous report load failures**: If the previous scan's report cannot be loaded from `/data/state/github_reports/`, delta comparison is skipped and the notification omits delta metrics.
+- **Report persistence failures**: If the report cannot be saved to `/data/state/github_reports/`, the error is logged and the notification includes `report_id: 'unsaved'` with no report URL.
 
-| Error Type | Handling |
-|---|---|
-| `JiraConnectionError` | Raised by `jira_utils.connect_to_jira()` if credentials are invalid or Jira is unreachable. Logged and returned as `AgentResponse.error_response()`. |
-| `GitHubConnectionError` | Raised by `github_utils` if `GITHUB_TOKEN` is missing or invalid. Logged and returned as `{ok: false, error: ...}`. |
-| `TeamsGraphError` | Raised by `TeamsGraphClient` if Graph API credentials are invalid or user resolution fails. Logged and returned as `{ok: false, error: ...}`. |
+### PR Reminder DM Delivery
 
-### State Store Errors
+- **Identity resolution failures**: If a GitHub username is not found in `identity_map.yaml`, the reminder is skipped and an error is logged.
+- **Teams Graph API failures**: If `create_one_on_one_chat()` or `send_chat_adaptive_card()` raises an exception, the error is logged and the reminder is marked as failed in `reminder_history`.
+- **Snooze/merge action failures**: If a user clicks a snooze or merge button but the action fails (e.g., GitHub API error), an error card is sent to the user via Teams DM.
 
-All SQLite stores (`ActivityCounter`, `DruckerLearningStore`, `DruckerMonitorState`, `PRReminderState`) follow a consistent error-handling pattern:
+### Natural Language Query Translation
 
-1. **Connection guard:** Every public method calls `_require_conn()`, which raises `RuntimeError('... connection is closed')` if `close()` has been called.
-2. **Thread safety:** All database operations are wrapped in `with self._lock:` blocks using `threading.RLock`.
-3. **Idempotent writes:** All insert operations use `INSERT ... ON CONFLICT DO UPDATE` (SQLite UPSERT).
-
-### LLM Errors
-
-The NL query translator (`nl_query.py`) wraps LLM calls in try/except:
-
-```python
-try:
-    result = executor(tool_args)
-except Exception as e:
-    log.error(f'NL query tool execution failed: {tool_name} — {e}')
-    return {'ok': False, 'error': str(e), 'tool_used': tool_name, 'tool_args': tool_args}
-```
+- **LLM function calling failures**: If the LLM does not call a tool or returns invalid JSON, the agent returns the LLM's text response directly (fallback to conversational mode).
+- **Tool execution failures**: If a Jira or GitHub tool raises an exception, the error is logged and returned to the user with `ok: false`.
 
 ## 9. Known Limitations / Technical Debt
 
-### 1. Duplicated Repository Lists
+1. **Hardcoded GitHub report storage path**: The GitHub hygiene report storage path (`/data/state/github_reports/`) is hardcoded in `agent.py` and `api.py`. This should be configurable via environment variable or `polling.yaml`.
 
-The 25-repository list appears in both `polling.yaml` (`defaults.github_repos`) and `pr_reminders.yaml` (`repos`). These lists are manually synchronized. Any addition or removal must be applied to both files, creating a maintenance risk. **Recommendation:** Consolidate to a single canonical source (e.g., `config/github_repos.yaml`) and reference it from both configs.
+2. **No pagination for large GitHub scans**: The `github-hygiene-scan` job fetches all open PRs for each repository with `limit=100`. Repositories with >100 open PRs will have incomplete scan results. The agent should implement pagination or increase the limit.
 
-### 2. Empty Project Keys in Config
+3. **Delta comparison assumes sequential scans**: The delta comparison logic loads the second-most-recent report from `/data/state/github_reports/` by sorting directory names. If scans are run out of order or reports are deleted, delta metrics may be incorrect.
 
-Both `monitor.yaml` (`project: ''`) and `polling.yaml` (`defaults.project_key: ''`) contain empty strings. These are hardcoded placeholders that must be populated at runtime or via an external mechanism. There is no documented contract for how this resolution occurs. **Recommendation:** Require `project_key` as a mandatory CLI argument or environment variable, and fail fast if missing.
+4. **No cleanup of old GitHub reports**: GitHub hygiene reports accumulate in `/data/state/github_reports/` indefinitely. The agent should implement a retention policy (e.g., delete reports older than 90 days).
 
-### 3. All GitHub Jobs Disabled by Default
+5. **Markdown-to-HTML conversion requires optional dependency**: The `/v1/github/hygiene/report/{report_id}` endpoint uses the `markdown` library to render HTML. If the library is not installed, the endpoint falls back to `<pre>` tags, which breaks table formatting.
 
-The three GitHub scan jobs (`github-hygiene-scan`, `github-extended-scan`, `github-pr-reminders`) are all set to `enabled: false`. This suggests the GitHub scanning capability is not yet production-ready or is gated behind an external activation step. **Recommendation:** Document the activation procedure or remove the jobs from the default config if they are experimental.
+6. **No error recovery for partial GitHub scans**: If a GitHub scan fails midway (e.g., network timeout), the partial results are discarded and the scan must be rerun from scratch. The agent should implement checkpoint-based resumption.
 
-### 4. No Schema Validation for Config Files
+7. **PR reminder snooze window is not timezone-aware**: The `snoozed_until` timestamp is stored as ISO 8601 UTC, but the `unsnooze_expired()` method compares it to `datetime.now(timezone.utc)`. If the system clock is misconfigured, snooze windows may expire early or late.
 
-There is no JSON Schema or equivalent validation definition for `monitor.yaml`, `polling.yaml`, or `pr_reminders.yaml`. Typos in key names (e.g., `reminder_day` instead of `reminder_days`) would silently produce incorrect behavior. **Recommendation:** Add Pydantic models for config validation and fail fast on schema violations.
+8. **No deduplication of PR reminder notifications**: If a PR has multiple reviewers, each reviewer receives a separate DM. The agent should implement a "one DM per PR per day" policy to reduce notification noise.
 
-### 5. Hardcoded Label Prefix
+9. **GitHub hygiene report viewer has no authentication**: The `/v1/github/hygiene/report/{report_id}` endpoint is publicly accessible. The agent should implement authentication or restrict access to internal networks.
 
-`defaults.label_prefix: drucker` is a hardcoded string that will be applied as Jira labels. Changing the agent's identity would require updating this value. **Recommendation:** Make `label_prefix` configurable per deployment or derive it from the agent name.
-
-### 6. No Retry Logic for Graph API Calls
-
-The `TeamsGraphClient` does not implement retry logic for transient Graph API failures (e.g., 429 rate limit, 503 service unavailable). A single failed DM delivery will abort the reminder for that PR. **Recommendation:** Add exponential backoff retry logic to `TeamsGraphClient`.
-
-### 7. No Deduplication for PR Reminder Notifications
-
-The PR reminder engine does not suppress repeat notifications for the same PR within a configurable window. If a PR is due for a reminder and the poller runs twice in quick succession, the user will receive duplicate DMs. **Recommendation:** Add a `last_notified_at` timestamp to `pr_reminders` and skip reminders if `now - last_notified_at < notification_window`.
-
-### 8. No Observability for Learning Store Predictions
-
-The `DruckerLearningStore` tracks observations and computes confidence scores, but there is no API endpoint or CLI command to inspect the learned patterns or prediction accuracy. **Recommendation:** Add `/v1/learning/patterns` and `/v1/learning/accuracy` endpoints.
-
-### 9. No Cleanup for Closed PRs in State
-
-The `PRReminderState` marks PRs as `status = 'closed'` or `status = 'merged'`, but these rows are never deleted. Over time, the `pr_reminders` table will accumulate stale rows. **Recommendation:** Add a cleanup job that deletes rows where `status IN ('closed', 'merged')` and `last_reminded_at < now - 90 days`.
-
-### 10. No Rate Limiting for API Endpoints
-
-The Drucker API has no rate limiting or request throttling. A malicious or misconfigured client could overwhelm the service with `/v1/hygiene/run` requests. **Recommendation:** Add rate limiting middleware (e.g., `slowapi` for FastAPI).
+10. **No support for GitHub Enterprise custom domains**: The `html_url` field in GitHub PR findings assumes `github.com`. For GitHub Enterprise instances, the URL should be constructed from `GITHUB_API_URL`.
 
 <!-- End Documentation Agent generated content -->
