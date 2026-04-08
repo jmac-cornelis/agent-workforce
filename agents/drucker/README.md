@@ -320,22 +320,11 @@ docker compose up drucker
 
 ### Standalone CLI (`drucker-agent`)
 
-The preferred way to run Drucker from the command line:
+The preferred way to run drucker-agent is:
 
 ```bash
 drucker-agent <subcommand> [options]
 ```
-
-| Subcommand | Description | Example |
-|------------|-------------|---------|
-| `hygiene` | Full Jira hygiene analysis | `drucker-agent hygiene -p STL` |
-| `issue-check` | Single ticket intake validation | `drucker-agent issue-check -p STL -t STLSW-1234` |
-| `intake-report` | Recent ticket intake report | `drucker-agent intake-report -p STL --since "2026-03-01"` |
-| `bug-activity` | Daily bug activity summary | `drucker-agent bug-activity -p STL --target-date 2026-03-30` |
-| `github-hygiene` | GitHub PR hygiene scan | `drucker-agent github-hygiene cornelisnetworks/ifs-all` |
-| `poll` | Scheduled hygiene polling loop | `drucker-agent poll -p STL --max-cycles 0` |
-
-### Via `agent-cli` (unified CLI)
 
 All Drucker subcommands are also available through the unified agent CLI:
 

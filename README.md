@@ -11,7 +11,7 @@ AI-powered engineering agents, reusable tools, and standalone CLI utilities for 
 - [Agents](#agents)
   - [Implemented Agents](#implemented-agents)
   - [Agent Communication](#agent-communication)
-  - [Agent Workforce Vision](#agent-workforce-vision)
+- [Agent Workforce Vision](#agent-workforce-vision)
 - [Agentic Workflows](#agentic-workflows)
 - [Standalone Utilities](#standalone-utilities)
 - [Tools (MCP / Agent API)](#tools-mcp--agent-api)
@@ -244,12 +244,9 @@ python3 jira_utils.py --bulk-delete --input-file to_delete.csv             # dry
 python3 jira_utils.py --bulk-delete --input-file to_delete.csv --execute   # execute
 ```
 
-#### Dashboard Management
+#### Dashboards
 
 ```bash
-python3 jira_utils.py --dashboards
-python3 jira_utils.py --dashboard 12345
-python3 jira_utils.py --create-dashboard "My Dashboard"
 python3 jira_utils.py --copy-dashboard 12345 "New Dashboard Name"
 ```
 
@@ -271,4 +268,4 @@ See [docs/development.md](docs/development.md) for contribution guidelines, test
 
 ## License
 
-Proprietary — Cornelis Networks internal use only.
+Proprietary — Co

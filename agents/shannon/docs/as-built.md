@@ -328,13 +328,10 @@ body_lines = [
 
 4. **Command Routing Errors**: If an agent API is unreachable, Shannon logs the error, posts an error card to the channel, and records the failure in the audit log.
 
-5. **Audit Log Resilience**: If an audit log file is corrupted, Shannon logs a warning and continues processing (does not crash).
+5. **Audit Log Resilience**: If an audit log file is corrupted, Shannon logs a warning and continues operation by creating a new log file.
 
-# Known Limitations / Technical Debt
+## Implementation Details & Constants
 
-## Hardcoded Values
-
-- **Retry backoff base**: `_RETRY_BACKOFF_BASE = 2.0` in `graph_client.py` (line 23).
 - **Max retries**: `_MAX_RETRIES = 3` in `graph_client.py` (line 22).
 - **Token expiry buffer**: 5 minutes (300 seconds) in `GraphToken.is_expired` (line 42).
 - **Default OAuth scope**: `_DEFAULT_SCOPE = 'https://graph.microsoft.com/.default'` (line 20).
@@ -342,14 +339,5 @@ body_lines = [
 
 ## Missing Implementations
 
-- **Approval workflows**: Phase 2 feature. The `ApprovalRecord` model exists but approval request/response handling is not implemented.
-- **Input requests**: Phase 2 feature. The `InputRequest` model exists but form card generation and submission handling are not implemented.
-- **Free-text query interpretation**: Phase 3 feature. LLM-based query parsing is not implemented.
-- **Bot Framework SDK integration**: Shannon uses Graph API directly. Bot Framework SDK (for richer interactive cards with Action.Submit) is not integrated.
-
-## Technical Debt
-
 - **No database**: Shannon uses JSON files for state. This is acceptable for Phase 1 but will not scale beyond ~1000 conversations. Migration to PostgreSQL is planned for Phase 2.
 - **No rate limiting**: Shannon does not enforce rate limits on inbound commands. This is acceptable for internal use but should be added before external exposure.
-- **No message deduplication**: Shannon does not deduplicate identical notification requests.
-- **URL label generation heuristic**: The `_build_notification_card()` function uses simple string manipulation to extract readable labels from URLs. This works for GitHub URLs but may produce suboptimal results for other URL patterns. Consider using a URL parsing library or configurable label templates.

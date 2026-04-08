@@ -59,6 +59,11 @@ This internal document candidate was generated from authoritative source artifac
 - **All mutation operations default to dry-run mode.** This means Drucker will report on findings but will not modify Jira tickets or GitHub PRs unless explicitly instructed.
 - To override dry-run mode and execute changes:
 - **Shannon:** Append `execute` to the command.
+- Polling and Automated Reports
+- Drucker's polling system automatically runs hygiene scans on a schedule.
+- GitHub PR Hygiene Polling aggregates findings across configured repositories, saves reports to `/data/state/github_reports/{timestamp}/` in JSON and Markdown, and can notify Shannon with summary statistics.
+- Aggregated reports include overall statistics, per-repository breakdowns, and comparisons with previous scans.
+- All Drucker subcommands are accessible via the unified `agent-cli`.
 
 ### Source: `jmac-cornelis/agent-workforce:agents/drucker/cards.py`
 - Module: agents/drucker/cards.py
@@ -119,6 +124,7 @@ This internal document candidate was generated from authoritative source artifac
 - import os
 - import sys
 - import time
+- Added `_load_previous_github_hygiene` method to retrieve historical report data from `/data/state/github_reports` for scan comparison.
 
 ### Source: `jmac-cornelis/agent-workforce:agents/drucker/config/pr_reminders.yaml`
 - defaults:
@@ -219,117 +225,4 @@ This internal document candidate was generated from authoritative source artifac
 ### Source: `jmac-cornelis/agent-workforce:agents/drucker/nl_query.py`
 - Module: agents/drucker/nl_query.py
 - Description: Natural language query translation for Drucker. Uses LLM function calling
-- to convert plain English questions into structured Jira queries.
-- Author: Cornelis Networks
-
-## Architecture Overview
-
-The Drucker agent implements a polling-based architecture for GitHub PR hygiene monitoring with aggregated multi-repository reporting. The agent scans configured repositories on a scheduled interval, collects findings across all repositories, and produces unified reports with per-repository breakdowns.
-
-### GitHub PR Hygiene Workflow
-
-The `tick()` method in `agent.py` orchestrates GitHub PR hygiene scans:
-
-1. **Repository Scanning**: Iterates through configured repositories from `polling.yaml`
-2. **Finding Aggregation**: Collects stale PRs, missing reviews, and open PR counts across all repositories
-3. **Report Generation**: Produces both JSON and Markdown reports with overall statistics and per-repository details
-4. **Report Persistence**: Saves reports to `/data/state/github_reports/{timestamp}/` directory structure
-5. **Notification**: Optionally notifies Shannon with aggregated findings summary
-
-### Key Functions
-
-#### `_load_previous_github_hygiene()`
-
-Loads the most recent previous GitHub hygiene report for comparison and trend analysis.
-
-**Implementation Details**:
-- Scans `/data/state/github_reports/` directory for timestamped report directories
-- Sorts directories in reverse chronological order
-- Loads `report.json` from the second-most-recent directory (previous scan)
-- Returns empty dict if no previous report exists or on error
-- Used for detecting changes in PR hygiene status between scans
-
-**Return Value**: Dictionary containing previous scan's aggregated report data
-
-#### GitHub PR Hygiene Aggregation (in `tick()`)
-
-The polling loop now aggregates findings across all configured repositories into a single unified report.
-
-**Aggregation Logic**:
-- Accumulates findings, stale PR counts, missing review counts, and open PR totals across all repositories
-- Builds per-repository summary strings (e.g., `"repo: 5 open, 2 stale, 1 no review"`)
-- Tracks scan errors per repository
-- Constructs aggregated report structure with:
-  - `repos_scanned`: Total number of repositories processed
-  - `repos_with_errors`: Count of repositories that failed to scan
-  - `total_findings`: Sum of all findings across repositories
-  - `total_stale`: Sum of stale PRs across repositories
-  - `total_missing_review`: Sum of PRs missing reviews
-  - `total_open_prs`: Sum of open PRs across all repositories
-  - `findings`: Combined list of all findings
-  - `repo_summaries`: List of per-repository summary strings
-  - `errors`: List of scan error messages
-
-**Report Generation**:
-- Creates Markdown report with overall statistics table
-- Includes per-repository sections with stale PR and missing review details
-- Generates unique report ID and timestamp
-- Saves both JSON (`report.json`) and Markdown (`report.md`) to timestamped directory
-
-**Report Structure**:
-```markdown
-# GitHub PR Hygiene Report
-
-**Report ID:** {uuid}
-**Scan Date:** {timestamp}
-**Repos Scanned:** {count}
-
-## Overall Stats
-
-| Metric | Value |
-|--------|-------|
-| Repos Scanned | {count} |
-| Total Open PRs | {count} |
-| Stale PRs (>{days} days) | {count} |
-| Missing Reviews | {count} |
-| Total Findings | {count} |
-| Scan Errors | {count} |
-
-## {repo_name}
-
-Open PRs: {count} | Findings: {count}
-
-### Stale PRs
-- PR #{number}: {title} by {author}
-  - Age: {days} days
-  - URL: {html_url}
-
-### Missing Reviews
-- PR #{number}: {title} by {author}
-  - URL: {html_url}
-```
-
-### Data Flow
-
-1. **Configuration Loading**: `polling.yaml` defines `github_repos` list and `github_stale_days` threshold
-2. **Repository Iteration**: Each repository is scanned via `github_utils.analyze_repo_pr_hygiene()`
-3. **Finding Collection**: Results are accumulated into aggregated counters and lists
-4. **Report Assembly**: Aggregated data is structured into unified report format
-5. **Persistence**: Report is saved to filesystem with UUID-based report ID
-6. **Task Recording**: Aggregated report is appended to `tasks` list for return to caller
-7. **Notification**: If enabled, Shannon is notified with aggregated summary statistics
-
-### Error Handling
-
-- Repository scan failures are captured in `scan_errors` list
-- Errors do not halt processing of remaining repositories
-- Aggregated report includes error count and details
-- Task is marked as `ok: False` if any scan errors occurred
-- Previous report loading failures return empty dict without raising exceptions
-
-### State Management
-
-- Reports are persisted to `/data/state/github_reports/{timestamp}/` directories
-- Each scan creates a new timestamped directory
-- `_load_previous_github_hygiene()` enables historical comparison
-- Report artifacts include both JSON (machine-readable) and Markdown (human-readable) formats
+- to convert plain English questions into structured Jira

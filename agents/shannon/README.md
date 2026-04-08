@@ -301,13 +301,9 @@ When a user types `@Shannon /pr-hygiene repo cornelisnetworks/ifs-all stale_days
 
 List parameters use comma-separation: `source_paths src/a.c,src/b.c` → `["src/a.c", "src/b.c"]`
 
-Use `/help` in any agent channel to see the full parameter syntax for all commands.
+Use `/help` in any agent channel to see the full parameter syntax for all commands
 
-### Currently Registered Agents
-
-| Agent | Role | Port | Commands |
-|-------|------|------|----------|
 | Shannon | Communications | 8200 | 6 built-in |
 | Drucker | Engineering Hygiene | 8201 | 15 commands (Jira + GitHub) |
 | Gantt | Project Planning | 8202 | 8 commands |
-| Hemingway | Documentation | 8203 | 7 commands (genera
+| Hemingway | Documentation | 8203 | 7 commands (generate, search, publish) |
